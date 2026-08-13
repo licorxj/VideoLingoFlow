@@ -1,0 +1,187 @@
+{
+  "id": "680749a93977",
+  "name": "12a781e606d44b2ab7a22383fdbce04b",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1786137867855",
+      "type": "workflow",
+      "position": {
+        "x": -1365,
+        "y": -2370
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "url",
+            "video"
+          ],
+          "videoPath": "X:/PCTMoveData/Videos/1.mp4",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "https://www.bilibili.com/video/BV1hZM16zEvo/?share_source=copy_web&vd_source=a2b9aa0b6d751b0161e2814c34c5e399",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": false,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 492
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1786137875583",
+      "type": "workflow",
+      "position": {
+        "x": -825,
+        "y": -2355
+      },
+      "data": {
+        "nodeType": "platform_download",
+        "label": "平台视频下载",
+        "config": {
+          "download_subs": false,
+          "download_cover": false,
+          "resolution": "best",
+          "cookie_file": "",
+          "use_as_task_name": false
+        },
+        "status": "failed",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "permanent",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 328
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1786152950222",
+      "type": "workflow",
+      "position": {
+        "x": -315,
+        "y": -2220
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 24,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 168
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1786172674911",
+      "type": "workflow",
+      "position": {
+        "x": -765,
+        "y": -1920
+      },
+      "data": {
+        "nodeType": "extract_audio",
+        "label": "音频分离",
+        "config": {
+          "format": "wav",
+          "sample_rate": "44100"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 255
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "style": {
+        "stroke": "#06b6d4",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1786137867855",
+      "sourceHandle": "out-url",
+      "target": "node_2_1786137875583",
+      "targetHandle": "in-url",
+      "id": "xy-edge__node_1_1786137867855out-url-node_2_1786137875583in-url"
+    },
+    {
+      "type": "smoothstep",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_2_1786137875583",
+      "sourceHandle": "out-video",
+      "target": "node_1_1786152950222",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_2_1786137875583out-video-node_1_1786152950222in-video"
+    },
+    {
+      "type": "smoothstep",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1786137867855",
+      "sourceHandle": "out-video",
+      "target": "node_1_1786172674911",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1786137867855out-video-node_1_1786172674911in-video"
+    }
+  ],
+  "type": "task",
+  "createdAt": "2026-08-08T23:25:34",
+  "updatedAt": "2026-08-08T23:25:34"
+}

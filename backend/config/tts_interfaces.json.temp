@@ -1,0 +1,663 @@
+{
+  "version": 1,
+  "interfaces": [
+    {
+      "id": "edge_tts",
+      "name": "Edge TTS",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "【推荐值：*】在线-微软免费 TTS，支持多语言预置音色，无需 GPU",
+      "config": {
+        "sdk_package": "edge-tts",
+        "sdk_function": "Communicate",
+        "sdk_module": "edge_tts",
+        "sdk_voice_list_module": "backend.tts.sdk.edge_tts_wrapper",
+        "sdk_voice_list_function": "list_voices",
+        "text_param": "text",
+        "ref_audio_param": null,
+        "speed_param": "null",
+        "voice": "zh-CN-YunjianNeural",
+        "model": "",
+        "modes": {
+          "clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [],
+        "sdk_extra_args": {},
+        "custom_params": [],
+        "max_concurrent": 1,
+        "timeout": 300,
+        "voice_options": []
+      }
+    },
+    {
+      "id": "openai_tts",
+      "name": "OpenAI TTS",
+      "type": "online",
+      "builtin": true,
+      "enabled": true,
+      "description": "【推荐值：***】在线-OpenAI TTS API，或者openAI格式的TTS端口请求，请自行配置url和apikey",
+      "config": {
+        "api_url": "https://api.openai.com/v1/audio/speech",
+        "api_key": "",
+        "model": "tts-1",
+        "voice": "alloy",
+        "response_format": "wav",
+        "speed_param": "speed",
+        "modes": {
+          "clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [
+          "tts-1",
+          "tts-1-hd"
+        ],
+        "custom_params": [],
+        "max_concurrent": 1,
+        "timeout": 120,
+        "voice_options": []
+      }
+    },
+    {
+      "id": "azure_tts",
+      "name": "Azure TTS",
+      "type": "online",
+      "builtin": true,
+      "enabled": true,
+      "description": "【推荐值：***】在线-微软 Azure 语音服务，请注册并申请api使用",
+      "config": {
+        "api_url": "https://api.302.ai/cognitiveservices/v1",
+        "api_key": "",
+        "model": "",
+        "voice": "zh-CN-YunjianNeural",
+        "response_format": "riff-16khz-16bit-mono-pcm",
+        "speed_param": null,
+        "ssml_speed": true,
+        "modes": {
+          "clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [],
+        "custom_params": [],
+        "max_concurrent": 1,
+        "timeout": 120,
+        "voice_options": []
+      }
+    },
+    {
+      "id": "index_tts",
+      "name": "IndexTTS-V2",
+      "type": "local",
+      "builtin": true,
+      "enabled": true,
+      "description": "【推荐值：****】B站开源的优秀的TTS，音色克隆效果好，支持5种情感控制模式（instruct/speaker/reference/vector/text）",
+      "config": {
+        "api_url": "http://localhost:8855",
+        "text_param": "text",
+        "ref_audio_param": "spk_audio_path",
+        "modes": {
+          "clone": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/clone"
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/clone"
+          },
+          "preset_voice": {
+            "enabled": false,
+            "endpoint": ""
+          }
+        },
+        "voice_design_param": null,
+        "controllable_clone_param": "instruct",
+        "speed_param": null,
+        "body_type": "form",
+        "is_async": true,
+        "model_options": [],
+        "custom_params": [
+          {
+            "key": "emo_control_method",
+            "default": "speaker",
+            "description": "情感控制方式：speaker(参考音频情感)/reference(独立情感音频)/vector(情感向量)/text(情感描述)"
+          },
+          {
+            "key": "emo_audio_path",
+            "default": "",
+            "description": "情感参考音频路径（reference模式时使用）"
+          },
+          {
+            "key": "emo_vector",
+            "default": "",
+            "description": "8维情感向量，逗号分隔（vector模式时使用）：happy,angry,sad,afraid,disgusted,melancholic,surprised,calm"
+          },
+          {
+            "key": "emo_text",
+            "default": "",
+            "description": "情感描述文本（text模式时使用）"
+          },
+          {
+            "key": "emo_alpha",
+            "default": "1.0",
+            "description": "情感权重（0.0-1.0），控制情感表达强度"
+          },
+          {
+            "key": "use_random",
+            "default": "false",
+            "description": "情感随机采样（会降低音色还原度）"
+          },
+          {
+            "key": "num_beams",
+            "default": "3",
+            "description": "beam search 宽度（1-10），值越大质量越好但速度越慢"
+          },
+          {
+            "key": "temperature",
+            "default": "0.8",
+            "description": "采样温度（0.1-2.0），越低越稳定，越高越有变化"
+          },
+          {
+            "key": "top_p",
+            "default": "0.8",
+            "description": "nucleus 采样概率阈值（0.0-1.0）"
+          },
+          {
+            "key": "top_k",
+            "default": "30",
+            "description": "top-k 采样数量（0-100，0表示不限制）"
+          },
+          {
+            "key": "repetition_penalty",
+            "default": "10.0",
+            "description": "重复惩罚系数（0.1-20.0）"
+          },
+          {
+            "key": "length_penalty",
+            "default": "0.0",
+            "description": "长度惩罚系数（-2.0-2.0）"
+          },
+          {
+            "key": "max_mel_tokens",
+            "default": "1500",
+            "description": "最大生成 Mel Token 数（50-3000），影响最大输出时长"
+          },
+          {
+            "key": "max_text_tokens_per_segment",
+            "default": "120",
+            "description": "分句最大 Token 数（20-500），影响分句长度和音频质量"
+          },
+          {
+            "key": "do_sample",
+            "default": "true",
+            "description": "是否进行采样"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 120,
+        "startup_script": "Y:\\Omnivoice\\启动_index_api.bat",
+        "voice_options": []
+      }
+    },
+    {
+      "id": "8dc074bb",
+      "name": "mimoTTS",
+      "type": "sdk",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：***】限时在线免费，小米的MiMo TTS 2.5 在线语音合成，支持预置音色、声音设计、声音克隆",
+      "config": {
+        "sdk_package": "",
+        "sdk_function": "synthesize",
+        "sdk_module": "backend.tts.sdk.mimotts_wrapper",
+        "sdk_voice_list_function": "list_voices",
+        "text_param": "text",
+        "ref_audio_param": null,
+        "speed_param": "speed",
+        "voice": "mimo_default",
+        "model": "",
+        "modes": {
+          "clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [],
+        "sdk_extra_args": {
+          "api_key": ""
+        },
+        "custom_params": [],
+        "sdk_api_key": "",
+        "max_concurrent": "3",
+        "timeout": 300,
+        "voice_options": []
+      }
+    },
+    {
+      "id": "omnivoice",
+      "name": "OmniVoice",
+      "type": "local",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：***】小米开源 TTS，支持声音克隆和声音设计、600+语音支持，多方言支持，优点：极快。缺点：不太稳定",
+      "config": {
+        "api_url": "http://localhost:8853",
+        "text_param": "text",
+        "ref_audio_param": "ref_audio_path",
+        "speed_param": "speed",
+        "modes": {
+          "clone": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/clone"
+          },
+          "voice_design": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/design"
+          },
+          "controllable_clone": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/clone"
+          },
+          "preset_voice": {
+            "enabled": false,
+            "endpoint": ""
+          }
+        },
+        "voice_design_param": "instruct",
+        "controllable_clone_param": "instruct",
+        "model_options": [],
+        "max_concurrent": 1,
+        "timeout": 300,
+        "custom_params": [
+          {
+            "key": "ref_text",
+            "default": "",
+            "description": "参考音频的文本内容（不提供则自动识别）"
+          },
+          {
+            "key": "language",
+            "default": "",
+            "description": "语言代码或名称（如 zh, en, ja, ko）"
+          },
+          {
+            "key": "num_steps",
+            "default": "32",
+            "description": "扩散步数（1-100），默认32，越高音质越好"
+          },
+          {
+            "key": "guidance_scale",
+            "default": "2.5",
+            "description": "分类器自由引导尺度（0.0-5.0）"
+          },
+          {
+            "key": "speed",
+            "default": "1.0",
+            "description": "语速因子（0.5-2.0），默认1.0"
+          },
+          {
+            "key": "duration",
+            "default": "",
+            "description": "固定输出时长（秒），留空则自动决定"
+          },
+          {
+            "key": "denoise",
+            "default": "false",
+            "description": "是否对参考音频去噪"
+          },
+          {
+            "key": "max_workers",
+            "default": "2",
+            "description": "处理线程数，默认1"
+          }
+        ],
+        "body_type": "form",
+        "is_async": true,
+        "startup_script": "Y:\\Omnivoice\\启动_omnivoice_api.bat",
+        "voice_options": []
+      }
+    },
+    {
+      "id": "voxcpm",
+      "name": "VoxCPM",
+      "type": "local",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：****】面壁智能开源本地 TTS，48kHz采样率，支持可控克隆、极致克隆和声音设计，支持方言，克隆质量好，运行速度慢",
+      "config": {
+        "api_url": "http://localhost:8854",
+        "text_param": "text",
+        "ref_audio_param": "ref_audio_path",
+        "speed_param": "",
+        "body_type": "form",
+        "is_async": true,
+        "modes": {
+          "clone": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/clone"
+          },
+          "voice_design": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/design"
+          },
+          "controllable_clone": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/clone"
+          },
+          "preset_voice": {
+            "enabled": false,
+            "endpoint": ""
+          }
+        },
+        "voice_design_param": "instruct",
+        "controllable_clone_param": "instruct",
+        "model_options": [],
+        "max_concurrent": 1,
+        "timeout": 300,
+        "custom_params": [
+          {
+            "key": "instruct",
+            "default": "",
+            "description": "声音风格控制指令（如 '温柔地'、'Excited and fast-paced'）"
+          },
+          {
+            "key": "language",
+            "default": "",
+            "description": "语言代码（如 zh, en, ja, ko）"
+          },
+          {
+            "key": "cfg_value",
+            "default": "3.5",
+            "description": "CFG 引导强度（1.0-5.0），默认2.0"
+          },
+          {
+            "key": "inference_timesteps",
+            "default": "10",
+            "description": "LocDiT 流匹配迭代步数，默认10"
+          },
+          {
+            "key": "normalize",
+            "default": "false",
+            "description": "是否启用文本规范化"
+          },
+          {
+            "key": "denoise",
+            "default": "false",
+            "description": "是否对参考音频降噪"
+          },
+          {
+            "key": "prompt_text",
+            "default": "",
+            "description": "参考音频对应的文本（极致克隆时提供可获得更好效果）"
+          }
+        ],
+        "startup_script": "Y:\\Omnivoice\\启动_vox_api.bat",
+        "voice_options": []
+      }
+    },
+    {
+      "id": "dots_tts",
+      "name": "DotTTS",
+      "type": "local",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：****】小红书开源2B参数全连续自回归TTS，48kHz采样率，支持续写克隆和指令控制",
+      "config": {
+        "api_url": "http://localhost:8856",
+        "text_param": "text",
+        "ref_audio_param": "ref_audio_path",
+        "speed_param": null,
+        "body_type": "form",
+        "is_async": true,
+        "modes": {
+          "clone": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/clone"
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": true,
+            "endpoint": "/api/v1/voice/clone"
+          },
+          "preset_voice": {
+            "enabled": false,
+            "endpoint": ""
+          }
+        },
+        "voice_design_param": null,
+        "controllable_clone_param": "instruct",
+        "model_options": [],
+        "custom_params": [
+          {
+            "key": "prompt_text",
+            "default": "",
+            "description": "参考音频对应的文本内容（提供后启用续写克隆，音色还原更佳）"
+          },
+          {
+            "key": "language",
+            "default": "auto_detect",
+            "description": "语言代码：none(不添加标签)/auto_detect(自动检测)/zh(中文)/en(英语)/Cantonese(粤语)等"
+          },
+          {
+            "key": "num_steps",
+            "default": "20",
+            "description": "Flow-matching 采样步数（1-100），越高音质越好，越低速度越快"
+          },
+          {
+            "key": "guidance_scale",
+            "default": "1.8",
+            "description": "CFG 引导强度（0.0-5.0），>2 会放大音频能量"
+          },
+          {
+            "key": "speaker_scale",
+            "default": "4",
+            "description": "参考说话人嵌入缩放系数（0.0-5.0），越大音色越接近参考音频"
+          },
+          {
+            "key": "normalize_text",
+            "default": "true",
+            "description": "是否启用文本规范化（通过 WeTextProcessing）"
+          },
+          {
+            "key": "max_generate_length",
+            "default": "800",
+            "description": "最大生成音频 patch 数（50-2000），约500 patches ≈ 10秒"
+          },
+          {
+            "key": "seed",
+            "default": "42",
+            "description": "随机种子（≥0），固定种子可复现结果"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 300,
+        "startup_script": "Y:\\Omnivoice\\启动_dots_api.bat",
+        "voice_options": []
+      }
+    },
+    {
+      "id": "minimax_tts",
+      "name": "MiniMax TTS",
+      "type": "sdk",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：****】MiniMax 云端 TTS，支持多语言多音色，需要自己到官网申请api后使用，角色名可以自行添加",
+      "config": {
+        "sdk_package": "minimax",
+        "sdk_function": "synthesize",
+        "sdk_module": "backend.tts.sdk.minimax_wrapper",
+        "sdk_voice_list_function": "list_voices",
+        "text_param": "text",
+        "ref_audio_param": null,
+        "speed_param": "speed",
+        "voice": "male-qn-qingse",
+        "model": "speech-2.8-hd",
+        "sdk_api_key": "",
+        "modes": {
+          "clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [
+          "speech-2.8-hd",
+          "speech-2.8-turbo",
+          "speech-2.6-hd",
+          "speech-2.6-turbo",
+          "speech-02-hd",
+          "speech-02-turbo",
+          "speech-01-hd",
+          "speech-01-turbo"
+        ],
+        "sdk_extra_args": {},
+        "custom_params": [
+          {
+            "key": "model",
+            "default": "speech-2.8-hd",
+            "description": "模型选择（必填）：speech-2.8-hd/speech-2.8-turbo/speech-2.6-hd/speech-2.6-turbo"
+          },
+          {
+            "key": "api_url",
+            "default": "https://api.minimaxi.com/v1/t2a_v2",
+            "description": "API 端点地址（备用：https://api-bj.minimaxi.com/v1/t2a_v2）"
+          },
+          {
+            "key": "vol",
+            "default": "1",
+            "description": "音量（0-10]，默认1.0"
+          },
+          {
+            "key": "pitch",
+            "default": "0",
+            "description": "语调（-12到12），默认0"
+          },
+          {
+            "key": "emotion",
+            "default": "",
+            "description": "情绪控制：happy/sad/angry/fearful/disgusted/surprised/calm/fluent/whisper"
+          },
+          {
+            "key": "language_boost",
+            "default": "",
+            "description": "增强指定语言识别能力（如 Chinese,English,Japanese,auto）"
+          },
+          {
+            "key": "text_normalization",
+            "default": "true",
+            "description": "是否启用文本规范化（提升数字阅读性能）"
+          },
+          {
+            "key": "sample_rate",
+            "default": "32000",
+            "description": "采样率：8000/16000/22050/24000/32000/44100"
+          },
+          {
+            "key": "bitrate",
+            "default": "128000",
+            "description": "比特率：32000/64000/128000/256000（仅mp3格式）"
+          },
+          {
+            "key": "format",
+            "default": "wav",
+            "description": "音频格式：mp3/pcm/flac/wav/opus"
+          }
+        ],
+        "max_concurrent": 3,
+        "timeout": 120,
+        "voice_options": []
+      }
+    }
+  ]
+}

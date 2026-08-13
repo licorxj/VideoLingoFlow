@@ -1,0 +1,224 @@
+{
+  "id": "5fc0150ea613",
+  "name": "视频下载",
+  "description": "纯下载，可以做批量任务里面做到批量下载，也可以跟随输出节点在后面，做下载文件固定归档",
+  "nodes": [
+    {
+      "id": "node_1_1783324270560",
+      "type": "workflow",
+      "position": {
+        "x": -2010,
+        "y": -2295
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "url"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "https://www.bilibili.com/video/BV1hZM16zEvo/?share_source=copy_web&vd_source=a2b9aa0b6d751b0161e2814c34c5e399",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": false,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "url": "https://www.bilibili.com/video/BV1hZM16zEvo/?share_source=copy_web&vd_source=a2b9aa0b6d751b0161e2814c34c5e399",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          }
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 478
+      },
+      "selected": false
+    },
+    {
+      "id": "node_2_1783324281016",
+      "type": "workflow",
+      "position": {
+        "x": -1425,
+        "y": -2280
+      },
+      "data": {
+        "nodeType": "platform_download",
+        "label": "平台视频下载",
+        "config": {
+          "download_subs": true,
+          "download_cover": true,
+          "resolution": "best",
+          "cookie_file": "",
+          "use_as_task_name": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "cache\\s00_platform_download_video_开源minimax h3 一键复刻爆款视频 skill 公开了.mp4",
+          "image": "cache\\s00_platform_download_cover_开源minimax h3 一键复刻爆款视频 skill 公开了.jpg"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 411
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1786496185089",
+      "type": "workflow",
+      "position": {
+        "x": -765,
+        "y": -2265
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 24,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 429
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1786605666798",
+      "type": "workflow",
+      "position": {
+        "x": -930,
+        "y": -1620
+      },
+      "data": {
+        "nodeType": "video_frame_extract",
+        "label": "视频抽帧",
+        "config": {
+          "video_source": "input_node",
+          "time_point": 1,
+          "time_mode": "positive",
+          "avoid_subtitles": false
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 265
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1786605687528",
+      "type": "workflow",
+      "position": {
+        "x": -345,
+        "y": -1665
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 227
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1783324270560",
+      "sourceHandle": "out-url",
+      "target": "node_2_1783324281016",
+      "targetHandle": "in-url",
+      "id": "xy-edge__node_1_1783324270560out-url-node_2_1783324281016in-url"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-video",
+      "target": "node_1_1786496185089",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_2_1783324281016out-video-node_1_1786496185089in-video"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-video",
+      "target": "node_1_1786605666798",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_2_1783324281016out-video-node_1_1786605666798in-video"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1786605666798",
+      "sourceHandle": "out-image",
+      "target": "node_2_1786605687528",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_1_1786605666798out-image-node_2_1786605687528in-image"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-07-06T15:53:12",
+  "updatedAt": "2026-08-13T15:21:46"
+}

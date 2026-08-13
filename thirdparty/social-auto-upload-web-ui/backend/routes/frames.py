@@ -1,0 +1,345 @@
+import os
+import shutil
+import tempfile
+
+from flask import Blueprint, request, jsonify, send_file
+from pathlib import Path
+
+from conf import BASE_DIR
+from services.ffmpeg_service import (
+    start_frame_extraction,
+    get_extraction_status,
+    get_frame_list,
+    get_frame_image_path,
+)
+
+frames_bp = Blueprint('frames', __name__)
+
+# S3 视频下载缓存目录
+_s3_cache_dir = BASE_DIR / "s3_video_cache"
+
+
+def _resolve_video_path(video_path):
+    """兼容旧格式：直接传文件路径的情况"""
+    from storage import resolve_material_path
+    local = resolve_material_path(video_path)
+    if local:
+        return local
+    if os.path.isfile(video_path):
+        return video_path
+    return None
+
+
+def _resolve_material_video(material_id):
+    """通过素材 ID 查 materials 表，获取本地文件绝对路径。
+    若素材存储在 S3，则下载到本地缓存目录再返回路径。
+    若素材存储在本地，直接用 LocalStorage 解析路径（不受当前存储配置影响）。
+    """
+    import sqlite3
+    db_path = BASE_DIR / "db" / "database.db"
+    conn = sqlite3.connect(str(db_path))
+    conn.row_factory = sqlite3.Row
+    row = conn.execute(
+        "SELECT stored_path, storage_type FROM materials WHERE id = ?",
+        (material_id,),
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+
+    stored_path = row["stored_path"]
+    storage_type = row["storage_type"] or "local"
+
+    if storage_type == "s3":
+        return _download_s3_to_cache(material_id, stored_path)
+
+    # 本地存储：直接用 LocalStorage 解析（避免 get_storage() 返回 S3 导致找不到文件）
+    from storage.local import LocalStorage
+    local_path = LocalStorage(BASE_DIR).get_local_path(stored_path)
+    return local_path
+
+
+def _download_s3_to_cache(material_id, stored_path):
+    """将 S3 上的视频下载到本地缓存目录，返回本地绝对路径。"""
+    _s3_cache_dir.mkdir(parents=True, exist_ok=True)
+    ext = os.path.splitext(stored_path)[1] or ".mp4"
+    cache_path = _s3_cache_dir / f"{material_id}{ext}"
+
+    if cache_path.exists():
+        return str(cache_path)
+
+    from storage import get_storage_by_type
+    storage = get_storage_by_type("s3")
+    file_data = storage.get(stored_path)
+    cache_path.write_bytes(file_data)
+    return str(cache_path)
+
+
+@frames_bp.post('/api/extract-frames')
+def extract_frames():
+    data = request.get_json(force=True)
+    # 优先使用素材 ID
+    material_id = data.get('material_id', '')
+    if material_id:
+        full_path = _resolve_material_video(material_id)
+    else:
+        video_path = data.get('video_path', '')
+        if not video_path:
+            return jsonify({"code": 400, "msg": "material_id or video_path is required"}), 400
+        full_path = _resolve_video_path(video_path)
+    if not full_path:
+        # 视频素材已被删除（清空素材库 / 草稿残留失效引用）→ 返回业务态 + 友好文案，
+        # 避免前端拿到生硬的 "Video file not found" HTTP 404。
+        return jsonify({"code": 404, "msg": "视频素材已失效，可能已被删除，请重新上传视频"})
+
+    status = get_extraction_status(full_path)
+
+    # Already done — return cached result
+    if status.get("status") == "done":
+        result = get_frame_list(BASE_DIR, full_path)
+        result["status"] = "done"
+        return jsonify({"code": 200, "data": result})
+
+    # Start background extraction if not yet started
+    if not status or status.get("status") not in ("processing", "done"):
+        start_frame_extraction(BASE_DIR, full_path)
+
+    # Return whatever frames exist so far + processing status
+    result = get_frame_list(BASE_DIR, full_path)
+    result["status"] = "processing"
+    result["duration"] = status.get("duration", 0)
+    return jsonify({"code": 200, "data": result})
+
+
+@frames_bp.get('/api/frames-status')
+def frames_status():
+    material_id = request.args.get('material_id', '')
+    video_path = request.args.get('video_path', '')
+
+    if material_id:
+        full_path = _resolve_material_video(material_id)
+    elif video_path:
+        full_path = _resolve_video_path(video_path)
+    else:
+        return jsonify({"code": 400, "msg": "material_id or video_path is required"}), 400
+
+    if not full_path:
+        return jsonify({"code": 404, "msg": "视频素材已失效，可能已被删除，请重新上传视频"})
+
+    status = get_extraction_status(full_path)
+    return jsonify({"code": 200, "data": status})
+
+
+@frames_bp.get('/api/frames')
+def get_frames():
+    material_id = request.args.get('material_id', '')
+    video_path = request.args.get('video_path', '')
+
+    if material_id:
+        full_path = _resolve_material_video(material_id)
+    elif video_path:
+        full_path = _resolve_video_path(video_path)
+    else:
+        return jsonify({"code": 400, "msg": "material_id or video_path is required"}), 400
+
+    if not full_path:
+        return jsonify({"code": 404, "msg": "视频素材已失效，可能已被删除，请重新上传视频"})
+
+    result = get_frame_list(BASE_DIR, full_path)
+    status = get_extraction_status(full_path)
+    result["status"] = status.get("status", "done")
+    return jsonify({"code": 200, "data": result})
+
+
+@frames_bp.get('/api/frame-image')
+def get_frame_image():
+    material_id = request.args.get('material_id', '')
+    video_path = request.args.get('video_path', '')
+    seconds = request.args.get('seconds', '0')
+    thumbnail = request.args.get('thumbnail', '0') == '1'
+
+    if material_id:
+        full_path = _resolve_material_video(material_id)
+    elif video_path:
+        full_path = _resolve_video_path(video_path)
+    else:
+        return jsonify({"code": 400, "msg": "material_id or video_path is required"}), 400
+
+    try:
+        seconds = int(seconds)
+    except ValueError:
+        return jsonify({"code": 400, "msg": "seconds must be integer"}), 400
+
+    if not full_path:
+        return jsonify({"code": 404, "msg": "Video file not found"}), 404
+
+    image_path = get_frame_image_path(BASE_DIR, full_path, seconds, thumbnail=thumbnail)
+    if not image_path or not os.path.isfile(image_path):
+        return jsonify({"code": 404, "msg": "Frame not found"}), 404
+
+    return send_file(image_path, mimetype='image/jpeg')
+
+
+@frames_bp.post('/api/clear-cache')
+def clear_cache():
+    """Clear cached data: extracted frames, old logs, etc."""
+    data = request.get_json(force=True) if request.is_json else {}
+    targets = data.get('targets', ['frames'])
+    days = data.get('days', 7)  # for logs: keep last N days
+
+    results = {}
+
+    if 'frames' in targets:
+        frames_dir = os.path.join(str(BASE_DIR), 'frames')
+        if os.path.isdir(frames_dir):
+            file_count = sum(len(files) for _, _, files in os.walk(frames_dir))
+            shutil.rmtree(frames_dir)
+            os.makedirs(frames_dir, exist_ok=True)
+            results['frames'] = {'cleared': file_count, 'unit': 'files'}
+        else:
+            results['frames'] = {'cleared': 0, 'unit': 'files'}
+
+    if 'logs' in targets:
+        logs_dir = os.path.join(str(BASE_DIR), 'logs')
+        if os.path.isdir(logs_dir):
+            from datetime import datetime, timedelta
+            cutoff = datetime.now() - timedelta(days=days)
+            cleared_count = 0
+            for item in os.listdir(logs_dir):
+                item_path = os.path.join(logs_dir, item)
+                if os.path.isdir(item_path):
+                    try:
+                        date_part = item.split('-')
+                        if len(date_part) == 3:
+                            item_date = datetime.strptime(item, "%Y-%m-%d")
+                            if item_date < cutoff:
+                                file_count = sum(len(files) for _, _, files in os.walk(item_path))
+                                shutil.rmtree(item_path)
+                                cleared_count += file_count
+                    except ValueError:
+                        pass  # not a date directory
+            results['logs'] = {'cleared': cleared_count, 'unit': 'files'}
+        else:
+            results['logs'] = {'cleared': 0, 'unit': 'files'}
+
+    if 's3_videos' in targets:
+        s3_cache_dir = os.path.join(str(BASE_DIR), 's3_video_cache')
+        if os.path.isdir(s3_cache_dir):
+            file_count = sum(len(files) for _, _, files in os.walk(s3_cache_dir))
+            shutil.rmtree(s3_cache_dir)
+            os.makedirs(s3_cache_dir, exist_ok=True)
+            results['s3_videos'] = {'cleared': file_count, 'unit': 'files'}
+        else:
+            os.makedirs(s3_cache_dir, exist_ok=True)
+            results['s3_videos'] = {'cleared': 0, 'unit': 'files'}
+
+    if 'covers' in targets:
+        # 封面缓存：视频发布裁剪生成的封面文件（covers/YYYY/MM/DD/<uuid>.jpg）
+        covers_dir = os.path.join(str(BASE_DIR), 'covers')
+        if os.path.isdir(covers_dir):
+            file_count = sum(len(files) for _, _, files in os.walk(covers_dir))
+            shutil.rmtree(covers_dir)
+            os.makedirs(covers_dir, exist_ok=True)
+            results['covers'] = {'cleared': file_count, 'unit': 'files'}
+        else:
+            os.makedirs(covers_dir, exist_ok=True)
+            results['covers'] = {'cleared': 0, 'unit': 'files'}
+
+    return jsonify({"code": 200, "data": results})
+
+
+@frames_bp.get('/api/system-info')
+def system_info():
+    """Return version and cache size info."""
+    # Read version from versions file
+    version = 'unknown'
+    for candidate in [
+        os.path.join(str(BASE_DIR), '..', 'versions'),
+        os.path.join(str(BASE_DIR), 'versions'),
+    ]:
+        if os.path.isfile(candidate):
+            with open(candidate, 'r') as f:
+                version = f.read().strip()
+            break
+
+    # Calculate frames cache size
+    frames_dir = os.path.join(str(BASE_DIR), 'frames')
+    frames_size = 0
+    frames_count = 0
+    if os.path.isdir(frames_dir):
+        for dirpath, _, filenames in os.walk(frames_dir):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                try:
+                    frames_size += os.path.getsize(fp)
+                    frames_count += 1
+                except OSError:
+                    pass
+
+    # Calculate logs size (only old logs beyond retention)
+    logs_dir = os.path.join(str(BASE_DIR), 'logs')
+    logs_size = 0
+    logs_count = 0
+    logs_old_count = 0
+    from datetime import datetime, timedelta
+    cutoff = datetime.now() - timedelta(days=7)
+    if os.path.isdir(logs_dir):
+        for item in os.listdir(logs_dir):
+            item_path = os.path.join(logs_dir, item)
+            if os.path.isdir(item_path):
+                try:
+                    item_date = datetime.strptime(item, "%Y-%m-%d")
+                    is_old = item_date < cutoff
+                except ValueError:
+                    is_old = False
+                for dirpath, _, filenames in os.walk(item_path):
+                    for f in filenames:
+                        fp = os.path.join(dirpath, f)
+                        try:
+                            logs_size += os.path.getsize(fp)
+                            logs_count += 1
+                            if is_old:
+                                logs_old_count += 1
+                        except OSError:
+                            pass
+
+    # Calculate s3_video_cache size
+    s3_cache_dir = os.path.join(str(BASE_DIR), 's3_video_cache')
+    s3_cache_size = 0
+    s3_cache_count = 0
+    if os.path.isdir(s3_cache_dir):
+        for dirpath, _, filenames in os.walk(s3_cache_dir):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                try:
+                    s3_cache_size += os.path.getsize(fp)
+                    s3_cache_count += 1
+                except OSError:
+                    pass
+
+    # Calculate covers cache size
+    covers_dir = os.path.join(str(BASE_DIR), 'covers')
+    covers_size = 0
+    covers_count = 0
+    if os.path.isdir(covers_dir):
+        for dirpath, _, filenames in os.walk(covers_dir):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                try:
+                    covers_size += os.path.getsize(fp)
+                    covers_count += 1
+                except OSError:
+                    pass
+
+    return jsonify({
+        "code": 200,
+        "data": {
+            "version": version,
+            "cache": {
+                "frames": {"count": frames_count, "size": frames_size},
+                "logs": {"count": logs_count, "size": logs_size, "oldCount": logs_old_count},
+                "s3_videos": {"count": s3_cache_count, "size": s3_cache_size},
+                "covers": {"count": covers_count, "size": covers_size},
+            },
+        },
+    })

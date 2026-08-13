@@ -1,0 +1,433 @@
+"""ASR base class: extensible interface for speech recognition."""
+from abc import ABC, abstractmethod
+from typing import Callable, Optional, List, Dict, Any
+
+
+class ASRBase(ABC):
+    """Abstract base class for ASR engines.
+
+    All engines must implement transcribe(). Optional kwargs allow engines
+    to accept extra configuration (model, language, batch_size, etc.)
+    without breaking the base contract.
+    """
+
+    @abstractmethod
+    def transcribe(
+        self,
+        input_path: str,
+        output_path: str,
+        callback: Optional[Callable] = None,
+        **kwargs,
+    ) -> dict:
+        """Transcribe audio/video file and save results to output_path.
+
+        Parameters
+        ----------
+        input_path : str   Path to audio/video file.
+        output_path : str  Path to write JSON result.
+        callback : callable  (percent: int, message: str) progress callback.
+        **kwargs : Extra engine-specific options (model, language, etc.)
+
+        Returns
+        -------
+        dict  {"segments": [...], "language": "xx"}
+        """
+        ...
+
+    def post_process(
+        self,
+        asr_result: dict,
+        audio_path: str,
+        language: Optional[str] = None,
+        vad_engine: Optional[str] = None,
+        alignment_engine: Optional[str] = None,
+        diarize_engine: Optional[str] = None,
+        vad_options: Optional[dict] = None,
+        alignment_options: Optional[dict] = None,
+        diarize_options: Optional[dict] = None,
+        callback: Optional[Callable] = None,
+        alignment_audio_path: Optional[str] = None,
+    ) -> dict:
+        """Post-process ASR result with VAD, alignment, and/or speaker diarization.
+
+        This method allows applying VAD, word-level alignment, and speaker 
+        diarization from other engines to any ASR result, enabling hybrid 
+        processing pipelines.
+
+        Parameters
+        ----------
+        asr_result : dict
+            Original ASR result from any engine.
+        audio_path : str
+            Path to the original audio file (needed for VAD/diarization).
+        language : str, optional
+            Language code (e.g., "zh", "en"). If not provided, will try to extract from asr_result.
+        vad_engine : str, optional
+            VAD engine name (e.g., "silero", "fsmn", "webrtc").
+        alignment_engine : str, optional
+            Alignment engine name (e.g., "whisperx", "qwen3").
+        diarize_engine : str, optional
+            Diarization engine name (e.g., "pyannote", "cam++").
+        vad_options : dict, optional
+            VAD-specific options.
+        alignment_options : dict, optional
+            Alignment-specific options.
+        diarize_options : dict, optional
+            Diarization-specific options.
+        callback : callable, optional
+            Progress callback (percent: int, message: str).
+        alignment_audio_path : str, optional
+            Path to audio file specifically for alignment (e.g., vocal-separated audio).
+            If provided, this audio will be used for word-level alignment instead of the original audio.
+
+        Returns
+        -------
+        dict
+            Post-processed result with optional VAD, word timestamps, and speaker labels.
+        """
+        # Get language from ASR result if not provided
+        if language is None:
+            language = asr_result.get("language", "auto")
+        
+        result = asr_result.copy()
+        
+        # Apply VAD first to determine speech boundaries.
+        # Each stage runs independently: a failure in one stage is logged and
+        # skipped so it never blocks the remaining stages (alignment/diarization).
+        if vad_engine:
+            if callback:
+                callback(30, f"Applying VAD with {vad_engine}...")
+            try:
+                result = self._apply_vad(result, audio_path, vad_engine, vad_options or {})
+            except Exception as e:
+                print(f"[PostProcess] VAD failed ({vad_engine}): {e}, continuing without VAD segmentation")
+        
+        # Apply word-level alignment within VAD boundaries
+        # Use alignment_audio_path if provided (e.g., vocal-separated audio for better alignment)
+        if alignment_engine:
+            if callback:
+                callback(50, f"Applying word alignment with {alignment_engine}...")
+            align_audio = alignment_audio_path or audio_path
+            if alignment_audio_path:
+                print(f"[PostProcess] Using alignment audio for alignment: {alignment_audio_path}")
+            try:
+                result = self._apply_alignment(result, align_audio, alignment_engine, alignment_options or {}, language)
+            except Exception as e:
+                print(f"[PostProcess] Alignment failed ({alignment_engine}): {e}, continuing without word timestamps")
+        
+        # Apply speaker diarization last
+        if diarize_engine:
+            if callback:
+                callback(70, f"Applying speaker diarization with {diarize_engine}...")
+            try:
+                result = self._apply_diarization(result, audio_path, diarize_engine, diarize_options or {})
+            except Exception as e:
+                print(f"[PostProcess] Diarization failed ({diarize_engine}): {e}, continuing without speaker labels")
+        
+        if callback:
+            callback(100, "Post-processing complete")
+        
+        return result
+
+    def _apply_alignment(
+        self,
+        asr_result: dict,
+        audio_path: str,
+        alignment_engine: str,
+        options: dict,
+        language: Optional[str] = None,
+    ) -> dict:
+        """Apply word-level alignment to ASR result."""
+        from backend.asr.alignment_processor import (
+            WhisperXAlignmentProcessor,
+            Qwen3AlignmentProcessor,
+            apply_alignment_to_segments
+        )
+        
+        # Use provided language or get from result
+        if language is None:
+            language = asr_result.get("language", "")
+        
+        # Select alignment processor
+        if alignment_engine == "whisperx":
+            processor = WhisperXAlignmentProcessor(**options)
+        elif alignment_engine == "qwen3":
+            processor = Qwen3AlignmentProcessor(**options)
+        else:
+            raise ValueError(f"Unknown alignment engine: {alignment_engine}")
+        
+        # Run alignment
+        segments = asr_result.get("segments", [])
+        alignment_result = processor.align(audio_path, segments, language)
+        
+        # Apply alignment results to segments
+        if alignment_result.words:
+            asr_result["segments"] = apply_alignment_to_segments(segments, alignment_result)
+        
+        return asr_result
+
+    def _apply_vad(
+        self,
+        asr_result: dict,
+        audio_path: str,
+        vad_engine: str,
+        options: dict,
+    ) -> dict:
+        """Apply VAD to ASR result segments.
+
+        If the configured engine fails (e.g. Silero needs to download its model
+        from GitHub which may be unreachable), automatically fall back to locally
+        available engines: fsmn (FunASR, cached locally) -> webrtc (if installed).
+        If every engine fails, the original result is returned unchanged so the
+        remaining post-processing stages (alignment/diarization) still run.
+        """
+        from backend.asr.vad_processor import (
+            SileroVADProcessor, 
+            FSMNVADProcessor, 
+            WebRTCVADProcessor
+        )
+        
+        # 依次尝试的VAD引擎：配置的引擎 → fsmn（本地模型）→ webrtc（如果已安装）
+        candidates: list = []
+        if vad_engine:
+            candidates.append(vad_engine)
+        for fallback in ("fsmn", "webrtc"):
+            if fallback not in candidates:
+                candidates.append(fallback)
+        
+        last_error = None
+        for engine in candidates:
+            try:
+                if engine == "silero":
+                    processor = SileroVADProcessor(**options)
+                elif engine == "fsmn":
+                    processor = FSMNVADProcessor(**options)
+                elif engine == "webrtc":
+                    processor = WebRTCVADProcessor(**options)
+                else:
+                    print(f"[VAD] Unknown VAD engine: {engine}, trying next")
+                    continue
+                
+                print(f"[VAD] Running VAD with engine: {engine}")
+                vad_segments = processor.detect(audio_path)
+                
+                # Merge VAD results with ASR segments
+                if vad_segments and "segments" in asr_result:
+                    asr_result["segments"] = self._merge_vad_segments(
+                        asr_result["segments"], vad_segments
+                    )
+                print(f"[VAD] VAD completed with engine: {engine}, {len(vad_segments)} segment(s)")
+                return asr_result
+            except Exception as e:
+                last_error = e
+                print(f"[VAD] VAD engine '{engine}' failed: {e}")
+        
+        if last_error:
+            print(f"[VAD] All VAD engines failed (last error: {last_error}); continuing without VAD segmentation")
+        return asr_result
+
+    def _apply_diarization(
+        self,
+        asr_result: dict,
+        audio_path: str,
+        diarize_engine: str,
+        options: dict,
+    ) -> dict:
+        """Apply speaker diarization to ASR result."""
+        from backend.asr.speaker_diarization_processor import (
+            PyannoteDiarizationProcessor,
+            CamPlusDiarizationProcessor,
+            merge_diarization_with_asr
+        )
+        
+        # Select diarization processor
+        if diarize_engine == "pyannote":
+            processor = PyannoteDiarizationProcessor(**options)
+        elif diarize_engine == "cam++":
+            processor = CamPlusDiarizationProcessor(**options)
+        else:
+            raise ValueError(f"Unknown diarization engine: {diarize_engine}")
+        
+        # Run diarization
+        diarization_result = processor.diarize(audio_path, **options)
+        
+        # Merge diarization results with ASR result
+        return merge_diarization_with_asr(asr_result, diarization_result)
+
+    def _merge_vad_segments(
+        self,
+        asr_segments: List[dict],
+        vad_segments: List[Any],
+    ) -> List[dict]:
+        """Merge VAD segments with ASR segments.
+        
+        If ASR returned few segments but VAD detected many, use VAD boundaries
+        to split long ASR segments into smaller ones.
+        
+        Parameters
+        ----------
+        asr_segments : List[dict]
+            Original ASR segments with text
+        vad_segments : List[VADSegment]
+            VAD-detected speech segments with timestamps
+            
+        Returns
+        -------
+        List[dict]
+            Merged segments with VAD boundaries and ASR text
+        """
+        if not vad_segments:
+            return asr_segments
+        
+        # Check if we have word-level timestamps
+        has_words = any("words" in seg and seg["words"] for seg in asr_segments)
+        
+        if has_words:
+            print(f"[VAD] Merging {len(asr_segments)} ASR segments with {len(vad_segments)} VAD segments using word timestamps")
+            all_words = []
+            for seg in asr_segments:
+                all_words.extend(seg.get("words", []))
+            
+            # Sort words by start time
+            all_words.sort(key=lambda x: x.get("start", 0))
+            
+            merged = []
+            word_idx = 0
+            for i, vad_seg in enumerate(vad_segments):
+                seg_words = []
+                # Find words that fall into this VAD segment
+                # We use a small buffer (0.1s) to include words that might start slightly before VAD
+                while word_idx < len(all_words):
+                    w = all_words[word_idx]
+                    w_start = w.get("start", 0)
+                    
+                    if w_start < vad_seg.start - 0.1:
+                        # Word is before this VAD segment, skip it
+                        word_idx += 1
+                        continue
+                    if w_start < vad_seg.end:
+                        # Word starts within this VAD segment
+                        seg_words.append(w)
+                        word_idx += 1
+                    else:
+                        # Word starts after this VAD segment
+                        break
+                
+                if seg_words:
+                    # Detect if it's CJK (no spaces needed)
+                    is_cjk = any('\u4e00' <= c <= '\u9fff' for c in seg_words[0].get("word", ""))
+                    if is_cjk:
+                        seg_text = "".join(w.get("word", "") for w in seg_words)
+                    else:
+                        seg_text = " ".join(w.get("word", "") for w in seg_words)
+                    
+                    merged.append({
+                        "id": len(merged) + 1,
+                        "start": round(vad_seg.start, 3),
+                        "end": round(vad_seg.end, 3),
+                        "text": seg_text.strip(),
+                        "words": seg_words
+                    })
+            
+            # If we managed to produce merged segments, return them
+            if merged:
+                print(f"[VAD] Word-aware merge produced {len(merged)} segments")
+                return merged
+            # Fallback if no words matched VAD segments (unlikely)
+            print("[VAD] Word-aware merge failed to find matches, falling back to duration-based split")
+
+        # If ASR already has many segments, just filter by VAD overlap
+        if len(asr_segments) > len(vad_segments) * 0.5:
+            merged = []
+            for asr_seg in asr_segments:
+                seg_start = asr_seg.get("start", 0.0)
+                seg_end = asr_seg.get("end", 0.0)
+                
+                # Check if this segment overlaps with any VAD segment
+                for vad_seg in vad_segments:
+                    if (seg_start < vad_seg.end and seg_end > vad_seg.start):
+                        merged.append(asr_seg)
+                        break
+            
+            return merged if merged else asr_segments
+        
+        # ASR returned few segments (e.g., 1 big segment), use VAD to split
+        print(f"[VAD] Splitting {len(asr_segments)} ASR segments using {len(vad_segments)} VAD segments")
+        
+        # Concatenate all ASR text（英文按空格拼接，避免单词在切分边界粘连）
+        texts = [seg.get("text", "") for seg in asr_segments]
+        combined = "".join(texts)
+        if not combined.strip():
+            return asr_segments
+        is_cjk = any('\u4e00' <= c <= '\u9fff' for c in combined[:200])
+        separator = "" if is_cjk else " "
+        full_text = separator.join(t for t in texts if t)
+        
+        # Calculate total ASR duration for text distribution
+        total_asr_duration = sum(
+            seg.get("end", 0) - seg.get("start", 0) 
+            for seg in asr_segments
+        )
+        
+        # If ASR has no duration info, use VAD total duration
+        if total_asr_duration <= 0:
+            total_asr_duration = max(v.end for v in vad_segments) if vad_segments else 0
+        
+        # Distribute text to VAD segments based on duration proportion
+        merged = []
+        text_pos = 0
+        total_vad_duration = sum(v.end - v.start for v in vad_segments)
+        
+        for i, vad_seg in enumerate(vad_segments):
+            seg_duration = vad_seg.end - vad_seg.start
+            
+            # Calculate text proportion for this segment
+            if total_vad_duration > 0:
+                text_proportion = seg_duration / total_vad_duration
+            else:
+                text_proportion = 1.0 / len(vad_segments)
+            
+            # Calculate text length for this segment
+            text_len = int(len(full_text) * text_proportion)
+            
+            # Ensure we don't exceed text length
+            text_len = max(1, min(text_len, len(full_text) - text_pos))
+            
+            # For the last segment, use all remaining text
+            if i == len(vad_segments) - 1:
+                seg_text = full_text[text_pos:]
+            else:
+                seg_text = full_text[text_pos:text_pos + text_len]
+                # Try to find a natural break point (whitespace or punctuation)
+                # Avoid splitting in the middle of an English word
+                if text_pos + text_len < len(full_text):
+                    next_char = full_text[text_pos + text_len]
+                    # If we are in the middle of a word (current char and next char are both alphanumeric)
+                    if seg_text[-1].isalnum() and next_char.isalnum():
+                        # Find the last space or punctuation in seg_text to break there instead
+                        import re
+                        match = re.search(r'[\s,.!?;:，。！？、；：][^\s,.!?;:，。！？、；：]*$', seg_text)
+                        if match and match.start() > len(seg_text) // 2:
+                            seg_text = seg_text[:match.start() + 1]
+                            text_len = len(seg_text)
+                        else:
+                            # If no good break point found, try to extend to the next space
+                            remaining = full_text[text_pos + text_len:]
+                            space_match = re.search(r'[\s,.!?;:，。！？、；：]', remaining)
+                            if space_match:
+                                extra_len = space_match.start() + 1
+                                seg_text = full_text[text_pos:text_pos + text_len + extra_len]
+                                text_len = len(seg_text)
+            
+            text_pos += text_len
+            
+            if seg_text.strip():
+                merged.append({
+                    "id": len(merged) + 1,
+                    "start": round(vad_seg.start, 3),
+                    "end": round(vad_seg.end, 3),
+                    "text": seg_text.strip(),
+                })
+        
+        print(f"[VAD] Split into {len(merged)} segments")
+        return merged

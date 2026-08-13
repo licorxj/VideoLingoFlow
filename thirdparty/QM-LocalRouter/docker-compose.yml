@@ -1,0 +1,38 @@
+# ============================================================
+# LocalRouter - Docker Compose
+# ============================================================
+# Usage:
+#   docker compose up -d
+#   docker compose logs -f
+#   docker compose down
+# ============================================================
+
+version: "3.8"
+
+services:
+  localrouter:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: localrouter
+    ports:
+      - "12002:12002"   # Backend API
+      - "12001:12001"   # Frontend UI
+    volumes:
+      # Persist SQLite database and uploaded data
+      - localrouter_data:/app/backend/data
+    environment:
+      - BACKEND_PORT=12002
+      - FRONTEND_PORT=12001
+      - HOST=0.0.0.0
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:12002/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  localrouter_data:
+    driver: local

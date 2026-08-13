@@ -1,0 +1,16 @@
+{
+  "terminology": [
+    {
+      "term": "术语示例1",
+      "explanation": "术语的解释或翻译"
+    },
+    {
+      "term": "术语示例2",
+      "explanation": "术语的解释或翻译"
+    },
+    {
+      "term": "专有名词示例",
+      "explanation": "专有名词的解释或外文对照"
+    }
+  ]
+}

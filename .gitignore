@@ -1,0 +1,182 @@
+# Environment variables
+.env
+.env.local
+.env.*.local
+.env.temp
+
+# Runtime config files — 真实运行文件含密钥，不上传；
+# 脱敏上传版本为同名 *.temp（安装时由 install.py 还原为正式名）
+backend/config/asr_interfaces.json
+backend/config/tts_interfaces.json
+backend/config/config.yaml
+backend/config/imagegen_interfaces.json
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyd
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+backend/venv*/
+**/.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+*.log.*
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+voiceforge.db
+
+# Uploads and Outputs
+uploads/
+output/
+temp/
+cache/
+*_cache/
+tasks/
+voiceforge_data/
+.dbg/
+.runtime/*
+!.runtime/README.md
+!.runtime/local_env.bat.template
+
+# 闭源核心源码：收费/计费源码不入库（分发时由编译产物提供）
+backend/auth/cloud_auth_client.py
+backend/auth/cloud_auth_service.py
+backend/auth/subscription_guard.py
+backend/auth/error_codes.json
+backend/control_plane/workflow_runtime.py
+
+# 受保护编译产物（分平台二进制）随公开仓库分发（源码已闭源）
+!backend/auth_binaries/cp312/
+!backend/auth_binaries/cp312/**/
+!backend/auth_binaries/cp312/**/*.pyd
+!backend/auth_binaries/cp312/**/*.so
+!backend/control_plane_binaries/cp312/
+!backend/control_plane_binaries/cp312/**/
+!backend/control_plane_binaries/cp312/**/*.pyd
+!backend/control_plane_binaries/cp312/**/*.so
+# Runtime data (db / workspace / sessions) — 不应上传
+data/*
+# 例外：pi agent 必要配置随仓库分发（models/path-policy/工具二进制等）
+!data/workspace/
+data/workspace/*
+!data/workspace/pi-agent-config/
+!data/workspace/pi-install-staging/
+# 例外：QM-LocalRouter 的 backend/data 预设（含 app.db 预设设置）需随仓库分享
+!thirdparty/QM-LocalRouter/backend/data/
+# 例外内再排除：QM 数据备份目录（可能含敏感运行数据/密钥快照）
+thirdparty/QM-LocalRouter/backend/data/backups/
+
+# Model files
+_model_cache/
+
+# 备份归档（原始项目代码等，不入库）
+_backup/
+原始项目代码-不要参考/
+
+# Frontend
+node_modules/
+dist/
+dist-ssr/
+# 主前端构建产物需随 git 分发（无 node 环境用户可直接使用）
+!frontend/dist/
+*.local
+
+# thirdparty：源码与 Windows 构建产物需上传；仅忽略重型/可再生内容
+#   - cloakbrowser: 运行时下载（install_thirdparty.py 负责）
+#   - bun: 运行时下载（install_thirdparty.py 负责）
+#   - node_modules / .next / .turbo: 依赖与构建缓存
+thirdparty/cloakbrowser/
+thirdparty/bun/
+thirdparty/**/node_modules/
+thirdparty/**/.next/
+thirdparty/**/.turbo/
+thirdparty/**/.cache/
+# 已提交的 Windows 构建产物（dist）重新纳入 git
+!thirdparty/social-auto-upload-web-ui/frontend/dist/
+!thirdparty/QM-LocalRouter/frontend/dist/
+!thirdparty/pi/packages/*/dist/
+# 子项目 git 元数据归档（安装/更新时释放为各子项目 .git），随仓库分发
+!thirdparty/.git-archives/
+# social-auto-upload-web-ui 运行数据库（含各平台账号凭据），不随 git 分发
+thirdparty/social-auto-upload-web-ui/backend/db/
+share/
+原始项目代码/
+# 本机私有（付费核心仓库 / 历史参考代码 / IDE 私有文档），不上传
+收费代码编译/
+原始项目代码-不要参考/
+.trae/
+# 任务工作区（用户素材/产物）
+control_plane_workspaces/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Secrets and sensitive data
+*.key
+*.pem
+*.crt
+credentials.json
+secrets.json
+api_keys.json
+# 第三方社交发布运行时凭据数据（cookie / 账号数据）
+**/cookies/
+**/cookiesFile/
+
+# 运行时进程与临时文件
+*.pid
+thirdparty/**/.mcp_deps_hash
+
+# 本机专用（CUDA 打进 venv 的隔离环境）启动脚本，不随 git 分发；
+# 随 git 分发的通用版为 start.* / activate-venv.*
+一键启动.bat
+start-local-prod.bat
+进入后端虚拟环境.bat
+
+# Test files
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# Celery
+celerybeat-schedule
+celerybeat.pid

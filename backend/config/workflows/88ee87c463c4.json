@@ -1,0 +1,98 @@
+{
+  "id": "88ee87c463c4",
+  "name": "3a79f8a7a1aa40e3a8fb7583f580d7c3",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1786137867855",
+      "type": "workflow",
+      "position": {
+        "x": -1365,
+        "y": -2370
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "url"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "【开源minimax h3 一键复刻爆款视频 skill 公开了】 https://www.bilibili.com/video/BV1hZM16zEvo/?share_source=copy_web&vd_source=a2b9aa0b6d751b0161e2814c34c5e399",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": false,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "succeeded",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 430
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1786137875583",
+      "type": "workflow",
+      "position": {
+        "x": -825,
+        "y": -2355
+      },
+      "data": {
+        "nodeType": "platform_download",
+        "label": "平台视频下载",
+        "config": {
+          "download_subs": false,
+          "download_cover": false,
+          "resolution": "best",
+          "cookie_file": "",
+          "use_as_task_name": false
+        },
+        "status": "running",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 328
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "style": {
+        "stroke": "#06b6d4",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1786137867855",
+      "sourceHandle": "out-url",
+      "target": "node_2_1786137875583",
+      "targetHandle": "in-url",
+      "id": "xy-edge__node_1_1786137867855out-url-node_2_1786137875583in-url"
+    }
+  ],
+  "type": "task",
+  "createdAt": "2026-08-08T05:52:30",
+  "updatedAt": "2026-08-08T05:52:30"
+}

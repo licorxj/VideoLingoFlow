@@ -1,0 +1,64 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+!frontend/dist/
+build/
+venv/
+.venv/
+node_modules/
+.vscode/
+.idea/
+data/db/*.db
+data/videoFile/*
+data/cookiesFile/*
+data/s3_video_cache/
+!data/**/.gitkeep
+.DS_Store
+Thumbs.db
+.env
+*.env.local
+.superpowers/
+data/logs/*
+data/data/logs/*
+data/*
+
+
+# Tauri
+src-tauri/target/
+src-tauri/src-tauri/
+*.pdb
+
+# Build outputs
+frontend-dist/
+
+# Embedded Python
+python/
+.gstack/
+docs/superpowers/.claude/
+.claude/
+src-tauri/bundle-resources/*
+src-tauri/*.exe
+data/frames/*
+data/image-publish/*
+data/materials/*
+data/upload_chunks
+backend/bin/
+
+# 启动脚本临时文件
+.backend_deps_hash
+.frontend_deps_hash
+.mcp_deps_hash
+.backend.pid
+.frontend.pid
+.mcp.pid
+backend.log
+frontend.log
+mcp.logdependency/
+dependency*
+QianFan*
+*.log
+AGENTS.md
+
+# ZCode 工具配置
+.zcode/

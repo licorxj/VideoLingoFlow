@@ -1,0 +1,91 @@
+{
+  "id": "285b6e739253",
+  "name": "4712b8fc28e44c84bcfae9539255101d",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1783324270560",
+      "type": "workflow",
+      "position": {
+        "x": -2010,
+        "y": -2295
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "url"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "https://www.bilibili.com/video/BV1hZM16zEvo/?share_source=copy_web&vd_source=a2b9aa0b6d751b0161e2814c34c5e399",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": false,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "succeeded",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 430
+      },
+      "selected": false
+    },
+    {
+      "id": "node_1_1786144118473",
+      "type": "workflow",
+      "position": {
+        "x": -1470,
+        "y": -2325
+      },
+      "data": {
+        "nodeType": "platform_download",
+        "label": "平台视频下载",
+        "config": {
+          "download_subs": false,
+          "download_cover": false,
+          "resolution": "best",
+          "cookie_file": "",
+          "use_as_task_name": false
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 328
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1783324270560",
+      "sourceHandle": "out-url",
+      "target": "node_1_1786144118473",
+      "targetHandle": "in-url",
+      "id": "xy-edge__node_1_1783324270560out-url-node_1_1786144118473in-url"
+    }
+  ],
+  "type": "task",
+  "createdAt": "2026-08-08T07:09:07",
+  "updatedAt": "2026-08-08T07:09:07"
+}

@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>更新日志 20260609 · 千帆云递 · QianFan Sync</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;600;700&display=swap"
+    rel="stylesheet"
+  />
+  <style>
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-0: #0B0F1A;
+      --bg-1: #111726;
+      --bg-2: #1A2236;
+      --line: rgba(255, 255, 255, 0.08);
+      --line-strong: rgba(255, 255, 255, 0.18);
+      --text: #E8ECF4;
+      --text-mute: #8A93A6;
+      --text-dim: #5C6577;
+
+      --ink: #D6D3C8;
+      --ink-2: #A8A29E;
+      --amber: #F59E0B;
+      --amber-2: #D97706;
+      --indigo: #6366F1;
+      --emerald: #10B981;
+      --rose: #F43F5E;
+      --cyan: #06B6D4;
+      --violet: #8B5CF6;
+      --pink: #EC4899;
+
+      --grad-amber: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+      --grad-indigo: linear-gradient(135deg, #818CF8 0%, #6366F1 100%);
+      --grad-emerald: linear-gradient(135deg, #34D399 0%, #10B981 100%);
+      --grad-rose: linear-gradient(135deg, #FB7185 0%, #F43F5E 100%);
+      --grad-cyan: linear-gradient(135deg, #22D3EE 0%, #06B6D4 100%);
+      --grad-violet: linear-gradient(135deg, #A78BFA 0%, #8B5CF6 100%);
+      --grad-pink: linear-gradient(135deg, #F472B6 0%, #EC4899 100%);
+    }
+
+    html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', 'Noto Sans SC', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg-0);
+      color: var(--text);
+      line-height: 1.55;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      background-image:
+        radial-gradient(at 8% 0%, rgba(245, 158, 11, 0.08) 0px, transparent 50%),
+        radial-gradient(at 92% 100%, rgba(99, 102, 241, 0.08) 0px, transparent 50%);
+    }
+
+    /* ---------- Top Bar ---------- */
+    .topbar {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 18px 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      backdrop-filter: blur(20px);
+      background: rgba(11, 15, 26, 0.55);
+      border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; font-weight: 600; font-size: 14px; letter-spacing: 0.04em; }
+    .brand-mark {
+      width: 28px; height: 28px; border-radius: 8px;
+      background: var(--grad-amber);
+      display: grid; place-items: center; color: #111;
+    }
+    .brand-tag { color: var(--text-mute); font-weight: 400; }
+    .topbar-meta { display: flex; align-items: center; gap: 18px; font-size: 12px; color: var(--text-mute); }
+    .topbar-meta b { color: var(--text); font-weight: 600; }
+
+    /* ---------- Side dots ---------- */
+    .sidenav {
+      position: fixed; right: 28px; top: 50%; transform: translateY(-50%); z-index: 90;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .sidenav-item {
+      display: flex; align-items: center; gap: 10px; cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    .sidenav-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.2);
+      transition: all 0.3s ease;
+    }
+    .sidenav-label {
+      font-size: 11px; color: var(--text-dim); opacity: 0;
+      transform: translateX(6px);
+      transition: all 0.3s ease;
+      white-space: nowrap; font-weight: 500; letter-spacing: 0.04em;
+    }
+    .sidenav-item:hover .sidenav-dot { background: rgba(255, 255, 255, 0.5); transform: scale(1.3); }
+    .sidenav-item:hover .sidenav-label { opacity: 1; transform: translateX(0); color: var(--text); }
+    .sidenav-item.active .sidenav-dot { background: var(--amber); transform: scale(1.5); box-shadow: 0 0 12px rgba(245, 158, 11, 0.6); }
+    .sidenav-item.active .sidenav-label { opacity: 1; color: var(--amber); }
+
+    /* ---------- Slide base ---------- */
+    .slide {
+      min-height: 100vh;
+      padding: 110px 8vw 80px;
+      scroll-snap-align: start;
+      display: flex; flex-direction: column; justify-content: center;
+      position: relative;
+    }
+    .slide-num {
+      position: absolute; top: 90px; right: 8vw;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; color: var(--text-dim);
+      letter-spacing: 0.15em;
+    }
+    .slide-num b { color: var(--amber); font-weight: 600; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--amber); margin-bottom: 18px;
+    }
+    .eyebrow::before { content: ''; width: 28px; height: 1px; background: var(--amber); }
+
+    h1.title {
+      font-size: clamp(40px, 5.5vw, 76px);
+      line-height: 1.05; font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 18px;
+    }
+    h2.title {
+      font-size: clamp(32px, 4vw, 56px);
+      line-height: 1.1; font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .title em {
+      font-style: normal;
+      background: var(--grad-amber);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .lede {
+      font-size: clamp(15px, 1.4vw, 18px);
+      color: var(--text-mute);
+      max-width: 720px;
+    }
+
+    /* ---------- Slide 1: Cover ---------- */
+    .cover { align-items: flex-start; }
+    .cover-stamp {
+      display: flex; align-items: center; gap: 14px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; color: var(--text-mute);
+      padding: 6px 14px; border: 1px solid var(--line-strong);
+      border-radius: 999px; margin-bottom: 24px;
+    }
+    .cover-stamp .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); box-shadow: 0 0 10px var(--emerald); animation: pulse 1.6s infinite; }
+    @keyframes pulse { 0%,100% { opacity: 1 } 50% { opacity: 0.35 } }
+
+    .cover-meta {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px; margin-top: 56px; max-width: 920px; width: 100%;
+    }
+    .meta-card {
+      padding: 22px 24px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      transition: all 0.3s ease;
+    }
+    .meta-card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+    .meta-card .icon { width: 32px; height: 32px; margin-bottom: 14px; }
+    .meta-card .num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 32px; font-weight: 700; color: var(--text); letter-spacing: -0.02em;
+    }
+    .meta-card .label { font-size: 13px; color: var(--text-mute); margin-top: 2px; }
+
+    .scroll-hint {
+      position: absolute; bottom: 32px; left: 50%; transform: translateX(-50%);
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      font-size: 11px; color: var(--text-dim); letter-spacing: 0.2em; text-transform: uppercase;
+    }
+    .scroll-hint .line {
+      width: 1px; height: 36px; background: linear-gradient(180deg, var(--amber) 0%, transparent 100%);
+      animation: scrollLine 1.6s ease-in-out infinite;
+    }
+    @keyframes scrollLine { 0% { transform: scaleY(0); transform-origin: top } 50% { transform: scaleY(1); transform-origin: top } 100% { transform: scaleY(0); transform-origin: bottom } }
+
+    /* ---------- Section 2: Highlights ---------- */
+    .highlight-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 16px; margin-top: 40px;
+    }
+    .h-card {
+      padding: 24px;
+      background: var(--bg-1);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      position: relative; overflow: hidden;
+      transition: all 0.35s ease;
+    }
+    .h-card::before {
+      content: ''; position: absolute; inset: 0;
+      background: var(--card-grad, var(--grad-amber));
+      opacity: 0; transition: opacity 0.4s ease;
+      pointer-events: none;
+    }
+    .h-card:hover { transform: translateY(-3px); border-color: var(--line-strong); }
+    .h-card:hover::before { opacity: 0.06; }
+    .h-card .icon-wrap {
+      width: 44px; height: 44px; border-radius: 12px;
+      display: grid; place-items: center;
+      background: var(--card-grad, var(--grad-amber));
+      margin-bottom: 16px;
+    }
+    .h-card h3 { font-size: 17px; font-weight: 600; margin-bottom: 6px; letter-spacing: -0.01em; }
+    .h-card p { font-size: 13.5px; color: var(--text-mute); line-height: 1.55; }
+    .h-card .tag {
+      display: inline-block; font-size: 11px; font-family: 'JetBrains Mono', monospace;
+      color: var(--amber); margin-top: 14px; letter-spacing: 0.05em;
+    }
+
+    /* ---------- Generic two-col layouts ---------- */
+    .split { display: grid; grid-template-columns: 1fr 1fr; gap: 64px; align-items: center; margin-top: 40px; }
+    .split.reverse > :first-child { order: 2; }
+
+    .feature-list { list-style: none; display: flex; flex-direction: column; gap: 16px; }
+    .feature-list li {
+      display: flex; gap: 14px; align-items: flex-start;
+      padding: 14px 16px; border-radius: 10px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--line);
+      transition: all 0.25s ease;
+    }
+    .feature-list li:hover { background: rgba(255, 255, 255, 0.04); border-color: var(--line-strong); }
+    .feature-list .ico {
+      flex: 0 0 28px; width: 28px; height: 28px; border-radius: 8px;
+      display: grid; place-items: center;
+    }
+    .feature-list .body { flex: 1; }
+    .feature-list .body h4 { font-size: 14.5px; font-weight: 600; margin-bottom: 2px; }
+    .feature-list .body p { font-size: 12.5px; color: var(--text-mute); line-height: 1.5; }
+
+    /* ---------- Diagram / Architecture ---------- */
+    .diagram {
+      padding: 28px;
+      background: var(--bg-1);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12.5px;
+    }
+    .diagram .layer {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      padding: 12px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      margin-bottom: 8px;
+      transition: all 0.25s ease;
+    }
+    .diagram .layer:hover { background: rgba(255,255,255,0.05); }
+    .diagram .layer .pill {
+      display: inline-block; padding: 3px 9px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+    }
+    .diagram .layer .arrow { color: var(--text-dim); }
+    .diagram .layer-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .diagram .layer-row .pill { background: var(--bg-2); color: var(--text); }
+
+    /* ---------- Stats / metrics row ---------- */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; margin-top: 36px;
+    }
+    .stat {
+      padding: 18px 20px;
+      background: var(--bg-1);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+    .stat .v {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 26px; font-weight: 700; letter-spacing: -0.02em;
+    }
+    .stat .l { font-size: 12.5px; color: var(--text-mute); margin-top: 2px; }
+
+    /* ---------- Platform grid ---------- */
+    .platform-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 14px; margin-top: 36px;
+    }
+    .plat-card {
+      padding: 22px;
+      background: var(--bg-1);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .plat-card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+    .plat-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+    .plat-logo {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: grid; place-items: center;
+      background: var(--bg-2);
+      flex: 0 0 36px;
+    }
+    .plat-name { font-size: 15px; font-weight: 600; }
+    .plat-sub { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+    .plat-items { display: flex; flex-direction: column; gap: 8px; }
+    .plat-items li {
+      list-style: none; display: flex; align-items: flex-start; gap: 8px;
+      font-size: 12.5px; color: var(--text-mute); line-height: 1.5;
+    }
+    .plat-items li svg { flex: 0 0 14px; margin-top: 4px; color: var(--emerald); }
+    .plat-items { padding: 0; }
+
+    /* ---------- Timeline / commit strip ---------- */
+    .commit-strip {
+      display: grid; grid-template-columns: repeat(7, 1fr);
+      gap: 8px; margin-top: 36px;
+    }
+    .commit-cell {
+      padding: 14px 12px; border-radius: 10px;
+      background: var(--bg-1); border: 1px solid var(--line);
+      transition: all 0.25s ease;
+    }
+    .commit-cell:hover { border-color: var(--line-strong); }
+    .commit-cell .n { font-family: 'JetBrains Mono', monospace; font-size: 20px; font-weight: 700; }
+    .commit-cell .t { font-size: 11px; color: var(--text-mute); margin-top: 2px; }
+    .commit-cell .pct {
+      height: 3px; border-radius: 2px; margin-top: 10px;
+      background: var(--cell-color, var(--amber));
+    }
+
+    /* ---------- Modules grid (MCP) ---------- */
+    .modules-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; margin-top: 36px;
+    }
+    .mod-card {
+      padding: 18px 18px 20px;
+      background: var(--bg-1);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .mod-card:hover { border-color: var(--line-strong); transform: translateY(-2px); }
+    .mod-card .top { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .mod-card .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px; padding: 2px 7px; border-radius: 4px;
+      background: rgba(245, 158, 11, 0.15); color: var(--amber);
+      letter-spacing: 0.04em;
+    }
+    .mod-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+    .mod-card .desc { font-size: 12px; color: var(--text-mute); line-height: 1.5; margin-bottom: 10px; }
+    .mod-card .tools {
+      display: flex; gap: 6px; flex-wrap: wrap;
+      font-family: 'JetBrains Mono', monospace; font-size: 10.5px;
+    }
+    .mod-card .tools span {
+      padding: 2px 6px; border-radius: 4px;
+      background: rgba(255,255,255,0.04); color: var(--text-mute);
+    }
+
+    /* ---------- Workflow / process steps ---------- */
+    .workflow {
+      display: grid; grid-template-columns: repeat(5, 1fr);
+      gap: 0; margin-top: 40px; position: relative;
+    }
+    .wf-step {
+      padding: 0 14px; position: relative;
+    }
+    .wf-step:not(:last-child)::after {
+      content: ''; position: absolute; right: 0; top: 18px; width: 14px; height: 1px;
+      background: var(--line-strong);
+    }
+    .wf-step .num {
+      width: 36px; height: 36px; border-radius: 10px;
+      display: grid; place-items: center;
+      background: var(--bg-1); border: 1px solid var(--line-strong);
+      font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 600;
+      color: var(--amber); margin-bottom: 12px;
+    }
+    .wf-step h4 { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+    .wf-step p { font-size: 12px; color: var(--text-mute); line-height: 1.5; }
+
+    /* ---------- Quote / pull-out ---------- */
+    .pull-out {
+      margin-top: 32px; padding: 24px 28px;
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.06) 0%, rgba(99, 102, 241, 0.04) 100%);
+      border: 1px solid var(--line);
+      border-left: 3px solid var(--amber);
+      border-radius: 4px 14px 14px 4px;
+    }
+    .pull-out p { font-size: 15px; color: var(--text); line-height: 1.6; max-width: 720px; }
+    .pull-out .cite { display: block; font-size: 12px; color: var(--text-dim); margin-top: 10px; font-family: 'JetBrains Mono', monospace; }
+
+    /* ---------- Footer of each slide ---------- */
+    .slide-foot {
+      position: absolute; bottom: 24px; left: 8vw;
+      font-size: 11px; color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em;
+    }
+
+    /* ---------- Code block ---------- */
+    .code-block {
+      margin-top: 32px;
+      background: var(--bg-1);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .code-block-head {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 18px;
+      border-bottom: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.02);
+    }
+    .code-block-head .title {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--text-mute); letter-spacing: 0.08em;
+    }
+    .code-block-head .dots { display: flex; gap: 6px; }
+    .code-block-head .dots span {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: rgba(255, 255, 255, 0.12);
+    }
+    .code-block-body {
+      padding: 20px 22px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; line-height: 1.7;
+      color: var(--text);
+      white-space: pre;
+      overflow-x: auto;
+    }
+    .code-block-body .key { color: #F59E0B; }
+    .code-block-body .str { color: #34D399; }
+    .code-block-body .punc { color: var(--text-dim); }
+    .code-block-body .path { color: #22D3EE; }
+    .code-block-foot {
+      padding: 12px 18px;
+      border-top: 1px solid var(--line);
+      background: rgba(245, 158, 11, 0.04);
+      font-size: 12.5px; color: var(--text-mute);
+      display: flex; align-items: flex-start; gap: 10px;
+    }
+    .code-block-foot svg { flex: 0 0 16px; margin-top: 2px; color: var(--amber); }
+    .code-block-foot code {
+      font-family: 'JetBrains Mono', monospace; font-size: 12px;
+      color: var(--amber); padding: 1px 6px; border-radius: 4px;
+      background: rgba(245, 158, 11, 0.08);
+    }
+
+    /* ---------- End slide ---------- */
+    .end {
+      align-items: center; text-align: center;
+    }
+    .end .big {
+      font-size: clamp(56px, 9vw, 140px);
+      font-weight: 800; letter-spacing: -0.04em;
+      background: var(--grad-amber);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1; margin-bottom: 24px;
+    }
+    .end p { max-width: 540px; color: var(--text-mute); font-size: 15px; }
+
+    .end-actions { display: flex; gap: 16px; margin-top: 40px; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 22px; border-radius: 10px;
+      font-size: 14px; font-weight: 500; cursor: pointer;
+      transition: all 0.25s ease;
+      border: 1px solid var(--line-strong);
+      color: var(--text);
+      background: transparent;
+    }
+    .btn:hover { background: rgba(255,255,255,0.05); transform: translateY(-1px); }
+    .btn.primary { background: var(--grad-amber); color: #111; border: none; }
+    .btn.primary:hover { box-shadow: 0 8px 24px -8px rgba(245, 158, 11, 0.5); }
+
+    @media (max-width: 980px) {
+      .split { grid-template-columns: 1fr; gap: 32px; }
+      .split.reverse > :first-child { order: 0; }
+      .highlight-grid, .platform-grid { grid-template-columns: repeat(2, 1fr); }
+      .modules-grid { grid-template-columns: repeat(2, 1fr); }
+      .stats-row, .commit-strip { grid-template-columns: repeat(2, 1fr); }
+      .workflow { grid-template-columns: repeat(2, 1fr); gap: 24px; }
+      .wf-step:not(:last-child)::after { display: none; }
+      .cover-meta { grid-template-columns: repeat(2, 1fr); }
+      .sidenav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== TOP BAR ===== -->
+  <header class="topbar">
+    <div class="brand">
+      <span class="brand-mark">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+      </span>
+      千帆云递 · QianFan Sync
+      <span class="brand-tag">/ Changelog</span>
+    </div>
+    <div class="topbar-meta">
+      <span>分支 <b>feature/20260608</b></span>
+      <span>基线 <b>master</b></span>
+      <span style="color: var(--amber);">· 2026.06.09</span>
+    </div>
+  </header>
+
+  <!-- ===== SIDE NAV ===== -->
+  <nav class="sidenav" id="sidenav"></nav>
+
+  <!-- =================================================== -->
+  <!-- SLIDE 1: COVER                                      -->
+  <!-- =================================================== -->
+  <section class="slide cover" data-label="封面" data-short="01">
+    <div class="slide-num"><b>01</b> / 07</div>
+    <div class="cover-stamp">
+      <span class="dot"></span>
+      <span>v0.6.0 · RELEASE NOTES</span>
+    </div>
+    <h1 class="title">
+      发布历史<em>重塑</em>，<br />
+      一次点击，<em>一目了然</em>
+    </h1>
+    <p class="lede">
+      本次版本基于 feature/20260608 分支，相较 master 基线累计 29 次提交、7964 行新增、1491 行删除。把 4 张零散发布表合并为统一的「主表 + 明细表」结构，发布历史页整页重写为卡片式 UI，并修了一键填写对话框的封面图 bug。专注「把数据重新组织好，让用户少看一眼」。
+    </p>
+
+    <div class="cover-meta">
+      <div class="meta-card">
+        <div class="icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#F59E0B" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16M4 12h16M4 17h10" />
+          </svg>
+        </div>
+        <div class="num">4 → 2</div>
+        <div class="label">表合并</div>
+      </div>
+      <div class="meta-card">
+        <div class="icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#10B981" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="14" rx="2" />
+            <path d="M8 21h8M12 18v3" />
+          </svg>
+        </div>
+        <div class="num">卡片</div>
+        <div class="label">UI 重写</div>
+      </div>
+      <div class="meta-card">
+        <div class="icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#06B6D4" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <div class="num">29</div>
+        <div class="label">commits</div>
+      </div>
+      <div class="meta-card">
+        <div class="icon">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#8B5CF6" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 7v5l3 3" />
+          </svg>
+        </div>
+        <div class="num">40/40</div>
+        <div class="label">测试通过</div>
+      </div>
+    </div>
+
+    <div class="scroll-hint">
+      <span>SCROLL</span>
+      <div class="line"></div>
+    </div>
+  </section>
+
+  <!-- =================================================== -->
+  <!-- SLIDE 2: HIGHLIGHTS                                  -->
+  <!-- =================================================== -->
+  <section class="slide" data-label="五大核心亮点" data-short="02">
+    <div class="slide-num"><b>02</b> / 07</div>
+    <div class="eyebrow">SECTION 02 · HIGHLIGHTS</div>
+    <h2 class="title">五大核心<em>亮点</em></h2>
+    <p class="lede">把"看上去都差不多"的发布历史，做成"一眼能看完"的发布历史。本期五个重点：表合并、卡片 UI、一键填写修复、缓存管理、兼容性兜底。</p>
+
+    <div class="highlight-grid">
+      <div class="h-card" style="--card-grad: var(--grad-amber);">
+        <div class="icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 7h16M4 12h16M4 17h10" />
+          </svg>
+        </div>
+        <h3>4 表 → 2 表合并</h3>
+        <p>publish_tasks / publish_logs / image_publish_tasks / image_publish_logs 整表删除。统一为 publish_batches（主表）+ publish_details（明细表 FK→主表）。视频/图文同构。</p>
+        <span class="tag">SCHEMA · UNIFIED</span>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-indigo);">
+        <div class="icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="14" rx="2" />
+            <path d="M8 21h8M12 18v3" />
+          </svg>
+        </div>
+        <h3>PublishHistory 卡片化</h3>
+        <p>从平铺表格重写为卡片列表：封面 + 标题 + 描述 + 账号汇总 + 状态徽标 + 时间。点击展开内联明细（账号/平台/耗时/状态/错误/publish_url）。</p>
+        <span class="tag">UI · CARDS</span>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-emerald);">
+        <div class="icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+        </div>
+        <h3>一键填写三连修</h3>
+        <p>封面 URL 改为走 /api/materials/file/{path}；账号按模板 channels 自动勾选；表单按平台填入 platformConfigs。三个根因，三个修复。</p>
+        <span class="tag">FIX · ONE-CLICK</span>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-rose);">
+        <div class="icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 6h18l-2 13H5L3 6z" />
+            <path d="M8 6V4a4 4 0 0 1 8 0v2" />
+          </svg>
+        </div>
+        <h3>S3 视频缓存管理</h3>
+        <p>抽帧时下载到 data/s3_video_cache/ 的 S3 视频（308MB+）现在能在系统设置"缓存管理"一键清理。get_stats 改读新表修复 500。</p>
+        <span class="tag">CACHE · OPS</span>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-cyan);">
+        <div class="icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+          </svg>
+        </div>
+        <h3>向后兼容兜底</h3>
+        <p>封面 URL 在 material_id 缺失时回退到 account_configs.thumbnailLandscape；中英文平台名映射；测试隔离修复。改动 0 灾难。</p>
+        <span class="tag">COMPAT · SAFE</span>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-violet);">
+        <div class="icon-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
+        <h3>40/40 测试通过</h3>
+        <p>10 个测试文件：TDD 流程（写失败测试 → 改代码 → 通过）。覆盖 /postVideo、image-publish、task_queue、tasks、history、publish-templates、materials 全链路。</p>
+        <span class="tag">TESTS · TDD</span>
+      </div>
+    </div>
+
+    <div class="slide-foot">02 · HIGHLIGHTS</div>
+  </section>
+
+  <!-- =================================================== -->
+  <!-- SLIDE 3: DATA MODEL                                  -->
+  <!-- =================================================== -->
+  <section class="slide" data-label="数据模型" data-short="03">
+    <div class="slide-num"><b>03</b> / 07</div>
+    <div class="eyebrow">SECTION 03 · DATA MODEL</div>
+    <h2 class="title">四表 → 两表：<em>主-子</em>结构统一</h2>
+    <p class="lede">视频（publish_tasks）和图文（image_publish_tasks + image_publish_logs）原本走两套表、两套粒度。这次合并为统一的主-子结构：批次 + 明细。</p>
+
+    <div class="diagram">
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--rose); margin-bottom: 8px; letter-spacing: 0.08em;">// BEFORE · v0.5.0</div>
+      <div class="layer" style="background: rgba(244, 63, 94, 0.04);">
+        <div class="layer-row">
+          <span class="pill" style="background: rgba(244, 63, 94, 0.2); color: var(--rose);">publish_tasks</span>
+          <span class="arrow">+</span>
+          <span class="pill" style="background: rgba(244, 63, 94, 0.2); color: var(--rose);">publish_logs</span>
+        </div>
+        <div class="layer-row" style="margin-top: 6px;">
+          <span class="pill" style="background: rgba(244, 63, 94, 0.2); color: var(--rose);">image_publish_tasks</span>
+          <span class="arrow">+</span>
+          <span class="pill" style="background: rgba(244, 63, 94, 0.2); color: var(--rose);">image_publish_logs</span>
+        </div>
+      </div>
+
+      <div style="font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--emerald); margin: 16px 0 8px; letter-spacing: 0.08em;">// AFTER · v0.6.0</div>
+      <div class="layer" style="background: rgba(16, 185, 129, 0.04);">
+        <div class="layer-row">
+          <span class="pill" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald);">publish_batches</span>
+          <span class="arrow" style="color: var(--emerald);">← 1 batch / 每次发布</span>
+        </div>
+        <div class="layer-row" style="margin-top: 6px;">
+          <span class="pill" style="background: rgba(16, 185, 129, 0.2); color: var(--emerald);">publish_details</span>
+          <span class="arrow" style="color: var(--emerald);">← N rows / 每账号</span>
+        </div>
+      </div>
+
+      <div style="margin-top: 18px; padding: 14px 16px; background: rgba(99, 102, 241, 0.06); border-radius: 10px; font-size: 12.5px; color: var(--text-mute); line-height: 1.5;">
+        <b style="color: var(--text);">不</b>做数据迁移。发布历史功能尚未正式使用，历史数据直接丢弃。<br />
+        新表都加 5 个索引：created_at、status、batch_id、platform 覆盖查询热路径。
+      </div>
+    </div>
+
+    <div class="slide-foot">03 · DATA MODEL</div>
+  </section>
+
+  <!-- =================================================== -->
+  <!-- SLIDE 4: PUBLISH HISTORY CARD UI                    -->
+  <!-- =================================================== -->
+  <section class="slide" data-label="卡片 UI" data-short="04">
+    <div class="slide-num"><b>04</b> / 07</div>
+    <div class="eyebrow">SECTION 04 · PUBLISH HISTORY</div>
+    <h2 class="title">PublishHistory：<em>卡片</em>取代表格</h2>
+    <p class="lede">N 个账号的一次发布 = 1 张卡片。点击卡片向内展开 N 行明细，比一行一账号的平铺表格直观得多。</p>
+
+    <div class="split">
+      <div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--amber); margin-bottom: 12px; letter-spacing: 0.1em;">// 收起态</div>
+        <div style="padding: 16px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; font-size: 12.5px; line-height: 1.55;">
+          <div style="display: flex; gap: 14px; margin-bottom: 10px;">
+            <div style="width: 80px; height: 48px; background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); border-radius: 6px; flex-shrink: 0;"></div>
+            <div style="flex: 1;">
+              <div style="font-weight: 600; margin-bottom: 4px;">千帆云递 v0.5.0 开源发布</div>
+              <div style="color: var(--text-mute); font-size: 11.5px;">一款号称「发到吐」的跨平台发布工具 · 2分钟前</div>
+            </div>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: center; font-size: 11px;">
+            <span style="color: var(--emerald);">3账号 2成功 1失败</span>
+            <span class="status-tag" style="background: rgba(245,158,11,0.15); color: #F59E0B; padding: 2px 8px; border-radius: 4px;">部分失败</span>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan); margin-bottom: 12px; letter-spacing: 0.1em;">// 展开态</div>
+        <div style="padding: 16px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; font-size: 12.5px; line-height: 1.7;">
+          <div style="font-weight: 600; margin-bottom: 10px;">展开 3 行明细：</div>
+          <div style="font-family: 'JetBrains Mono', monospace; font-size: 11.5px; color: var(--text-mute);">
+            <div>✓  账号A · 抖音    · 2分10秒 · 成功</div>
+            <div>✓  账号B · 小红书  · 1分45秒 · 成功</div>
+            <div style="color: var(--rose);">✗  账号C · B站  · 0分30秒 · 失败</div>
+            <div style="color: var(--rose); padding-left: 20px; font-size: 10.5px;">错误：登录已过期</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="highlight-grid" style="grid-template-columns: repeat(3, 1fr); margin-top: 32px;">
+      <div class="h-card" style="--card-grad: var(--grad-amber);">
+        <h3>封面缩略图</h3>
+        <p>横版封面优先，无则用竖版。后端解析 material_id → materials.stored_path，缺则回退到 account_configs 里的路径。</p>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-indigo);">
+        <h3>账号汇总 + 状态</h3>
+        <p>"3账号 2成功 1失败"+ 状态徽标（全部成功 / 部分失败 / 全部失败 / 等待中 / 发布中）。</p>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-emerald);">
+        <h3>类型过滤</h3>
+        <p>新增 typeFilter（视频/图文/全部）+ 原有 timeRange / platform / status filter 全保留。</p>
+      </div>
+    </div>
+
+    <div class="slide-foot">04 · PUBLISH HISTORY</div>
+  </section>
+
+  <!-- =================================================== -->
+  <!-- SLIDE 5: ONE-CLICK FILL FIX                           -->
+  <!-- =================================================== -->
+  <section class="slide" data-label="一键填写修复" data-short="05">
+    <div class="slide-num"><b>05</b> / 07</div>
+    <div class="eyebrow">SECTION 05 · ONE-CLICK FILL</div>
+    <h2 class="title">一键填写的<em>三个根因</em>三个修</h2>
+    <p class="lede">从用户视角："封面没显示、账号没复原、表单没填上"。三个独立的 bug，串成一条"端到端填不进去"的故事。</p>
+
+    <div class="split">
+      <div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--rose); margin-bottom: 12px; letter-spacing: 0.1em;">// BUG #1：封面 URL 错</div>
+        <ul class="feature-list">
+          <li>
+            <div class="ico" style="background: var(--grad-rose);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></div>
+            <div class="body">
+              <h4>旧：<code>http://host:5409/uploads/...</code></h4>
+              <p>Vite proxy 没转发 /uploads/ 路径，封面 404。</p>
+            </div>
+          </li>
+          <li>
+            <div class="ico" style="background: var(--grad-emerald);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></div>
+            <div class="body">
+              <h4>新：<code>/api/materials/file/{path}</code></h4>
+              <p>跟 Vite proxy 走 /api 通到 5409 后端，封面正常加载。</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--amber); margin-bottom: 12px; letter-spacing: 0.1em;">// BUG #2：账号不复原</div>
+        <ul class="feature-list">
+          <li>
+            <div class="ico" style="background: var(--grad-rose);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></div>
+            <div class="body">
+              <h4>handleOneClickFill 不动 publishAccountIds</h4>
+              <p>原代码只填 platformConfigs，账号选择保持用户当前态。</p>
+            </div>
+          </li>
+          <li>
+            <div class="ico" style="background: var(--grad-emerald);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></div>
+            <div class="body">
+              <h4>按 channels 自动勾选</h4>
+              <p>清空当前选中 → 遍历 record.channels → 找对应平台 → 把所有匹配账号加入集合。</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="split" style="margin-top: 32px;">
+      <div>
+        <div style="font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--cyan); margin-bottom: 12px; letter-spacing: 0.1em;">// BUG #3：表单没填上</div>
+        <ul class="feature-list">
+          <li>
+            <div class="ico" style="background: var(--grad-rose);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></div>
+            <div class="body">
+              <h4>把 account_configs 当平台嵌套 dict</h4>
+              <p>实际是单 detail 扁平配置（{title, description, tags...}），字符串被 typeof === 'object' 过滤掉。</p>
+            </div>
+          </li>
+          <li>
+            <div class="ico" style="background: var(--grad-amber);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg></div>
+            <div class="body">
+              <h4>中英文 key 不匹配</h4>
+              <p>platformConfigs 用 douyin 英文 key，channels[].platform 是抖音中文名，写入不存在的 key。</p>
+            </div>
+          </li>
+          <li>
+            <div class="ico" style="background: var(--grad-emerald);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12" /></svg></div>
+            <div class="body">
+              <h4>按 channels 逐个平台填 + platformNameToKey</h4>
+              <p>遍历 channels 拿 platformNameToKey 转换后填 platformConfigs[key] = {...config}。</p>
+            </div>
+          </li>
+        </ul>
+      </div>
+      <div>
+        <div class="pull-out" style="margin-top: 0;">
+          <b style="color: var(--emerald);">修复后效果：</b><br />
+          点"从历史一键填写" → 选中模板 → <b style="color: var(--amber);">封面图正常显示</b> + <b style="color: var(--amber);">平台对应账号被自动勾选</b> + <b style="color: var(--amber);">标题/描述/标签填入表单</b>。一次点击完成"选历史 → 用历史"完整链路。
+        </div>
+      </div>
+    </div>
+
+    <div class="slide-foot">05 · ONE-CLICK FILL</div>
+  </section>
+
+  <!-- =================================================== -->
+  <!-- SLIDE 6: CACHE & TEST                                -->
+  <!-- =================================================== -->
+  <section class="slide" data-label="缓存与测试" data-short="06">
+    <div class="slide-num"><b>06</b> / 07</div>
+    <div class="eyebrow">SECTION 06 · CACHE & TEST</div>
+    <h2 class="title">缓存管理与<em>质量保障</em></h2>
+    <p class="lede">S3 视频缓存纳入系统设置；后端几个"忘了迁移"的端点顺手修了；TDD 全程 40/40 通过。</p>
+
+    <div class="stats-row">
+      <div class="stat">
+        <div class="v" style="color: var(--amber);">308<span style="font-size: 14px; color: var(--text-mute);">MB</span></div>
+        <div class="l">单视频 S3 缓存</div>
+      </div>
+      <div class="stat">
+        <div class="v" style="color: var(--emerald);">40<span style="font-size: 14px; color: var(--text-mute);">/40</span></div>
+        <div class="l">测试通过</div>
+      </div>
+      <div class="stat">
+        <div class="v" style="color: var(--cyan);">7</div>
+        <div class="l">测试文件</div>
+      </div>
+      <div class="stat">
+        <div class="v" style="color: var(--violet);">8</div>
+        <div class="l">测试 fixture 改</div>
+      </div>
+    </div>
+
+    <div class="highlight-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 32px;">
+      <div class="h-card" style="--card-grad: var(--grad-amber);">
+        <h3>S3 视频缓存可清理</h3>
+        <p>系统在设置 → 缓存管理 → 新增"S3 视频缓存"项。点清理按钮 → rmtree + mkdir。下次抽帧时自动重新从 S3 下载。</p>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-rose);">
+        <h3>get_stats 500 修复</h3>
+        <p>原来 8 个查询都引用旧 publish_tasks 表，schema 迁移后全部 500。改读 publish_batches / publish_details，发布历史 stat cards 恢复显示。</p>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-indigo);">
+        <h3>封面 URL 兜底</h3>
+        <p>抽帧封面没有 material_id 时，_resolve_cover_url 回退到 account_configs.thumbnailLandscape。把后者从 _before_publish 的 excluded 集合移除，确保存进 JSON。</p>
+      </div>
+      <div class="h-card" style="--card-grad: var(--grad-emerald);">
+        <h3>测试隔离修复</h3>
+        <p>两个测试文件用模块级 os.environ，污染其他测试。改为 setUpClass + patch 注入 DB_PATH。8 errors → 0。</p>
+      </div>
+    </div>
+
+    <div class="slide-foot">06 · CACHE & TEST</div>
+  </section>
+
+  <!-- =================================================== -->
+  <!-- SLIDE 7: END                                        -->
+  <!-- =================================================== -->
+  <section class="slide end" data-label="致谢" data-short="07">
+    <div class="slide-num"><b>07</b> / 07</div>
+    <div class="big">THANKS</div>
+    <h2 class="title">把数据组织好，让用户少看一眼</h2>
+    <p>
+      29 次提交、7964 行新增、1491 行删除。本期没有炫目的新功能，但把发布历史这件"看上去已经做完了"的事情，重新做了一遍。下一阶段我们将继续围绕"UI 体验打磨 + 平台覆盖深化 + MCP 能力扩展"三条主线迭代。
+    </p>
+
+    <div class="end-actions">
+      <button class="btn primary" onclick="window.scrollTo({top:0, behavior:'smooth'});">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="18 15 12 9 6 15" />
+        </svg>
+        回到顶部
+      </button>
+      <a class="btn" href="../README.md">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+          <polyline points="14 2 14 8 20 8" />
+        </svg>
+        查看 README
+      </a>
+    </div>
+
+    <div style="margin-top: 56px; font-size: 12px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em;">
+      千帆云递 · QIANFAN SYNC · v0.6.0 · 2026.06.09
+    </div>
+
+    <div class="scroll-hint" style="bottom: 16px;">
+      <span>END</span>
+      <div class="line" style="background: linear-gradient(180deg, transparent 0%, var(--amber) 100%);"></div>
+    </div>
+  </section>
+
+  <script>
+    // ===== Side nav generation =====
+    (function buildSideNav() {
+      const nav = document.getElementById('sidenav');
+      const slides = Array.from(document.querySelectorAll('.slide'));
+      slides.forEach((slide, idx) => {
+        const label = slide.dataset.label || ('0' + (idx + 1));
+        const short = slide.dataset.short || ('0' + (idx + 1));
+        const item = document.createElement('div');
+        item.className = 'sidenav-item';
+        item.dataset.target = idx;
+        item.innerHTML = `<span class="sidenav-dot"></span><span class="sidenav-label">${short} · ${label}</span>`;
+        item.addEventListener('click', () => {
+          slide.scrollIntoView({ behavior: 'smooth' });
+        });
+        nav.appendChild(item);
+      });
+
+      const items = nav.querySelectorAll('.sidenav-item');
+      const io = new IntersectionObserver(
+        entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+              const idx = slides.indexOf(entry.target);
+              items.forEach(it => it.classList.remove('active'));
+              if (items[idx]) items[idx].classList.add('active');
+            }
+          });
+        },
+        { threshold: [0.5] }
+      );
+      slides.forEach(s => io.observe(s));
+      if (items[0]) items[0].classList.add('active');
+    })();
+
+    // ===== Topbar scrolled state =====
+    (function topbarScroll() {
+      const tb = document.querySelector('.topbar');
+      window.addEventListener('scroll', () => {
+        if (window.scrollY > 60) tb.classList.add('scrolled');
+        else tb.classList.remove('scrolled');
+      }, { passive: true });
+    })();
+
+    // ===== Keyboard navigation =====
+    document.addEventListener('keydown', e => {
+      const slides = document.querySelectorAll('.slide');
+      const currentIdx = Array.from(slides).findIndex(s => {
+        const rect = s.getBoundingClientRect();
+        return rect.top >= -window.innerHeight / 2 && rect.top <= window.innerHeight / 2;
+      });
+      if (e.key === 'ArrowDown' || e.key === 'PageDown' || e.key === ' ') {
+        e.preventDefault();
+        const next = slides[Math.min(currentIdx + 1, slides.length - 1)];
+        if (next) next.scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'ArrowUp' || e.key === 'PageUp') {
+        e.preventDefault();
+        const prev = slides[Math.max(currentIdx - 1, 0)];
+        if (prev) prev.scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'Home') {
+        slides[0].scrollIntoView({ behavior: 'smooth' });
+      } else if (e.key === 'End') {
+        slides[slides.length - 1].scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  </script>
+</body>
+</html>

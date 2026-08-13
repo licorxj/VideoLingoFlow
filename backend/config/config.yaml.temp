@@ -1,0 +1,155 @@
+# 版本号
+version: "0.2.0"
+
+# ============ General ============
+general:
+  target_language: "zh"
+  source_language: "auto"
+  max_sentence_length: 18
+  max_subtitle_length: 30
+  use_llm_split: true
+  split_by_punct: true
+  summary_length: 3000
+  translation_style: marketing
+  reflect_translate: true
+  custom_styles: []
+  merge_min_duration: 0.2
+  merge_max_gap: 0.2
+  pause_split_threshold: 2
+  split_on_speaker: false
+
+# ============ LLM ============
+llm:
+  use_router: true
+  router_url: "http://localhost:8800/v1"
+  router_api_key: ""
+  base_url: ""
+  api_key: ""
+  max_concurrent: 10
+  max_request_chars: 3000
+  timeout: 120
+  retry_enabled: true
+  retry_count: 1
+  # Per-step model name overrides (step name is used as model name by default)
+  step_models:
+    default_model: "vlf-01"
+    s02_subtitle_check: "vlf-02"
+    s03_sentence_split: "vlf-03"
+    s04_summarize: "vlf-04"
+    s05_translate_faithful: "vlf-05"
+    s05_translate_reflect: "vlf-06"
+    s07_subtitle_align: "vlf-07"
+    s08_dub_task: "vlf-08"
+    s09_subtitle_reduction: "vlf-09"
+    agent_model: "vlf-agent"
+    llm_request: ""
+
+# ============ Pi Agent ==========
+pi:
+  enabled: true
+  node_path: ""
+  cli_path: ""
+  session_root: "data/workspace/pi-sessions"
+  max_sessions: 3
+  prompt_timeout: 30
+  idle_timeout: 1800
+  max_output_chars: 12000
+  allow_tools: ["read", "grep", "find", "ls", "write", "edit"]
+  model: ""
+
+# ============ TTS ============
+
+tts:
+  method: "8dc074bb"
+  edge_tts:
+    voice: "zh-CN-YunjianNeural"
+
+# ============ ASR ============
+asr:
+  engine: funasr_nano
+
+  post_process:
+    diarization:
+      engine: pyannote
+      enabled: true
+    vad:
+      engine: silero
+      enabled: true
+    alignment:
+      enabled: true
+      engine: qwen3
+
+# ============ Subtitle Style ============
+subtitle:
+  font: "Arial"
+  font_size: 24
+  outline: 2
+  shadow: 1
+  margin_v: 30
+  default_preset: "英-中-下中-001"
+  primary_on_top: false
+
+# ============ Video Processing ============
+video:
+  default_quality: "copy"
+  target_lufs: -14
+  watermark:
+    enabled: false
+  speed:
+    min: 0.98
+    max: 1.25
+    gap_threshold: 0.1
+    match_video_speed: true
+    slow_limit: 0.8
+    fast_limit: 1.3
+
+# ============ Background Music ============
+bgm:
+  volume: 0.8
+  fade_in: 0.5
+  fade_out: 0.5
+  dub_volume: 0.9
+
+# ============ Dubbing ============
+dub:
+  tts_mode: "clone"  # clone | controllable_clone | voice_design
+
+# ============ Advanced ============
+advanced:
+  demucs: false
+  min_subtitle_duration: 0.2
+  min_trim_duration: 2
+  max_concurrent_tasks: 3
+  model_dir: "./_model_cache"
+
+# ============ Batch ============
+batch:
+  max_concurrent_tasks: 3
+  task_start_interval: 2.0
+audio:
+  cut_extend_time: 0.05
+  denoise_enabled: false
+  peak_cut_window: 0.1
+  peak_cut_enabled: true
+imagegen:
+  method: bailian
+  default_t2i_model: "z-image-turbo"
+  default_i2i_model: "wan2.7-image-pro"
+separation:
+  method: demucs
+  model: htdemucs
+
+# ============ Social 更新 ============
+social_update:
+  # 更新 Social 项目时是否同时重新构建前端界面。
+  # false（默认）：仅拉取云端代码并更新 Social 后端，前端保持当前构建版本；
+  # true：拉取代码后同时更新前端并重新构建（npm run build），重启前后端服务。
+  rebuild_frontend: false
+aigc:
+  comfyui:
+    instances:
+    - 127.0.0.1:8188
+  jimeng:
+    bin: ''
+    use_wsl: false
+    timeout: 120

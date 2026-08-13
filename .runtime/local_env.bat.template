@@ -1,0 +1,5 @@
+@echo off
+rem Copy this file to .runtime\local_env.bat to override local runtime settings.
+rem Default behavior binds the API and Manager to 127.0.0.1 only.
+rem Set VIDEOLINGO_LAN_MODE=1 only on a trusted LAN. This mode has no authentication or TLS.
+set "VIDEOLINGO_LAN_MODE=0"

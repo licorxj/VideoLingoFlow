@@ -1,0 +1,173 @@
+{
+  "version": 1,
+  "interfaces": [
+    {
+      "id": "demucs",
+      "name": "Demucs",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "Meta开源的高质量音源分离模型，支持多种模型变体",
+      "config": {
+        "sdk_module": "backend.separation.sep_demucs",
+        "sdk_class": "DemucsSeparation",
+        "model": "htdemucs",
+        "model_options": [
+          "htdemucs",
+          "htdemucs_ft",
+          "htdemucs_6s",
+          "mdx",
+          "mdx_extra"
+        ],
+        "model_details": {
+          "HDemucs": {
+            "name": "HDemucs",
+            "description": "标准 HDemucs 模型，平衡分离质量和速度"
+          },
+          "HDemucs Fine-Tuned": {
+            "name": "HDemucs Fine-Tuned",
+            "description": "微调版 HDemucs，推荐默认使用，人声分离效果最佳，但是略慢"
+          },
+          "HDemucs 6 Stems": {
+            "name": "HDemucs 6 Stems",
+            "description": "6 轨分离模型，输出人声/鼓/贝斯/吉他/钢琴/其他"
+          },
+          "MDX": {
+            "name": "MDX",
+            "description": "MDX 模型，基于 Demucs 架构，适合一般分离场景"
+          },
+          "MDX Extra": {
+            "name": "MDX Extra",
+            "description": "MDX 增强版，更高的分离精度但速度较慢"
+          }
+        },
+        "segment": 7,
+        "two_stems": "vocals",
+        "format": "wav",
+        "format_options": [
+          "wav",
+          "mp3"
+        ],
+        "timeout": 1800,
+        "max_concurrent": 1,
+        "custom_params": []
+      }
+    },
+    {
+      "id": "spleeter",
+      "name": "Spleeter",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "Deezer开源的轻量快速音源分离，支持2/4/5轨分离，设备要求低",
+      "config": {
+        "sdk_module": "backend.separation.sep_spleeter",
+        "sdk_class": "SpleeterSeparation",
+        "model": "2stems",
+        "model_options": [
+          "2stems",
+          "4stems",
+          "5stems"
+        ],
+        "model_details": {
+          "2stems": {
+            "name": "2 Stems",
+            "description": "双轨分离：人声 + 伴奏"
+          },
+          "4stems": {
+            "name": "4 Stems",
+            "description": "四轨分离：人声/鼓/贝斯/其他"
+          },
+          "5stems": {
+            "name": "5 Stems",
+            "description": "五轨分离：人声/鼓/贝斯/钢琴/其他"
+          }
+        },
+        "format": "wav",
+        "format_options": [
+          "wav",
+          "mp3"
+        ],
+        "timeout": 1200,
+        "max_concurrent": 1,
+        "custom_params": []
+      }
+    },
+    {
+      "id": "bs_roformer",
+      "name": "BS-Roformer",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "高质量、模型众多-但是吃配置。基于Band-Split RoPE Transformer的高质量音源分离，bs-roformer-infer 社区模型集合",
+      "config": {
+        "sdk_module": "backend.separation.sep_bs_roformer",
+        "sdk_class": "BSRoformerSeparation",
+        "model": "roformer-model-bs-roformer-vocals-revive-v3e-by-unwa",
+        "model_options": [
+          "roformer-model-bs-roformer-sw-by-jarredou",
+          "roformer-model-bs-roformer-vocals-revive-v3e-by-unwa",
+          "roformer-model-bs-roformer-vocals-revive-v2-by-unwa",
+          "roformer-model-bs-roformer-vocals-revive-by-unwa",
+          "roformer-model-bs-roformer-vocals-resurrection-by-unwa",
+          "roformer-model-bs-roformer-vocals-by-gabox",
+          "roformer-model-bs-roformer-chorus-male-female-by-sucial",
+          "roformer-model-bs-roformer-male-female-by-aufr33",
+          "roformer-model-bs-roformer-instrumental-resurrection-by-unwa",
+          "roformer-model-bs-roformer-de-reverb"
+        ],
+        "model_details": {
+          "BS-RoFormer SW": {
+            "name": "BS-RoFormer SW",
+            "description": "默认推荐，6 轨分离（人声/鼓/贝斯/吉他/钢琴/其他），由 jarredou 训练"
+          },
+          "Vocals Revive V3e": {
+            "name": "Vocals Revive V3e",
+            "description": "目前人声分离 SOTA，Bleedless 评分最高，适合追求纯净人声，特别慢"
+          },
+          "Vocals Revive V2": {
+            "name": "Vocals Revive V2",
+            "description": "Revive V2 人声模型，平衡分离质量与速度"
+          },
+          "Vocals Revive": {
+            "name": "Vocals Revive",
+            "description": "Revive 初版人声模型，稳定的人声分离效果"
+          },
+          "Vocals Resurrection": {
+            "name": "Vocals Resurrection",
+            "description": "专注人声修复和还原的分离模型"
+          },
+          "Vocals by Gabox": {
+            "name": "Vocals by Gabox",
+            "description": "Gabox 训练的人声分离模型"
+          },
+          "Chorus Male-Female": {
+            "name": "Chorus Male-Female",
+            "description": "合唱/男女声分离模型，可分离男声和女声"
+          },
+          "Male-Female by aufr33": {
+            "name": "Male-Female by aufr33",
+            "description": "男女声分离模型，由 aufr33 训练"
+          },
+          "Instrumental Resurrection": {
+            "name": "Instrumental Resurrection",
+            "description": "伴奏分离模型，专注还原伴奏（人声去除）"
+          },
+          "De-Reverb": {
+            "name": "De-Reverb",
+            "description": "去混响/去回声模型，用于消除音频中的混响效果"
+          }
+        },
+        "format": "wav",
+        "format_options": [
+          "wav",
+          "mp3"
+        ],
+        "timeout": 1800,
+        "max_concurrent": 1,
+        "custom_params": [],
+        "segment": 18
+      }
+    }
+  ]
+}

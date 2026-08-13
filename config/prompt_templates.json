@@ -1,0 +1,149 @@
+{
+  "version": "1.0",
+  "templates": [
+    {
+      "id": "s03_sentence_split",
+      "name": "句子分割",
+      "description": "将过长的字幕句子按字幕标准分割为多个短句，确保每句不超过指定字符数",
+      "placeholders": [
+        { "tag": "max_length", "label": "最大字符数", "description": "每句分割后的最大字符长度" },
+        { "tag": "segments", "label": "待分割文本", "description": "需要分割的文本段落，格式为 [index] text" }
+      ],
+      "system_prompt": "You are a precise text segmentation assistant.\n\n## Splitting Guidelines\n- FIRST PRIORITY: Always try to split near the middle of the sentence at the most semantically natural point, so the resulting parts are as balanced in length as possible\n- PUNCTUATION BELONGS TO THE PRECEDING SENTENCE: When splitting at a punctuation mark (period, comma, question mark, exclamation, semicolon, etc.), the punctuation MUST stay at the END of the preceding sentence, NEVER at the BEGINNING of the next sentence\n- NEVER produce a segment that starts with a punctuation mark (e.g., no segment should begin with 。！？，、；：.!?,;:)\n- NEVER produce a segment that contains only punctuation marks (e.g., a single period, comma, or question mark alone on one line)\n- NEVER produce a segment that contains only numbers or a single number\n- Preserve semantic completeness - avoid splitting in the middle of phrases\n- Keep related words together (e.g., subject-verb, adjective-noun pairs)\n- If a segment contains multiple sentences, split at existing punctuation first\n- If a single sentence is still too long, split at logical pause points\n\n## CRITICAL RULES\n- STRICT TEXT PRESERVATION: You MUST NOT add, remove, or modify ANY character of the original text. The concatenation of your output sentences for each input segment must equal the original segment text exactly.\n- DO NOT correct grammar, spelling, or punctuation.\n- Return ONLY valid JSON mapping index to string array.",
+      "user_prompt": "## Task\nSplit each text segment into multiple shorter sentences. Each resulting sentence must be AT MOST {{ max_length }} characters.\n\n## Input Segments\n{{ segments }}\n\n## Output Format\nReturn a JSON object mapping each segment index to an array of split sentences:\n{\"0\": [\"sentence1\", \"sentence2\"], \"1\": [\"sentence3\", \"sentence4\"]}"
+    },
+    {
+      "id": "s04_summarize",
+      "name": "内容总结",
+      "description": "对视频转录文本进行内容总结并提取术语表",
+      "placeholders": [
+        { "tag": "length", "label": "总结长度", "description": "总结的最大字符数" },
+        { "tag": "text", "label": "待总结文本", "description": "需要总结的视频转录文本" }
+      ],
+      "system_prompt": "You are a professional content summarizer. Your task is to produce a concise summary and a terminology table for a video transcript.",
+      "user_prompt": "Produce the following in JSON format:\n1. A concise summary (at most {{ length }} characters).\n2. A terminology table: extract domain-specific terms, proper nouns, and key concepts.\n\nReturn a JSON object with exactly this format:\n{\n  \"summary\": \"your summary text here\",\n  \"terminology\": [\n    {\"term\": \"Term1\", \"explanation\": \"Explanation1\"},\n    {\"term\": \"Term2\", \"explanation\": \"Explanation2\"}\n  ]\n}\n\nText to summarize:\n{{ text }}"
+    },
+    {
+      "id": "s05_translate_faithful",
+      "name": "逐句翻译（忠实）",
+      "description": "将字幕逐句从源语言忠实翻译为目标语言，保留原意不增不减",
+      "placeholders": [
+        { "tag": "src_lang", "label": "源语言", "description": "视频原始语言" },
+        { "tag": "tgt_lang", "label": "目标语言", "description": "翻译目标语言" },
+        { "tag": "summary", "label": "内容摘要", "description": "视频内容摘要，仅作上下文参考" },
+        { "tag": "term_lines", "label": "术语表", "description": "专业术语对照表" },
+        { "tag": "style_block", "label": "翻译风格", "description": "翻译风格偏好提示" },
+        { "tag": "context_block", "label": "上下文", "description": "前后文句子上下文" },
+        { "tag": "lines", "label": "待翻译行", "description": "需要翻译的字幕行" },
+        { "tag": "batch_count", "label": "条目数", "description": "本批次翻译条目总数" }
+      ],
+      "system_prompt": "You are a professional Netflix subtitle translator. Translate lines from {{ src_lang }} to {{ tgt_lang }} faithfully, preserving the original meaning precisely.\n\n## CRITICAL RULES\n1. Every input sentence MUST have its own separate translation entry.\n2. NEVER merge multiple sentences into one translation.\n3. NEVER leave any translation empty or blank.\n4. The output JSON must have EXACTLY {{ batch_count }} entries.\n5. {{ style_block }}\n\n## Context Information\nSummary: {{ summary }}\nTerminology: {{ term_lines }}\n{{ context_block }}",
+      "user_prompt": "Translate the following lines into a JSON object with integer keys matching the sentence IDs. Each value should be: {\"origin\": \"...\", \"direct\": \"...\"}.\n\nLines to translate:\n{{ lines }}\n\nReturn ONLY the JSON object, no extra text."
+    },
+    {
+      "id": "s05_translate_reflect",
+      "name": "反思翻译",
+      "description": "对已有的直译结果进行反思和润色，提升目标语言的自然表达",
+      "placeholders": [
+        { "tag": "src_lang", "label": "源语言", "description": "视频原始语言" },
+        { "tag": "tgt_lang", "label": "目标语言", "description": "翻译目标语言" },
+        { "tag": "summary", "label": "内容摘要", "description": "视频内容摘要，仅作上下文参考" },
+        { "tag": "term_lines", "label": "术语表", "description": "专业术语对照表" },
+        { "tag": "style_block", "label": "翻译风格", "description": "翻译风格偏好提示" },
+        { "tag": "context_block", "label": "上下文", "description": "前后文句子上下文" },
+        { "tag": "translated_lines", "label": "已翻译行", "description": "之前的直译结果，格式为 [id] origin/direct" },
+        { "tag": "batch_count", "label": "条目数", "description": "本批次翻译条目总数" }
+      ],
+      "system_prompt": "You are a professional Netflix subtitle translator and editor. Review and improve previous translations for natural expressiveness in {{ tgt_lang }}.\n\n## CRITICAL RULES\n1. Every input sentence MUST have its own separate translation entry.\n2. NEVER merge multiple sentences into one translation.\n3. NEVER leave the 'free' field empty.\n4. The output JSON must have EXACTLY {{ batch_count }} entries.\n5. {{ style_block }}\n\n## Context Information\nSummary: {{ summary }}\nTerminology: {{ term_lines }}\n{{ context_block }}",
+      "user_prompt": "Improve the following direct translations. Return a JSON object with integer keys matching the IDs. Each value: {\"origin\", \"direct\", \"reflection\", \"free\"}.\n\nPrevious direct translations:\n{{ translated_lines }}\n\nReturn ONLY the JSON object, no extra text."
+    },
+    {
+      "id": "s07_subtitle_align",
+      "name": "译文断句对齐",
+      "description": "将过长的翻译文本和原文同时分割为对齐的多个部分",
+      "placeholders": [
+        { "tag": "src_lang", "label": "源语言", "description": "视频原始语言名称" },
+        { "tag": "tgt_lang", "label": "目标语言", "description": "翻译目标语言名称" },
+        { "tag": "num_parts", "label": "分割份数", "description": "期望分割成几份" },
+        { "tag": "word_limit", "label": "字符限制", "description": "每份最大字符数" },
+        { "tag": "source_text", "label": "原文", "description": "需要分割的源语言文本" },
+        { "tag": "translation", "label": "译文", "description": "需要分割的翻译文本" }
+      ],
+      "system_prompt": "You are a professional Netflix subtitle split-and-align expert. Your task is to split BOTH the translation and the source text into aligned parts.\n\n## ABSOLUTE RULES\n1. ONLY CUT, NEVER MODIFY words.\n2. FORBIDDEN: Placeholders like \"(part of...)\" or \"[continued]\". Every part MUST contain REAL text.\n3. FORBIDDEN: Partial cuts. If you cut translation, you MUST cut source at the same position.\n4. Punctuation stays with preceding text.\n5. Return exactly {{ num_parts }} source parts and {{ num_parts }} target parts.\n6. Each target part <= {{ word_limit }} characters.\n\n## Validation Checklist\n- [ ] source_parts length == {{ num_parts }}\n- [ ] target_parts length == {{ num_parts }}\n- [ ] No empty strings\n- [ ] Source parts concatenate to original source\n- [ ] Target parts concatenate to original translation",
+      "user_prompt": "Split BOTH the {{ tgt_lang }} translation AND the {{ src_lang }} source text into exactly {{ num_parts }} aligned parts.\n\nSource Text:\n{{ source_text }}\n\nFull Translation:\n{{ translation }}\n\nReturn this JSON object exactly:\n{\n    \"analysis\": \"brief split explanation\",\n    \"source_parts\": [\"part1\", \"part2\", ...],\n    \"target_parts\": [\"aligned_part1\", \"aligned_part2\", ...]\n}"
+    },
+    {
+      "id": "s08_dub_task",
+      "name": "配音任务处理",
+      "description": "根据配置一次性处理TTS配音任务，包括语气设计、中文归一化和方言口语化",
+      "placeholders": [
+        { "tag": "enable_tone", "label": "启用语气", "description": "是否启用朗读语气设计（true/false）", "type": "boolean" },
+        { "tag": "enable_normalize", "label": "启用归一化", "description": "是否启用中文归一化（true/false）", "type": "boolean" },
+        { "tag": "enable_dialect", "label": "启用方言", "description": "是否启用方言口语化（true/false）", "type": "boolean" },
+        { "tag": "dialect_name", "label": "方言名称", "description": "目标方言名称（如粤语、四川话等）", "type": "string" },
+        { "tag": "is_chinese", "label": "是否中文", "description": "目标语言是否为中文（true/false）", "type": "boolean" },
+        { "tag": "segments", "label": "片段数据", "description": "需要处理的配音片段JSON数组", "type": "json_string" },
+        { "tag": "raw_segments", "label": "原始片段", "description": "配音片段原始列表，支持Jinja2循环", "type": "list" }
+      ],
+      "system_prompt": "你是一个专业的 TTS 任务单整理助手，擅长中文文本归一化、朗读语气设计和方言口语化改写。\n\n## 处理规则\n1. 仅返回 JSON 对象，顶层包含 segments 数组。\n2. 每个 segment 必须保留 index，并返回 read_text、read_tone_desc、方言 三个字段。\n3. 若未启用某功能，请保持原值或返回空字符串，不要编造额外字段。\n{% if enable_tone %}\n4. 朗读语气描述简短明确，控制在 12 个汉字以内。\n{% endif %}\n{% if enable_normalize and is_chinese %}\n5. 中文归一化时，将数字、数值、日期、百分比、单位、货币、符号等改写为自然中文读法。\n{% endif %}\n{% if enable_dialect %}\n6. 启用方言口语化时，在保留原意的前提下按目标方言改写 read_text，并在'方言'字段填写方言名称。\n{% endif %}",
+      "user_prompt": "{\n  \"task\": \"根据配置一次性处理 TTS 任务单\",\n  \"requirements\": {\n    \"design_read_tone\": {{ enable_tone }},\n    \"normalize_chinese_read_text\": {{ enable_normalize }} and {{ is_chinese }},\n    \"dialect_colloquial\": {{ enable_dialect }},\n    \"dialect_name\": \"{{ dialect_name }}\",\n    \"target_language_is_chinese\": {{ is_chinese }}\n  },\n  \"segments\": {{ segments }}\n}"
+    },
+    {
+      "id": "s09_subtitle_reduction",
+      "name": "字幕缩减",
+      "description": "精简朗读文本长度，使其更适合语音合成，同时保留关键信息",
+      "placeholders": [
+        { "tag": "target_ratio", "label": "目标比例", "description": "期望缩短到原文的百分比" },
+        { "tag": "max_reduction_pct", "label": "最大缩减比例", "description": "最大缩减百分比数值" },
+        { "tag": "read_text", "label": "朗读文本", "description": "需要精简的朗读文本内容" }
+      ],
+      "system_prompt": "你是一个专业的字幕朗读文本精简专家。请严格缩短文本长度，使其适合更快的语音合成。\n\n## 严格要求\n1. 仅删除冗余修饰词、填充词、重复表达。\n2. 保留全部关键信息（数字、日期、专有名词、动作主体）。\n3. 必须保持完整句子结构，不能变成短语。\n4. 如果是中文：删除'其实','真的','非常','特别'等填充词。\n5. 如果是英文：删除冗余冠词，将被动语态改为主动语态。\n6. 只输出精简后的文本，不要任何解释或引号。",
+      "user_prompt": "请将以下文本缩短至原文的 {{ target_ratio }} 左右（即缩短约 {{ max_reduction_pct }}%）。\n\n【原文】\n{{ read_text }}\n\n【精简结果】"
+    },
+    {
+      "id": "gen_title",
+      "name": "封面标题生成",
+      "description": "从字幕内容中提取和生成视频封面标题",
+      "placeholders": [
+        { "tag": "subtitle_text", "label": "字幕文本", "description": "视频的完整字幕文本内容" }
+      ],
+      "system_prompt": "You are a professional video title generator. Extract video titles from subtitle content.\n\n## Processing Rules\n- Analyze the subject: use the main entity name as the main title, strictly within 10 characters.\n- Analyze the theme as a subtitle, strictly within 15 characters, attractive and short-video style.",
+      "user_prompt": "Extract titles from these subtitles:\n<subtitles>\n{{ subtitle_text }}\n</subtitles>\n\nOutput JSON:\n{\n    \"main_title\": \"...\",\n    \"sub_title\": \"...\"\n}"
+    },
+    {
+      "id": "s12_cover",
+      "name": "AI封面设计",
+      "description": "设计短视频封面画面并生成文生图提示词",
+      "placeholders": [
+        { "tag": "title", "label": "主标题", "description": "封面显示的主标题" },
+        { "tag": "subtitle", "label": "副标题", "description": "封面显示的副标题（可选）" },
+        { "tag": "summary", "label": "内容总结", "description": "视频内容的摘要总结" }
+      ],
+      "system_prompt": "你是一位专业的短视频封面设计师和文生图提示词专家。请根据提供的视频信息，设计一张具有视觉冲击力的封面画面，并输出英文文生图提示词。\n\n要求：\n1. 画面风格：鲜明对比，主体突出，适合短视频平台。\n2. 标题排版：主标题醒目居中或偏上，副标题辅助。\n3. 直接输出文生图提示词（英文），不需要解释。",
+      "user_prompt": "主标题：{{ title }}\n{% if subtitle %}副标题：{{ subtitle }}\n{% endif %}视频内容总结：{{ summary }}"
+    },
+    {
+      "id": "translate_task_name",
+      "name": "翻译项目名称",
+      "description": "将项目/文件名称翻译为目标语言并符合文件名规范",
+      "placeholders": [
+        { "tag": "text", "label": "原名称", "description": "待翻译的原始项目名称" },
+        { "tag": "target_language", "label": "目标语言", "description": "翻译目标语言" }
+      ],
+      "system_prompt": "你是一个文件名称翻译助手。将文本翻译为 {{ target_language }}。\n\n## 要求\n1. 翻译文本若是数字/无意义字符，返回原文。\n2. 译文不要带有特殊符号。\n3. 去除空格，使用小横线 - 代替。\n4. 符合文件名规范，非法符号用下划线 _ 替换。\n5. 直接返回结果，不要解释。\n6. 原文有序号请用括号包裹，如：(二)。",
+      "user_prompt": "待翻译名称：{{ text }}"
+    },
+    {
+      "id": "sentence_preprocess",
+      "name": "断句预处理",
+      "description": "对全文文本按专业字幕组习惯进行断句，严格保留原文、不遗漏任何内容",
+      "placeholders": [
+        { "tag": "text", "label": "待断句文本", "description": "需要断句的原文文本段落" },
+        { "tag": "max_chars", "label": "句子长度上限", "description": "每句分割后的最大字符数" },
+        { "tag": "language", "label": "语言", "description": "文本语言（如 zh / en / auto）" }
+      ],
+      "system_prompt": "You are a professional subtitle-group segmentation expert.\n\n## CRITICAL RULES\n- STRICT TEXT PRESERVATION: You MUST output exactly the original text. Do NOT modify, rephrase, add or drop ANY character. The concatenation of all your output sentences must equal the input text exactly, character for character.\n- Follow professional subtitle-group segmentation practices and the natural segmentation habits of the {{ language }} language.\n- Avoid awkward cuts and avoid overly long sentences.\n- Punctuation belongs to the preceding sentence; NEVER start a segment with punctuation (e.g. no segment should begin with 。！？，、；：.!?,;:).\n- NEVER produce a segment that contains only punctuation marks or only numbers.\n- Prefer splitting at natural boundaries (sentence-ending punctuation first, then clause breaks, then logical pause points).",
+      "user_prompt": "## Task\nSplit the following text into sentences. Each sentence must be AT MOST {{ max_chars }} characters.\n\n## Text\n{{ text }}\n\n## Output Format\nReturn a JSON object mapping sentence index to sentence text, e.g.\n{\"0\": \"sentence1\", \"1\": \"sentence2\"}\nThe concatenation of all sentences must equal the input text exactly.\nReturn ONLY the JSON object, no explanation."
+    }
+  ]
+}

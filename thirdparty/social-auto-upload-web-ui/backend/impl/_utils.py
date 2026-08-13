@@ -1,0 +1,1354 @@
+"""
+Shared utilities for all platform implementations.
+
+Provides profile scraping helpers, schedule-time parsing, and a unified
+post-login flow (scrape profile -> save cookie -> write DB -> send SSE status).
+
+All functions use standard Playwright Page/Context APIs only.
+"""
+
+import asyncio
+import json
+import platform as _platform
+import sqlite3
+import uuid
+from datetime import datetime, timedelta
+from pathlib import Path
+
+from conf import BASE_DIR
+
+from util._logger import get_channel_logger
+
+logger = get_channel_logger("utils")
+
+
+# ---------------------------------------------------------------------------
+# Account nickname lookup (用于日志带上发布账号昵称)
+# ---------------------------------------------------------------------------
+
+def get_account_name_by_cookie_file(cookie_filename: str) -> str:
+    """根据 cookie 文件名查询账号昵称 (user_info.userName)。
+
+    cookie 文件名即 user_info.filePath 的值（如 ``xxx-uuid.json``）。
+    查询失败或未找到时返回空字符串，调用方应做兜底处理。
+
+    仅用于日志打印，不参与任何业务逻辑判断。
+    """
+    if not cookie_filename:
+        return ""
+    try:
+        db_path = Path(BASE_DIR / "db" / "database.db")
+        with sqlite3.connect(db_path) as conn:
+            row = conn.execute(
+                "SELECT userName FROM user_info WHERE filePath = ?",
+                (cookie_filename,),
+            ).fetchone()
+        return row[0] if row else ""
+    except Exception as e:
+        logger.warning("查询账号昵称失败 (%s): %s", cookie_filename, e)
+        return ""
+
+
+# ---------------------------------------------------------------------------
+# JS injection script for generic profile scraping
+# Source: original login.py JS injection script
+# ---------------------------------------------------------------------------
+
+_SCRAPE_JS = '''() => {
+    let name = '';
+    let avatar = '';
+    const candidates = [];
+
+    // ====== 头像查找 ======
+    function isAvatarUrl(url) {
+        if (!url || !url.startsWith('http')) return false;
+        const lower = url.toLowerCase();
+        return !lower.endsWith('.svg') && !lower.includes('.svg') &&
+            !lower.includes('icon') && !lower.includes('logo') &&
+            !lower.includes('qrcode') && !lower.includes('placeholder') &&
+            !lower.includes('default') && !lower.includes('blank') &&
+            !lower.includes('sprite') && !lower.includes('bg');
+    }
+
+    const avatarCdnPatterns = [
+        'aweme-avatar', 'douyinpic.com/avatar',
+        'xhscdn.com/avatar', 'qlogo.cn', 'finderhead',
+        'kuaishoucdn.com/avatar', 'head_url'
+    ];
+    const imgs = [...document.querySelectorAll('img')];
+
+    // ====== 工具函数 ======
+    const excludeTexts = ['登录','注册','密码','手机','首页','上传','数据','管理',
+        '发布','创作','视频','直播','消息','设置','帮助','退出','更多','搜索',
+        '扫码','关注','粉丝','获赞','作品','动态','喜欢','收藏',
+        '共创','中心','工具','服务','收益','任务','课程','通知','评论',
+        '互动','权限','认证','申请','开通','绑定','电商','带货',
+        '网址','链接','复制','分享','下载','打开','全部','菜单',
+        '内容','素材','流量','分析','商品','订单','结算','功能',
+        '主页','首页','个人','专栏','活动','热门','推荐',
+        '播放量','点赞数','评论数','转发数','浏览量','阅读量','新增','昨日'];
+
+    function isValidName(text) {
+        if (!text || text.length < 2 || text.length > 30) return false;
+        if (/^\\d+(\\.\\d+)?[万亿]$/.test(text)) return false;
+        if (/^\\d+$/.test(text)) return false;
+        for (const ex of excludeTexts) {
+            if (text.includes(ex)) return false;
+        }
+        return true;
+    }
+
+    // ====== 策略0 (最高优先级): 平台精确匹配，找到直接返回 ======
+    // 抖音: container-xxx > avatar-xxx > img + name-xxx
+    const dyAllContainers = document.querySelectorAll('div[class^="container-"]');
+    for (const dyContainer of dyAllContainers) {
+        const dyAvImg = dyContainer.querySelector(':scope > div[class^="avatar-"] > img');
+        const dyNameEl = dyContainer.querySelector('div[class^="name-"]');
+        if (dyAvImg && dyNameEl && isValidName(dyNameEl.textContent.trim())) {
+            return {
+                name: dyNameEl.textContent.trim(),
+                avatar: dyAvImg.src || '',
+                debug: [{text: dyNameEl.textContent.trim(), method: 'douyin-profile-container'}]
+            };
+        }
+    }
+    // 视频号: img[alt*="头像"] + h2.finder-nickname
+    const wxAvatar = document.querySelector('img[alt*="头像"]');
+    const wxName = document.querySelector('h2.finder-nickname') || document.querySelector('[class*="nickname"]');
+    if (wxAvatar && wxName && isValidName(wxName.textContent.trim())) {
+        return {
+            name: wxName.textContent.trim(),
+            avatar: wxAvatar.src || '',
+            debug: [{text: wxName.textContent.trim(), method: 'wechat-profile'}]
+        };
+    }
+
+    // ====== 以下为兜底策略 ======
+
+    // 头像: 优先匹配平台头像 CDN（精确匹配）
+    for (const img of imgs) {
+        const src = img.src || '';
+        if (isAvatarUrl(src) && !src.includes('cover') && !src.includes('video')) {
+            for (const p of avatarCdnPatterns) {
+                if (src.includes(p)) { avatar = src; break; }
+            }
+            if (avatar) break;
+        }
+    }
+    // 兜底：尺寸匹配
+    if (!avatar) {
+        for (const img of imgs) {
+            const rect = img.getBoundingClientRect();
+            const w = rect.width, h = rect.height;
+            if (w >= 24 && w <= 80 && h >= 24 && h <= 80 &&
+                Math.abs(w - h) < Math.max(w, h) * 0.3 && isAvatarUrl(img.src)) {
+                avatar = img.src;
+                break;
+            }
+        }
+    }
+
+    // 昵称查找
+    // 策略A: 找到头像后，找头像旁边的 name 元素
+    if (avatar) {
+        const avatarImg = imgs.find(i => i.src === avatar);
+        if (avatarImg) {
+            let parent = avatarImg.parentElement;
+            if (parent) {
+                const sibling = parent.nextElementSibling;
+                if (sibling && sibling.className && sibling.className.startsWith('name-')) {
+                    const text = sibling.textContent.trim();
+                    if (isValidName(text)) {
+                        candidates.push({text, method: 'avatar-sibling', level: 0});
+                    }
+                }
+            }
+            let container = avatarImg.parentElement;
+            for (let i = 0; i < 5 && container; i++) {
+                const leaves = container.querySelectorAll('span, div, p, a');
+                for (const leaf of leaves) {
+                    if (leaf.childElementCount > 0) continue;
+                    const text = leaf.textContent.trim();
+                    if (isValidName(text)) {
+                        candidates.push({text, method: 'near-avatar', level: i});
+                    }
+                }
+                container = container.parentElement;
+            }
+        }
+    }
+
+    // 策略B: class 选择器
+    const selectors = [
+        'div[class^="avatar-"] + div[class^="name-"]',
+        'h2.finder-nickname', 'img.avatar[alt]',
+        '[class*="user-name"]', '[class*="userName"]', '[class*="username"]',
+        '[class*="nick-name"]', '[class*="nickname"]', '[class*="nickName"]',
+        '[class*="NickName"]', '[class*="nick_name"]',
+        '[class*="UserInfo"]', '[class*="userInfo"]', '[class*="user-info"]',
+        '[class*="profile-name"]', '[class*="profileName"]',
+        '[class*="name-text"]', '[class*="nameText"]',
+    ];
+    for (const sel of selectors) {
+        const els = document.querySelectorAll(sel);
+        for (const el of els) {
+            const style = window.getComputedStyle(el);
+            if (style.display === 'none' || style.visibility === 'hidden') continue;
+            const text = el.textContent.trim();
+            if (isValidName(text)) {
+                candidates.push({text, method: 'class:' + sel});
+            }
+        }
+    }
+
+    // 策略C: img alt 属性
+    for (const img of imgs) {
+        if (img.alt && isValidName(img.alt)) {
+            candidates.push({text: img.alt, method: 'img-alt'});
+        }
+    }
+
+    const best = candidates[0];
+    name = best ? best.text : '';
+
+    return { name, avatar, debug: candidates.slice(0, 10) };
+}'''
+
+
+# ---------------------------------------------------------------------------
+# Profile scraping functions
+# ---------------------------------------------------------------------------
+
+async def scrape_user_profile(page):
+    """Generic scraper using _SCRAPE_JS injection.
+
+    Works for Douyin, Kuaishou, Xiaohongshu, and most platforms.
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+
+    try:
+        await page.wait_for_load_state('domcontentloaded', timeout=5000)
+        await asyncio.sleep(3)
+    except Exception:
+        pass
+
+    try:
+        result = await page.evaluate(_SCRAPE_JS)
+        name = result.get('name', '')
+        avatar = result.get('avatar', '')
+        debug = result.get('debug', [])
+        logger.info(f"[scrape] candidates: {debug}")
+        if name:
+            logger.info(f"[scrape] found profile - name: {name}, avatar: {avatar[:50] if avatar else 'N/A'}")
+        else:
+            logger.info("[scrape] could not find user name, will use default")
+    except Exception as e:
+        logger.info(f"[scrape] failed to scrape user profile: {e}")
+
+    return name, avatar
+
+
+async def scrape_bilibili_profile(page):
+    """Bilibili-specific scraper.
+
+    Targets ``span.home-top-msg-name`` for the username and
+    ``div.home-head img`` for the avatar.
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        await page.wait_for_load_state('domcontentloaded', timeout=5000)
+        await asyncio.sleep(2)
+        # Username: span.home-top-msg-name
+        name_el = page.locator('span.home-top-msg-name').first
+        if await name_el.count():
+            name = (await name_el.text_content() or '').strip()
+        # Avatar: div.home-head img
+        avatar_el = page.locator('div.home-head img').first
+        if await avatar_el.count():
+            avatar = (await avatar_el.get_attribute('src') or '').strip()
+        if name:
+            logger.info(f"[bilibili] profile scraped - name: {name}, avatar: {avatar[:50] if avatar else 'N/A'}")
+        else:
+            logger.info("[bilibili] profile scrape failed, will use default name")
+    except Exception as e:
+        logger.info(f"[bilibili] profile scrape error: {e}")
+    return name, avatar
+
+
+async def scrape_tencent_profile(page):
+    """WeChat Channels (视频号) specific scraper.
+
+    登录成功后创作中心首页（``/platform``）会渲染一张 ``div.finder-card``
+    资料卡，内含 ``img.avatar``（头像）和 ``h2.finder-nickname``（昵称）。
+    这里显式等待该卡片就绪后再读取，避免页面未渲染完抓不到。
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        await page.wait_for_load_state('domcontentloaded', timeout=10000)
+        # 显式等待 finder-card 资料卡渲染（取代固定 sleep）
+        try:
+            await page.locator('div.finder-card').first.wait_for(
+                state="visible", timeout=15000,
+            )
+        except Exception:
+            logger.info(f"[channels] finder-card 未就绪, 当前 url={page.url}")
+        # 头像: div.finder-card img.avatar
+        avatar_el = page.locator('div.finder-card img.avatar').first
+        if await avatar_el.count():
+            avatar = (await avatar_el.get_attribute('src') or '').strip()
+        # 昵称: div.finder-card h2.finder-nickname
+        name_el = page.locator('div.finder-card h2.finder-nickname').first
+        if await name_el.count():
+            name = (await name_el.text_content() or '').strip()
+        if name:
+            logger.info(f"[channels] profile scraped - name: {name}, avatar: {avatar[:50] if avatar else 'N/A'}")
+        else:
+            logger.info("[channels] profile scrape failed, will use default name")
+    except Exception as e:
+        logger.info(f"[channels] profile scrape error: {e}")
+    return name, avatar
+
+
+async def scrape_baijiahao_profile(page):
+    """Baijiahao (百家号) specific scraper.
+
+    Navigates to the account settings page and targets
+    ``img[class*="userImg"]`` for the avatar and
+    ``div[class*="userName"]`` for the username.
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        # Navigate to account settings page where avatar and name are rendered
+        await page.goto(
+            "https://baijiahao.baidu.com/builder/rc/settings/accountSet",
+            timeout=20000,
+        )
+        await page.wait_for_load_state('domcontentloaded', timeout=15000)
+
+        # 等待用户信息节点出现（SPA 异步渲染）
+        # userName 容器比 userImg 先就绪，先等 name
+        try:
+            await page.locator('div[class*="userName"]').first.wait_for(
+                state="visible", timeout=12000,
+            )
+        except Exception as e:
+            # 未在 12s 内出现：可能 cookie 失效跳转到了登录页，记录后继续
+            logger.info(f"[baijiahao] userName 元素等待超时: {e}; 当前 url={page.url}")
+
+        await asyncio.sleep(1)
+
+        # Avatar: img with class containing "userImg"
+        avatar_el = page.locator('img[class*="userImg"]').first
+        if await avatar_el.count():
+            avatar = (await avatar_el.get_attribute('src') or '').strip()
+
+        # Username: div with class containing "userName"
+        name_el = page.locator('div[class*="userName"]').first
+        if await name_el.count():
+            # 优先取 title 兜底 text
+            name = (await name_el.get_attribute('title') or '').strip()
+            if not name:
+                name = (await name_el.text_content() or '').strip()
+
+        logger.info(f"[baijiahao] profile scraped - name={name!r} avatar={avatar[:50] if avatar else 'None'}")
+    except Exception as e:
+        logger.info(f"[baijiahao] profile scrape error: {e}")
+    return name, avatar
+
+
+async def scrape_youtube_profile(page):
+    """YouTube-specific scraper.
+
+    Navigates to YouTube Studio, waits for redirect to the channel page,
+    then extracts the channel name and avatar from the navigation drawer.
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        # Wait for redirect to channel-specific URL
+        await page.wait_for_url("**/channel/**", timeout=15000)
+        await page.wait_for_load_state('networkidle', timeout=15000)
+        await asyncio.sleep(3)
+
+        # Extract nickname from navigation drawer
+        name_el = page.locator('div#entity-name').first
+        if await name_el.count():
+            name = (await name_el.text_content() or '').strip()
+
+        # Extract avatar from navigation drawer
+        avatar_el = page.locator('img.image-thumbnail').first
+        if await avatar_el.count():
+            avatar = (await avatar_el.get_attribute('src') or '').strip()
+
+        # Fallback: avatar button in Studio header
+        if not avatar:
+            avatar_btn = page.locator('button[id="avatar-button"]')
+            if await avatar_btn.count():
+                btn_img = avatar_btn.locator('img')
+                if await btn_img.count():
+                    avatar = (await btn_img.get_attribute('src') or '').strip()
+
+        # Fallback: scan all images for Google profile URLs
+        if not avatar:
+            all_imgs = page.locator('img')
+            count = await all_imgs.count()
+            for i in range(count):
+                img = all_imgs.nth(i)
+                src = (await img.get_attribute('src') or '')
+                if 'ggpht.com' in src or 'googleusercontent.com' in src:
+                    avatar = src
+                    if not name:
+                        alt = (await img.get_attribute('alt') or '').strip()
+                        if alt and len(alt) < 50:
+                            name = alt
+                    break
+
+        # Fallback: page title ("Channel Name - YouTube Studio")
+        if not name:
+            title = await page.title()
+            if ' - ' in title:
+                candidate = title.split(' - ')[0].strip()
+                if candidate and candidate != 'YouTube':
+                    name = candidate
+
+        logger.info(f"[youtube] profile scraped - name={name!r} avatar={avatar[:50] if avatar else 'None'}")
+    except Exception as e:
+        logger.info(f"[youtube] profile scrape error: {e}")
+    return name, avatar
+
+
+async def scrape_alipay_profile(page):
+    """支付宝内容创作平台专用 scraper。
+
+    抓取依据:登录后的创作中心首页
+    (``c.alipay.com/page/life-account/index``)会渲染账号信息容器。
+    login() 和 sync_profile() 都调用此方法,保证逻辑一致。
+
+    **定位策略:不依赖 class 名**(支付宝用 CSS modules,hash 类名如
+    ``name___mAiik`` 会随发版漂移)。改用业务文案锚点 + DOM 结构:
+
+    - 昵称:页面里必然有 ``生活号ID：xxx`` 文案(业务字段,稳定)。
+      从该叶子节点向上找到包含它的「信息区」div(同时含昵称/粉丝/获赞/
+      生活号ID 文本),该 div 的第一个子元素(昵称区)的第一个子文本
+      节点 = 昵称。
+    - 头像:账号头像走 ``mdn.alipayobjects.com/open_content/afts/...``
+      CDN 路径(用户上传内容),区别于平台 UI 图标(``huamei_*`` / ``rms``)。
+      在信息区附近(兄弟节点)找该路径的 img。
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        await page.wait_for_load_state("domcontentloaded", timeout=10000)
+
+        # 显式等待「生活号ID：」文案出现(它出现 = 账号信息已渲染完成)
+        # 这是比等 container class 更可靠的就绪信号 —— 业务文案稳定
+        info_ready = False
+        for _ in range(20):  # 最多等 10s
+            try:
+                found = await page.evaluate(
+                    """() => {
+                        const els = document.querySelectorAll('*');
+                        for (const el of els) {
+                            if (el.children.length === 0
+                                && (el.textContent || '').includes('生活号ID')) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    }"""
+                )
+                if found:
+                    info_ready = True
+                    break
+            except Exception:
+                pass
+            await asyncio.sleep(0.5)
+
+        if not info_ready:
+            logger.warning(
+                f"[alipay] 账号信息未渲染 (url={page.url}, "
+                "可能 cookie 失效跳转了登录页)"
+            )
+        await asyncio.sleep(0.5)
+
+        result = await page.evaluate("""() => {
+            let name = '', avatar = '';
+
+            // ---- 昵称: 用「生活号ID：」文案锚点 + DOM 结构回溯 ----
+            // 1. 找到「生活号ID」叶子节点
+            const allEls = document.querySelectorAll('*');
+            let idLeaf = null;
+            for (const el of allEls) {
+                if (el.children.length === 0
+                    && (el.textContent || '').includes('生活号ID')) {
+                    idLeaf = el; break;
+                }
+            }
+            // 2. 向上找到「信息区」(nameBox + numBox 的共同父级)
+            //    结构:infoArea > [nameBox, numBox], numBox 含「生活号ID」
+            //
+            //    区分 infoArea vs numBox(两者都含生活号ID):
+            //    - numBox 的第一个子元素是「粉丝N」(含"粉丝")
+            //    - infoArea 的第一个子元素是 nameBox(昵称,不含"粉丝"也不含"生活号ID")
+            //    所以 infoArea 的判据:firstChild 不含「生活号ID」也不含「粉丝」
+            let infoArea = null;
+            if (idLeaf) {
+                let cur = idLeaf;
+                for (let i = 0; i < 6 && cur; i++) {
+                    const txt = (cur.textContent || '');
+                    const fcTxt = cur.firstElementChild
+                        ? (cur.firstElementChild.textContent || '') : '';
+                    if (txt.includes('生活号ID')
+                        && cur.children.length >= 2
+                        && !fcTxt.includes('生活号ID')
+                        && !fcTxt.includes('粉丝')) {
+                        infoArea = cur; break;
+                    }
+                    cur = cur.parentElement;
+                }
+            }
+            // 3. infoArea 的第一个子元素 = nameBox,
+            //    nameBox 第一个子元素(纯文本,无子节点)= 昵称
+            if (infoArea && infoArea.firstElementChild) {
+                const nameBox = infoArea.firstElementChild;
+                // 在 nameBox 子树里找第一个「无子节点 + 非空文本」的元素
+                const walker = document.createTreeWalker(
+                    nameBox, NodeFilter.SHOW_ELEMENT
+                );
+                let node = nameBox;
+                while (node) {
+                    if (node.children.length === 0) {
+                        const t = (node.textContent || '').trim();
+                        // 排除描述语(带引号的,如 " 又是充满创作力的一天 ")
+                        // 昵称通常 2-20 字,不含引号/书名号
+                        if (t && !t.startsWith('"') && !t.startsWith('"')
+                            && !t.startsWith('「') && t.length <= 30) {
+                            name = t; break;
+                        }
+                    }
+                    node = walker.nextNode();
+                }
+                // 兜底:若上面没取到,直接取 nameBox 的第一个 leaf 文本
+                if (!name) {
+                    const firstLeaf = nameBox.querySelector('*:not(:has(*))')
+                        || nameBox.firstElementChild;
+                    if (firstLeaf) name = (firstLeaf.textContent || '').trim();
+                }
+
+                // ---- 头像: 在 infoArea 的父级范围内找 open_content img ----
+                // 头像与信息区是兄弟(都在 accountContainer 下),
+                // 头像区在前,信息区在后
+                const scope = infoArea.parentElement || infoArea;
+                const imgs = scope.querySelectorAll('img');
+                for (const img of imgs) {
+                    const src = img.src || '';
+                    // 用户头像走 open_content CDN 路径
+                    // (区别于平台 UI 图标 huamei_*/rms)
+                    if (src.includes('/open_content/')
+                        && src.includes('alipayobjects.com')) {
+                        avatar = src; break;
+                    }
+                }
+                // 兜底:任意 alipay CDN 图片(排除明显的小图标)
+                if (!avatar) {
+                    for (const img of imgs) {
+                        const src = img.src || '';
+                        if (src.includes('alipayobjects.com')
+                            && (img.naturalWidth >= 80
+                                || img.naturalHeight >= 80)) {
+                            avatar = src; break;
+                        }
+                    }
+                }
+            }
+
+            return { name, avatar };
+        }""")
+        name = (result.get("name") or "").strip()
+        avatar = (result.get("avatar") or "").strip()
+        logger.info(
+            f"[alipay] profile scraped - name={name!r} "
+            f"avatar={avatar[:80] if avatar else 'None'}"
+        )
+    except Exception as e:
+        logger.info(f"[alipay] profile scrape error: {e}")
+
+    return name, avatar
+
+
+async def scrape_weibo_profile(page):
+    """Weibo-specific scraper.
+
+    抓取依据：微博创作中心顶部导航栏登录后会出现
+    ``a[href^="/u/"]``（最后一个 tab，带 ``title`` 属性和头像 img）。
+    直接跑 JS eval 取属性，避免 locator API 链的兼容问题。
+
+    1. 昵称：``a[href^="/u/"]`` 的 ``title`` 属性
+    2. 头像：``a[href^="/u/"] img[src*="sinaimg.cn"]`` 的 ``src`` 属性
+
+    失败兜底：返回 ("", "")，由 save_login_result 兜底用户名。
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        await page.wait_for_load_state("domcontentloaded", timeout=5000)
+        await asyncio.sleep(2)
+
+        result = await page.evaluate("""() => {
+            let name = '', avatar = '';
+            // 必须限定到顶部导航栏 .woo-tab-nav，否则未登录态主页面
+            // 热门博主链接也是 a[href^="/u/"] img[src*="sinaimg.cn"]
+            const link = document.querySelector('.woo-tab-nav a[href^="/u/"]');
+            if (link) {
+                name = link.getAttribute('title') || '';
+                const img = link.querySelector('img');
+                if (img) avatar = img.src || '';
+            }
+            return { name, avatar };
+        }""")
+        name = (result.get("name") or "").strip()
+        avatar = (result.get("avatar") or "").strip()
+        logger.info(f"[weibo] profile scraped - name={name!r} avatar={avatar[:80] if avatar else 'None'} (result={result})")
+    except Exception as e:
+        logger.info(f"[weibo] profile scrape error: {e}")
+
+    return name, avatar
+
+
+async def scrape_toutiao_profile(page):
+    """Toutiao-specific scraper.
+
+    抓取依据：今日头条创作中心登录后会出现 user-panel 结构。
+    从 user-panel 中提取头像和昵称。
+
+    定位策略：
+    1. 昵称：auth-avator-name 类名的元素
+    2. 头像：auth-avator-img 类名的 img 元素
+
+    失败兜底：返回 ("", "")，由 save_login_result 兜底用户名。
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        await page.wait_for_load_state("domcontentloaded", timeout=10000)
+        await asyncio.sleep(3)
+
+        result = await page.evaluate("""() => {
+            let name = '', avatar = '';
+
+            // Strategy 1: Look for user-panel structure
+            const userPanel = document.querySelector('.user-panel .information');
+            if (userPanel) {
+                // Avatar: img inside auth-avator-img-wrap
+                const avatarImg = userPanel.querySelector('.auth-avator-img');
+                if (avatarImg) {
+                    avatar = avatarImg.src || '';
+                }
+                // Name: text in auth-avator-name
+                const nameEl = userPanel.querySelector('.auth-avator-name');
+                if (nameEl) {
+                    name = nameEl.textContent.trim();
+                }
+            }
+
+            // Strategy 2: Look for menu-title (e.g., "晚上好，菜鸡")
+            if (!name) {
+                const menuTitle = document.querySelector('.menu-title');
+                if (menuTitle) {
+                    const text = menuTitle.textContent.trim();
+                    // Extract name after comma
+                    const match = text.match(/[，,](.+)$/);
+                    if (match) {
+                        name = match[1].trim();
+                    }
+                }
+            }
+
+            // Strategy 3: Look for title attribute on links
+            if (!name) {
+                const userLink = document.querySelector('.user-panel a[title]');
+                if (userLink) {
+                    const title = userLink.getAttribute('title');
+                    // Extract name from "菜鸡的个人主页"
+                    const match = title.match(/^(.+?)的个人主页$/);
+                    if (match) {
+                        name = match[1].trim();
+                    }
+                }
+            }
+
+            return { name, avatar };
+        }""")
+
+        name = (result.get("name") or "").strip()
+        avatar = (result.get("avatar") or "").strip()
+        logger.info(
+            f"[toutiao] profile scraped - name={name!r} "
+            f"avatar={avatar[:80] if avatar else 'None'}"
+        )
+    except Exception as e:
+        logger.info(f"[toutiao] profile scrape error: {e}")
+
+    return name, avatar
+
+
+async def scrape_vivo_profile(page):
+    """VIVO 内容创作平台专用 scraper。
+
+    创作者中心 ``https://www.kaixinkan.com.cn/#/home`` 登录后会渲染一张
+    ``.user-info-area`` 资料卡。DOM 结构(产品语义 class,非 data-v 随机串):
+
+      <div class="user-info-area">
+        <div class="user-info-area-left">
+          <div class="user-icon"><img src="头像URL"></div>
+          <div class="info">
+            <div class="user-name"> 昵称 </div>
+          </div>
+        </div>
+        <div class="user-detail">
+          <div class="item-detail">
+            <div class="item-detail-title">粉丝</div>
+            <div class="item-detail-number">0</div>
+          </div>
+          <div class="item-detail">
+            <div class="item-detail-title">获赞</div>
+            <div class="item-detail-number">0</div>
+          </div>
+        </div>
+      </div>
+
+    VIVO 没有「关注数」概念,follows 固定为 0。
+
+    Returns:
+        tuple[str, str, int, int, int]:
+            ``(user_name, avatar_url, fans, likes, follows)``
+    """
+    name = ""
+    avatar = ""
+    fans = 0
+    likes = 0
+    follows = 0  # VIVO 无关注数概念,固定 0
+    try:
+        await page.wait_for_load_state("domcontentloaded", timeout=10000)
+        await asyncio.sleep(3)
+
+        # 昵称 / 头像
+        name_el = page.locator(".user-info-area .user-name").first
+        if await name_el.count():
+            name = (await name_el.text_content() or "").strip()
+        avatar_el = page.locator(".user-info-area .user-icon img").first
+        if await avatar_el.count():
+            avatar = (await avatar_el.get_attribute("src") or "").strip()
+
+        # 粉丝 / 获赞:遍历 .item-detail,按 title 文本匹配对应 number
+        # (避免依赖 DOM 顺序,平台后续增删字段也能正确取值)
+        detail_items = page.locator(".user-info-area .user-detail .item-detail")
+        count = await detail_items.count()
+        for i in range(count):
+            item = detail_items.nth(i)
+            title_el = item.locator(".item-detail-title").first
+            number_el = item.locator(".item-detail-number").first
+            if not await title_el.count() or not await number_el.count():
+                continue
+            title = (await title_el.text_content() or "").strip()
+            number_text = (await number_el.text_content() or "").strip()
+            try:
+                # 处理 "1.2万" / "1.2w" / 纯数字 三种格式
+                number = _parse_vivo_count(number_text)
+            except Exception:
+                number = 0
+            if title == "粉丝":
+                fans = number
+            elif title == "获赞":
+                likes = number
+
+        logger.info(
+            f"[vivo] profile scraped - name={name!r} "
+            f"avatar={avatar[:80] if avatar else 'None'} "
+            f"fans={fans} likes={likes}"
+        )
+    except Exception as e:
+        logger.info(f"[vivo] profile scrape error: {e}")
+
+    return name, avatar, fans, likes, follows
+
+
+def _parse_vivo_count(text: str) -> int:
+    """解析 VIVO 数字显示格式: '1.2万' / '1.2w' / '12345' → int。"""
+    if not text:
+        return 0
+    text = text.strip().lower()
+    multi = 1
+    if text.endswith("万"):
+        multi = 10_000
+        text = text[:-1]
+    elif text.endswith("w"):
+        multi = 10_000
+        text = text[:-1]
+    elif text.endswith("亿"):
+        multi = 100_000_000
+        text = text[:-1]
+    try:
+        return int(float(text) * multi)
+    except ValueError:
+        return 0
+
+
+async def scrape_zhihu_profile(page):
+    """知乎专用 scraper。
+
+    抓取流程（详见对接文档）：
+    1. 当前页应该是 ``https://www.zhihu.com/settings/account`` 或类似页面，
+       页面右上角已有头像按钮。
+    2. 点击右上角头像按钮 (``.AppHeader-profileEntry``) 弹出下拉菜单。
+    3. 点击菜单中的「我的主页」链接 (``a[href^="/people/"]``)。
+    4. 等待跳转到 ``https://www.zhihu.com/people/<id>`` 后：
+       - 昵称：``span.ProfileHeader-name``
+       - 头像：``.UserAvatar-inner`` 或 ``img.Avatar`` 的 ``src``
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        await page.wait_for_load_state("domcontentloaded", timeout=10000)
+        await asyncio.sleep(2)
+
+        # 1. 点击右上角头像按钮展开下拉菜单
+        try:
+            avatar_btn = page.locator(
+                'button.AppHeader-profileEntry, .AppHeader-userInfo .AppHeader-profileEntry'
+            ).first
+            if await avatar_btn.count() == 0:
+                avatar_btn = page.locator('.AppHeader-profileEntry').first
+            await avatar_btn.wait_for(state="visible", timeout=8000)
+            await avatar_btn.click()
+            await asyncio.sleep(1)
+        except Exception as e:
+            logger.info(f"[zhihu] 点击头像下拉失败 (可能已在主页): {e}")
+
+        # 2. 点击「我的主页」链接
+        # href 在 DOM 里是完整 URL (https://www.zhihu.com/people/xxx)，
+        # 不能用 [href^="/people/"] 匹配；用文案「我的主页」+ 排除关怀版
+        # (/aria/people/) 最稳。
+        profile_link = page.locator(
+            '.AppHeaderProfileMenu-item:has-text("我的主页"), '
+            'a.Menu-item:has-text("我的主页")'
+        ).first
+        navigated = False
+        try:
+            await profile_link.wait_for(state="visible", timeout=5000)
+            href = await profile_link.get_attribute("href") or ""
+            await profile_link.click()
+            logger.info(f"[zhihu] 点击「我的主页」成功，href={href}")
+            navigated = True
+        except Exception as e:
+            logger.info(f"[zhihu] 点击「我的主页」失败: {e}")
+
+        # 3. 等待跳转完成（URL 应包含 /people/）
+        if navigated:
+            try:
+                await page.wait_for_url("**/people/**", timeout=15000)
+            except Exception:
+                pass
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=10000)
+        except Exception:
+            pass
+
+        # 4. 抓取昵称和头像
+        # 知乎「我的主页」是 SPA，跳转后异步渲染。先等昵称容器出现再读。
+        try:
+            name_el = page.locator(
+                'span.ProfileHeader-name, h1.ProfileHeader-title, '
+                'h1.UserHeaderName, .ProfileHeader-name'
+            ).first
+            try:
+                await name_el.wait_for(state="visible", timeout=10000)
+            except Exception as e:
+                logger.info(f"[zhihu] 昵称容器等待超时 (url={page.url}): {e}")
+            if await name_el.count() > 0:
+                name = (await name_el.text_content() or "").strip()
+        except Exception as e:
+            logger.info(f"[zhihu] 昵称抓取失败: {e}")
+
+        # 兜底：从 URL / 页面 title 提取昵称
+        if not name:
+            try:
+                title = (await page.title() or "").strip()
+                # title 一般是 "xxx - 知乎" 或 "xxx的主页"
+                if title and "知乎" in title:
+                    cand = title.split("-")[0].split("的")[0].strip()
+                    if cand and cand != "知乎":
+                        name = cand
+                        logger.info(f"[zhihu] 从 title 兜底昵称: {name!r}")
+            except Exception:
+                pass
+
+        try:
+            avatar_el = page.locator(
+                '.UserAvatar-inner img, .ProfileHeader-avatar img.Avatar, '
+                '.UserAvatar-inner, img.Avatar'
+            ).first
+            try:
+                await avatar_el.wait_for(state="attached", timeout=8000)
+            except Exception:
+                pass
+            if await avatar_el.count() > 0:
+                avatar = (await avatar_el.get_attribute("src") or "").strip()
+        except Exception as e:
+            logger.info(f"[zhihu] 头像抓取失败: {e}")
+
+        logger.info(
+            f"[zhihu] profile scraped - name={name!r} "
+            f"avatar={avatar[:80] if avatar else 'None'}"
+        )
+    except Exception as e:
+        logger.info(f"[zhihu] profile scrape error: {e}")
+
+    return name, avatar
+
+
+async def scrape_csdn_profile(page):
+    """CSDN 专用 scraper。
+
+    抓取流程（详见对接文档）：
+    1. 当前页应该是 ``https://mp.csdn.net/`` 创作者首页，已登录。
+    2. 等待 ``div.user-info-box``（用户信息卡）出现。
+    3. 昵称：``div.user-info-box p.name``（优先取 ``title`` 属性，兜底 text）。
+    4. 头像：``div.user-info-box .avatar-box img`` 的 ``src``。
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        try:
+            await page.wait_for_load_state("domcontentloaded", timeout=10000)
+        except Exception:
+            pass
+        try:
+            await page.locator("div.user-info-box").first.wait_for(
+                state="visible", timeout=15000
+            )
+        except Exception as e:
+            logger.info(f"[csdn] 用户信息卡未出现 (可能未登录): {e}")
+        await asyncio.sleep(2)
+
+        # 昵称：优先 title 属性（完整名），兜底 text_content
+        try:
+            name_el = page.locator("div.user-info-box p.name").first
+            if await name_el.count() > 0:
+                name = (await name_el.get_attribute("title") or "").strip()
+                if not name:
+                    name = (await name_el.text_content() or "").strip()
+        except Exception as e:
+            logger.info(f"[csdn] 昵称抓取失败: {e}")
+
+        # 头像
+        try:
+            avatar_el = page.locator(
+                "div.user-info-box .avatar-box img"
+            ).first
+            if await avatar_el.count() > 0:
+                avatar = (await avatar_el.get_attribute("src") or "").strip()
+        except Exception as e:
+            logger.info(f"[csdn] 头像抓取失败: {e}")
+
+        logger.info(
+            f"[csdn] profile scraped - name={name!r} "
+            f"avatar={avatar[:80] if avatar else 'None'}"
+        )
+    except Exception as e:
+        logger.info(f"[csdn] profile scrape error: {e}")
+
+    return name, avatar
+
+
+async def scrape_weixin_gzh_profile(page):
+    """微信公众号专用 scraper。
+
+    当前页应为 ``https://mp.weixin.qq.com/cgi-bin/home?...&token=XXX`` 首页，
+    已登录。DOM 结构（用户提供）：
+      <div class="weui-personal_info">
+        <img class="weui-desktop-account__img" src="https://wx.qlogo.cn/...">
+        <div class="weui-desktop_name">czy个人测试</div>
+      </div>
+
+    Returns:
+        tuple[str, str]: (user_name, avatar_url)
+    """
+    name = ""
+    avatar = ""
+    try:
+        try:
+            await page.locator(".weui-desktop_name").first.wait_for(
+                state="visible", timeout=12000
+            )
+        except Exception as e:
+            logger.info(f"[weixin_gzh] 昵称容器等待超时 (url={page.url}): {e}")
+        await asyncio.sleep(1)
+
+        # 头像：.weui-desktop-account__img 的 src
+        try:
+            avatar_el = page.locator(".weui-desktop-account__img").first
+            if await avatar_el.count() > 0:
+                avatar = (await avatar_el.get_attribute("src") or "").strip()
+        except Exception as e:
+            logger.info(f"[weixin_gzh] 头像抓取失败: {e}")
+
+        # 昵称：.weui-desktop_name（优先 title 兜底 text）
+        try:
+            name_el = page.locator(".weui-desktop_name").first
+            if await name_el.count() > 0:
+                name = (await name_el.get_attribute("title") or "").strip()
+                if not name:
+                    name = (await name_el.text_content() or "").strip()
+        except Exception as e:
+            logger.info(f"[weixin_gzh] 昵称抓取失败: {e}")
+
+        logger.info(
+            f"[weixin_gzh] profile scraped - name={name!r} "
+            f"avatar={avatar[:80] if avatar else 'None'}"
+        )
+    except Exception as e:
+        logger.info(f"[weixin_gzh] profile scrape error: {e}")
+
+    return name, avatar
+
+
+# ---------------------------------------------------------------------------
+# Schedule time parser
+# Source: original postVideo.py schedule parser
+# ---------------------------------------------------------------------------
+
+def parse_schedule_time(schedule_time_str, total_files, enableTimer,
+                       videos_per_day, daily_times, start_days):
+    """Parse a user-specified schedule time string.
+
+    If *enableTimer* is True and *schedule_time_str* can be parsed, returns
+    that datetime repeated for every file.  Otherwise falls back to
+    auto-generated times via ``generate_schedule_time_next_day``.
+
+    Args:
+        schedule_time_str: ISO-ish datetime string from the frontend.
+        total_files: Number of files to schedule.
+        enableTimer: Whether timed publishing is enabled.
+        videos_per_day: Videos per day for auto-generation.
+        daily_times: List of daily publish times for auto-generation.
+        start_days: Offset in days for auto-generation.
+
+    Returns:
+        list[int | datetime]: One entry per file.
+    """
+    if enableTimer and schedule_time_str:
+        try:
+            raw = str(schedule_time_str)
+            # Handle UTC ISO format (frontend may send 2026-05-16T13:00:00.000Z)
+            is_utc = raw.endswith("Z") or "+00:00" in raw
+            raw_clean = raw.replace("+08:00", "").replace("+00:00", "")
+
+            for fmt in (
+                "%Y-%m-%dT%H:%M:%S.%fZ",
+                "%Y-%m-%dT%H:%M:%SZ",
+                "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%d %H:%M",
+            ):
+                try:
+                    dt = datetime.strptime(raw_clean, fmt)
+                    if is_utc:
+                        dt = dt + timedelta(hours=8)
+                    logger.info(f"[schedule] using user-specified time: {dt}")
+                    return [dt] * total_files
+                except ValueError:
+                    continue
+            logger.info(f"[schedule] cannot parse time '{schedule_time_str}', falling back to auto-generation")
+        except Exception as e:
+            logger.info(f"[schedule] error parsing time: {e}, falling back to auto-generation")
+
+    # No user-specified time: auto-generate
+    if enableTimer:
+        # Lazy import to avoid circular dependency
+        from utils.files_times import generate_schedule_time_next_day
+        return generate_schedule_time_next_day(total_files, videos_per_day, daily_times, start_days)
+    else:
+        return [0 for _ in range(total_files)]
+
+
+# ---------------------------------------------------------------------------
+# Unified post-login flow
+# ---------------------------------------------------------------------------
+
+async def save_login_result(
+    context,
+    page,
+    platform_id: int,
+    platform_name: str,
+    status_queue,
+    scrape_fn=None,
+    account_id=None,
+    stats_fn=None,
+):
+    """Shared post-login flow: scrape profile, save cookie, write DB, send SSE.
+
+    This consolidates the repeated pattern found in every platform's login
+    handler (Douyin, Bilibili, Xiaohongshu, Kuaishou, Channels, Baijiahao,
+    YouTube, TikTok).
+
+    新增 stats_fn 参数:登录成功写入 DB 后,在同一个 session 内调用
+    stats_fn(page, account_id) 抓运营数据,把结果写入 user_info.stats JSON 列。
+    stats_fn 自己负责 page.goto 等所有动作;返回 list[dict] 或 []。
+    失败不阻塞登录成功流程。与 platform.sync_profile 内部用同一份抓取逻辑,
+    保证"登录后同步"和"同步按钮"看到的运营数据完全一致。
+
+    Args:
+        context: Playwright BrowserContext (used for cookie storage).
+        page: Playwright Page (used for profile scraping).
+        platform_id: Numeric platform identifier (matches ``user_info.type``).
+        platform_name: Human-readable platform name for default usernames.
+        status_queue: Queue for sending SSE status messages back to the
+            frontend.
+        scrape_fn: Optional async ``async (page) -> (name, avatar)`` callable.
+            Defaults to :func:`scrape_user_profile` (the generic JS scraper).
+        account_id: Optional existing account ID for re-login. When provided,
+            updates the existing record instead of creating a new one.
+    """
+    if scrape_fn is None:
+        scrape_fn = scrape_user_profile
+
+    # 1. Scrape user profile
+    # scrape_fn 约定:
+    #   2 元组 (name, avatar) — 旧平台
+    #   5 元组 (name, avatar, fans, likes, follows) — 新平台(如 VIVO)同步运营数据
+    profile = await scrape_fn(page)
+    user_name, avatar_url = profile[0], profile[1]
+    # 新平台同步账号运营数据;旧平台 scrape_fn 不返回,fans/likes/follows 默认 0
+    fans = profile[2] if len(profile) > 2 else 0
+    likes = profile[3] if len(profile) > 3 else 0
+    follows = profile[4] if len(profile) > 4 else 0
+    if not user_name:
+        user_name = f"{platform_name}用户{int(asyncio.get_event_loop().time())}"
+
+    cookies_dir = Path(BASE_DIR / "cookiesFile")
+    cookies_dir.mkdir(exist_ok=True)
+    db_path = Path(BASE_DIR / "db" / "database.db")
+
+    if account_id:
+        # Re-login: update existing record's cookie file
+        with sqlite3.connect(db_path) as conn:
+            row = conn.execute(
+                'SELECT filePath FROM user_info WHERE id = ?', (account_id,)
+            ).fetchone()
+            cookie_filename = row[0] if row else None
+
+        if not cookie_filename:
+            logger.info(f"[login] account {account_id} not found, creating new")
+            account_id = None
+
+    if not account_id:
+        # New login: generate new cookie filename
+        uuid_v1 = uuid.uuid1()
+        logger.info(f"UUID v1: {uuid_v1}")
+        cookie_filename = f"{uuid_v1}.json"
+
+    # 2. Save cookie file
+    await context.storage_state(path=cookies_dir / cookie_filename)
+
+    # 3. Write to database
+    # 注意:不再写入 fans/likes/follows 旧字段(已废弃),仅写 userName/avatar/stats。
+    # 旧的 fans/likes/follows 保留在表中以备历史数据,但新数据不再更新。
+    with sqlite3.connect(db_path) as conn:
+        if account_id:
+            conn.execute(
+                '''
+                UPDATE user_info
+                SET userName = ?, status = 1, avatar = ?
+                WHERE id = ?
+                ''',
+                (user_name, avatar_url, account_id),
+            )
+            conn.commit()
+            logger.info(f"[login] account {account_id} updated (re-login)")
+        else:
+            cursor = conn.cursor()
+            cursor.execute(
+                '''
+                INSERT INTO user_info (type, filePath, userName, status, avatar)
+                VALUES (?, ?, ?, ?, ?)
+                ''',
+                (platform_id, cookie_filename, user_name, 1, avatar_url),
+            )
+            conn.commit()
+            # 回填 account_id(新登录场景下原 account_id 为 None),供后续 stats 抓取使用
+            account_id = cursor.lastrowid
+            logger.info(f"[login] {platform_name} user record saved (id={account_id})")
+
+    # 4. 可选:补抓运营数据(stats)。
+    # 注意顺序:stats 必须在「推 SSE 200」之前写库,否则前端收到 200 立即刷新
+    # 账号列表时 DB 里还没有 stats,导致登录瞬间运营数据为空。
+    # stats_fn 自己负责 goto + 抓取,返回 [{ICON, COUNT, NAME, SORT}, ...];
+    # 失败不阻塞登录成功。
+    if stats_fn and account_id:
+        try:
+            stats = await stats_fn(page, account_id)
+            if stats:
+                import json as _json
+                with sqlite3.connect(db_path) as conn:
+                    conn.execute(
+                        'UPDATE user_info SET stats = ? WHERE id = ?',
+                        (_json.dumps(stats, ensure_ascii=False), account_id),
+                    )
+                    conn.commit()
+                logger.info(f"[login] account {account_id} stats 已补抓({len(stats)} 项)")
+            else:
+                logger.info(f"[login] account {account_id} stats 抓取为空,跳过")
+        except Exception as exc:
+            logger.info(f"[login] 补抓 stats 失败(不影响登录成功): {exc}")
+
+    # 5. Send SSE status (放在 stats 之后,确保前端刷新时 DB 已有运营数据)
+    status_queue.put(json.dumps({
+        "status": "200",
+        "name": user_name,
+        "avatar": avatar_url,
+    }))
+
+    # 返回 account_id,供调用方(login)做后续处理(如公众号自己掌控 stats 时序)
+    return account_id
+
+
+# ---------------------------------------------------------------------------
+# Platform URL registry (for sync_profile / open_creator_center)
+# ---------------------------------------------------------------------------
+
+PLATFORM_SYNC_URLS = {
+    1: "https://creator.xiaohongshu.com/",
+    2: "https://channels.weixin.qq.com/platform/post/create",
+    3: "https://creator.douyin.com/",
+    4: "https://cp.kuaishou.com/article/publish/video",
+    5: "https://account.bilibili.com/account/home",
+    6: "https://baijiahao.baidu.com/builder/rc/home",
+    7: "https://www.tiktok.com/",
+    8: "https://studio.youtube.com",
+    9: "https://mp.v.qq.com/",
+    10: "https://creator.iqiyi.com/",
+    11: "https://weibo.com/set/index",
+    12: "https://c.alipay.com/page/life-account/index",
+    13: "https://mp.toutiao.com/profile_v4/index",
+    14: "https://www.zhihu.com/settings/account",
+    15: "https://mp.csdn.net/",
+    16: "https://www.kaixinkan.com.cn/#/home",
+    17: "https://mp.weixin.qq.com/",
+}
+
+
+# ---------------------------------------------------------------------------
+# Platform scrape-function registry
+# ---------------------------------------------------------------------------
+
+PLATFORM_SCRAPE_FNS = {
+    1: scrape_user_profile,         # Xiaohongshu
+    2: scrape_tencent_profile,      # WeChat Channels
+    3: scrape_user_profile,         # Douyin
+    4: scrape_user_profile,         # Kuaishou
+    5: scrape_bilibili_profile,     # Bilibili
+    6: scrape_baijiahao_profile,    # Baijiahao
+    7: scrape_user_profile,         # TikTok
+    8: scrape_youtube_profile,      # YouTube
+    11: scrape_weibo_profile,       # Weibo
+    12: scrape_alipay_profile,      # Alipay
+    13: scrape_toutiao_profile,     # Toutiao
+    14: scrape_zhihu_profile,       # Zhihu
+    15: scrape_csdn_profile,        # CSDN
+    16: scrape_vivo_profile,        # VIVO
+    17: scrape_weixin_gzh_profile,  # 微信公众号
+}
+
+
+# ---------------------------------------------------------------------------
+# Cross-platform input helpers
+# ---------------------------------------------------------------------------
+
+_IS_MAC = _platform.system() == "Darwin"
+
+# 全选快捷键:Mac 用 Meta(Cmd)+A,其他系统用 Control+A
+_SELECT_ALL_KEY = "Meta+a" if _IS_MAC else "Control+a"
+
+
+async def clear_input(page, element=None):
+    """清空输入框内容(跨平台兼容)。
+
+    对 input/textarea 元素用 fill("") 清空(最稳定);
+    对 contenteditable 元素用 Ctrl/Cmd+A + Delete 清空。
+
+    Args:
+        page: Playwright page 对象
+        element: 可选,要清空的元素 locator。为 None 时对当前焦点元素操作。
+    """
+    if element is not None:
+        # 尝试用 fill("") 清空(input/textarea 最稳定)
+        try:
+            tag = await element.evaluate("el => el.tagName.toLowerCase()")
+            if tag in ("input", "textarea"):
+                await element.fill("")
+                return
+        except Exception:
+            pass
+        # contenteditable 或其他:点击聚焦 + 全选 + 删除
+        await element.click()
+        await asyncio.sleep(0.1)
+
+    # 全选 + 删除(跨平台)
+    await page.keyboard.press(_SELECT_ALL_KEY)
+    await asyncio.sleep(0.05)
+    await page.keyboard.press("Delete")
+    await asyncio.sleep(0.05)
+
+
+async def clear_and_type(page, text: str, element=None, delay: int = 0):
+    """清空输入框后输入新内容(跨平台兼容)。
+
+    先调用 clear_input 清空,再用 keyboard.type 输入。
+
+    Args:
+        page: Playwright page 对象
+        text: 要输入的文本
+        element: 可选,要操作的元素 locator
+        delay: 每字符延迟(ms),0 表示瞬间输入
+    """
+    await clear_input(page, element)
+    if text:
+        if delay > 0:
+            await page.keyboard.type(text, delay=delay)
+        else:
+            await page.keyboard.type(text)

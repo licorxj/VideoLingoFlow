@@ -1,0 +1,18 @@
+{
+  "groups": [
+    {
+      "id": "grp_d269a985",
+      "name": "翻译类",
+      "order": 0
+    },
+    {
+      "id": "grp_d7395d52",
+      "name": "下载类",
+      "order": 1
+    }
+  ],
+  "membership": {
+    "7032ce81b6df": "grp_d269a985",
+    "5fc0150ea613": "grp_d7395d52"
+  }
+}

@@ -1,0 +1,909 @@
+<template>
+  <div class="settings-page" v-loading="loading">
+    <h1 class="page-title">系统设置</h1>
+    <p class="page-subtitle">配置应用偏好</p>
+
+    <!-- 代理设置 -->
+    <div class="settings-card">
+      <h3 class="card-title">
+        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        网络代理
+      </h3>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">HTTP 代理地址</span>
+          <span class="setting-desc">用于 YouTube、TikTok 等海外平台的浏览器连接，国内平台无需代理</span>
+        </div>
+        <div class="setting-control">
+          <el-input
+            v-model="settings.proxyUrl"
+            placeholder="http://127.0.0.1:7897"
+            style="width: 300px"
+            clearable
+          />
+        </div>
+      </div>
+      <div class="proxy-platforms">
+        <span class="proxy-tag" v-for="p in overseasPlatforms" :key="p.key">
+          <img :src="p.logo" :alt="p.name" class="proxy-tag-logo" />
+          {{ p.name }}
+        </span>
+      </div>
+    </div>
+
+    <!-- 发布设置 -->
+    <div class="settings-card">
+      <h3 class="card-title">
+        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        发布设置
+      </h3>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">上传视频后自动填充标题</span>
+          <span class="setting-desc">上传视频成功后，自动将文件名填入所有渠道的标题字段</span>
+        </div>
+        <div class="setting-control">
+          <el-switch v-model="settings.autoFillTitle" />
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">自动保存草稿</span>
+          <span class="setting-desc">发布界面内容（视频、封面、标题、描述等）发生变更时，自动定时将当前内容保存为草稿，避免意外丢失</span>
+        </div>
+        <div class="setting-control">
+          <el-switch v-model="settings.autoSaveDraft" />
+        </div>
+      </div>
+      <div class="setting-row" v-if="settings.autoSaveDraft">
+        <div class="setting-info">
+          <span class="setting-label">自动保存间隔（秒）</span>
+          <span class="setting-desc">检测到内容变更后，等待指定时间再执行保存。间隔过短可能频繁触发请求，建议设置为 10-30 秒</span>
+        </div>
+        <div class="setting-control">
+          <el-input-number v-model="settings.autoSaveInterval" :min="10" :max="300" controls-position="right" style="width: 120px" />
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">账号登录状态检查机制</span>
+          <span class="setting-desc">选择账号 Cookie 有效性的检测时机。两个机制互斥，只能生效一个</span>
+        </div>
+        <div class="setting-control">
+          <el-select v-model="settings.accountCheckMode" style="width: 220px">
+            <el-option label="发布前检测（默认）" value="pre-publish" />
+            <el-option label="项目启动时后台检测" value="startup" />
+          </el-select>
+        </div>
+      </div>
+    </div>
+
+    <!-- 渠道黑名单 -->
+    <div class="settings-card">
+      <div class="card-header">
+        <h3 class="card-title">
+          <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
+          渠道黑名单
+        </h3>
+        <el-button type="primary" @click="openBlacklistDialog">
+          <el-icon><Plus /></el-icon> 添加渠道
+        </el-button>
+      </div>
+      <p class="card-desc">
+        被加入黑名单的渠道，将无法在视频发布、图集发布、账号登录场景下被选择
+      </p>
+
+      <!-- 已拉黑渠道的小卡片网格 -->
+      <div v-if="disabledPlatformObjects.length" class="blacklist-grid">
+        <div
+          v-for="p in disabledPlatformObjects"
+          :key="p.key"
+          class="blacklist-chip"
+          :class="`platform-${p.cssClass}`"
+        >
+          <img v-if="p.logo" :src="p.logo" :alt="p.name" class="chip-logo" />
+          <span class="chip-name">{{ p.name }}</span>
+          <button class="chip-remove" type="button" @click="removeFromBlacklist(p.key)">
+            <el-icon><Close /></el-icon>
+          </button>
+        </div>
+      </div>
+
+      <!-- 空态 -->
+      <div v-else class="blacklist-empty">
+        <el-icon class="empty-icon"><Warning /></el-icon>
+        <span>暂无黑名单渠道，点击右上角「添加渠道」开始</span>
+      </div>
+    </div>
+
+    <!-- 文件存储 -->
+    <div class="settings-card">
+      <h3 class="card-title">
+        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        文件存储
+      </h3>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">存储类型</span>
+          <span class="setting-desc">选择素材文件的存储方式，S3 兼容存储支持 MinIO、阿里云 OSS、AWS S3 等</span>
+        </div>
+        <div class="setting-control">
+          <el-radio-group v-model="settings.storage.type">
+            <el-radio value="local">本地存储</el-radio>
+            <el-radio value="s3">S3 兼容存储</el-radio>
+          </el-radio-group>
+        </div>
+      </div>
+      <template v-if="settings.storage.type === 's3'">
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Endpoint</span>
+          </div>
+          <div class="setting-control">
+            <el-input v-model="settings.storage.s3.endpoint" placeholder="http://127.0.0.1:9000" style="width: 300px" />
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Access Key</span>
+          </div>
+          <div class="setting-control">
+            <el-input v-model="settings.storage.s3.access_key" style="width: 300px" />
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Secret Key</span>
+          </div>
+          <div class="setting-control">
+            <el-input v-model="settings.storage.s3.secret_key" type="password" show-password style="width: 300px" />
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Bucket</span>
+          </div>
+          <div class="setting-control">
+            <el-input v-model="settings.storage.s3.bucket" style="width: 300px" />
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Region</span>
+          </div>
+          <div class="setting-control">
+            <el-input v-model="settings.storage.s3.region" placeholder="可选" style="width: 300px" />
+          </div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">连接测试</span>
+            <span class="setting-desc">验证 S3 配置是否正确，确认可以正常连接</span>
+          </div>
+          <div class="setting-control">
+            <button class="cache-btn" style="border-color: rgba(var(--el-color-primary-rgb), 0.3); background: rgba(var(--el-color-primary-rgb), 0.06); color: var(--el-color-primary);" :disabled="s3Testing" @click="testS3Connection">
+              {{ s3Testing ? '测试中...' : '测试连接' }}
+            </button>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- 缓存管理 -->
+    <div class="settings-card">
+      <h3 class="card-title">
+        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        缓存管理
+      </h3>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">清理抽帧缓存</span>
+          <span class="setting-desc">清除 data/frames/ 目录下所有已提取的视频帧画面，释放磁盘空间</span>
+        </div>
+        <div class="setting-control">
+          <span v-if="cacheInfo.frames.count > 0" class="cache-size">{{ cacheInfo.frames.count }} 个文件 · {{ formatSize(cacheInfo.frames.size) }}</span>
+          <span v-else class="cache-size empty">无缓存</span>
+          <button class="cache-btn" :disabled="clearingCache || cacheInfo.frames.count === 0" @click="handleClearCache('frames')">
+            {{ clearingCache ? '清理中...' : '清理缓存' }}
+          </button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">清理日志文件</span>
+          <span class="setting-desc">清除 7 天前的日志文件，保留最近一周的日志</span>
+        </div>
+        <div class="setting-control">
+          <span v-if="cacheInfo.logs.oldCount > 0" class="cache-size">{{ cacheInfo.logs.oldCount }} 个过期文件 · {{ formatSize(cacheInfo.logs.size) }}</span>
+          <span v-else class="cache-size empty">无过期日志</span>
+          <button class="cache-btn" :disabled="clearingCache || cacheInfo.logs.oldCount === 0" @click="handleClearCache('logs')">
+            {{ clearingCache ? '清理中...' : '清理日志' }}
+          </button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">S3 视频缓存</span>
+          <span class="setting-desc">清除 data/s3_video_cache/ 目录下从 S3 下载的本地视频副本</span>
+        </div>
+        <div class="setting-control">
+          <span v-if="cacheInfo.s3_videos.count > 0" class="cache-size">{{ cacheInfo.s3_videos.count }} 个文件 · {{ formatSize(cacheInfo.s3_videos.size) }}</span>
+          <span v-else class="cache-size empty">无缓存</span>
+          <button class="cache-btn" :disabled="clearingCache || cacheInfo.s3_videos.count === 0" @click="handleClearCache('s3_videos')">
+            {{ clearingCache ? '清理中...' : '清理缓存' }}
+          </button>
+        </div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">清理封面缓存</span>
+          <span class="setting-desc">清除 data/covers/ 目录下视频发布裁剪生成的封面文件</span>
+        </div>
+        <div class="setting-control">
+          <span v-if="cacheInfo.covers.count > 0" class="cache-size">{{ cacheInfo.covers.count }} 个文件 · {{ formatSize(cacheInfo.covers.size) }}</span>
+          <span v-else class="cache-size empty">无缓存</span>
+          <button class="cache-btn" :disabled="clearingCache || cacheInfo.covers.count === 0" @click="handleClearCache('covers')">
+            {{ clearingCache ? '清理中...' : '清理缓存' }}
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 关于系统 -->
+    <div class="settings-card">
+      <h3 class="card-title">
+        <svg class="title-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        技术栈
+      </h3>
+      <div class="tech-grid">
+        <div class="tech-section">
+          <h4 class="tech-section-title">版本</h4>
+          <div class="version-badge">v{{ appVersion }}</div>
+        </div>
+        <div class="tech-section">
+          <h4 class="tech-section-title">前端</h4>
+          <div class="tech-item" v-for="item in frontendStack" :key="item.name">
+            <span class="tech-name">{{ item.name }}</span>
+            <span class="tech-version">{{ item.version }}</span>
+          </div>
+        </div>
+        <div class="tech-section">
+          <h4 class="tech-section-title">后端</h4>
+          <div class="tech-item" v-for="item in backendStack" :key="item.name">
+            <span class="tech-name">{{ item.name }}</span>
+            <span class="tech-version">{{ item.version }}</span>
+          </div>
+        </div>
+        <div class="tech-section">
+          <h4 class="tech-section-title">浏览器引擎</h4>
+          <div class="tech-item" v-for="item in browserStack" :key="item.name">
+            <span class="tech-name">{{ item.name }}</span>
+            <span class="tech-version">{{ item.version }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 反馈系统 -->
+    <div class="settings-card">
+      <h3 class="card-title">
+        <el-icon class="title-icon"><ChatDotRound /></el-icon>
+        反馈系统
+      </h3>
+      <div class="setting-row">
+        <div class="setting-info">
+          <span class="setting-label">反馈邮箱</span>
+          <span class="setting-desc">用于在「一键反馈」菜单提交反馈和投票。不填将无法使用这些功能</span>
+        </div>
+        <div class="setting-control">
+          <el-input
+            v-model="settings.feedbackEmail"
+            placeholder="your@email.com"
+            style="width: 300px"
+            clearable
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- Save button -->
+    <div class="save-bar">
+      <button class="save-btn" :disabled="saving" @click="handleSave">
+        {{ saving ? '保存中...' : '保存设置' }}
+      </button>
+    </div>
+
+    <!-- 渠道黑名单添加弹窗 -->
+    <PlatformBlacklistDialog
+      v-model="blacklistDialogVisible"
+      :disabled-keys="appStore.disabledPlatforms"
+      @confirm="onBlacklistConfirm"
+    />
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, computed, onMounted } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { ChatDotRound, Plus, Close, Warning } from '@element-plus/icons-vue'
+import { settingsApi } from '@/api/v2'
+import { platformList, getPlatformByKey } from '@/config/platforms'
+import { http } from '@/utils/request'
+import { useAppStore } from '@/stores/app'
+import PlatformBlacklistDialog from '@/components/PlatformBlacklistDialog.vue'
+
+const appStore = useAppStore()
+
+// 已拉黑渠道的平台对象数组(filter(Boolean) 容错,防止后端返回不存在的 key)
+// 注意: store 中存的是小写 platform key (如 'xiaohongshu'),
+// 不能用 PLATFORMS[<uppercase>] 直接查,要用 getPlatformByKey
+const disabledPlatformObjects = computed(() =>
+  appStore.disabledPlatforms
+    .map(k => getPlatformByKey(k))
+    .filter(Boolean)
+)
+
+const blacklistDialogVisible = ref(false)
+const openBlacklistDialog = () => { blacklistDialogVisible.value = true }
+
+const removeFromBlacklist = async (key) => {
+  try {
+    await appStore.removeDisabledPlatform(key)
+    ElMessage.success('已从黑名单移除')
+  } catch (e) {
+    console.error('移除黑名单失败:', e)
+    ElMessage.error('移除失败,请重试')
+  }
+}
+
+const onBlacklistConfirm = async (newKeys) => {
+  try {
+    await appStore.addDisabledPlatforms(newKeys)
+    ElMessage.success(`已添加 ${newKeys.length} 个渠道到黑名单`)
+  } catch (e) {
+    console.error('添加黑名单失败:', e)
+    ElMessage.error('添加失败,请重试')
+  }
+}
+
+const loading = ref(false)
+const saving = ref(false)
+const clearingCache = ref(false)
+const appVersion = ref('--')
+const cacheInfo = reactive({
+  frames: { count: 0, size: 0 },
+  logs: { count: 0, size: 0, oldCount: 0 },
+  s3_videos: { count: 0, size: 0 },
+  covers: { count: 0, size: 0 },
+})
+
+const fetchSystemInfo = async () => {
+  try {
+    const res = await http.get('/api/system-info')
+    if (res.code === 200 && res.data) {
+      appVersion.value = res.data.version || '--'
+      if (res.data.cache) {
+        cacheInfo.frames = res.data.cache.frames || { count: 0, size: 0 }
+        cacheInfo.logs = res.data.cache.logs || { count: 0, size: 0, oldCount: 0 }
+        cacheInfo.s3_videos = res.data.cache.s3_videos || { count: 0, size: 0 }
+        cacheInfo.covers = res.data.cache.covers || { count: 0, size: 0 }
+      }
+    }
+  } catch {}
+}
+
+const formatSize = (bytes) => {
+  if (!bytes) return '0B'
+  if (bytes < 1024) return bytes + 'B'
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB'
+  return (bytes / 1024 / 1024).toFixed(1) + 'MB'
+}
+
+const handleClearCache = async (target) => {
+  const messages = { frames: '抽帧缓存', logs: '日志文件', s3_videos: 'S3 视频缓存', covers: '封面缓存' }
+  const confirmMessages = {
+    frames: '确定要清理所有抽帧缓存数据吗？清理后下次使用封面功能时会重新提取视频帧。',
+    logs: '确定要清理所有过期日志文件吗？',
+    s3_videos: '确定要清理所有 S3 视频缓存吗？清理后下次抽帧时会重新从 S3 下载。',
+    covers: '确定要清理所有封面缓存吗？清理后已设置的封面引用可能失效，需重新裁剪。',
+  }
+  try {
+    await ElMessageBox.confirm(
+      confirmMessages[target],
+      '确认清理',
+      { confirmButtonText: '确定清理', cancelButtonText: '取消', type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  clearingCache.value = true
+  try {
+    const res = await http.post('/api/clear-cache', { targets: [target] })
+    if (res.code === 200) {
+      const info = res.data?.[target]
+      ElMessage.success(info ? `已清理 ${info.cleared} 个${messages[target]}` : `${messages[target]}已清理`)
+      fetchSystemInfo()
+    } else {
+      ElMessage.error(res.msg || '清理失败')
+    }
+  } catch {
+    ElMessage.error('清理失败')
+  } finally {
+    clearingCache.value = false
+  }
+}
+
+const settings = reactive({
+  proxyUrl: '',
+  autoFillTitle: true,
+  autoSaveDraft: true,
+  autoSaveInterval: 10,
+  accountCheckMode: 'pre-publish',
+  storage: {
+    type: 'local',
+    s3: { endpoint: '', access_key: '', secret_key: '', bucket: '', region: '' },
+  },
+  feedbackEmail: '',
+})
+
+const s3Testing = ref(false)
+
+async function testS3Connection() {
+  s3Testing.value = true
+  try {
+    const resp = await http.post('/api/materials/test-s3', settings.storage.s3)
+    if (resp.code === 200) {
+      ElMessage.success('S3 连接成功')
+    } else {
+      ElMessage.error(resp.msg || '连接失败')
+    }
+  } catch (e) {
+    ElMessage.error('连接失败: ' + (e.message || '未知错误'))
+  }
+  s3Testing.value = false
+}
+
+// 海外平台列表
+const overseasPlatforms = platformList.filter(p => ['youtube', 'tiktok'].includes(p.key))
+
+// 技术栈版本
+const frontendStack = [
+  { name: 'Vue', version: '3.5.x' },
+  { name: 'Element Plus', version: '2.9.x' },
+  { name: 'Vite', version: '6.3.x' },
+  { name: 'Pinia', version: '3.0.x' },
+  { name: 'Axios', version: '1.9.x' },
+]
+
+const backendStack = [
+  { name: 'Python', version: '3.14' },
+  { name: 'Flask', version: '3.1.x' },
+  { name: 'SQLite', version: '3.x' },
+]
+
+const browserStack = [
+  { name: 'CloakBrowser', version: 'latest' },
+  { name: 'Chromium', version: 'latest' },
+]
+
+const fetchSettings = async () => {
+  loading.value = true
+  try {
+    const res = await settingsApi.getSettings()
+    if (res.code === 200 && res.data) {
+      if (res.data.proxyUrl !== undefined) settings.proxyUrl = res.data.proxyUrl
+      if (res.data.autoFillTitle !== undefined) settings.autoFillTitle = res.data.autoFillTitle
+      if (res.data.autoSaveDraft !== undefined) settings.autoSaveDraft = res.data.autoSaveDraft
+      if (res.data.autoSaveInterval !== undefined) settings.autoSaveInterval = res.data.autoSaveInterval
+      if (res.data.accountCheckMode !== undefined) settings.accountCheckMode = res.data.accountCheckMode
+      if (res.data.storage) {
+        settings.storage = { ...settings.storage, ...res.data.storage }
+      }
+      if (res.data.feedbackEmail !== undefined) {
+        settings.feedbackEmail = res.data.feedbackEmail
+        // 同步到 localStorage 让非设置页也能快速判断 email 是否已配置
+        localStorage.setItem('global_user_email', settings.feedbackEmail || '')
+      }
+      // 把 disabledPlatforms(JSON 字符串数组)同步到 app store
+      // 注意:后端 GET 不自动反序列化此字段,前端需手动 JSON.parse
+      if (res.data.disabledPlatforms !== undefined && res.data.disabledPlatforms !== null && res.data.disabledPlatforms !== '') {
+        try {
+          const parsed = typeof res.data.disabledPlatforms === 'string'
+            ? JSON.parse(res.data.disabledPlatforms)
+            : res.data.disabledPlatforms
+          appStore.disabledPlatforms = Array.isArray(parsed) ? parsed : []
+        } catch (e) {
+          console.warn('解析 disabledPlatforms 失败:', e)
+          appStore.disabledPlatforms = []
+        }
+      } else {
+        appStore.disabledPlatforms = []
+      }
+    }
+  } catch (e) {
+    console.error(e)
+  } finally {
+    loading.value = false
+  }
+}
+
+const handleSave = async () => {
+  saving.value = true
+  try {
+    const res = await settingsApi.updateSettings({
+      proxyUrl: settings.proxyUrl,
+      autoFillTitle: settings.autoFillTitle,
+      autoSaveDraft: settings.autoSaveDraft,
+      autoSaveInterval: settings.autoSaveInterval,
+      accountCheckMode: settings.accountCheckMode,
+      storage: settings.storage,
+      feedbackEmail: settings.feedbackEmail,
+    })
+    if (res.code === 200) {
+      // 同步到 Pinia store + localStorage(之前漏了这三项,导致开关不生效)
+      appStore.setAutoFillTitle(settings.autoFillTitle)
+      appStore.setAutoSaveDraft(settings.autoSaveDraft)
+      appStore.setAutoSaveInterval(settings.autoSaveInterval)
+      appStore.setAccountCheckMode(settings.accountCheckMode)
+      localStorage.setItem('global_user_email', settings.feedbackEmail || '')
+      ElMessage.success('设置已保存')
+    } else {
+      ElMessage.error(res.msg || '保存失败')
+    }
+  } catch (e) {
+    ElMessage.error('保存失败')
+  } finally {
+    saving.value = false
+  }
+}
+
+onMounted(() => {
+  fetchSettings()
+  fetchSystemInfo()
+})
+</script>
+
+<style lang="scss" scoped>
+@use '@/styles/variables.scss' as *;
+
+.settings-page {
+  padding: 0 28px;
+
+  .page-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: $text-primary;
+    margin: 0 0 8px 0;
+  }
+
+  .page-subtitle {
+    font-size: 14px;
+    color: $text-secondary;
+    margin: 0 0 $spacing-lg 0;
+  }
+
+  .settings-card {
+    background: $bg-elevated;
+    border: 1px solid $border;
+    border-radius: $radius-card;
+    padding: $spacing-lg;
+    margin-bottom: $spacing-md;
+
+    .card-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: $text-primary;
+      margin: 0 0 $spacing-lg 0;
+      padding-bottom: $spacing-sm;
+      border-bottom: 1px solid $border;
+
+      .title-icon {
+        width: 20px;
+        height: 20px;
+        color: $text-secondary;
+      }
+    }
+
+    .setting-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+
+      &:not(:last-child) {
+        border-bottom: 1px solid $border-light;
+      }
+
+      .setting-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+
+        .setting-label {
+          font-size: 14px;
+          color: $text-primary;
+          font-weight: 500;
+        }
+
+        .setting-desc {
+          font-size: 12px;
+          color: $text-muted;
+          line-height: 1.5;
+        }
+      }
+
+      .setting-control {
+        flex-shrink: 0;
+        margin-left: $spacing-lg;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .cache-size {
+        font-size: 12px;
+        color: $text-muted;
+        font-family: 'Fira Code', monospace;
+        white-space: nowrap;
+
+        &.empty {
+          opacity: 0.5;
+        }
+      }
+
+      .cache-btn {
+        padding: 8px 20px;
+        border: 1px solid rgba($danger-color, 0.3);
+        border-radius: $radius-base;
+        background: rgba($danger-color, 0.06);
+        color: $danger-color;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: $transition-base;
+        font-family: inherit;
+        outline: none;
+
+        &:hover:not(:disabled) {
+          background: rgba($danger-color, 0.12);
+          border-color: rgba($danger-color, 0.5);
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+    }
+
+    .proxy-platforms {
+      display: flex;
+      gap: $spacing-sm;
+      margin-top: $spacing-sm;
+      padding-left: 4px;
+
+      .proxy-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 14px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: 500;
+        background: $bg-surface;
+        border: 1px solid $border;
+        color: $text-secondary;
+
+        .proxy-tag-logo {
+          width: 16px;
+          height: 16px;
+          border-radius: 3px;
+        }
+      }
+    }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: $spacing-md;
+      margin: 0 0 $spacing-sm 0;
+      padding-bottom: $spacing-sm;
+      border-bottom: 1px solid $border;
+
+      .card-title {
+        margin: 0;
+        border-bottom: none;
+        padding-bottom: 0;
+      }
+    }
+
+    .card-desc {
+      margin: 0 0 $spacing-md 0;
+      font-size: 12px;
+      color: $text-muted;
+      line-height: 1.5;
+    }
+
+    .blacklist-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .blacklist-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 8px;
+      border: 1px solid $border;
+      background: $bg-surface;
+      position: relative;
+      transition: all 0.2s;
+
+      &:hover {
+        border-color: var(--el-color-primary);
+      }
+    }
+
+    .chip-logo {
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+    }
+
+    .chip-name {
+      font-size: 13px;
+      color: $text-primary;
+    }
+
+    .chip-remove {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.4);
+      color: white;
+      cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.2s;
+      padding: 0;
+      margin-left: 2px;
+
+      .blacklist-chip:hover & {
+        opacity: 1;
+      }
+
+      &:hover {
+        background: var(--el-color-danger);
+      }
+    }
+
+    .blacklist-empty {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: $text-secondary;
+      font-size: 13px;
+      margin-top: 12px;
+      padding: 16px;
+      background: $bg-surface;
+      border-radius: 8px;
+
+      .empty-icon {
+        font-size: 18px;
+      }
+    }
+  }
+
+  // ── Tech stack section ──
+  .tech-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: $spacing-lg;
+
+    @media (max-width: 768px) {
+      grid-template-columns: 1fr;
+    }
+
+    .tech-section {
+      .version-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 20px;
+        border-radius: 8px;
+        background: $gradient-brand;
+        color: #fff;
+        font-size: 18px;
+        font-weight: 700;
+        font-family: 'Fira Code', monospace;
+        letter-spacing: 0.5px;
+      }
+
+      .tech-section-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: $text-muted;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin: 0 0 $spacing-sm 0;
+      }
+
+      .tech-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid $border-light;
+
+        &:last-child {
+          border-bottom: none;
+        }
+
+        .tech-name {
+          font-size: 14px;
+          color: $text-primary;
+        }
+
+        .tech-version {
+          font-size: 13px;
+          color: $text-muted;
+          font-family: 'Fira Code', monospace;
+        }
+      }
+    }
+  }
+
+  .save-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 16px;
+    padding: $spacing-lg 0;
+
+    .save-btn {
+      padding: 10px 32px;
+      border: none;
+      border-radius: $radius-base;
+      font-size: 14px;
+      font-weight: 500;
+      color: #fff;
+      background: $gradient-brand;
+      cursor: pointer;
+      transition: opacity $transition-base;
+
+      &:hover:not(:disabled) {
+        opacity: 0.9;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  // Element Plus overrides for dark theme consistency
+  :deep(.el-input__wrapper),
+  :deep(.el-select__wrapper),
+  :deep(.el-input-number) {
+    background-color: $bg-surface;
+    box-shadow: 0 0 0 1px $border inset;
+  }
+
+  :deep(.el-input__inner),
+  :deep(.el-select__placeholder),
+  :deep(.el-input-number .el-input__inner) {
+    color: $text-primary;
+  }
+}
+</style>

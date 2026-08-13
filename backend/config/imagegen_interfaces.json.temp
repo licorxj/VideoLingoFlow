@@ -1,0 +1,541 @@
+﻿﻿﻿﻿﻿{
+  "version": 1,
+  "interfaces": [
+    {
+      "id": "bailian",
+      "name": "阿里百炼 (DashScope)",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "阿里云百炼图像生成服务，支持万相(Wan)、千问(Qwen)和Z-Image系列模型，通过dashscope SDK同步调用",
+      "api_source_url": "https://help.aliyun.com/zh/model-studio/get-api-key",
+      "model_docs_url": "https://help.aliyun.com/zh/model-studio/image-model/",
+      "balance": null,
+      "config": {
+        "api_url": "",
+        "api_key": "",
+        "sdk_package": "dashscope",
+        "sdk_module": "backend.imagegen.sdk.bailian_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "",
+        "default_model": "wan2.7-image-pro",
+        "model_options": [
+          "wan2.7-image-pro",
+          "wan2.7-image",
+          "z-image-turbo",
+          "qwen-image-2.0-pro",
+          "qwen-image-2.0",
+          "qwen-image-max",
+          "qwen-image-plus",
+          "qwen-image-edit-max",
+          "qwen-image-edit-plus"
+        ],
+        "model_metadata": {
+          "wan2.7-image-pro": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "wan2.7-image": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "z-image-turbo": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4"
+            ]
+          },
+          "qwen-image-2.0-pro": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4"
+            ]
+          },
+          "qwen-image-2.0": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4"
+            ]
+          },
+          "qwen-image-max": {
+            "modes": [
+              "t2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4"
+            ]
+          },
+          "qwen-image-plus": {
+            "modes": [
+              "t2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4"
+            ]
+          },
+          "qwen-image-edit-max": {
+            "modes": [
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4"
+            ]
+          },
+          "qwen-image-edit-plus": {
+            "modes": [
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4"
+            ]
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2img": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2img": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "prompt_extend",
+            "default": "true",
+            "description": "智能改写prompt（仅千问模型生效）"
+          },
+          {
+            "key": "watermark",
+            "default": "false",
+            "description": "添加水印"
+          },
+          {
+            "key": "thinking_mode",
+            "default": "true",
+            "description": "思考模式增强出图质量（仅万相2.7模型生效）"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 180,
+        "sdk_extra_args": {}
+      }
+    },
+    {
+      "id": "kieai",
+      "name": "KIE AI (国际模型代理)",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "国际图像生成模型代理，支持Seedream、Grok Imagine、GPT-Image、Z-Image、Nano-Banana等模型，异步任务轮询模式",
+      "api_source_url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+      "model_docs_url": "https://kie.ai/market",
+      "balance": null,
+      "config": {
+        "api_url": "",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.imagegen.sdk.kieai_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "",
+        "default_model": "seedream/5-lite-text-to-image",
+        "model_options": [
+          "seedream/5-lite-text-to-image",
+          "seedream/5-lite-image-to-image",
+          "z-image",
+          "nano-banana-2",
+          "grok-imagine/text-to-image",
+          "grok-imagine/image-to-image",
+          "gpt-image-2-text-to-image",
+          "gpt-image-2-image-to-image",
+          "google/nano-banana-edit",
+          "nano-banana-2",
+          "flux-2/pro-image-to-image",
+          "flux-2/pro-text-to-image",
+          "google/imagen4"
+        ],
+        "model_metadata": {
+          "seedream/5-lite-text-to-image": {
+            "modes": [
+              "t2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "21:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "seedream/5-lite-image-to-image": {
+            "modes": [
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "21:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "z-image": {
+            "modes": [
+              "t2i"
+            ],
+            "price": "0.03",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "21:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "nano-banana-2": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "grok-imagine/text-to-image": {
+            "modes": [
+              "t2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "21:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "grok-imagine/image-to-image": {
+            "modes": [
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "21:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "gpt-image-2-text-to-image": {
+            "modes": [
+              "t2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "21:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "gpt-image-2-image-to-image": {
+            "modes": [
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "21:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "google/nano-banana-edit": {
+            "modes": [
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "4K",
+              "2K",
+              "1K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "flux-2/pro-image-to-image": {
+            "modes": [
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "flux-2/pro-text-to-image": {
+            "modes": [
+              "t2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "google/imagen4": {
+            "modes": [
+              "t2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "3:4",
+              "4:3",
+              "9:16",
+              "16:9",
+              "1:1"
+            ]
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "balance_endpoint": "api/v1/chat/credit",
+        "modes": {
+          "txt2img": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2img": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "quality",
+            "default": "",
+            "description": "输出质量：basic(2K) 或 high(3K-4K)，留空则根据分辨率自动选择"
+          },
+          {
+            "key": "nsfw_checker",
+            "default": "false",
+            "description": "是否启用内容安全检查"
+          },
+          {
+            "key": "poll_timeout",
+            "default": "600",
+            "description": "任务轮询超时时间（秒）"
+          }
+        ],
+        "max_concurrent": 2,
+        "timeout": 600,
+        "sdk_extra_args": {}
+      }
+    }
+  ]
+}

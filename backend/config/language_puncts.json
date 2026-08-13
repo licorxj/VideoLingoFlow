@@ -1,0 +1,240 @@
+{
+  "_doc": "sentence splitting punctuation config per language",
+  "_common": {
+    "_doc": "公共标点符号集合（全角+半角），与语言专属标点合并去重后使用",
+    "sentence_ends": [
+      ".", "。",
+      "!", "！",
+      "?", "？",
+      ";", "；"
+    ],
+    "clause_breaks": [
+      ",", "，",
+      ".", "。",
+      "!", "！",
+      "?", "？",
+      ";", "；"
+    ]
+  },
+  "_default": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?",
+      "；"
+    ],
+    "clause_breaks": [
+      ",",
+      "，"
+    ]
+  },
+  "zh": {
+    "sentence_ends": [
+      "。",
+      "！",
+      "？",
+      "；"
+    ],
+    "clause_breaks": [
+      ",",
+      "，",
+      "、"
+    ]
+  },
+  "en": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?",
+      ";"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "ja": {
+    "sentence_ends": [
+      "。",
+      "！",
+      "？",
+      "」"
+    ],
+    "clause_breaks": [
+      "、",
+      "，"
+    ]
+  },
+  "ko": {
+    "sentence_ends": [
+      "。",
+      "！",
+      "？",
+      "」"
+    ],
+    "clause_breaks": [
+      "、",
+      "，"
+    ]
+  },
+  "fr": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?",
+      ";"
+    ],
+    "clause_breaks": [
+      ","
+    ]
+  },
+  "de": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?",
+      ";"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "es": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?",
+      "¿"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "pt": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?",
+      ";"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "ru": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?",
+      ";"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "ar": {
+    "sentence_ends": [
+      "؟",
+      "؛",
+      "."
+    ],
+    "clause_breaks": [
+      "،"
+    ]
+  },
+  "hi": {
+    "sentence_ends": [
+      "।",
+      "॥",
+      ".",
+      "!",
+      "?"
+    ],
+    "clause_breaks": [
+      ",",
+      "ऌ"
+    ]
+  },
+  "th": {
+    "sentence_ends": [
+      "ฯ",
+      ".",
+      "!",
+      "?"
+    ],
+    "clause_breaks": [
+      "ก",
+      ","
+    ]
+  },
+  "vi": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "it": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "nl": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "pl": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "tr": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  },
+  "id": {
+    "sentence_ends": [
+      ".",
+      "!",
+      "?"
+    ],
+    "clause_breaks": [
+      ",",
+      ";"
+    ]
+  }
+}

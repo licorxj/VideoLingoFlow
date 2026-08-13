@@ -1,0 +1,30 @@
+{
+  "providers": {
+    "videolingo": {
+      "baseUrl": "http://localhost:8800/v1",
+      "api": "openai-completions",
+      "apiKey": "$VIDEOLINGO_PI_API_KEY",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false,
+        "supportsUsageInStreaming": false
+      },
+      "models": [
+        {
+          "id": "vlf-agent",
+          "name": "VideoLingo Agent",
+          "reasoning": false,
+          "input": ["text"],
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          },
+          "contextWindow": 128000,
+          "maxTokens": 4096
+        }
+      ]
+    }
+  }
+}

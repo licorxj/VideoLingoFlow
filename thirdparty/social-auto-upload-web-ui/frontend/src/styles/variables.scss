@@ -1,0 +1,120 @@
+// ========== Color Palette — Gradient Vibrant Dark ==========
+
+// Brand colors
+$brand-start: #8b5cf6;
+$brand-end: #3b82f6;
+
+// Accent colors
+$accent-cyan: #06b6d4;
+$accent-green: #22c55e;
+$accent-rose: #f43f5e;
+$accent-amber: #f59e0b;
+
+// Status colors
+$success-color: #22c55e;
+$warning-color: #f59e0b;
+$danger-color: #ef4444;
+$info-color: #3b82f6;
+
+// Background colors —— 映射 CSS 变量，随主题切换（themes.scss）
+$bg-base: var(--bg-base);
+$bg-elevated: var(--bg-elevated);
+$bg-surface: var(--surface);
+$bg-overlay: var(--shadow-overlay);
+// 背景的 RGB 通道（供 rgba($bg-elevated-rgb, X) 形式使用，带透明度的背景随主题切换）
+$bg-base-rgb: var(--bg-base-rgb);
+$bg-elevated-rgb: var(--bg-elevated-rgb);
+
+// Text colors —— 随主题切换
+$text-primary: var(--text-primary);
+$text-secondary: var(--text-secondary);
+$text-muted: var(--text-muted);
+$text-placeholder: var(--text-placeholder);
+
+// Border colors —— 随主题切换
+$border: var(--border);
+$border-light: var(--border-light);
+$border-active: var(--border-active);
+
+// Overlay RGB —— 关键：暗色=255,255,255（提亮），亮色=15,23,42（压暗）。
+// 组件里原本的 rgba(255,255,255,X) 叠加层统一改写为 rgba($overlay-rgb, X)，
+// 即可在两个主题下都正确显示 hover/highlight 状态。
+$overlay-rgb: var(--overlay-rgb);
+$overlay-strong-rgb: var(--overlay-strong-rgb);
+
+// 语义化的叠加层（直接给 background 用）
+$overlay-hover: var(--surface-hover);
+$overlay-active: var(--surface-active);
+
+// Popper / 下拉弹出层 —— 随主题切换
+$popper-bg: var(--popper-bg);
+$popper-border: var(--popper-border);
+$popper-hover: var(--popper-hover);
+$popper-text: var(--popper-text);
+$popper-text-muted: var(--popper-text-muted);
+
+// ========== Gradient Presets ==========
+$gradient-brand: linear-gradient(135deg, $brand-start, $brand-end);
+$gradient-brand-subtle: linear-gradient(135deg, rgba($brand-start, 0.12), rgba($brand-end, 0.08));
+$gradient-success: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(6, 182, 212, 0.1));
+$gradient-danger: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(244, 63, 94, 0.1));
+$gradient-info: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.1));
+$gradient-cyan: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(34, 197, 94, 0.1));
+
+// Stat card gradient themes (for 4 stat cards)
+$stat-purple-bg: linear-gradient(135deg, rgba($brand-start, 0.15), rgba($brand-end, 0.1));
+$stat-purple-border: rgba($brand-start, 0.2);
+$stat-blue-bg: linear-gradient(135deg, rgba($brand-end, 0.15), rgba(6, 182, 212, 0.1));
+$stat-blue-border: rgba($brand-end, 0.2);
+$stat-cyan-bg: linear-gradient(135deg, rgba(6, 182, 212, 0.15), rgba(34, 197, 94, 0.1));
+$stat-cyan-border: rgba(6, 182, 212, 0.2);
+$stat-green-bg: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(234, 179, 8, 0.1));
+$stat-green-border: rgba(34, 197, 94, 0.2);
+
+// ========== Platform Colors ==========
+$platform-douyin: #f43f5e;
+$platform-douyin-bg: rgba(244, 63, 94, 0.15);
+$platform-kuaishou: #f59e0b;
+$platform-kuaishou-bg: rgba(245, 158, 11, 0.15);
+$platform-channels: #3b82f6;
+$platform-channels-bg: rgba(59, 130, 246, 0.15);
+$platform-xiaohongshu: #8b5cf6;
+$platform-xiaohongshu-bg: rgba(139, 92, 246, 0.15);
+$platform-bilibili: #00a1d6;
+$platform-bilibili-bg: rgba(0, 161, 214, 0.15);
+$platform-baijiahao: #e64e3a;
+$platform-baijiahao-bg: rgba(230, 78, 58, 0.15);
+$platform-tiktok: #FE2C55;
+$platform-tiktok-bg: rgba(254, 44, 85, 0.15);
+$platform-youtube: #ff0000;
+$platform-youtube-bg: rgba(255, 0, 0, 0.15);
+$platform-zhihu: #0084ff;
+$platform-zhihu-bg: rgba(0, 132, 255, 0.15);
+$platform-csdn: #fc5531;
+$platform-csdn-bg: rgba(252, 85, 49, 0.15);
+
+// ========== Spacing ==========
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+
+// ========== Border Radius ==========
+$radius-sm: 8px;
+$radius-base: 10px;
+$radius-card: 12px;
+$radius-lg: 14px;
+$radius-dialog: 16px;
+
+// ========== Transitions ==========
+$transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+$transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+
+// ========== Z-index ==========
+$z-normal: 1;
+$z-header: 10;
+$z-sidebar: 20;
+$z-overlay: 1000;
+$z-dialog: 2000;

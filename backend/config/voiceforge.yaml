@@ -1,0 +1,11 @@
+storage_root: voiceforge_data
+database_name: voiceforge.db
+default_language: zh-CN
+max_upload_bytes: 524288000
+export_format: wav
+redis_url: redis://127.0.0.1:6379/2
+celery_result_url: redis://127.0.0.1:6379/3
+queues:
+  synthesis: voiceforge_synthesis
+  voice: voiceforge_voice
+  export: voiceforge_export

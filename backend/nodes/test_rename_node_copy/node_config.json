@@ -1,0 +1,1 @@
+{"id": "test_rename_node", "name": "重命名测试", "version": "1.0.0", "category": "process", "description": "t", "icon": "Wrench", "color": "#6b7280", "inputs": [], "outputs": [], "defaultConfig": {}, "configFields": [], "execType": "", "execCode": "", "execFile": "", "execTimeout": 300, "schemaVersion": "1.0"}
