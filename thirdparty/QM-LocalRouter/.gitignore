@@ -26,10 +26,6 @@ frontend/build/
 *.db-wal
 *.db-shm
 
-# VideoLingoLc 定制：预设数据库 app.db 随仓库分享（内含 Provider/Key/模型等预设；
-# 上传前请自行删除其中的 API key），wal/shm/journal 等临时文件仍忽略
-!backend/data/app.db
-
 # === Backups ===
 backend/data/backups/
 *.bak
