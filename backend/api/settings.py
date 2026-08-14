@@ -1,4 +1,4 @@
-﻿"""Settings API: read/write YAML config."""
+"""Settings API: read/write YAML config."""
 from fastapi import APIRouter
 from pydantic import BaseModel
 from typing import Any

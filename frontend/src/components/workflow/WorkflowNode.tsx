@@ -25,6 +25,7 @@ import {
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
 import SubtitleEditorDialog from "./SubtitleEditorDialog";
+import { LcwrWatermarkEditor } from "./LcwrWatermarkEditor";
 
 const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
@@ -854,6 +855,8 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
          return field;
        });
   })();
+  // LCWR 去水印节点使用自定义编辑器（LcwrWatermarkEditor），跳过通用表单渲染
+  if (nodeType.id === "lcwr_watermark_removal") return null;
   if (configFields.length === 0 && !dynamicLoading) return null;
 
   const fieldSpanClass = (field: ConfigField) => {
@@ -1577,7 +1580,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
   // For preview nodes, get paths from upstream outputs or configs
   const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } = 
-    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
+    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
 
   // 当前任务 id（调试任务 activeTaskId 或一般/批量任务 taskModeId），用于相对产物路径解析
   const storeActiveTaskId = useWorkflowStore((s) => s.activeTaskId);
@@ -1954,6 +1957,17 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
             else if (nodeType.id === "subtitle_editor") openSubtitleEditor();
             else openJsonEditor();
           }}
+        />
+      )}
+
+      {/* LCWR 去水印：自定义编辑器（视频/黑帧预览、区域框选、片头片尾时间轴、模型选择） */}
+      {nodeType.id === "lcwr_watermark_removal" && expanded && (
+        <LcwrWatermarkEditor
+          config={config}
+          onConfigChange={handleConfigChange}
+          videoPath={upstreamOutputs.video}
+          imagePath={upstreamOutputs.image}
+          taskId={previewTaskId}
         />
       )}
 

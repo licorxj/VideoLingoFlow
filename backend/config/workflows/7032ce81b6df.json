@@ -41,7 +41,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 546
+        "height": 500
       },
       "selected": false,
       "dragging": false
@@ -75,7 +75,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 360
+        "height": 493
       },
       "selected": false,
       "dragging": false
@@ -93,7 +93,7 @@
         "config": {
           "word_timestamps": true,
           "engine": "mimo_asr",
-          "model": "mimo-v2.5-asr",
+          "model": "",
           "hotwords_enabled": false,
           "audioPath": "",
           "videoPath": "",
@@ -112,7 +112,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 668
+        "height": 663
       },
       "selected": false,
       "dragging": false
@@ -128,13 +128,13 @@
         "nodeType": "sentence_split",
         "label": "句子分割",
         "config": {
-          "use_llm_split": false,
+          "use_llm_split": true,
           "merge_min_duration": "0.1",
           "max_sentence_length": "18",
           "merge_max_gap": "0.1",
           "split_on_speaker": false,
           "split_by_punct": true,
-          "pause_split_threshold": "3",
+          "pause_split_threshold": "1.8",
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
@@ -154,9 +154,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 539
+        "height": 545
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -187,7 +187,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 377
+        "height": 350
       },
       "selected": false,
       "dragging": false
@@ -223,7 +223,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 450
+        "height": 412
       },
       "selected": false,
       "dragging": false
@@ -259,7 +259,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 375
+        "height": 349
       },
       "selected": false,
       "dragging": false
@@ -338,7 +338,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 699
+        "height": 692
       },
       "selected": false,
       "dragging": false
@@ -376,7 +376,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 332
+        "height": 310
       },
       "selected": false,
       "dragging": false
@@ -418,7 +418,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 719
+        "height": 675
       },
       "selected": false,
       "dragging": false
@@ -458,7 +458,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 640
+        "height": 586
       },
       "selected": false,
       "dragging": false
@@ -480,7 +480,11 @@
           "videoPath": "",
           "subtitlePath": "",
           "url": "",
-          "model": "htdemucs_ft"
+          "model": "htdemucs_ft",
+          "bitrate": "192",
+          "channels": "1",
+          "bit_depth": "16",
+          "sample_rate": "16000"
         },
         "status": "completed",
         "progress": 100,
@@ -495,7 +499,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 413
+        "height": 638
       },
       "selected": false,
       "dragging": false
@@ -532,7 +536,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 418
+        "height": 368
       },
       "selected": false,
       "dragging": false
@@ -572,7 +576,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 582
+        "height": 540
       },
       "selected": false,
       "dragging": false
@@ -581,8 +585,8 @@
       "id": "node_1_1782507205161",
       "type": "workflow",
       "position": {
-        "x": -210,
-        "y": 465
+        "x": 165,
+        "y": 375
       },
       "data": {
         "nodeType": "image_gen",
@@ -617,7 +621,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 588
+        "height": 586
       },
       "selected": false,
       "dragging": false
@@ -651,7 +655,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 395
+        "height": 313
       },
       "selected": false,
       "dragging": false
@@ -660,35 +664,33 @@
       "id": "node_1_1782640383627",
       "type": "workflow",
       "position": {
-        "x": -1290,
-        "y": -660
+        "x": -1200,
+        "y": -495
       },
       "data": {
         "nodeType": "video_frame_extract",
         "label": "视频抽帧",
         "config": {
           "video_source": "input_node",
-          "time_point": "12",
-          "time_mode": "positive",
+          "time_point": "10",
+          "time_mode": "negative",
           "avoid_subtitles": true,
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
           "url": ""
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "image": "cache/key_frame_node_1_1782640383627.png"
-        },
+        "status": "running",
+        "progress": 0,
+        "message": "Starting...",
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 381
+        "height": 311
       },
       "selected": false,
       "dragging": false
@@ -731,86 +733,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 477
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_3_1782641542678",
-      "type": "workflow",
-      "position": {
-        "x": 45,
-        "y": -120
-      },
-      "data": {
-        "nodeType": "image_gen",
-        "label": "AI生图",
-        "config": {
-          "mode": [
-            "img2img"
-          ],
-          "interface": "bailian",
-          "model": "qwen-image-edit-max",
-          "resolution": "2K",
-          "aspect_ratio": "4:3",
-          "num_images": 1,
-          "custom_prompt_enabled": false,
-          "custom_prompt": "",
-          "output_prefix": "cover_gen_byfram4x3",
-          "audioPath": "",
-          "videoPath": "",
-          "subtitlePath": "",
-          "url": ""
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "images": "['output/cover_gen_byfram4x3_1_gen_image_node_3_1782641542678.png']",
-          "text": "output/cover_gen_byfram4x3_1_gen_image_node_3_1782641542678.png"
-        },
-        "error": "",
-        "disableExecute": false,
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 588
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_5_1782654274362",
-      "type": "workflow",
-      "position": {
-        "x": 870,
-        "y": -15
-      },
-      "data": {
-        "nodeType": "image_preview",
-        "label": "图片预览器",
-        "config": {
-          "fit": "contain",
-          "audioPath": "",
-          "videoPath": "",
-          "subtitlePath": "",
-          "url": ""
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "skipped": true
-        },
-        "error": "",
-        "workbench_url": "",
-        "disableExecute": false
-      },
-      "measured": {
-        "width": 420,
-        "height": 395
+        "height": 444
       },
       "selected": false,
       "dragging": false
@@ -861,7 +784,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 871
+        "height": 765
       },
       "selected": false,
       "dragging": false
@@ -901,7 +824,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 582
+        "height": 540
       },
       "selected": false,
       "dragging": false
@@ -936,7 +859,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 281
+        "height": 261
       },
       "selected": false,
       "dragging": false
@@ -970,7 +893,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 288
+        "height": 266
       },
       "selected": false,
       "dragging": false
@@ -1006,7 +929,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 419
+        "height": 382
       },
       "selected": false,
       "dragging": false
@@ -1039,7 +962,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 412
+        "height": 377
       },
       "selected": false,
       "dragging": false
@@ -1058,19 +981,6 @@
       "target": "node_1_1780650299385",
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1780590163157out-video-node_1_1780650299385in-video"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780709567651",
-      "sourceHandle": "out-subtitle",
-      "target": "node_2_1780807148463",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1780709567651out-asr_result-node_2_1780807148463in-subtitle"
     },
     {
       "type": "smoothstep",
@@ -1279,47 +1189,6 @@
     },
     {
       "type": "smoothstep",
-      "animated": false,
-      "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1782640383627",
-      "sourceHandle": "out-image",
-      "target": "node_3_1782641542678",
-      "targetHandle": "in-image",
-      "id": "xy-edge__node_1_1782640383627out-image-node_3_1782641542678in-image",
-      "selected": false
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#8b5cf6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_2_1782640528572",
-      "sourceHandle": "out-prompt",
-      "target": "node_3_1782641542678",
-      "targetHandle": "in-text",
-      "id": "xy-edge__node_2_1782640528572out-prompt-node_3_1782641542678in-text"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_3_1782641542678",
-      "sourceHandle": "out-text",
-      "target": "node_5_1782654274362",
-      "targetHandle": "in-image",
-      "id": "xy-edge__node_3_1782641542678out-text-node_5_1782654274362in-image"
-    },
-    {
-      "type": "smoothstep",
       "style": {
         "stroke": "#3b82f6",
         "strokeWidth": 2,
@@ -1369,19 +1238,6 @@
       "target": "node_1_1781200299298",
       "targetHandle": "in-subtitle",
       "id": "xy-edge__node_1_1780954897405out-reflect-node_1_1781200299298in-subtitle"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_3_1782641542678",
-      "sourceHandle": "out-text",
-      "target": "node_1_1782672877872",
-      "targetHandle": "in-cover_landscape",
-      "id": "xy-edge__node_3_1782641542678out-text-node_1_1782672877872in-cover_landscape"
     },
     {
       "type": "smoothstep",
@@ -1594,9 +1450,22 @@
       "target": "node_1_1781709944783",
       "targetHandle": "in-subtitle",
       "id": "xy-edge__node_1_1780954897405out-reflect-node_1_1781709944783in-subtitle"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782640383627",
+      "sourceHandle": "out-image",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-cover_landscape",
+      "id": "xy-edge__node_1_1782640383627out-image-node_1_1782672877872in-cover_landscape"
     }
   ],
   "type": "user",
   "createdAt": "2026-07-07T04:56:33",
-  "updatedAt": "2026-08-14T15:10:24"
+  "updatedAt": "2026-08-14T23:16:31"
 }

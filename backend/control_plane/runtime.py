@@ -218,6 +218,9 @@ class ResourceTokens:
 def queue_for(resource: str, capabilities: set[str] | None = None) -> str:
     if capabilities and resource not in capabilities:
         raise ValueError(f"worker 不具备资源能力: {resource}")
+    # 网络请求型节点无资源类型（None）时归入 io 队列
+    if not resource:
+        resource = "io"
     return os.getenv(f"CELERY_QUEUE_{resource.upper()}", f"videolingo_{resource}")
 
 

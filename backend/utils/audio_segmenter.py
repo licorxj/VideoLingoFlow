@@ -74,6 +74,7 @@ def get_audio_output_settings():
             "bitrate": config.get("audio.bitrate") or 320,
             "sample_rate": config.get("audio.sample_rate") or 48000,
             "bit_depth": config.get("audio.bit_depth") or 16,
+            "channels": config.get("audio.channels") or 2,
         }
     except Exception:
         return {
@@ -81,6 +82,7 @@ def get_audio_output_settings():
             "bitrate": 320,
             "sample_rate": 48000,
             "bit_depth": 16,
+            "channels": 2,
         }
 
 

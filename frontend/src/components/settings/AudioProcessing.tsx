@@ -166,7 +166,7 @@ export default function AudioProcessingSettings() {
               }}
             >
               <option value={128}>128 kbps</option>
-              <option value={192}>192 kbps</option>
+              <option value={192}>192 kbps ★推荐</option>
               <option value={256}>256 kbps</option>
               <option value={320}>320 kbps</option>
             </select>
@@ -202,7 +202,7 @@ export default function AudioProcessingSettings() {
                 save("audio.bit_depth", parseInt(e.target.value));
               }}
             >
-              <option value={16}>16 bit</option>
+              <option value={16}>16 bit ★推荐</option>
               <option value={24}>24 bit</option>
               <option value={32}>32 bit</option>
             </select>

@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Scope, Receive, Send
 
-from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update
+from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr
 from backend.control_plane import runtime_flags
 from backend.utils.observability import correlation_id
 
@@ -136,6 +136,7 @@ app.include_router(subtitle_presets.router, prefix="/api/subtitle-presets", tags
 app.include_router(subtitle_preview.router, prefix="/api/subtitle-preview", tags=["subtitle-preview"])
 app.include_router(voiceforge.router, prefix="/api/voiceforge", tags=["voiceforge"])
 app.include_router(voiceforge_ws.router, prefix="/ws/voiceforge", tags=["voiceforge-websocket"])
+app.include_router(lcwr.router, tags=["lcwr"])
 
 os.makedirs(os.path.join(ROOT, "tasks"), exist_ok=True)
 

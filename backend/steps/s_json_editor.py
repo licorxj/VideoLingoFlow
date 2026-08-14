@@ -168,7 +168,7 @@ class S_JsonEditor(BaseStep):
                     json.dump(data, f, ensure_ascii=False, indent=2)
                 return {
                     "artifacts": [f"output/json_edit_{node_id}.json"],
-                    "outputs": {"json": output_path},
+                    "outputs": {"json": f"output/json_edit_{node_id}.json"},
                 }
 
         # --- Try to parse as JSON, otherwise keep as string ---

@@ -206,7 +206,7 @@ class S_VideoSplit(BaseStep):
         return {
             "artifacts": [f"output/{output_filename}"],
             "outputs": {
-                "video": output_path,
+                "video": f"output/{output_filename}",
                 "text": f"第{output_index}段 ({start:.1f}s ~ {end:.1f}s)",
             },
         }

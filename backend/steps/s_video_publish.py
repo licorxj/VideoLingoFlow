@@ -318,6 +318,6 @@ class S_VideoPublish(BaseStep):
             "artifacts": [f"output/{output_filename}"],
             "outputs": {
                 "text": result_text,
-                "result_file": output_path,
+                "result_file": f"output/{output_filename}",
             },
         }

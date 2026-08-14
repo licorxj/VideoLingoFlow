@@ -70,6 +70,7 @@ temp/
 cache/
 *_cache/
 tasks/
+!backend/voiceforge/tasks/
 voiceforge_data/
 .dbg/
 .runtime/*

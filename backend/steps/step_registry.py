@@ -44,6 +44,7 @@ from backend.steps.s_text_editor import S_TextEditor
 from backend.steps.s_subtitle_editor import S_SubtitleEditor
 from backend.steps.s_video_split import S_VideoSplit
 from backend.steps.s_cutia import S_Cutia
+from backend.steps.s_lcwr_watermark_removal import S_LcwrWatermarkRemoval
 from backend.steps.passthrough_step import PassthroughStep
 
 # Step ID -> instance mapping
@@ -129,6 +130,8 @@ _STEPS = {
     "video_split": S_VideoSplit(),
     "s_cutia": S_Cutia(),
     "cutia": S_Cutia(),
+    "s_lcwr_watermark_removal": S_LcwrWatermarkRemoval(),
+    "lcwr_watermark_removal": S_LcwrWatermarkRemoval(),
 }
 
 

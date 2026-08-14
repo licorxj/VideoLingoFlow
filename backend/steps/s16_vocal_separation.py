@@ -51,7 +51,10 @@ class StepVocalSeparation(BaseStep):
         # Interface ID: node_config.method → global setting → default "spleeter"
         iface_id = node_config.get("method") or self._get_default_interface()
         model = node_config.get("model", "")
-        fmt = node_config.get("format", "wav")
+        # 音频质量：节点优先、全局设置兜底（格式/采样率/位深/声道/码率）
+        from backend.utils.audio_quality import resolve_audio_quality, reencode_audio
+        quality = resolve_audio_quality(node_config)
+        fmt = quality["format"]
 
         # 优先使用上游连线传入的音频路径
         audio_path = step_inputs.get("audio", "")
@@ -101,10 +104,28 @@ class StepVocalSeparation(BaseStep):
         node_suffix = f"_{getattr(self, '_node_id', '')}" if getattr(self, "_node_id", "") else ""
         final_vocals = os.path.join(output_dir, f"vocals{node_suffix}.{fmt}")
         final_background = os.path.join(output_dir, f"background{node_suffix}.{fmt}")
+        # 节点显式设置了采样率/位深/声道/码率时，即使扩展名相同也强制按目标参数转码
+        # （format 默认值不算显式设置，仅当扩展名不同时按格式转码）
+        node_explicit_quality = any(
+            str(node_config.get(k) or "").strip()
+            for k in ("sample_rate", "bit_depth", "channels", "bitrate")
+        )
         if vocals_path and os.path.exists(vocals_path) and os.path.abspath(vocals_path) != os.path.abspath(final_vocals):
-            shutil.move(vocals_path, final_vocals)
+            same_ext = os.path.splitext(vocals_path)[1].lower() == f".{fmt}"
+            if same_ext and not node_explicit_quality:
+                shutil.move(vocals_path, final_vocals)
+            else:
+                if callback:
+                    callback(70, f"按目标质量转码人声 ({fmt})...")
+                reencode_audio(vocals_path, final_vocals, quality)
         if bg_path and os.path.exists(bg_path) and os.path.abspath(bg_path) != os.path.abspath(final_background):
-            shutil.move(bg_path, final_background)
+            same_ext = os.path.splitext(bg_path)[1].lower() == f".{fmt}"
+            if same_ext and not node_explicit_quality:
+                shutil.move(bg_path, final_background)
+            else:
+                if callback:
+                    callback(75, f"按目标质量转码背景 ({fmt})...")
+                reencode_audio(bg_path, final_background, quality)
 
         # Copy to cache/ with node_id prefix for artifact scanner
         cache_dir = os.path.join(task_dir, "cache")

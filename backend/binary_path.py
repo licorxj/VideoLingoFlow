@@ -7,6 +7,7 @@
 - 平台不匹配、版本不符或目录缺失时保持默认源码导入。
 """
 
+import os
 import platform
 import sys
 from pathlib import Path
@@ -51,7 +52,13 @@ def binary_directory(package_name: str) -> Path | None:
 
 
 def prepend_binary_path(package_name: str, current_path: list[str]) -> None:
-    """将匹配平台的二进制目录前置插入包的 __path__；无匹配时保持不变。"""
+    """将匹配平台的二进制目录前置插入包的 __path__；无匹配时保持不变。
+
+    设置环境变量 VIDEOLINGO_USE_SOURCE=1 时强制回退源码导入
+    （开发/调试用途，跳过可能滞后的编译产物）。
+    """
+    if os.environ.get("VIDEOLINGO_USE_SOURCE", "").strip() in ("1", "true", "yes"):
+        return
     directory = binary_directory(package_name)
     if directory is None:
         return

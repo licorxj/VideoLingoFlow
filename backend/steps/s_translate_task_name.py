@@ -176,5 +176,5 @@ class S_TranslateTaskName(BaseStep):
 
         return {
             "artifacts": ["cache/task_name.txt"],
-            "outputs": {"text": out_path, "translated": translated_name},
+            "outputs": {"text": "cache/task_name.txt", "translated": translated_name},
         }
