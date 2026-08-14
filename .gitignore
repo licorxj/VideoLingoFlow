@@ -168,6 +168,10 @@ api_keys.json
 *.pid
 thirdparty/**/.mcp_deps_hash
 
+# QM-LocalRouter 运行时数据库（含加密 API Key / 请求日志），不随 git 分发
+thirdparty/QM-LocalRouter/backend/data/app.db
+thirdparty/QM-LocalRouter/backend/data/.encryption_key
+
 # 本机专用（CUDA 打进 venv 的隔离环境）启动脚本，不随 git 分发；
 # 随 git 分发的通用版为 start.* / activate-venv.*
 一键启动.bat
