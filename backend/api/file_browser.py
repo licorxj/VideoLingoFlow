@@ -332,6 +332,57 @@ async def stream_file(path: str, task_id: Optional[str] = None, request: Request
 
     return FileResponse(safe, media_type=mime)
 
+@router.get("/video-info")
+async def video_info(path: str, task_id: Optional[str] = None):
+    """使用 ffprobe 获取视频基本信息（时长/帧率/分辨率），供去水印节点前端帧浏览使用。"""
+    import json as _json
+
+    safe = _stream_path(path, task_id)
+    if not os.path.isfile(safe):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    def _run(cmd):
+        try:
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        except FileNotFoundError:
+            raise HTTPException(status_code=500, detail="ffprobe not found. Please install ffmpeg.")
+        except subprocess.TimeoutExpired:
+            raise HTTPException(status_code=500, detail="ffprobe timed out")
+
+    result = _run([
+        "ffprobe", "-v", "quiet", "-print_format", "json",
+        "-show_format", "-show_streams", safe,
+    ])
+    if result.returncode != 0 or not result.stdout:
+        raise HTTPException(status_code=500, detail="无法解析视频信息")
+    try:
+        info = _json.loads(result.stdout)
+    except ValueError:
+        raise HTTPException(status_code=500, detail="无法解析视频信息")
+    streams = info.get("streams") or []
+    fmt = info.get("format") or {}
+    vstream = next((s for s in streams if s.get("codec_type") == "video"), None)
+    duration = 0.0
+    try:
+        duration = float(fmt.get("duration") or (vstream or {}).get("duration") or 0)
+    except (ValueError, TypeError):
+        duration = 0.0
+    fps = 25.0
+    if vstream:
+        r_frame_rate = vstream.get("r_frame_rate") or vstream.get("avg_frame_rate") or ""
+        if "/" in r_frame_rate:
+            num, den = r_frame_rate.split("/", 1)
+            try:
+                fps = round(float(num) / float(den), 3)
+            except (ValueError, ZeroDivisionError):
+                fps = 25.0
+    try:
+        width = int((vstream or {}).get("width") or 0)
+        height = int((vstream or {}).get("height") or 0)
+    except (ValueError, TypeError):
+        width, height = 0, 0
+    return {"duration": duration, "fps": fps, "width": width, "height": height, "path": safe}
+
 @router.post("/scan-audio")
 async def scan_audio(body: dict):
     """Scan a directory for audio files."""

@@ -65,8 +65,10 @@ class StepExtractAudio(BaseStep):
             )
 
         node_config = getattr(self, '_node_config', {}) or {}
-        fmt = node_config.get("format", "wav")
-        sample_rate = node_config.get("sample_rate", "44100")
+        # 音频质量：节点优先、全局设置兜底（格式/采样率/位深/声道/码率）
+        from backend.utils.audio_quality import resolve_audio_quality, ffmpeg_encode_args
+        quality = resolve_audio_quality(node_config)
+        fmt = quality["format"]
 
         output_dir = os.path.join(task_dir, "output")
         os.makedirs(output_dir, exist_ok=True)
@@ -79,20 +81,11 @@ class StepExtractAudio(BaseStep):
         if callback:
             callback(30, "Extracting audio from video...")
 
-        codec_map = {
-            "wav": "pcm_s16le",
-            "mp3": "libmp3lame",
-            "flac": "flac",
-            "m4a": "aac",
-        }
-        codec = codec_map.get(fmt, "pcm_s16le")
-
         cmd = [
             "ffmpeg", "-y",
             "-i", video_path,
             "-vn",
-            "-acodec", codec,
-            "-ar", sample_rate,
+            *ffmpeg_encode_args(quality),
             output_path,
         ]
 
