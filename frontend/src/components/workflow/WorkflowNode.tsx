@@ -369,6 +369,8 @@ function VideoPreview({ config, videoPath, subtitlePath, taskId, onConfigChange,
 
 function ImagePreview({ config, imagePath, taskId, refreshKey }: { config: Record<string, any>; imagePath?: string; taskId?: string; refreshKey?: string }) {
   const imageSrc = useStableFileUrl(imagePath, taskId, refreshKey);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [imageSrc]);
   if (!imagePath) {
     return (
       <div className="px-3 pb-3 border-t border-border/50 pt-2">
@@ -380,12 +382,17 @@ function ImagePreview({ config, imagePath, taskId, refreshKey }: { config: Recor
   return (
     <div className="px-3 pb-3 border-t border-border/50 pt-2">
       <div className="rounded-lg overflow-hidden bg-black/5">
-        <img
-          src={imageSrc}
-          alt="Preview"
-          className="w-full max-h-[200px]"
-          style={{ objectFit: config.fit || "contain" }}
-        />
+        {broken ? (
+          <div className="grid h-[120px] place-items-center text-[11px] text-muted-foreground/70">预览文件不存在或已删除</div>
+        ) : (
+          <img
+            src={imageSrc}
+            alt="Preview"
+            className="w-full max-h-[200px]"
+            style={{ objectFit: config.fit || "contain" }}
+            onError={() => setBroken(true)}
+          />
+        )}
       </div>
     </div>
   );

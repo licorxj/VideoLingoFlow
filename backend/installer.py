@@ -128,13 +128,21 @@ def get_torch_cuda_tag(cuda_version):
 
 
 def install_pytorch(cuda_tag, mirror="default"):
-    """安装PyTorch三件套"""
+    """安装PyTorch三件套（按平台/CUDA 版本适配）"""
     print("\n" + "="*60)
     print(f"  安装PyTorch {PYTORCH_VERSION} (CUDA: {cuda_tag})")
     print("="*60)
-    
+
+    # macOS 无 CUDA：使用 PyPI 官方 wheel（含 MPS 支持），不加 +cpu 后缀
+    if sys.platform == "darwin":
+        extra_index = None
+        packages = [
+            f"torch=={PYTORCH_VERSION}",
+            f"torchvision=={TORCHVISION_VERSION}",
+            f"torchaudio=={TORCHAUDIO_VERSION}",
+        ]
     # 构建安装命令
-    if cuda_tag == "cpu":
+    elif cuda_tag == "cpu":
         extra_index = f"https://download.pytorch.org/whl/cpu"
         packages = [
             f"torch=={PYTORCH_VERSION}+cpu",
@@ -148,9 +156,9 @@ def install_pytorch(cuda_tag, mirror="default"):
             f"torchvision=={TORCHVISION_VERSION}+{cuda_tag}",
             f"torchaudio=={TORCHAUDIO_VERSION}+{cuda_tag}",
         ]
-    
+
     # 使用国内镜像加速
-    if mirror in TORCH_MIRRORS:
+    if mirror in TORCH_MIRRORS and extra_index is not None:
         extra_index = f"{TORCH_MIRRORS[mirror]}/{cuda_tag}"
     
     # 卸载旧版本
@@ -160,12 +168,16 @@ def install_pytorch(cuda_tag, mirror="default"):
     # 安装新版本
     print(f"[步骤2] 安装PyTorch三件套...")
     for pkg in packages:
-        cmd = f'pip install {pkg} --extra-index-url {extra_index} --no-cache-dir'
+        cmd = f'pip install {pkg} --no-cache-dir'
+        if extra_index:
+            cmd += f' --extra-index-url {extra_index}'
         result = run_cmd(cmd, check=False)
         if result.returncode != 0:
             print(f"[警告] 安装 {pkg} 失败，尝试使用国内镜像...")
             # 尝试使用阿里云镜像
-            cmd = f'pip install {pkg} -i {PIP_MIRRORS["aliyun"]} --extra-index-url {extra_index} --trusted-host mirrors.aliyun.com'
+            cmd = f'pip install {pkg} -i {PIP_MIRRORS["aliyun"]} --trusted-host mirrors.aliyun.com'
+            if extra_index:
+                cmd += f' --extra-index-url {extra_index}'
             run_cmd(cmd, check=True)
     
     # 验证安装
@@ -229,11 +241,9 @@ def verify_installation():
         ("torchaudio", "TorchAudio"),
         ("fastapi", "FastAPI"),
         ("uvicorn", "Uvicorn"),
-        ("transformers", "Transformers"),
-        ("diffusers", "Diffusers"),
-        ("opencv-python", "OpenCV"),
-        ("moviepy", "MoviePy"),
+        ("cv2", "OpenCV (headless)"),
         ("PIL", "Pillow"),
+        ("yt_dlp", "yt-dlp"),
     ]
     
     success_count = 0

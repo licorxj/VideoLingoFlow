@@ -1,30 +1,79 @@
 # VideoLingoFlow
 
-面向桌面/本地部署的**一站式 AI 视频创作与出海本地化平台**。基于节点式工作流，覆盖视频字幕、翻译、配音、剪辑、AI 编辑、批量生产、多平台发布，并内置**多人协作、共享社区、项目专用 AI 助手（小 Pi）**三大协作能力——一个人、一台电脑，就能把一部视频变成多语言、多平台、带配音带字幕的成品。
+一套面向**本地优先、可无限扩展、可多人协作**的 AI 自动化创作框架。它把「视频字幕、翻译、配音、剪辑、AI 编辑、批量生产、多平台发布」沉淀为**节点工作流 + Agent 聊天式执行 + 能力接口自由扩展**三大骨架——无论是个人创作者、团队工作室还是异地协作团队，都能用同一套框架随心所欲地编排任务。
 
-## 功能特性
+> **一句话定位**：一切任务 = 可视化节点编排；一切能力 = 可插拔接口；一切指令 = 对话即执行。节点、接口、Agent 三者自由组合，百变任务，随心所欲。
 
-### 核心生产链路
+---
 
-- **节点式工作流**：基于 `@xyflow/react` 的可视化 DAG 编排，40+ 内置节点（输入/下载/音频/ASR/翻译/字幕/配音/合成/生图/发布），支持自定义节点（导入、字段级规则校验、端口语义连线），工作流可保存、复用、批量重跑。
-- **ASR 语音识别**：多引擎可选——WhisperX、FunASR（SenseVoice/MiMo）、Qwen3-ASR、ElevenLabs 等，支持热词、说话人切分。
-- **TTS 语音合成**：Edge-TTS 免费自然；晴沐配音谷（VoiceForge）支持音色克隆、声音资产库、批量合成、情绪标签。
-- **视频剪辑**：内置 Cutia 编辑器（端口 4100）与剪辑工作台，节点级剪辑 AI Agent 可接收文字指令。
-- **批量生产**：批量工作台一次导入多条素材、多任务并行调度、限流与失败重试，单条视频成本摊薄到接近零。
-- **AI 能力**：LLM 翻译/反思/总结/标题生成，术语表统一译法；集成本地大模型路由器（LLM Router，多 Provider 多策略）。
-- **多平台发布**：集成 Social 模块（抖音/B 站/小红书/YouTube/TikTok 等），标题、标签、封面一次配好，支持定时发布。
+## 为什么需要这套框架
 
-### 三大协作能力
+传统自动化工具往往「功能写死、扩展靠改代码、协作靠手动传文件」。VideoLingoFlow 从设计上解决三件事：
 
-- **多人协作**：基于控制平面的用户/角色/项目权限体系 + WebSocket 实时协作。支持局域网模式（LAN）与远程网络协作（Remote Mode，配 Cloudflare Tunnel），成员申请审批、项目级资源中心（素材/产物上传下载）、审计日志。
-- **共享社区**：把自定义**节点**与**工作流**打包分享到云端社区（Cloudflare Worker + R2 + D1），或从社区导入别人分享的资源，一键复用成熟流程。
-- **项目专用 AI 助手「小 Pi」**：内嵌于工作台的智能体，可指定六种角色（通用/节点创建/工作流编排/任务执行/文件整理/作品发布），流式对话、会话历史留存、支持工具调用，帮助完成编排、排查、发布准备。
+- **标准化任务模型**：所有任务都是一张有向无环图（DAG）。每个节点是一个可复用的能力单元，节点间通过语义化端口连线传递数据。任务 = 图，图 = 可保存、可复用、可批量重跑、可分享。
+- **能力与编排解耦**：能力接口（ASR / TTS / 生图 / 人声分离 / AIGC / 发布…）与业务编排完全分离。新增一种能力，只需要注册一个接口，**编排层零改动**；反过来，调整一条生产链路，也只需要拖拽连线，能力层零改动。
+- **人人可扩展**：框架提供三件套扩展手段——**自定义节点**、**新增能力接口**、**把 Agent 当作节点**。扩展不需要修改框架内核，插件式挂载即可。
 
-### 平台底座
+> 这使它不只是一个「视频工具」，而是一个可以承载任何 AI 工作流的**创作操作系统**。
 
-- **控制平面（Control Plane）**：FastAPI + SQLite + Redis/Celery 的任务调度与运行时——任务生命周期管理、节点级产物清理、资源队列（GPU/TTS/LLM/IO）限流、健康检查、Prometheus 指标、备份恢复、Alembic 迁移。
-- **监控运维**：实时日志（rich 格式化 + 后台日志页）、进程管理器状态面板（Manager 端口 18001）、一键重启各服务。
-- **本地优先**：数据、素材、模型缓存全部落本地（`_model_cache/`），不依赖订阅制云端服务，长期成本可控、商业素材不外泄。
+---
+
+## 核心能力
+
+### 1. 节点式工作流，节点可自定义
+
+基于 `@xyflow/react` 的可视化 DAG 编排画布，内置 **40+ 节点**覆盖输入、平台下载、音频、ASR、翻译、字幕、配音、合成、生图、发布全链路。支持：
+
+- **自定义节点**：按「节点定义 + 执行步骤 + 规则校验 + 注册」四件套即可新增节点，字段级规则校验、端口语义连线、节点产物落盘规范全部内置约定。
+- 工作流可保存、复用、批量重跑；节点级产物管理与清理由控制平面自动完成。
+
+### 2. 能力接口，随意自定义增加
+
+能力层按「接口域」组织：ASR / TTS / 生图 / 人声分离 / AIGC / 发布等。每类接口支持**多 Provider 自由切换**（如 ASR 可选 WhisperX、FunASR、Qwen3-ASR、ElevenLabs…）。新增一个能力接口 = 定义数据模型 + 实现调用 + 注册接口域，**无需改动任何编排逻辑**。示例：想要接入新的 TTS 服务商，注册一个 TTS 接口，全部工作流立刻可用。
+
+### 3. Agent 聊天式执行任务
+
+内嵌项目专用 AI 助手「小 Pi」，用**自然语言对话**指挥整条流水线：
+
+- **配置接口**：对话中完成能力接口的配置与切换；
+- **创造节点**：描述需求，Agent 自动生成自定义节点的定义与步骤；
+- **安排任务**：口头下达任务，Agent 解析为工作流并调度执行；
+- **排障与整理**：流式对话排查问题、整理文件、准备发布。
+
+小 Pi 支持六种角色（通用 / 节点创建 / 工作流编排 / 任务执行 / 文件整理 / 作品发布），会话历史留存，支持工具调用。
+
+### 4. Agent 即节点，随意编排
+
+框架把 Agent 实现为**内置节点类型**（`pi_agent` 通用智能体节点、`editor_agent` 剪辑智能体节点）。你可以把 Agent 直接拖进画布，与普通能力节点混合连线——**Agent 既是对话助手，也是流水线上的一个节点**，前一步的产物可以喂给 Agent，Agent 的输出再交给后续节点处理。文字指令驱动 + 节点编排，两种范式无缝融合。
+
+### 5. 百变任务，批量与调度
+
+- **批量工作台**：一次导入多条素材，多任务并行调度，限流与失败重试；
+- **任务生命周期管理**：由控制平面（FastAPI + SQLite + Redis/Celery）统一调度，支持资源队列（GPU / TTS / LLM / IO）限流、健康检查、Prometheus 指标、备份恢复。
+
+---
+
+## 协作与社区
+
+### 6. 共享社区：节点、工作流一键共享与导入
+
+- 把自定义**节点**与**工作流**打包上传到云端共享社区（Cloudflare Worker + R2 + D1）；
+- 从社区浏览并**一键导入**他人分享的成熟流程，复用即用；
+- 团队的工程经验沉淀为可分发资产，全网共享。
+
+### 7. 多人协同：局域网 / 互联网 / 远程控制
+
+基于控制平面的用户 / 角色 / 项目权限体系 + WebSocket 实时协作：
+
+- **局域网模式（LAN）**：同一可信局域网内多成员协同，开启即用；
+- **互联网远程协作（Remote）**：配合 Cloudflare Tunnel 暴露公网域名，异地成员实时协作，默认关闭、访问受 `RemoteAccessGuard` 拦截；
+- 项目级资源中心（素材 / 产物上传下载）、成员申请审批、审计日志、进程管理面板（Manager 端口 18001）远程监控与控制。
+
+### 8. 团队与异地办公场景
+
+成员可同时编辑工作流、共同维护项目资源、远程查看任务进度与日志、远程启停服务。一套框架满足**工作室、MCN、跨城市团队**的协同与异地办公需求。
+
+---
 
 ## 技术栈
 
@@ -32,7 +81,7 @@
 | --- | --- |
 | 后端 | Python 3.12、FastAPI、Uvicorn、SQLAlchemy、Alembic、Celery |
 | 前端 | React 18、Vite、TypeScript、Tailwind CSS、zustand、@xyflow/react |
-| 任务队列 | Celery + Redis（`--pool=threads`，方案 C 子进程隔离执行） |
+| 任务队列 | Celery + Redis（`--pool=threads`，子进程隔离执行） |
 | 数据库 | SQLite（本地 `data/control-plane.db`）/ PostgreSQL（Docker 集群部署） |
 | AI/ML | WhisperX、FunASR、Edge-TTS、Qwen/多模型 LLM、demucs、FFmpeg |
 | 云服务 | Cloudflare Worker/R2/D1（共享社区）、Cloudflare Tunnel（远程协作） |
@@ -42,7 +91,7 @@
 ```text
 VideoLingoFlow/
 ├── backend/                  # 后端（FastAPI 主应用，端口 11001）
-│   ├── api/                  # 全部 REST/WS 路由（见 docs/项目目录功能说明.md）
+│   ├── api/                  # 全部 REST/WS 路由
 │   ├── control_plane/        # 控制平面：DB/模型/运行时/任务调度/Celery/安全
 │   ├── engine/               # 执行引擎：批量执行器、步骤流水线、任务管理
 │   ├── steps/                # 40+ 节点执行步骤（s_*.py，继承 BaseStep）
@@ -57,41 +106,35 @@ VideoLingoFlow/
 │   ├── manager.py            # 进程管理器（端口 18001）
 │   └── venv312/              # Python 3.12 虚拟环境
 ├── frontend/                 # 前端（React + Vite，开发端口 11003）
-│   ├── src/pages/            # 页面：工作流编排/批量/历史/多人协作/社区/配音谷等
-│   ├── src/components/       # 组件（workflow/batch/collaboration/community/agent/…）
 │   └── dist/                 # 构建产物（由后端同源托管）
 ├── data/                     # 运行时数据（control-plane.db、redis/）
-├── control_plane_workspaces/ # 任务工作区（{task_id}/cache、output、workflow.json、task.json）
-├── docs/                     # 知识库文档（智能体与开发者指南，见下方索引）
+├── control_plane_workspaces/ # 任务工作区
+├── docs/                     # 知识库文档（智能体与开发者指南）
 ├── deploy/                   # Docker 集群部署（docker-compose、nginx、TLS）
 ├── cloudflare/               # 共享社区 Worker（src/index.js + wrangler.toml）
 ├── thirdparty/               # 第三方组件（pi、cutia、social 等）
-├── install.bat / install.sh    # 跨平台安装（Python/依赖/第三方扩展）
-├── start.bat / start.sh        # 通用一键启动（前端 dev server + Manager + 全部服务，使用系统 CUDA）
-└── start-prod.bat / start-prod.sh  # 生产模式一键启动（不启 Vite，前端由后端托管 dist）
+├── install.bat / install.sh
+├── start.bat / start.sh        # 通用一键启动（开发模式）
+└── start-prod.bat / start-prod.sh  # 生产模式一键启动
 ```
 
 ## 快速开始
 
 ### 环境要求
 
-- Windows 10/11（脚本为 `.bat`/PowerShell）
-- Python 3.12（或由安装脚本自动下载）
-- Node.js ≥ 18
-- Redis（Manager 可自动拉起）
+- Windows 10/11（脚本为 `.bat`）/ Linux / macOS
+- Python 3.12（或由安装脚本自动下载）、Node.js ≥ 18、Redis（Manager 可自动拉起）
 - 可选：NVIDIA GPU + CUDA（本地模型推理）
 
 ### 1. 首次安装
 
-运行 `install.bat`（Linux/macOS 用 `install.sh`）：自动检查/安装 Python 3.12 与 Node.js、安装后端依赖（PyTorch 三件套按 CUDA 自动选择）、安装第三方扩展。
+运行 `install.bat`（Linux/macOS 用 `install.sh`）：自动检查/安装 Python 3.12 与 Node.js、安装后端依赖（PyTorch 三件套按平台与 CUDA 自动选择）、安装第三方扩展。
 
 ### 2. 一键启动
 
-双击 `start.bat`（Linux/macOS 运行 `bash start.sh`）。Manager 会执行 Alembic 迁移、初始化配音谷数据库、拉起 Redis 与各服务。前端以 Vite dev server（端口 11003）启动。
+双击 `start.bat`（Linux/macOS 运行 `bash start.sh`）。Manager 执行 Alembic 迁移、初始化配音谷数据库、拉起 Redis 与各服务；前端以 Vite dev server（端口 11003）启动。
 
-**生产模式**：双击 `start-prod.bat`（Linux/macOS 运行 `bash start-prod.sh`）。不启动 Vite dev server，前端构建产物由后端同源托管（`frontend/dist` 已存在则直接复用，`--rebuild` 参数强制重建），访问 `http://127.0.0.1:11001/` 即为生产版前端。
-
-> 正式版脚本**不隔离环境**：直接使用你自己安装的 CUDA。若你使用将 CUDA 运行时打进 `backend\venv312` 的特殊构建，可用本机隔离版 `一键启动.bat`（该文件不随 git 分发）。
+**生产模式**：运行 `start-prod.bat` / `start-prod.sh`。不启动 Vite，前端构建产物由后端同源托管（`frontend/dist` 已存在则直接复用，`--rebuild` 参数强制重建），访问 `http://127.0.0.1:11001/` 即为生产版前端。
 
 | 服务 | 地址 | 端口 |
 | --- | --- | --- |
@@ -114,8 +157,8 @@ VideoLingoFlow/
 
 - **局域网协作**：复制 `.runtime/local_env.bat.template` 为 `local_env.bat`，设 `VIDEOLINGO_LAN_MODE=1` 后重启 Manager，API 与 Manager 监听 `0.0.0.0`（仅限可信局域网）。
 - **远程协作**：在「多人协作」页开启远程模式（配 Cloudflare Tunnel 后公网域名可访问），默认关闭时公网请求被 `RemoteAccessGuard` 拦截。
-- **模型缓存**：统一放 `_model_cache/`；`HF_ENDPOINT` 默认 `https://hf-mirror.com`；pip 默认清华镜像。
-- **备份恢复**：Manager 停止后，`python scripts/control_plane_backup.py backup/restore`（详见 `deploy/README.md` 与文档）。
+- **模型缓存**：统一放 `_model_cache/`；`HF_ENDPOINT` 默认 `https://hf-mirror.com`。
+- **备份恢复**：Manager 停止后，`python scripts/control_plane_backup.py backup/restore`（详见 `deploy/README.md`）。
 - **Docker 集群部署**（PostgreSQL + Redis + MinIO + Nginx）：见 `deploy/README.md`，数据库迁移唯一入口 `alembic upgrade head`。
 
 ## 文档索引（docs/ 知识库）
@@ -125,23 +168,24 @@ VideoLingoFlow/
 | 文档 | 内容 | 适合场景 |
 | --- | --- | --- |
 | [docs/项目架构.md](docs/项目架构.md) | 整体架构：控制平面、任务生命周期、执行域、通信、部署形态 | 快速理解系统如何运转 |
-| [docs/项目目录功能说明.md](docs/项目目录功能说明.md) | 逐目录/逐模块功能说明（后端路由、前端页面、三大新功能） | 定位代码、找到入口 |
+| [docs/项目目录功能说明.md](docs/项目目录功能说明.md) | 逐目录/逐模块功能说明（后端路由、前端页面、三大协作能力） | 定位代码、找到入口 |
 | [docs/工作流编排指南.md](docs/工作流编排指南.md) | 工作流 JSON 格式、端口连线规则、节点清单、编排步骤 | 按需求编排工作流 |
-| [docs/工作流运行指南.md](docs/工作流运行指南.md) | 任务类型与隔离、执行模式、产物清理、节点执行边界、批量、日志 | 排查执行/清理问题 |
 | [docs/节点新建规范指南.md](docs/节点新建规范指南.md) | 新建节点四件套、执行域判定、产物命名、输入注入、Checklist | 新增自定义节点 |
-| [docs/接口添加指南.md](docs/接口添加指南.md) | 接口体系（ASR/TTS/生图/分离/AIGC）、数据模型、四件套、新增接口/接口域规范 | 添加或扩展能力接口 |
-| [docs/推广文档.md](docs/推广文档.md) | 产品卖点与使用场景（对外推广用） | 介绍/售卖 |
-| [docs/BS-RoFormer-Infer.md](docs/BS-RoFormer-Infer.md) | BS-RoFormer 人声分离模型推理说明 | 人声分离配置 |
+| [docs/接口添加指南.md](docs/接口添加指南.md) | 接口体系（ASR/TTS/生图/分离/AIGC）、数据模型、四件套、新增接口规范 | 添加或扩展能力接口 |
+| [docs/多人协作功能介绍.md](docs/多人协作功能介绍.md) | 局域网/远程协作、权限体系、资源中心、审计 | 多人协同与远程办公 |
+| [docs/剪辑工作台联动说明.md](docs/剪辑工作台联动说明.md) | 剪辑工作台与节点流水线联动、剪辑 Agent | 使用剪辑能力 |
+| [docs/依赖清单.md](docs/依赖清单.md) | 三大系统依赖声明、平台适配、安装入口 | 依赖管理与排障 |
+| [docs/快速开始.md](docs/快速开始.md) | 从零搭建运行环境 | 首次安装 |
 
 ## 常用脚本
 
 | 脚本 | 用途 |
 | --- | --- |
 | `install.bat` / `install.sh` | 跨平台安装（Python/依赖/第三方扩展） |
-| `start.bat` / `start.sh` | 通用一键启动：前端 dev server（11003）+ 全部后端服务（使用系统 CUDA） |
-| `start-prod.bat` / `start-prod.sh` | 生产模式一键启动：不启 Vite，前端由后端同源托管 `frontend/dist`（`--rebuild` 强制重建） |
+| `start.bat` / `start.sh` | 通用一键启动：前端 dev server（11003）+ 全部后端服务 |
+| `start-prod.bat` / `start-prod.sh` | 生产模式一键启动：不启 Vite，前端由后端同源托管 `frontend/dist` |
 | `backend.bat` | 单独启动主后端 |
-| `activate-venv.bat` / `activate-venv.sh` | 进入 `backend\venv312`（不隔离环境） |
+| `activate-venv.bat` / `activate-venv.sh` | 进入 `backend\venv312` |
 
 ## 许可与致谢
 

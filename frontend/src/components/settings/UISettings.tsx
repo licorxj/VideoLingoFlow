@@ -13,22 +13,49 @@ import {
   Home,
   Layers,
   History,
+  Eye,
+  EyeOff,
+  Clapperboard,
+  Mic2,
+  Share2,
+  Users,
+  Terminal,
 } from "lucide-react";
 
 type Theme = "light" | "dark" | "system";
-type FontScale = "small" | "medium" | "large";
-type FontFamily = "default" | "serif" | "mono";
+type FontScale = "small" | "medium" | "large" | "xlarge";
+type FontFamily =
+  | "plus-jakarta"
+  | "inter"
+  | "noto-sans"
+  | "roboto"
+  | "source-han-sans"
+  | "noto-serif"
+  | "playfair"
+  | "merriweather"
+  | "jetbrains-mono"
+  | "fira-code"
+  | "system";
 
 const FONT_SCALES: { id: FontScale; label: string; value: string }[] = [
   { id: "small", label: "小 (14px)", value: "14px" },
   { id: "medium", label: "中 (15px)", value: "15px" },
   { id: "large", label: "大 (16px)", value: "16px" },
+  { id: "xlarge", label: "超大 (18px)", value: "18px" },
 ];
 
 const FONT_FAMILIES: { id: FontFamily; label: string; value: string }[] = [
-  { id: "default", label: "Plus Jakarta Sans", value: "\"Plus Jakarta Sans\", system-ui, sans-serif" },
-  { id: "serif", label: "Noto Serif", value: "\"Noto Serif\", Georgia, serif" },
-  { id: "mono", label: "JetBrains Mono", value: "\"JetBrains Mono\", \"Fira Code\", monospace" },
+  { id: "plus-jakarta", label: "Plus Jakarta Sans", value: "\"Plus Jakarta Sans\", system-ui, sans-serif" },
+  { id: "inter", label: "Inter", value: "\"Inter\", system-ui, sans-serif" },
+  { id: "noto-sans", label: "Noto Sans SC", value: "\"Noto Sans SC\", \"PingFang SC\", \"Microsoft YaHei\", sans-serif" },
+  { id: "roboto", label: "Roboto", value: "\"Roboto\", system-ui, sans-serif" },
+  { id: "source-han-sans", label: "Source Han Sans SC", value: "\"Source Han Sans SC\", \"Noto Sans SC\", sans-serif" },
+  { id: "noto-serif", label: "Noto Serif", value: "\"Noto Serif\", Georgia, serif" },
+  { id: "playfair", label: "Playfair Display", value: "\"Playfair Display\", Georgia, serif" },
+  { id: "merriweather", label: "Merriweather", value: "\"Merriweather\", Georgia, serif" },
+  { id: "jetbrains-mono", label: "JetBrains Mono", value: "\"JetBrains Mono\", \"Fira Code\", monospace" },
+  { id: "fira-code", label: "Fira Code", value: "\"Fira Code\", \"Cascadia Code\", monospace" },
+  { id: "system", label: "系统默认", value: "ui-sans-serif, system-ui, sans-serif" },
 ];
 
 const DEFAULT_PAGES = [
@@ -36,6 +63,13 @@ const DEFAULT_PAGES = [
   { id: "/batch", label: "批量工作台", icon: Layers },
   { id: "/history", label: "历史项目", icon: History },
 ];
+
+// Map old font family keys to new ones for backward compatibility
+const FONT_FAMILY_ALIASES: Record<string, FontFamily> = {
+  default: "plus-jakarta",
+  serif: "noto-serif",
+  mono: "jetbrains-mono",
+};
 
 function loadLocal<T>(key: string, fallback: T): T {
   try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
@@ -48,20 +82,38 @@ function saveLocal(key: string, val: any) {
 export default function UISettings() {
   const [theme, setTheme] = useState<Theme>("system");
   const [fontScale, setFontScale] = useState<FontScale>("medium");
-  const [fontFamily, setFontFamily] = useState<FontFamily>("default");
+  const [fontFamily, setFontFamily] = useState<FontFamily>("plus-jakarta");
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [showMeshGradient, setShowMeshGradient] = useState(true);
+  const [navIconsVisible, setNavIconsVisible] = useState(true);
+  const [navEditing, setNavEditing] = useState(true);
+  const [navVoiceForge, setNavVoiceForge] = useState(true);
+  const [navSocial, setNavSocial] = useState(true);
+  const [navCollaboration, setNavCollaboration] = useState(true);
+  const [navLogs, setNavLogs] = useState(true);
   const [defaultPage, setDefaultPage] = useState("/");
   const [interfaceLang, setInterfaceLang] = useState("zh");
 
   useEffect(() => {
     setTheme(loadLocal("vl_theme", "system"));
-    setFontScale(loadLocal("vl_font_scale", "medium"));
-    setFontFamily(loadLocal("vl_font_family", "default"));
+    // Backward compatible font scale
+    const rawFontScale = loadLocal<string>("vl_font_scale", "medium");
+    setFontScale(((["small", "medium", "large", "xlarge"] as const) as readonly string[]).includes(rawFontScale) ? (rawFontScale as "small" | "medium" | "large" | "xlarge") : "medium");
+    // Backward compatible font family
+    const rawFontFamily = loadLocal<string>("vl_font_family", "default");
+    const mappedFamily = FONT_FAMILY_ALIASES[rawFontFamily] || rawFontFamily;
+    const validFamilies = FONT_FAMILIES.map((f) => f.id);
+    setFontFamily((validFamilies as readonly string[]).includes(mappedFamily) ? mappedFamily : "plus-jakarta");
     setSidebarCollapsed(loadLocal("vl_sidebar_collapsed", false));
     setReduceMotion(loadLocal("vl_reduce_motion", false));
     setShowMeshGradient(loadLocal("vl_mesh_gradient", true));
+    setNavIconsVisible(loadLocal("vl_nav_icons", true));
+    setNavEditing(loadLocal("vl_nav_editing", true));
+    setNavVoiceForge(loadLocal("vl_nav_voiceforge", true));
+    setNavSocial(loadLocal("vl_nav_social", true));
+    setNavCollaboration(loadLocal("vl_nav_collaboration", true));
+    setNavLogs(loadLocal("vl_nav_logs", true));
     setDefaultPage(loadLocal("vl_default_page", "/"));
     setInterfaceLang(loadLocal("vl_interface_lang", "zh"));
   }, []);
@@ -127,6 +179,18 @@ export default function UISettings() {
     saveLocal("vl_interface_lang", l);
   };
 
+  const applyNavIconsVisible = (v: boolean) => {
+    setNavIconsVisible(v);
+    saveLocal("vl_nav_icons", v);
+    emit("nav_icons_visible", v);
+  };
+
+  const applyNavEditing = (v: boolean) => { setNavEditing(v); saveLocal("vl_nav_editing", v); emit("nav_hidden_editing", !v); };
+  const applyNavVoiceForge = (v: boolean) => { setNavVoiceForge(v); saveLocal("vl_nav_voiceforge", v); emit("nav_hidden_voiceforge", !v); };
+  const applyNavSocial = (v: boolean) => { setNavSocial(v); saveLocal("vl_nav_social", v); emit("nav_hidden_social", !v); };
+  const applyNavCollaboration = (v: boolean) => { setNavCollaboration(v); saveLocal("vl_nav_collaboration", v); emit("nav_hidden_collaboration", !v); };
+  const applyNavLogs = (v: boolean) => { setNavLogs(v); saveLocal("vl_nav_logs", v); emit("nav_hidden_logs", !v); };
+
   const ToggleRow = ({
     icon: Icon,
     title,
@@ -171,7 +235,7 @@ export default function UISettings() {
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             "主题模式"
           </label>
-          <div className="grid grid-cols-3 gap-2 mt-2">
+          <div className="grid grid-cols-4 gap-2 mt-2">
             {([
               { id: "light" as Theme, icon: Sun, label: "亮色" },
               { id: "dark" as Theme, icon: Moon, label: "暗色" },
@@ -203,7 +267,7 @@ export default function UISettings() {
           <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             "字体大小"
           </label>
-          <div className="grid grid-cols-3 gap-2 mt-2">
+          <div className="grid grid-cols-4 gap-2 mt-2">
             {FONT_SCALES.map((fs) => (
               <button
                 key={fs.id}
@@ -227,22 +291,24 @@ export default function UISettings() {
             <Type className="w-3 h-3" />
             "字体样式"
           </label>
-          <div className="grid grid-cols-3 gap-2 mt-2">
-            {FONT_FAMILIES.map((ff) => (
-              <button
-                key={ff.id}
-                onClick={() => applyFontFamily(ff.id)}
-                className={cn(
-                  "py-2.5 rounded-xl border text-sm font-medium transition-all duration-200",
-                  fontFamily === ff.id
-                    ? "border-primary/50 bg-primary/8 text-primary"
-                    : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
-                )}
-                style={{ fontFamily: ff.value }}
-              >
-                {ff.label}
-              </button>
-            ))}
+          <div className="mt-2 rounded-xl border border-border/60 p-2.5">
+            <div className="grid grid-cols-5 gap-2">
+              {FONT_FAMILIES.map((ff) => (
+                <button
+                  key={ff.id}
+                  onClick={() => applyFontFamily(ff.id)}
+                  className={cn(
+                    "py-2.5 rounded-lg border text-sm font-medium transition-all duration-200",
+                    fontFamily === ff.id
+                      ? "border-primary/50 bg-primary/8 text-primary"
+                      : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                  )}
+                  style={{ fontFamily: ff.value }}
+                >
+                  {ff.label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
@@ -252,14 +318,25 @@ export default function UISettings() {
             <Languages className="w-3 h-3" />
             "界面语言"
           </label>
-          <select
-            className="w-full mt-2 px-3.5 py-2.5 border border-border/60 rounded-xl bg-background/50 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-200 outline-none appearance-none"
-            value={interfaceLang}
-            onChange={(e) => applyInterfaceLang(e.target.value)}
-          >
-            <option value="zh">中文</option>
-            <option value="en">English</option>
-          </select>
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            {([
+              { id: "zh", label: "中文" },
+              { id: "en", label: "English" },
+            ]).map((l) => (
+              <button
+                key={l.id}
+                onClick={() => applyInterfaceLang(l.id)}
+                className={cn(
+                  "py-2.5 rounded-xl border text-sm font-medium transition-all duration-200",
+                  interfaceLang === l.id
+                    ? "border-primary/50 bg-primary/8 text-primary"
+                    : "border-border/50 text-muted-foreground hover:border-border hover:text-foreground"
+                )}
+              >
+                {l.label}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -267,8 +344,16 @@ export default function UISettings() {
       <div className="rounded-2xl border border-border/50 bg-card/70 p-5 space-y-4">
         <h3 className="text-sm font-semibold flex items-center gap-2">
           <Type className="w-4 h-4 text-primary" />
-          "布局设置"
+          "布局与显示"
         </h3>
+
+        <ToggleRow
+          icon={navIconsVisible ? Eye : EyeOff}
+          title="导航栏图标"
+          desc="切换导航栏图标的显示与隐藏"
+          checked={navIconsVisible}
+          onChange={applyNavIconsVisible}
+        />
 
         <ToggleRow
           icon={sidebarCollapsed ? PanelLeftClose : PanelLeft}
@@ -325,6 +410,52 @@ export default function UISettings() {
             );
           })}
         </div>
+      </div>
+
+      {/* Nav items visibility */}
+      <div className="rounded-2xl border border-border/50 bg-card/70 p-5 space-y-4">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <Type className="w-4 h-4 text-primary" />
+          "导航栏自定义"
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          "关闭后对应标签将从导航栏中隐藏"
+        </p>
+        <ToggleRow
+          icon={Clapperboard}
+          title="剪辑工作台"
+          desc="视频剪辑与时间线编辑"
+          checked={navEditing}
+          onChange={applyNavEditing}
+        />
+        <ToggleRow
+          icon={Mic2}
+          title="晴沐配音谷"
+          desc="AI 配音与音色合成工具"
+          checked={navVoiceForge}
+          onChange={applyNavVoiceForge}
+        />
+        <ToggleRow
+          icon={Share2}
+          title="多平台发布"
+          desc="一键分发至多个社交媒体"
+          checked={navSocial}
+          onChange={applyNavSocial}
+        />
+        <ToggleRow
+          icon={Users}
+          title="多人协作"
+          desc="团队协作与项目管理"
+          checked={navCollaboration}
+          onChange={applyNavCollaboration}
+        />
+        <ToggleRow
+          icon={Terminal}
+          title="后台日志"
+          desc="系统运行日志与状态监控"
+          checked={navLogs}
+          onChange={applyNavLogs}
+        />
       </div>
 
     </div>

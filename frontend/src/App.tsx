@@ -27,22 +27,37 @@ function applyUISettings() {
     }
 
     const fontScale = JSON.parse(localStorage.getItem("vl_font_scale") || '"medium"');
-    const sizes: Record<string, string> = { small: "14px", medium: "15px", large: "16px" };
+    const sizes: Record<string, string> = { small: "14px", medium: "15px", large: "16px", xlarge: "18px" };
     if (sizes[fontScale]) document.documentElement.style.fontSize = sizes[fontScale];
 
-    const fontFamily = JSON.parse(localStorage.getItem("vl_font_family") || '"default"');
-    const families: Record<string, string> = {
+    const fontFamily = JSON.parse(localStorage.getItem("vl_font_family") || '"plus-jakarta"');
+    // Map old keys to new values for backward compatibility
+    const familyMap: Record<string, string> = {
       default: '"Plus Jakarta Sans", system-ui, sans-serif',
       serif: '"Noto Serif", Georgia, serif',
       mono: '"JetBrains Mono", "Fira Code", monospace',
+      "plus-jakarta": '"Plus Jakarta Sans", system-ui, sans-serif',
+      inter: '"Inter", system-ui, sans-serif',
+      "noto-sans": '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
+      roboto: '"Roboto", system-ui, sans-serif',
+      "source-han-sans": '"Source Han Sans SC", "Noto Sans SC", sans-serif',
+      "noto-serif": '"Noto Serif", Georgia, serif',
+      playfair: '"Playfair Display", Georgia, serif',
+      merriweather: '"Merriweather", Georgia, serif',
+      "jetbrains-mono": '"JetBrains Mono", "Fira Code", monospace',
+      "fira-code": '"Fira Code", "Cascadia Code", monospace',
+      system: "ui-sans-serif, system-ui, sans-serif",
     };
-    if (families[fontFamily]) document.body.style.fontFamily = families[fontFamily];
+    if (familyMap[fontFamily]) document.body.style.fontFamily = familyMap[fontFamily];
 
     const mesh = JSON.parse(localStorage.getItem("vl_mesh_gradient") ?? "true");
     document.querySelector(".gradient-mesh")?.classList.toggle("no-mesh", !mesh);
 
     const reduceMotion = JSON.parse(localStorage.getItem("vl_reduce_motion") || "false");
     if (reduceMotion) document.documentElement.style.setProperty("--animation-duration", "0s");
+
+    const navIcons = JSON.parse(localStorage.getItem("vl_nav_icons") ?? "true");
+    document.body.classList.toggle("nav-icons-hidden", !navIcons);
   } catch {}
 }
 

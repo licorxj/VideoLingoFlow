@@ -8,7 +8,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import { useControlStore } from "@/stores/controlStore";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 
-export default function Header({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSidebar: () => void }) {
+export default function Header({ collapsed, onToggleSidebar, piDockVisible = false, onPiDockClick }: { collapsed: boolean; onToggleSidebar: () => void; piDockVisible?: boolean; onPiDockClick?: () => void }) {
   const user = useControlStore((s) => s.user);
   const setUser = useControlStore((s) => s.setUser);
   const refreshSession = useControlStore((s) => s.refreshSession);
@@ -70,7 +70,7 @@ export default function Header({ collapsed, onToggleSidebar }: { collapsed: bool
   };
 
   return (
-    <header className="h-14 bg-[hsl(var(--surface))] border-b border-[hsl(var(--surface-border))] flex items-center justify-between px-5 z-20 relative select-none">
+    <header className="h-14 header-gradient border-b border-[hsl(var(--surface-border))] flex items-center justify-between px-5 z-20 relative select-none">
       <div className="flex items-center gap-3">
         <button
           onClick={onToggleSidebar}
@@ -91,6 +91,16 @@ export default function Header({ collapsed, onToggleSidebar }: { collapsed: bool
         </div>
       </div>
       <div className="flex items-center gap-1.5">
+        {piDockVisible && (
+          <button
+            onClick={onPiDockClick}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 transition-all duration-200 hover:bg-primary/20 active:scale-90"
+            title="恢复 Pi Agent"
+            aria-label="恢复 Pi Agent"
+          >
+            <img src="/imge/pi-lite.png" alt="Pi Agent" className="h-[18px] w-[18px] object-contain" />
+          </button>
+        )}
         <ThemeToggle />
         {user && projects.length > 0 && (
           <select

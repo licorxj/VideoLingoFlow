@@ -1,14 +1,20 @@
-# VideoLingoLc 后端依赖清单
-# 注意: PyTorch 三件套 (torch, torchvision, torchaudio) 单独安装，不在此文件中
-# 安装顺序: 由 installer.py 控制
+# VideoLingoLc 主后端依赖清单（跨平台）
+# 注意: PyTorch 三件套 (torch, torchvision, torchaudio) 单独安装，不在此文件中，
+#       由 backend/installer.py 按平台/CUDA 版本选择（详见文档 docs/依赖清单.md）
+# 安装入口: 全量安装 installer/install.py -> backend/installer.py
+# 平台适配要点:
+#   - uvicorn[standard]: Windows 提供 httptools/watchfiles，Linux/macOS 额外提供 uvloop（性能）
+#   - websockets: FastAPI WebSocket 端点（/logs、/collaboration、/voiceforge）运行依赖，勿删
+#   - yt-dlp: s00_platform_download 步骤以 `python -m yt_dlp` 子进程调用，勿删
+#   - aiohttp/scikit-learn/regex/transformers/safetensors/sentencepiece/tokenizers:
+#     由 edge-tts / librosa / transformers / funasr / faster-whisper 硬依赖带入，勿删
 
 # ============================================================
 # Web框架与服务器 (高层)
 # ============================================================
 fastapi==0.115.0
-fastapi-cli==0.0.7
-fastapi-sso==0.10.0
-uvicorn==0.30.0
+uvicorn[standard]==0.30.0
+websockets>=12.0,<13
 
 # ============================================================
 # 数据库与缓存
@@ -30,60 +36,47 @@ pyyaml>=6.0,<7
 # HTTP客户端
 # ============================================================
 httpx==0.19.0
-httpx-sse==0.4.3
 aiohttp>=3.9,<4
 requests>=2.31,<3
 curl_cffi>=0.15,<1
 
 # ============================================================
-# AI/ML 高层库 (依赖torch，需先装torch)
+# 平台视频下载（s00_platform_download 子进程调用，勿删）
+# ============================================================
+yt-dlp==2025.3.31
+
+# ============================================================
+# AI/ML 高层库
+# 说明: transformers/tokenizers/safetensors/sentencepiece/regex 为
+#       funasr（ASR 默认引擎）与 faster-whisper 的硬依赖，勿删
 # ============================================================
 transformers==5.3.0
-diffusers==0.32.2
-accelerate==1.1.1
 safetensors==0.8.0
-peft==0.19.1
-bitsandbytes==0.47.0
 sentencepiece>=0.2.0
 tokenizers>=0.20
+regex>=2023.10,<2025
 
 # ============================================================
 # ASR 语音识别
 # ============================================================
 faster-whisper==1.1.1
 funasr==1.2.7
-pytorch-wpe==0.0.1
-pytorch-complex==0.4.4
 
 # ============================================================
 # TTS 语音合成
 # ============================================================
 edge-tts==7.2.7
-gradio==5.7.1
-gradio_client==1.5.0
 
 # ============================================================
-# 图像处理
+# 图像处理（headless：服务器/无 GUI 环境适用，跨平台有预编译 wheel）
 # ============================================================
-opencv-python==4.12.0.88
 opencv-python-headless==4.10.0.84
 pillow==12.2.0
-imageio>=0.35,<1
-imageio-ffmpeg==0.6.0
-
-# ============================================================
-# 视频处理
-# ============================================================
-moviepy==2.2.1
-ffmpeg-python==0.2.0
-yt-dlp==2025.3.31
 
 # ============================================================
 # 字幕处理
 # ============================================================
 pysubs2>=1.7,<2
-ass>=0.5,<1
-pyparsing>=3.1,<4
 
 # ============================================================
 # 音频处理
@@ -91,11 +84,11 @@ pyparsing>=3.1,<4
 librosa>=0.10,<1
 soundfile>=0.12,<1
 pydub>=0.25,<1
-pedalboard>=0.9,<1
 demucs>=4.0,<5
 
 # ============================================================
 # 数据处理与科学计算
+# 说明: scikit-learn 为 librosa 硬依赖，勿删
 # ============================================================
 numpy==2.2.6
 scipy==1.14.1
@@ -108,12 +101,8 @@ scikit-learn>=1.3,<2
 tqdm>=4.66,<5
 rich>=13.7,<14
 click>=8.1,<9
-typer>=0.9,<1
 python-multipart>=0.0.6
-websockets>=12.0,<13
 jinja2>=3.1,<4
-markupsafe>=2.1,<3
-python-jose>=3.3,<4
 passlib>=1.7,<2
 bcrypt>=4.1,<5
 
@@ -121,16 +110,6 @@ bcrypt>=4.1,<5
 # 文本处理
 # ============================================================
 jieba>=0.42,<1
-opencc-python-reimplemented>=0.1,<1
-langdetect>=1.0,<2
-regex>=2023.10,<2025
-
-# ============================================================
-# 系统监控
-# ============================================================
-psutil>=5.9,<6
-py-cpuinfo>=9.0,<10
-gputil>=1.4,<2
 
 # ============================================================
 # 文件锁（本地额度文件跨进程互斥）

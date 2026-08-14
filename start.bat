@@ -4,6 +4,9 @@ setlocal EnableDelayedExpansion
 cd /d %~dp0
 title VideoLingoLc 一键启动（正式版）
 
+:: --- 加载本地覆盖配置（如有；含 LAN 模式开关 VIDEOLINGO_LAN_MODE）---
+if exist "%cd%\.runtime\local_env.bat" call "%cd%\.runtime\local_env.bat"
+
 :: ============================================================
 ::  正式版一键启动（Windows）：不隔离 CUDA / 环境，
 ::  直接使用用户系统已安装的 CUDA 运行时。
@@ -66,11 +69,14 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":18001" ^| findstr "LISTENIN
     exit /b 1
 )
 
-:: --- 前端：新窗口等待主后端(11001)就绪后启动 Vite dev server（后端先、前端后）---
+:: --- 前端：清理残留 vite 后，新窗口等待主后端(11001)就绪再启动 Vite（后端先、前端后）---
 set VITE_DEPRECATION_SILENT=1
 if exist "%cd%\frontend\node_modules" (
+    echo [Frontend] 清理 11003/11004 残留前端进程...
+    for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":11003" ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>&1
+    for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":11004" ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>&1
     echo [Frontend] 主后端就绪后将在新窗口启动 Vite dev server（http://127.0.0.1:11003）...
-    start "VideoLingoLc Frontend" cmd /c "for /L %%i in (1,1,180) do @(netstat -ano | findstr ":11001" | findstr "LISTENING" >nul 2>&1 && (cd /d "%cd%\frontend" && npx vite --port 11003 --open && exit)) & ping -n 2 127.0.0.1 >nul"
+    start "VideoLingoLc Frontend" cmd /c "for /L %%i in (1,1,180) do @((netstat -ano | findstr ":11001" | findstr "LISTENING" >nul 2>&1 && (cd /d "%cd%\frontend" && npx vite --port 11003 --strictPort --open && exit)) & ping -n 2 127.0.0.1 >nul)"
 ) else (
     echo [提示] frontend\node_modules 不存在，跳过前端 dev server；可使用构建产物 frontend/dist
 )

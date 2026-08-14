@@ -1,18 +1,27 @@
 {
   "groups": [
     {
-      "id": "grp_d269a985",
-      "name": "翻译类",
-      "order": 0
-    },
-    {
       "id": "grp_d7395d52",
       "name": "下载类",
       "order": 1
+    },
+    {
+      "id": "grp_a10ef73f",
+      "name": "二创类",
+      "order": 2
+    },
+    {
+      "id": "grp_603d72ac",
+      "name": "小说配音",
+      "order": 3
+    },
+    {
+      "id": "grp_c23b4b83",
+      "name": "视频精译",
+      "order": 4
     }
   ],
   "membership": {
-    "7032ce81b6df": "grp_d269a985",
     "5fc0150ea613": "grp_d7395d52"
   }
 }

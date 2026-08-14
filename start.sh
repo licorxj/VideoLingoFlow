@@ -51,10 +51,17 @@ if command -v netstat >/dev/null 2>&1 && netstat -tln 2>/dev/null | grep -q ':18
     exit 1
 fi
 
-# 前端：后台等待主后端(11001)就绪后启动 Vite dev server（后端先、前端后）
+# 前端：清理残留 vite 后，后台等待主后端(11001)就绪再启动 Vite dev server（后端先、前端后）
 if [ -d frontend/node_modules ]; then
+    # 清理 11003/11004 残留前端进程（与 Windows 脚本行为一致）
+    if command -v lsof >/dev/null 2>&1; then
+        lsof -ti tcp:11003 2>/dev/null | xargs kill -9 2>/dev/null
+        lsof -ti tcp:11004 2>/dev/null | xargs kill -9 2>/dev/null
+    elif command -v fuser >/dev/null 2>&1; then
+        fuser -k 11003/tcp 11004/tcp >/dev/null 2>&1
+    fi
     echo "[Frontend] 主后端就绪后将启动 Vite dev server: http://127.0.0.1:11003"
-    (poll_port 11001 && (cd frontend && nohup npx vite --port 11003 >/dev/null 2>&1 &) && poll_port 11003 && open_browser "http://127.0.0.1:11003" >/dev/null 2>&1) &
+    (poll_port 11001 && (cd frontend && nohup npx vite --port 11003 --strictPort >/dev/null 2>&1 &) && poll_port 11003 && open_browser "http://127.0.0.1:11003" >/dev/null 2>&1) &
 else
     echo "[提示] frontend/node_modules 不存在，跳过前端 dev server；可使用构建产物 frontend/dist"
 fi

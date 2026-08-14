@@ -7,12 +7,19 @@ import {
   CloudDownload,
   FileText,
   Github,
+  Globe,
   Info,
+  Layers,
   Loader2,
   Mail,
   Megaphone,
+  MessageSquareText,
+  Plug,
+  Puzzle,
   QrCode,
   RefreshCw,
+  Rocket,
+  Share2,
   Sparkles,
   Users,
   Workflow,
@@ -24,17 +31,24 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 const GITHUB_URL = "https://github.com/licorxj/VideoLingoFlow.git";
 
 const highlights = [
-  [Workflow, "节点式工作流", "拖拽连接，保存复用，适合栏目化生产"],
-  [Sparkles, "多语言出海", "翻译、配音和双语字幕一次完成"],
-  [CloudDownload, "批量分发", "批量处理并同步发布到主流平台"],
-  [Users, "团队共创", "权限、资源、审计和实时协作集中管理"],
+  [Workflow, "节点式工作流", "拖拽即搭建：40+ 内置节点任意连线组合，保存、复用、批量重跑，把创意沉淀成可复用的流水线。"],
+  [MessageSquareText, "Agent 聊天式执行", "开口即指挥：让小 Pi 帮你配置接口、创造节点、编排流程、安排任务，自然语言驱动整条生产流水线。"],
+  [Puzzle, "Agent 即节点", "把智能体拖进画布，与能力节点自由连线——对话与编排两种范式无缝融合，Agent 既是助手也是流水线的一环。"],
+  [Globe, "多语言出海", "翻译、配音、双语字幕一次完成，本地化到全球，让一部作品走遍世界。"],
+  [Rocket, "批量生产", "批量导入、并行调度、限流重试，规模化交付，单条视频成本摊薄到接近零。"],
+  [Plug, "能力无限扩展", "ASR / TTS / 生图 / 分离 / AIGC 接口域即插即用，注册一个新接口，全部工作流立刻可用。"],
+  [Share2, "共享社区", "节点与工作流一键上传云端社区，一键导入他人成熟流程，复用即用，全网共享。"],
+  [Users, "多人协同", "局域网 / 互联网远程协作 + 实时编辑 + 资源中心 + 审计日志，异地办公也高效。"],
 ] as const;
 
 const guides = [
-  ["快速开始", "快速配置模型、接口和第一个工作流", "快速开始.md"],
-  ["接口与节点管理", "添加服务接口，配置节点并排查调用问题", "接口与节点管理教程.md"],
-  ["剪辑工作台联动", "理解自动化剪辑节点和人工精修的衔接", "剪辑工作台联动说明.md"],
-  ["多人协作", "了解角色权限、资源中心和远程协作", "多人协作功能介绍.md"],
+  ["快速开始", "从零搭建运行环境，几分钟跑起第一张工作流", "快速开始.md", Rocket],
+  ["工作流编排", "掌握 DAG 画布、端口连线与节点清单，随心编排百变任务", "工作流编排指南.md", Workflow],
+  ["自定义节点", "按「四件套」规范新建专属节点，扩展属于自己的能力单元", "节点新建规范指南.md", Puzzle],
+  ["能力接口扩展", "注册新接口域 / Provider，能力即插即用，编排层零改动", "接口添加指南.md", Plug],
+  ["多人协作", "了解权限体系、资源中心与远程协作，开启团队共创", "多人协作功能介绍.md", Users],
+  ["剪辑工作台", "自动化剪辑节点与人工精修无缝衔接，机器效率 + 人的审美", "剪辑工作台联动说明.md", Layers],
+  ["依赖与环境", "三大系统依赖声明与平台适配说明，环境排障必备", "依赖清单.md", BookOpen],
 ] as const;
 
 type PublicInfo = {
@@ -123,6 +137,8 @@ function GuideDialog({ guide, open, onOpenChange }: { guide: (typeof guides)[num
     </Dialog>
   );
 }
+
+const heroChips = ["40+ 内置节点", "6 大能力域", "3 大协作能力", "跨平台运行"];
 
 export default function About() {
   const [guide, setGuide] = useState<(typeof guides)[number] | null>(null);
@@ -241,26 +257,43 @@ export default function About() {
   };
 
   return (
-    <div className="mx-auto max-w-[86.4rem] space-y-5 stagger-children">
+    <div className="mx-auto max-w-[77.76rem] space-y-5 stagger-children">
+      {/* ===== 页头 ===== */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2.5"><Info className="h-6 w-6 text-primary" /><h2 className="text-2xl font-extrabold tracking-tight">关于 VideoLingoFlow</h2></div>
-          <p className="mt-1 text-sm text-muted-foreground">流连视听 · AI 视频创作与出海本地化工作台</p>
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-primary to-indigo-500 text-white shadow-lg shadow-primary/20">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <h2 className="bg-gradient-to-r from-primary via-indigo-500 to-primary bg-clip-text text-2xl font-extrabold tracking-tight text-transparent">
+              关于 VideoLingoFlow
+            </h2>
+          </div>
+          <p className="mt-1.5 text-sm text-muted-foreground">流连视听 · AI 视频创作与出海本地化工作台 —— 节点、接口、Agent，自由组合，百变任务</p>
         </div>
-        <span className="text-xs text-muted-foreground">v{localVersion}</span>
+        <span className="animate-pulse-glow rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">v{localVersion}</span>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <section className="relative overflow-hidden rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm lg:min-h-[390px]">
-          <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-primary/10" />
+      <div className="grid gap-4 lg:grid-cols-[45fr_55fr]">
+        {/* ===== 品牌主卡 ===== */}
+        <section className="relative overflow-hidden rounded-2xl border border-border/60 bg-card/90 p-8 shadow-lg lg:min-h-[420px]">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,hsl(var(--primary)/0.14),transparent_45%),radial-gradient(circle_at_88%_75%,hsl(var(--primary)/0.10),transparent_40%)]" />
+          <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-28 -left-20 h-72 w-72 rounded-full bg-indigo-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute inset-0 opacity-[0.05] bg-[linear-gradient(hsl(var(--foreground))_1px,transparent_1px),linear-gradient(90deg,hsl(var(--foreground))_1px,transparent_1px)] bg-[size:28px_28px]" />
           <div className="relative flex h-full flex-col items-center justify-center gap-5 text-center">
             <div className="grid h-20 grid-rows-5 place-items-center">
               <img src="/vlf-long-logo.png" alt="VideoLingoFlow" className="row-span-5 row-start-1 h-20 w-auto max-w-none object-contain" />
             </div>
-            <div className="flex flex-col items-center gap-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">VideoLingoFlow</p>
+            <div className="flex flex-col items-center gap-1.5">
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">VideoLingoFlow</p>
               <h3 className="text-xl font-extrabold">流连视听 <span className="text-base font-semibold text-muted-foreground">v{localVersion}</span></h3>
               <p className="text-sm text-muted-foreground">出品方：晴沐智坊</p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {heroChips.map((chip) => (
+                <span key={chip} className="rounded-full border border-border/60 bg-background/60 px-3 py-1 text-[11px] font-medium text-muted-foreground backdrop-blur">{chip}</span>
+              ))}
             </div>
             <div className="flex flex-col items-center justify-center gap-3">
               <div className="flex flex-wrap items-center justify-center gap-3">
@@ -268,39 +301,119 @@ export default function About() {
               </div>
               <span className="text-xs text-muted-foreground">{message}</span>
             </div>
-            {remoteVersion && localVersion !== "-" && isNewer(remoteVersion, localVersion) && <div className="flex flex-wrap items-center justify-center gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm"><CheckCircle2 className="h-4 w-4 text-primary" /><span>云端版本 v{remoteVersion} 已发布</span><Button size="sm" variant="outline" onClick={fetchDownloadUrl} disabled={downloadFetching}><CloudDownload className="mr-2 h-4 w-4" />{downloadFetching ? "获取中..." : "获取下载地址"}</Button></div>}
+            {remoteVersion && localVersion !== "-" && isNewer(remoteVersion, localVersion) && <div className="flex flex-wrap items-center justify-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-sm"><CheckCircle2 className="h-4 w-4 text-primary" /><span>云端版本 v{remoteVersion} 已发布</span><Button size="sm" variant="outline" onClick={fetchDownloadUrl} disabled={downloadFetching}><CloudDownload className="mr-2 h-4 w-4" />{downloadFetching ? "获取中..." : "获取下载地址"}</Button></div>}
           </div>
         </section>
 
-        <section className="rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm lg:min-h-[300px]"><div className="mb-5 flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /><h3 className="font-bold">软件亮点</h3></div><div className="grid gap-4 sm:grid-cols-2">{highlights.map(([Icon, title, text]) => <div key={title} className="flex gap-3"><div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-primary"><Icon className="h-4 w-4" /></div><div><p className="text-sm font-semibold">{title}</p><p className="mt-1 text-xs leading-5 text-muted-foreground">{text}</p></div></div>)}</div></section>
+        {/* ===== 软件亮点 ===== */}
+        <section className="rounded-2xl border border-border/60 bg-card/90 p-6 shadow-lg lg:min-h-[300px]">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-primary to-indigo-500 text-white shadow-md shadow-primary/20"><Sparkles className="h-4 w-4" /></span>
+            <div>
+              <h3 className="font-bold">软件亮点</h3>
+              <p className="text-[11px] text-muted-foreground">把创意变成流水线，把流水线变成资产</p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {highlights.map(([Icon, title, text]) => (
+              <div key={title} className="group flex gap-3 rounded-xl border border-border/50 bg-card p-3.5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
+                <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary/85 to-indigo-500/85 text-white shadow-md shadow-primary/20 transition-transform group-hover:scale-105"><Icon className="h-5 w-5" /></div>
+                <div>
+                  <p className="text-sm font-bold">{title}</p>
+                  <p className="mt-1 text-xs leading-5 text-muted-foreground">{text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
 
-        <section className="rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm lg:min-h-[300px]"><div className="mb-5 flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /><h3 className="font-bold">配置说明</h3></div><div className="grid gap-2 sm:grid-cols-2">{guides.map((item) => <button key={item[2]} type="button" onClick={() => setGuide(item)} className="group flex items-center justify-between rounded-lg border border-border/60 px-3 py-3 text-left transition-colors hover:border-primary/50 hover:bg-accent/50"><span><span className="block text-sm font-semibold">{item[0]}</span><span className="mt-1 block text-xs text-muted-foreground">{item[1]}</span></span><ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" /></button>)}</div></section>
+      <div className="grid gap-4 lg:grid-cols-[55fr_45fr]">
+        {/* ===== 配置说明 ===== */}
+        <section className="rounded-2xl border border-border/60 bg-card/90 p-6 shadow-lg lg:min-h-[300px]">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 text-white shadow-md shadow-indigo-500/20"><FileText className="h-4 w-4" /></span>
+            <div>
+              <h3 className="font-bold">配置说明</h3>
+              <p className="text-[11px] text-muted-foreground">从入门到进阶，动手之前先读它</p>
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {guides.map(([title, desc, file, Icon]) => (
+              <button key={file} type="button" onClick={() => setGuide([title, desc, file, Icon] as (typeof guides)[number])} className="group flex items-start justify-between gap-3 rounded-xl border border-border/50 bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg">
+                <span className="flex items-start gap-3">
+                  <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground"><Icon className="h-4 w-4" /></span>
+                  <span>
+                    <span className="block text-sm font-semibold">{title}</span>
+                    <span className="mt-1 block text-xs leading-5 text-muted-foreground">{desc}</span>
+                  </span>
+                </span>
+                <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </button>
+            ))}
+          </div>
+        </section>
 
-        <section className="rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm lg:min-h-[390px]"><div className="mb-5 flex items-center justify-between gap-2"><div className="flex items-center gap-2"><Megaphone className="h-5 w-5 text-primary" /><h3 className="font-bold">项目公告</h3></div><Button size="icon" variant="ghost" onClick={refreshAnnouncements} disabled={announcementRefreshing} title="刷新公告"><RefreshCw className={`h-4 w-4 ${announcementRefreshing ? "animate-spin" : ""}`} /></Button></div><div className="space-y-3">{announcements.length ? announcements.slice(0, 4).map((item, index) => <div key={index} className="border-l-2 border-primary/50 pl-3"><div className="flex items-center justify-between gap-2"><p className="text-sm font-semibold">{pickValue(item, ["title", "name"]) || "项目公告"}</p>{formatLocalTime(pickValue(item, ["created_at", "publish_at"])) && <span className="shrink-0 text-[10px] text-muted-foreground">{formatLocalTime(pickValue(item, ["created_at", "publish_at"]))}</span>}</div><p className="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">{pickValue(item, ["content", "description", "body"])}</p></div>) : announcementError ? <p className="text-sm text-destructive">公告获取失败：{announcementError}</p> : <p className="text-sm leading-6 text-muted-foreground">暂无公告。</p>}</div><div className="mt-6 flex flex-wrap gap-2"><Button size="sm" variant="outline" onClick={() => window.open(GITHUB_URL, "_blank", "noopener,noreferrer")}><Github className="mr-2 h-4 w-4" />项目 GitHub</Button><Button size="sm" variant="outline" onClick={startGithubUpdate} disabled={updatePolling}><Github className="mr-2 h-4 w-4" />{updatePolling ? "更新中..." : "从GitHub更新"}</Button></div></section>
-        <section className="rounded-xl border border-border/70 bg-card/90 p-6 shadow-sm lg:col-span-2"><div className="mb-5 flex items-center gap-2"><QrCode className="h-5 w-5 text-primary" /><h3 className="font-bold">联系我们</h3></div>
+        {/* ===== 项目公告 ===== */}
+        <section className="rounded-2xl border border-border/60 bg-card/90 p-6 shadow-lg lg:min-h-[390px]">
+          <div className="mb-5 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-3">
+              <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-md shadow-amber-500/20"><Megaphone className="h-4 w-4" /></span>
+              <h3 className="font-bold">项目公告</h3>
+            </div>
+            <Button size="icon" variant="ghost" onClick={refreshAnnouncements} disabled={announcementRefreshing} title="刷新公告"><RefreshCw className={`h-4 w-4 ${announcementRefreshing ? "animate-spin" : ""}`} /></Button>
+          </div>
+          <div className="space-y-3">
+            {announcements.length ? announcements.slice(0, 4).map((item, index) => (
+              <div key={index} className="rounded-r-lg border-l-2 border-primary/60 bg-accent/30 py-2.5 pl-3 pr-2">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm font-semibold">{pickValue(item, ["title", "name"]) || "项目公告"}</p>
+                  {formatLocalTime(pickValue(item, ["created_at", "publish_at"])) && <span className="shrink-0 text-[10px] text-muted-foreground">{formatLocalTime(pickValue(item, ["created_at", "publish_at"]))}</span>}
+                </div>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-blue-600 dark:text-blue-400">{pickValue(item, ["content", "description", "body"])}</p>
+              </div>
+            )) : announcementError ? <p className="text-sm text-destructive">公告获取失败：{announcementError}</p> : <p className="text-sm leading-6 text-muted-foreground">暂无公告。</p>}
+          </div>
+          <div className="mt-6 flex flex-wrap gap-2">
+            <Button size="sm" variant="outline" onClick={() => window.open(GITHUB_URL, "_blank", "noopener,noreferrer")}><Github className="mr-2 h-4 w-4" />项目 GitHub</Button>
+            <Button size="sm" variant="outline" onClick={startGithubUpdate} disabled={updatePolling}><Github className="mr-2 h-4 w-4" />{updatePolling ? "更新中..." : "从GitHub更新"}</Button>
+          </div>
+        </section>
+      </div>
+
+      <div className="grid gap-4">
+        {/* ===== 联系我们 ===== */}
+        <section className="rounded-2xl border border-border/60 bg-card/90 p-6 shadow-lg">
+          <div className="mb-5 flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 text-white shadow-md shadow-emerald-500/20"><QrCode className="h-4 w-4" /></span>
+            <div>
+              <h3 className="font-bold">联系我们</h3>
+              <p className="text-[11px] text-muted-foreground">一起碰撞灵感，或把繁琐任务交给我们</p>
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border/60 p-4 text-center">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border/60 bg-card p-4 text-center transition-all hover:border-primary/40 hover:shadow-lg">
               <Button variant="outline" size="sm" onClick={() => window.open("https://www.licorxj.online/home", "_blank", "noopener,noreferrer")}><ExternalLink className="mr-2 h-4 w-4" />访问晴沐智坊</Button>
               <p className="text-xs text-muted-foreground">官方网站 🌐</p>
             </div>
-            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border/60 p-4 text-center">
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border/60 bg-card p-4 text-center transition-all hover:border-primary/40 hover:shadow-lg">
               <button type="button" onClick={() => setQrPreview("/imge/qqun.png")} title="点击放大企鹅群二维码" className="transition-transform hover:scale-105">
                 <img src="/imge/qqun.png" alt="企鹅群二维码" className="h-24 w-24 rounded-lg border border-border object-contain" />
               </button>
               <p className="text-xs text-muted-foreground">企鹅群 🐧</p>
             </div>
-            <div className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border/60 p-4 text-center">
+            <div className="flex flex-col items-center justify-center gap-2 rounded-xl border border-border/60 bg-card p-4 text-center transition-all hover:border-primary/40 hover:shadow-lg">
               <button type="button" onClick={() => setQrPreview("/imge/licor.png")} title="点击放大开发者微信二维码" className="transition-transform hover:scale-105">
                 <img src="/imge/licor.png" alt="开发者微信二维码" className="h-24 w-24 rounded-lg border border-border object-contain" />
               </button>
               <p className="text-xs text-muted-foreground">开发者微信 💬</p>
             </div>
-            <div className="flex flex-col items-center justify-center gap-3 rounded-lg border border-border/60 p-4 text-center">
+            <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-border/60 bg-card p-4 text-center transition-all hover:border-primary/40 hover:shadow-lg">
               <a href="mailto:727909969@qq.com" className="inline-flex items-center gap-2 text-sm font-medium text-primary hover:underline"><Mail className="h-4 w-4" />727909969@qq.com</a>
               <p className="text-xs text-muted-foreground">企业邮箱 📧</p>
             </div>
           </div>
-          <p className="mt-6 text-center text-sm leading-6 text-muted-foreground">温馨提示：除了在分享社区找工作流，你也可以找我定制工作流哦～ 😉 甚至可以把这些无聊的任务甩给我们来包办！🚀✨</p>
+          <p className="mt-6 text-center text-lg font-bold leading-7 text-muted-foreground">温馨提示：除了在分享社区找工作流，你也可以找我定制工作流哦～ 😉 甚至可以把这些无聊的任务甩给我们来包办！🚀✨</p>
         </section>
       </div>
       <GuideDialog guide={guide} open={Boolean(guide)} onOpenChange={(open) => !open && setGuide(null)} />

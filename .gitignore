@@ -146,6 +146,9 @@ share/
 # 任务工作区（用户素材/产物）
 control_plane_workspaces/
 
+# 本机临时诊断脚本（一次性脚本，不入库）
+_diag_router.py
+
 # OS
 Thumbs.db
 .DS_Store

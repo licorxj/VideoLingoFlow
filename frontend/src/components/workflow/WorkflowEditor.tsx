@@ -10,7 +10,7 @@ import WorkflowNodeComponent from "./WorkflowNode";
 import NodePalette from "./NodePalette";
 import ContextMenu from "./ContextMenu";
 import {
-  Save, FolderOpen, Play, Trash2, RotateCcw, Download, FileText, Loader2,
+  Save, FolderOpen, Play, Trash2, RotateCcw, FileText, Loader2,
   Plus, Workflow as WorkflowIcon, Clock, CheckCircle2, Pause, Square, Copy,
   ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2,
 } from "lucide-react";
@@ -102,7 +102,7 @@ function GroupTab({ label, active, onClick, count, onDelete, compact }: {
         onClick={onClick}
         className={cn(
           "flex items-center border transition-all rounded-md",
-          compact ? "gap-1 px-2 py-0.5 text-[10px] font-semibold" : "gap-1.5 px-3 py-1 rounded-full text-xs font-semibold",
+          compact ? "gap-1 px-2 py-0.5 text-base font-semibold" : "gap-1.5 px-3 py-1 rounded-full text-xs font-semibold",
           active
             ? "bg-primary text-primary-foreground border-primary shadow-sm"
             : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-primary/40 hover:bg-secondary"
@@ -1110,15 +1110,6 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     }
   };
 
-  const handleExportJSON = () => {
-    const wf = getWorkflowJSON();
-    const blob = new Blob([JSON.stringify(wf, null, 2)], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url; a.download = (workflowName || "workflow") + ".json"; a.click();
-    URL.revokeObjectURL(url);
-  };
-
   const handlePackSubmit = async (fields: SharePackFields, preview: File | null): Promise<PublishResult> => {
     const wf = getWorkflowJSON();
     const form = new FormData();
@@ -1163,18 +1154,18 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     <div className="flex flex-col h-full animate-fade-in-up">
       {/* === Top: Saved Workflow Cards === */}
       <div className="border-b border-border bg-card flex-shrink-0">
-        <div className="flex items-center gap-2 px-3 py-1.5 bg-secondary">
+        <div className="flex items-center gap-2 px-3 py-1.5 min-h-[38px] bg-secondary">
           <WorkflowIcon className="w-3.5 h-3.5 text-primary" />
-          <span className="text-xs font-bold text-muted-foreground">{"\u5df2\u4fdd\u5b58\u5de5\u4f5c\u6d41"}</span>
+          <span className="text-base font-bold text-muted-foreground">{"\u5df2\u4fdd\u5b58\u5de5\u4f5c\u6d41"}</span>
           <button
             onClick={createNew}
-            className="ml-1 flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold text-primary border border-primary/30 hover:bg-primary/10 rounded-md transition-colors"
+            className="ml-1 flex items-center gap-1 px-2 py-0.5 text-base font-semibold text-primary border border-primary/30 hover:bg-primary/10 rounded-md transition-colors"
           >
             <Plus className="w-3 h-3" />{"\u65b0\u5efa"}
           </button>
           <button
             onClick={fetchWorkflows}
-            className="text-xs font-semibold text-foreground border border-border px-1.5 py-0.5 rounded-md hover:bg-secondary transition-colors"
+            className="text-base font-semibold text-foreground border border-border px-1.5 py-0.5 rounded-md hover:bg-secondary transition-colors"
             title={"\u5237\u65b0"}
           >
             {loadingList ? <Loader2 className="w-3 h-3 animate-spin" /> : "\u5237\u65b0"}
@@ -1368,27 +1359,25 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               </span>
             )}
             <input type="text" value={workflowName} onChange={(e) => store.setWorkflowName(e.target.value)}
-              className="text-sm font-bold text-foreground bg-transparent border border-border rounded-md hover:border-primary/40 focus:border-primary outline-none transition-colors px-2 py-1 w-36"
+              className="text-sm font-bold text-foreground bg-transparent border-2 border-muted-foreground/40 rounded-full hover:border-primary focus:border-primary outline-none transition-colors px-2 py-1 h-8 flex-1 min-w-0"
               placeholder={"\u5de5\u4f5c\u6d41\u540d\u79f0"} />
             <input type="text" value={workflowDesc} onChange={(e) => store.setWorkflowDesc(e.target.value)}
-              className="text-xs text-foreground bg-transparent border border-border rounded-md hover:border-primary/40 focus:border-primary outline-none transition-colors px-2 py-1 flex-1 min-w-0"
+              className="text-sm text-foreground bg-transparent border-2 border-muted-foreground/40 rounded-full hover:border-primary focus:border-primary outline-none transition-colors px-2 py-1 h-8 flex-[2] min-w-0"
               placeholder={"\u63cf\u8ff0..."} />
             <div className="flex items-center gap-1 ml-auto flex-shrink-0">
               <Btn icon={RefreshCw} label={"刷新"} onClick={() => { if (currentWfId && currentWfId !== "new") loadWorkflow(currentWfId); }} />
               <Btn icon={Copy} label={"另存为"} onClick={handleSaveAs} loading={saving} />
 <Btn icon={Save} label={"\u4fdd\u5b58"} onClick={handleSave} loading={saving} />
-              <Btn icon={Download} label={"\u5bfc\u51fa"} onClick={handleExportJSON} />
               <Btn icon={Share2} label={"分享"} onClick={() => {
                 if (!currentWfId || currentWfId === "new") {
                   if (confirm("当前工作流尚未保存，建议先保存再分享，是否现在保存？")) handleSave();
                 }
                 setPackOpen(true);
               }} />
-              <Btn icon={Trash2} label={"\u5220\u9664"} onClick={deleteSelected} />
               <Btn icon={RotateCcw} label={"\u6e05\u7a7a"} onClick={handleClear} />
               <div className="w-px h-4 bg-border/40 mx-0.5" />
               <button onClick={handleExecute} disabled={nodes.length === 0 || executing || !!executingNode || cancelling}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-primary-foreground border border-primary/60 bg-primary rounded-lg hover:shadow-lg hover:shadow-primary/30 active:scale-[0.97] disabled:opacity-40 transition-all">
+                className="flex items-center gap-1 px-2.5 py-2 text-sm font-bold text-primary-foreground border border-primary/60 bg-primary rounded-lg hover:shadow-lg hover:shadow-primary/30 active:scale-[0.97] disabled:opacity-40 transition-all">
                 {executing || !!executingNode || cancelling
                   ? <><Loader2 className="w-3 h-3 animate-spin" />{"运行中"}</>
                   : <><Play className="w-3 h-3" />{"执行"}</>}
@@ -1396,7 +1385,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               <button
                 onClick={handleCancelExecution}
                 disabled={(!executing && !executingNode && !hasRunningNodes) || cancelling}
-                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-bold text-red-600 border border-red-400 bg-red-500/10 rounded-lg hover:bg-red-500/20 active:scale-[0.97] disabled:opacity-40 transition-all"
+                className="flex items-center gap-1 px-2.5 py-2 text-sm font-bold text-red-600 border border-red-400 bg-red-500/10 rounded-lg hover:bg-red-500/20 active:scale-[0.97] disabled:opacity-40 transition-all"
               >
                 {cancelling ? <Pause className="w-3 h-3" /> : <Square className="w-3 h-3" />} {cancelling ? "停止中" : "停止"}
               </button>
@@ -1760,7 +1749,7 @@ const WORKFLOW_SHARE_CATEGORIES = [
 function Btn({ icon: Icon, label, onClick, loading }: { icon: any; label: string; onClick: () => void; loading?: boolean }) {
   return (
     <button onClick={onClick} disabled={loading}
-      className="flex items-center gap-1 px-2 py-1.5 text-[10px] font-semibold text-foreground border border-border rounded-md hover:bg-secondary/60 hover:border-primary/40 transition-all disabled:opacity-50"
+      className="flex items-center gap-1 px-2 py-2 text-xs font-semibold text-foreground border border-border rounded-md hover:bg-secondary/60 hover:border-primary/40 transition-all disabled:opacity-50"
       title={label}>
       {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}{label}
     </button>

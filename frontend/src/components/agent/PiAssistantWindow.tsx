@@ -23,7 +23,7 @@ const ASSISTANTS: { id: AssistantKind; label: string; description: string; icon:
   { id: "installer", label: "技能安装助手", description: "安装 Skill / MCP", icon: Sparkles, prompt: "你是 VideoLingo 技能安装助手。帮助用户从暂存目录安装 Skill 或 MCP，并在安装前询问是项目专用还是系统级别。" },
 ];
 
-export default function PiAssistantWindow({ onClose, onMinimize, onReady }: { onClose: () => void; onMinimize: () => void; onReady?: () => void }) {
+export default function PiAssistantWindow({ visible = true, onClose, onMinimize, onReady }: { visible?: boolean; onClose: () => void; onMinimize: () => void; onReady?: () => void }) {
   const [assistant, setAssistant] = useState<AssistantKind>("general");
   const [collapsed, setCollapsed] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -55,6 +55,57 @@ export default function PiAssistantWindow({ onClose, onMinimize, onReady }: { on
   const dragRef = useRef<{ offsetX: number; offsetY: number; width: number; height: number } | null>(null);
   const resizeRef = useRef<{ left: number; bottom: number } | null>(null);
   const current = ASSISTANTS.find((item) => item.id === assistant) ?? ASSISTANTS[0];
+  const rootRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    const el = rootRef.current;
+    if (!el) return;
+    const animation = el.animate(
+      [
+        { transform: "translate(0, 28px) scale(0.32)", opacity: 0, transformOrigin: "bottom left" },
+        { transform: "translate(0, 0) scale(1)", opacity: 1, transformOrigin: "bottom left" },
+      ],
+      { duration: 340, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "backwards" },
+    );
+    return () => animation.cancel();
+  }, [visible]);
+
+  const runExit = useCallback((kind: "minimize" | "close") => {
+    const el = rootRef.current;
+    const finish = () => (kind === "minimize" ? onMinimize() : onClose());
+    if (!el) return finish();
+    const animation = el.animate(
+      [
+        { transform: "translate(0, 0) scale(1)", opacity: 1, transformOrigin: "bottom left" },
+        { transform: "translate(0, 20px) scale(0.3)", opacity: 0, transformOrigin: "bottom left" },
+      ],
+      { duration: 220, easing: "cubic-bezier(0.55, 0, 1, 0.45)", fill: "forwards" },
+    );
+    animation.onfinish = finish;
+  }, [onClose, onMinimize]);
+
+  const toggleMaximize = useCallback(() => {
+    const el = rootRef.current;
+    const from = el?.getBoundingClientRect();
+    setMaximized((value) => {
+      const next = !value;
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        if (!el) return;
+        const to = el.getBoundingClientRect();
+        if (from && to && (from.width !== to.width || from.height !== to.height || from.left !== to.left || from.top !== to.top)) {
+          el.animate(
+            [
+              { transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`, transformOrigin: "0 0" },
+              { transform: "translate(0, 0) scale(1, 1)", transformOrigin: "0 0" },
+            ],
+            { duration: 320, easing: "cubic-bezier(0.22, 1, 0.36, 1)" },
+          );
+        }
+      }));
+      return next;
+    });
+  }, []);
 
   const commitThinking = useCallback(() => {
     const thinking = thinkingRef.current.trim();
@@ -364,14 +415,14 @@ export default function PiAssistantWindow({ onClose, onMinimize, onReady }: { on
 
   const windowStyle = maximized ? undefined : { ...(position || {}), ...(size || {}) };
 
-  return <section style={windowStyle} className={cn("fixed z-[10000] overflow-hidden border border-white/70 bg-background/90 shadow-[0_28px_80px_hsl(215_35%_15%_/_0.28),0_3px_10px_hsl(215_35%_15%_/_0.12)] backdrop-blur-2xl", maximized ? "inset-3 rounded-[14px]" : cn("h-[min(680px,calc(100vh-40px))] w-[min(920px,calc(100vw-40px))] rounded-[14px]", position ? "" : "bottom-5 right-5"), !dragging && !resizing && "transition-[box-shadow] duration-200")}>
+  return <section ref={rootRef} style={windowStyle} className={cn("fixed z-[10000] overflow-hidden border border-white/70 bg-background/90 shadow-[0_28px_80px_hsl(215_35%_15%_/_0.28),0_3px_10px_hsl(215_35%_15%_/_0.12)] backdrop-blur-2xl", maximized ? "inset-3 rounded-[14px]" : cn("h-[min(680px,calc(100vh-40px))] w-[min(920px,calc(100vw-40px))] rounded-[14px]", position ? "" : "bottom-5 left-5"), !dragging && !resizing && "transition-[box-shadow] duration-200")}>
     <header onPointerDown={beginDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag} className={cn("relative flex h-[46px] select-none items-center border-b border-black/[0.08] bg-white/65 px-4 backdrop-blur-xl dark:bg-card/65", maximized ? "cursor-default" : "cursor-grab active:cursor-grabbing")}>
       <div className="z-10 flex items-center gap-1" onPointerDown={(event) => event.stopPropagation()}>
-        <Button type="button" variant="ghost" size="icon" onClick={onClose} title="关闭 Pi Agent" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><X className="h-3.5 w-3.5" /></Button>
-        <Button type="button" variant="ghost" size="icon" onClick={onMinimize} title="最小化" className="h-7 w-7 text-muted-foreground hover:bg-warning/10"><Minus className="h-3.5 w-3.5" /></Button>
-        <Button type="button" variant="ghost" size="icon" onClick={() => setMaximized((value) => !value)} title={maximized ? "恢复窗口" : "最大化"} className="h-7 w-7 text-muted-foreground hover:bg-primary/10">{maximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}</Button>
+        <Button type="button" variant="ghost" size="icon" onClick={() => runExit("close")} title="关闭 Pi Agent" className="h-7 w-7 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"><X className="h-3.5 w-3.5" /></Button>
+        <Button type="button" variant="ghost" size="icon" onClick={() => runExit("minimize")} title="最小化" className="h-7 w-7 text-muted-foreground hover:bg-warning/10"><Minus className="h-3.5 w-3.5" /></Button>
+        <Button type="button" variant="ghost" size="icon" onClick={toggleMaximize} title={maximized ? "恢复窗口" : "最大化"} className="h-7 w-7 text-muted-foreground hover:bg-primary/10">{maximized ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}</Button>
       </div>
-      <div className="pointer-events-none absolute inset-x-16 flex items-center justify-center gap-2"><span className="grid h-5 w-5 place-items-center rounded-md bg-primary/12 text-primary"><Bot className="h-3 w-3" /></span><span className="truncate text-[13px] font-semibold tracking-[0.01em]">Pi Agent</span><span className="hidden text-[11px] text-muted-foreground sm:inline">{current.label} · {status}</span></div>
+      <div className="pointer-events-none absolute inset-x-16 flex items-center justify-center gap-2"><span className="grid h-5 w-5 place-items-center rounded-md bg-primary/12"><img src="/imge/pi-lite.png" alt="Pi Agent" className="h-4 w-4 object-contain" /></span><span className="truncate text-[13px] font-semibold tracking-[0.01em]">Pi Agent</span><span className="hidden text-[11px] text-muted-foreground sm:inline">{current.label} · {status}</span></div>
       <div className="z-10 ml-auto flex items-center" onPointerDown={(event) => event.stopPropagation()}><Button type="button" variant="ghost" size="icon" title={maximized ? "最大化时不可调整大小" : "拖动右上角调节窗口大小"} disabled={maximized} onPointerDown={beginResize} className="h-7 w-7 cursor-nesw-resize text-muted-foreground disabled:cursor-default"><Grip className="h-3.5 w-3.5 -rotate-45" /></Button></div>
     </header>
     <div className="flex h-[calc(100%-3rem)] min-h-0">
@@ -383,7 +434,7 @@ export default function PiAssistantWindow({ onClose, onMinimize, onReady }: { on
       <div className="flex min-w-0 flex-1 flex-col">
         {settingsOpen ? <div className="min-h-0 flex-1 overflow-y-auto bg-[linear-gradient(135deg,hsl(var(--background)),hsl(var(--muted)/0.35))] p-5"><AgentSettings /></div> : <>
         <div className="flex items-center gap-2 border-b border-black/[0.06] bg-white/35 px-5 py-3 dark:bg-card/20"><span className="grid h-7 w-7 place-items-center rounded-lg bg-primary/10 text-primary"><current.icon className="h-4 w-4" /></span><div><div className="text-sm font-semibold">{current.label}</div><div className="text-[11px] text-muted-foreground">预设提示词与知识库将在后续版本持续深化</div></div></div>
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[linear-gradient(135deg,hsl(var(--background)),hsl(var(--muted)/0.35))] p-5">{messages.length === 0 && <div className="mx-auto mt-16 max-w-sm text-center"><div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-lg shadow-primary/20"><Bot className="h-7 w-7" /></div><div className="text-sm font-semibold">{current.label}已就绪</div><p className="mt-1 text-xs leading-5 text-muted-foreground">{current.description}。输入你的目标，Pi 会基于当前预设助手提供下一步建议。</p></div>}{messages.map((message, index) => <div key={`${message.role}-${index}`} className={cn("max-w-[86%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 shadow-sm", message.role === "user" ? "ml-auto rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md border border-black/[0.04] bg-white/85 text-foreground dark:bg-card")}>{message.role === "assistant" && message.thinking ? <details className="mb-2 rounded-lg border border-border/45 bg-muted/25 px-2.5 py-1.5"><summary className="flex cursor-pointer select-none items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><Sparkles className="h-3 w-3 text-primary" />思考过程</summary><div className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">{message.thinking}</div></details> : null}<div className="whitespace-pre-wrap break-words">{message.text}</div></div>)}{busy && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Pi 正在组织回答</div>}</div>
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto bg-[linear-gradient(135deg,hsl(var(--background)),hsl(var(--muted)/0.35))] p-5">{messages.length === 0 && <div className="mx-auto mt-16 max-w-sm text-center"><div className="mx-auto mb-4 grid h-14 w-14 place-items-center rounded-2xl bg-primary shadow-lg shadow-primary/20"><img src="/imge/pi-lite.png" alt="Pi Agent" className="h-8 w-8 object-contain" /></div><div className="text-sm font-semibold">{current.label}已就绪</div><p className="mt-1 text-xs leading-5 text-muted-foreground">{current.description}。输入你的目标，Pi 会基于当前预设助手提供下一步建议。</p></div>}{messages.map((message, index) => <div key={`${message.role}-${index}`} className={cn("max-w-[86%] rounded-2xl px-3.5 py-2.5 text-sm leading-6 shadow-sm", message.role === "user" ? "ml-auto rounded-br-md bg-primary text-primary-foreground" : "rounded-bl-md border border-black/[0.04] bg-white/85 text-foreground dark:bg-card")}>{message.role === "assistant" && message.thinking ? <details className="mb-2 rounded-lg border border-border/45 bg-muted/25 px-2.5 py-1.5"><summary className="flex cursor-pointer select-none items-center gap-1.5 text-[11px] font-semibold text-muted-foreground"><Sparkles className="h-3 w-3 text-primary" />思考过程</summary><div className="mt-1.5 whitespace-pre-wrap break-words text-xs leading-5 text-muted-foreground">{message.thinking}</div></details> : null}<div className="whitespace-pre-wrap break-words">{message.text}</div></div>)}{busy && <div className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />Pi 正在组织回答</div>}</div>
         <form className="relative border-t border-black/[0.06] bg-white/65 p-3.5 backdrop-blur-xl dark:bg-card/65" onSubmit={submit}><div className="mb-2 flex flex-wrap items-center gap-2"><Button type="button" variant="outline" size="sm" onClick={endConversation} disabled={!sessionId || busy} className="h-7"><X className="mr-1.5 h-3.5 w-3.5" />结束对话</Button><Button type="button" variant="outline" size="sm" onClick={createConversation} disabled={!sessionId || busy} className="h-7"><Plus className="mr-1.5 h-3.5 w-3.5" />新建对话</Button><Button type="button" variant="outline" size="sm" onClick={clearContext} disabled={!sessionId || busy} className="h-7"><Trash2 className="mr-1.5 h-3.5 w-3.5" />清空上下文</Button><Button type="button" variant="outline" size="sm" onClick={loadHistory} disabled={!sessionId || busy} className="h-7"><History className="mr-1.5 h-3.5 w-3.5" />历史会话<ChevronDown className={cn("ml-1.5 h-3.5 w-3.5 transition-transform", historyOpen && "rotate-180")} /></Button><Button type="button" variant="outline" size="sm" onClick={addAttachments} className="h-7"><Paperclip className="mr-1.5 h-3.5 w-3.5" />添加文件{attachments.length > 0 && <span className="ml-1 rounded-full bg-primary/15 px-1.5 text-[10px] font-semibold text-primary">{attachments.length}</span>}</Button><span className="ml-auto rounded-md border border-primary/20 bg-primary/5 px-2 py-1 text-[11px] font-medium text-primary">权限：{sessionId ? "已按助手设置生效" : "未连接"}</span></div>{historyOpen && <div className="mb-2 max-h-32 overflow-y-auto rounded-lg border border-border/60 bg-background/80 p-1">{history.length ? history.map((item) => <div key={item.id} className="flex items-center gap-1"><button type="button" onClick={() => selectHistory(item)} className="flex min-w-0 flex-1 items-center justify-between rounded-md px-2.5 py-2 text-left text-xs hover:bg-muted"><span className="truncate">{item.messages.find((message) => message.role === "user")?.text || "空白对话"}</span><span className="ml-3 shrink-0 text-[10px] text-muted-foreground">{item.message_count} 条</span></button><button type="button" aria-label="删除历史会话" onClick={() => removeHistory(item.id)} className="shrink-0 rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" title="删除该历史会话"><Trash2 className="h-3 w-3" /></button></div>) : <div className="px-2 py-3 text-center text-xs text-muted-foreground">暂无已结束历史会话</div>}</div>}{attachments.length > 0 && <div className="mb-2 flex flex-wrap gap-1.5">{attachments.map((path) => <span key={path} className="inline-flex items-center gap-1 rounded-md border border-border/60 bg-background/70 px-2 py-1 text-[11px] text-muted-foreground"><FileArchive className="h-3 w-3 shrink-0 text-primary" /><span className="max-w-56 truncate">{path}</span><button type="button" aria-label="移除附件" onClick={() => setAttachments((items) => items.filter((item) => item !== path))} className="text-muted-foreground hover:text-destructive"><X className="h-3 w-3" /></button></span>)}</div>}{mentionMenu && <div className="absolute bottom-full left-4 z-50 mb-2 max-h-52 w-72 overflow-y-auto rounded-xl border border-border/60 bg-background/95 p-1.5 shadow-xl backdrop-blur-xl"><div className="px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{mentionMenu.kind === "integration" ? "Skill / MCP" : "知识文档"}</div>{mentionOptions.filter((option) => !mentionMenu.query || option.label.toLowerCase().includes(mentionMenu.query.toLowerCase())).map((option) => <button type="button" key={option.value} onClick={() => pickMention(option)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs hover:bg-muted"><span className="grid h-5 w-5 shrink-0 place-items-center rounded bg-primary/10 text-primary">{mentionMenu.kind === "integration" ? <Sparkles className="h-3 w-3" /> : <FileArchive className="h-3 w-3" />}</span><span className="min-w-0 flex-1 truncate font-medium">{option.label}</span><span className="shrink-0 text-[10px] text-muted-foreground">{option.sub}</span></button>)}</div>}<Textarea rows={3} ref={textareaRef} className="resize-none rounded-xl border-black/[0.09] bg-background/80 shadow-inner" value={input} onChange={handleInputChange} onKeyDown={handleInputKeyDown} disabled={!sessionId || busy} placeholder={`向${current.label}描述你的目标，输入 @ 引用 Skill/MCP，输入 & 引用知识文档`} /><div className="mt-2 flex justify-end gap-2">{busy && <Button type="button" variant="outline" size="sm" onClick={stop}><Square className="mr-1.5 h-3.5 w-3.5" />停止</Button>}<Button type="submit" size="sm" className="rounded-lg px-4 shadow-sm" disabled={!sessionId || !input.trim() || busy}><Send className="mr-1.5 h-3.5 w-3.5" />发送</Button></div></form>
       </>}
       </div>

@@ -19,7 +19,6 @@ import {
   Clapperboard,
   Scissors,
   Mic2,
-  Bot,
   Store,
 } from "lucide-react";
 
@@ -41,16 +40,51 @@ const NAV_GROUPS = [
   ],
   [
     { to: "/logs", icon: Terminal, label: "后台日志" },
-    { to: "/about", icon: Info, label: "关于" },
+    { to: "/about", icon: Info, label: "关于软件" },
     { to: "/community", icon: Store, label: "共享社区" },
   ],
 ];
 
-export default function Sidebar({ collapsed }: { collapsed: boolean }) {
+export default function Sidebar({ collapsed, agentState }: { collapsed: boolean; agentState: "closed" | "booting" | "open" | "minimized" }) {
   const [services, setServices] = useState<Record<string, { status: string; port?: number; managed?: boolean }>>({});
   const [restartingSvc, setRestartingSvc] = useState<string | null>(null);
   const [stoppingSvc, setStoppingSvc] = useState<string | null>(null);
+  const [piJump, setPiJump] = useState(false);
+  const [hiddenRoutes, setHiddenRoutes] = useState<Set<string>>(() => {
+    const set = new Set<string>();
+    try {
+      const raw = JSON.parse(localStorage.getItem("vl_nav_hidden") || "{}");
+      Object.entries(raw).forEach(([k, v]) => { if (v) set.add(k); });
+    } catch {}
+    return set;
+  });
   const navItems = NAV_GROUPS;
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail.key === "nav_icons_visible") {
+        document.body.classList.toggle("nav-icons-hidden", !detail.val);
+      } else if (typeof detail.key === "string" && detail.key.startsWith("nav_hidden_")) {
+        const routeKey = detail.key.replace("nav_hidden_", "");
+        setHiddenRoutes(prev => {
+          const next = new Set(prev);
+          if (detail.val) next.add(routeKey);
+          else next.delete(routeKey);
+          return next;
+        });
+      }
+    };
+    window.addEventListener("vl-ui-change", handler);
+    return () => window.removeEventListener("vl-ui-change", handler);
+  }, []);
+
+  useEffect(() => {
+    if (hiddenRoutes.size === 0) { localStorage.removeItem("vl_nav_hidden"); return; }
+    const obj: Record<string, boolean> = {};
+    hiddenRoutes.forEach((k) => { obj[k] = true; });
+    localStorage.setItem("vl_nav_hidden", JSON.stringify(obj));
+  }, [hiddenRoutes]);
 
   const fetchStatus = useCallback(async () => {
     try {
@@ -126,58 +160,85 @@ export default function Sidebar({ collapsed }: { collapsed: boolean }) {
     >
       <div className="mx-3 mb-1 border-t border-dashed border-cyan-400/50 shadow-[0_1px_2px_rgba(34,211,238,0.15)]" />
       <nav className="flex-1 space-y-0 px-2">
-        {navItems.map((group, groupIdx) => (
-          <div key={groupIdx}>
-            {groupIdx > 0 && (
-              <div className="my-2.5 mx-3 flex items-center">
-                <div className="flex-1 border-t-[1.5px] border-dashed border-cyan-400/50 shadow-[0_1px_2px_rgba(34,211,238,0.15)]" />
+        {navItems.map((group, groupIdx) => {
+          const visible = group.filter((item) => !hiddenRoutes.has(item.to.replace("/", "")));
+          if (visible.length === 0) return null;
+          return (
+            <div key={groupIdx}>
+              {groupIdx > 0 && (
+                <div className="my-2.5 mx-3 flex items-center">
+                  <div className="flex-1 border-t-[1.5px] border-dashed border-cyan-400/50 shadow-[0_1px_2px_rgba(34,211,238,0.15)]" />
+                </div>
+              )}
+              <div className="space-y-0.5">
+                {visible.map((item) => (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === "/"}
+                    className={({ isActive }) =>
+                      cn(
+                        "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 w-full",
+                        collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
+                        isActive
+                          ? "bg-slate-200 dark:bg-slate-700/80 text-foreground font-semibold scale-[1.01]"
+                            : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-foreground"
+                      )
+                    }
+                  >
+                    {({ isActive }) => (
+                      <>
+                        <item.icon
+                          className={cn(
+                            "sidebar-nav-icon w-[18px] h-[18px] transition-all duration-200 flex-shrink-0",
+                            isActive ? "text-primary" : "group-hover:scale-105"
+                          )}
+                          strokeWidth={isActive ? 2.5 : 2}
+                        />
+                        {!collapsed && <span>{item.label}</span>}
+                      </>
+                    )}
+                  </NavLink>
+                ))}
               </div>
-            )}
-            <div className="space-y-0.5">
-              {group.map((item) => (
-                <NavLink
-                  key={item.to}
-                  to={item.to}
-                  end={item.to === "/"}
-                  className={({ isActive }) =>
-                    cn(
-                      "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 w-full",
-                      collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
-                      isActive
-                        ? "bg-slate-200 dark:bg-slate-700/80 text-foreground font-semibold scale-[1.01]"
-                          : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-foreground"
-                    )
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      <item.icon
-                        className={cn(
-                          "w-[18px] h-[18px] transition-all duration-200 flex-shrink-0",
-                          isActive ? "text-primary" : "group-hover:scale-105"
-                        )}
-                        strokeWidth={isActive ? 2.5 : 2}
-                      />
-                      {!collapsed && <span>{item.label}</span>}
-                    </>
-                  )}
-                </NavLink>
-              ))}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </nav>
       {!collapsed && (
-        <div className="px-3 py-3 mt-auto space-y-2 border-t border-[hsl(var(--surface-border))]">
+        <div className="px-3 py-3 mt-auto space-y-2">
           <button
-            onClick={() => window.dispatchEvent(new Event("vl-pi-wake"))}
-            className="group relative flex w-full items-center gap-2 overflow-hidden rounded-lg border border-primary/25 bg-primary/5 px-2.5 py-2 text-left transition-colors hover:bg-primary/10"
+            onClick={() => {
+              if (agentState !== "booting") setPiJump(true);
+              window.dispatchEvent(new Event("vl-pi-wake"));
+            }}
+            className="group relative flex w-full flex-col items-center gap-1.5 rounded-lg bg-primary/5 px-2.5 py-2 text-center transition-colors hover:bg-primary/10"
             title="唤醒 Pi Agent"
           >
-            <span className="relative grid h-8 w-8 place-items-center rounded-md bg-primary text-primary-foreground shadow-sm"><Bot className="h-4 w-4" /><span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" /></span>
-            <span className="min-w-0"><span className="block text-xs font-semibold text-foreground">Pi Agent</span><span className="block text-[10px] text-muted-foreground">点击唤醒工作台</span></span>
+            <span className="relative">
+              <img
+                src="/imge/pi-lite.png"
+                alt="小π智助"
+                className={cn(
+                  "h-[54px] w-[54px] object-contain drop-shadow-sm transition-transform duration-700 ease-out",
+                  agentState === "booting" && "scale-[3] origin-bottom",
+                  agentState !== "booting" && piJump && "animate-pi-jump",
+                )}
+                onAnimationEnd={() => setPiJump(false)}
+              />
+              {agentState === "booting" && (
+                <span className="animate-pi-pop absolute -top-12 right-0 z-10 whitespace-nowrap rounded-lg border border-primary/30 bg-background/95 px-2.5 py-1.5 shadow-xl backdrop-blur">
+                  <span className="block text-xs font-semibold">小π启动中....</span>
+                  <span className="block text-[10px] text-muted-foreground">就是这么带派</span>
+                </span>
+              )}
+              {agentState === "open" && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" />}
+            </span>
+            <span className="block w-full text-[21px] font-bold bg-gradient-to-r from-purple-500 to-violet-400 bg-clip-text text-transparent">小π智助</span>
             <span className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-primary/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
           </button>
+          {/* 横线：位于 Agent 按钮之下、刷新按钮之上 */}
+          <div className="border-t border-[hsl(var(--surface-border))]" />
           <div className="flex items-center gap-1.5">
             <button
               onClick={fetchStatus}
@@ -265,7 +326,34 @@ export default function Sidebar({ collapsed }: { collapsed: boolean }) {
           </div>
         </div>
       )}
-      {collapsed && <button onClick={() => window.dispatchEvent(new Event("vl-pi-wake"))} className="mx-auto mb-3 grid h-9 w-9 place-items-center rounded-md border border-primary/25 bg-primary/10 text-primary" title="唤醒 Pi Agent"><Bot className="h-4 w-4" /></button>}
+      {collapsed && (
+        <button
+          onClick={() => {
+            if (agentState !== "booting") setPiJump(true);
+            window.dispatchEvent(new Event("vl-pi-wake"));
+          }}
+          className="relative mx-auto mb-3 grid h-[54px] w-[54px] place-items-center rounded-md bg-primary/10"
+          title="唤醒 Pi Agent"
+        >
+          <img
+            src="/imge/pi-lite.png"
+            alt="小π智助"
+            className={cn(
+              "h-[42px] w-[42px] object-contain transition-transform duration-700 ease-out",
+              agentState === "booting" && "scale-[3] origin-bottom",
+              agentState !== "booting" && piJump && "animate-pi-jump",
+            )}
+            onAnimationEnd={() => setPiJump(false)}
+          />
+          {agentState === "booting" && (
+            <span className="animate-pi-pop absolute -top-12 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-primary/30 bg-background/95 px-2.5 py-1.5 shadow-xl backdrop-blur">
+              <span className="block text-xs font-semibold">小π启动中....</span>
+              <span className="block text-[10px] text-muted-foreground">就是这么带派</span>
+            </span>
+          )}
+          {agentState === "open" && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" />}
+        </button>
+      )}
     </aside>
   );
 }

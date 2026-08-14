@@ -4,6 +4,9 @@ setlocal EnableDelayedExpansion
 cd /d %~dp0
 title VideoLingoLc 一键启动（正式版 · 生产模式）
 
+:: --- 加载本地覆盖配置（如有；含 LAN 模式开关 VIDEOLINGO_LAN_MODE）---
+if exist "%cd%\.runtime\local_env.bat" call "%cd%\.runtime\local_env.bat"
+
 :: ============================================================
 ::  正式版一键启动·生产模式（Windows）：不隔离 CUDA / 环境，
 ::  不启动 Vite dev server；前端由后端同源托管构建产物 frontend/dist，
@@ -96,8 +99,8 @@ for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":18001" ^| findstr "LISTENIN
 echo.
 echo [生产模式] 前端: http://127.0.0.1:11001/  （后端同源托管 frontend\dist）
 echo.
-rem 端口就绪后自动打开默认浏览器（无固定等待，就绪即开）
-start "" cmd /c "for /L %%i in (1,1,120) do @(netstat -ano | findstr ":11001" | findstr "LISTENING" >nul 2>&1 && (start http://127.0.0.1:11001 & exit /b)) & ping -n 2 127.0.0.1 >nul"
+rem 端口就绪后自动打开默认浏览器（每 2 秒轮询一次，就绪即开）
+start "" cmd /c "for /L %%i in (1,1,120) do @((netstat -ano | findstr ":11001" | findstr "LISTENING" >nul 2>&1 && (start http://127.0.0.1:11001 & exit /b)) & ping -n 2 127.0.0.1 >nul)"
 python backend\manager.py
 if errorlevel 1 (
     echo.

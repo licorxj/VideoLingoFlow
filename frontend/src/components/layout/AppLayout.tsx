@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
-import { Bot, Loader2 } from "lucide-react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import PiAssistantWindow from "@/components/agent/PiAssistantWindow";
@@ -15,7 +14,7 @@ export default function AppLayout() {
   const location = useLocation();
   const isEditor = location.pathname === "/editing";
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
-  const [agentState, setAgentState] = useState<"closed" | "loading" | "open" | "minimized">("closed");
+  const [agentState, setAgentState] = useState<"closed" | "booting" | "open" | "minimized">("closed");
   const agentWakeAtRef = useRef(0);
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((collapsed) => {
@@ -26,18 +25,24 @@ export default function AppLayout() {
     });
   }, []);
   const handleAgentReady = useCallback(() => {
-    const remaining = Math.max(0, 450 - (Date.now() - agentWakeAtRef.current));
+    const remaining = Math.max(0, 1500 - (Date.now() - agentWakeAtRef.current));
     window.setTimeout(() => setAgentState("open"), remaining);
   }, []);
 
   useEffect(() => {
     const wakeAgent = () => {
       agentWakeAtRef.current = Date.now();
-      setAgentState("loading");
+      setAgentState((state) => (state === "closed" ? "booting" : "open"));
     };
     window.addEventListener("vl-pi-wake", wakeAgent);
     return () => window.removeEventListener("vl-pi-wake", wakeAgent);
   }, []);
+
+  useEffect(() => {
+    if (agentState !== "booting") return;
+    const timer = window.setTimeout(() => setAgentState("open"), 3000);
+    return () => window.clearTimeout(timer);
+  }, [agentState]);
 
   useEffect(() => {
     const handleUIChange = (event: Event) => {
@@ -51,18 +56,16 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen flex flex-col gradient-mesh noise-overlay">
-      <Header collapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
+      <Header collapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} piDockVisible={agentState === "minimized"} onPiDockClick={() => setAgentState("open")} />
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar collapsed={sidebarCollapsed} />
+        <Sidebar collapsed={sidebarCollapsed} agentState={agentState} />
         <main className={isEditor ? "flex-1 min-h-0 overflow-hidden" : "flex-1 min-h-0 overflow-auto px-2 py-2"}>
           <div key={location.pathname} className="animate-fade-in-up h-full">
             <Outlet />
           </div>
         </main>
       </div>
-      {agentState === "loading" && <div className="pointer-events-none fixed bottom-5 right-5 z-[10000] flex w-72 items-center gap-3 rounded-lg border border-primary/25 bg-background px-4 py-3 shadow-xl"><div className="grid h-9 w-9 place-items-center rounded-md bg-primary/10 text-primary"><Loader2 className="h-5 w-5 animate-spin" /></div><div><div className="text-sm font-semibold">Pi 正在就位</div><div className="text-xs text-muted-foreground">加载 Agent 工作台与助手配置</div></div></div>}
-      {agentState !== "closed" && <div className={agentState === "loading" || agentState === "minimized" ? "invisible pointer-events-none" : undefined}><PiAssistantWindow onClose={() => setAgentState("closed")} onMinimize={() => setAgentState("minimized")} onReady={handleAgentReady} /></div>}
-      {agentState === "minimized" && <button onClick={() => setAgentState("open")} className="fixed bottom-5 right-5 z-[10000] flex items-center gap-2 rounded-lg border border-primary/30 bg-background px-3 py-2 shadow-lg transition-transform hover:-translate-y-0.5" title="恢复 Pi Agent"><span className="grid h-7 w-7 place-items-center rounded-md bg-primary text-primary-foreground"><Bot className="h-4 w-4" /></span><span className="text-xs font-medium">Pi Agent</span></button>}
+      {agentState !== "closed" && <div className={agentState === "booting" || agentState === "minimized" ? "invisible pointer-events-none" : undefined}><PiAssistantWindow visible={agentState === "open"} onClose={() => setAgentState("closed")} onMinimize={() => setAgentState("minimized")} onReady={handleAgentReady} /></div>}
     </div>
   );
 }
