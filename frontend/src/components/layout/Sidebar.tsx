@@ -222,6 +222,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
                 className={cn(
                   "h-[54px] w-[54px] object-contain drop-shadow-sm transition-transform duration-700 ease-out",
                   agentState === "booting" && "scale-[3] origin-bottom",
+                  agentState === "open" && "scale-[1.35]",
                   agentState !== "booting" && piJump && "animate-pi-jump",
                 )}
                 onAnimationEnd={() => setPiJump(false)}
@@ -341,6 +342,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             className={cn(
               "h-[42px] w-[42px] object-contain transition-transform duration-700 ease-out",
               agentState === "booting" && "scale-[3] origin-bottom",
+              agentState === "open" && "scale-[1.35]",
               agentState !== "booting" && piJump && "animate-pi-jump",
             )}
             onAnimationEnd={() => setPiJump(false)}

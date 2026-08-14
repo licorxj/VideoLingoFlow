@@ -24,6 +24,27 @@ WORKFLOW_GROUPS_FILE = os.path.join(
 )
 
 
+def _node_config_of(node: dict) -> dict:
+    """提取节点 data.config（缺失时返回空 dict）。"""
+    data = node.get("data") or {}
+    cfg = data.get("config")
+    return cfg if isinstance(cfg, dict) else {}
+
+
+def _config_changed_node_ids(old_workflow: dict, new_workflow: dict) -> list[str]:
+    """对比任务存储的工作流与本次提交，返回 data.config 发生变化的节点 id（不含新增节点）。
+
+    新增节点由执行端自动置为 pending，无需在此处理。
+    """
+    old = {n.get("id", ""): _node_config_of(n) for n in (old_workflow.get("nodes") or [])}
+    changed: list[str] = []
+    for node in (new_workflow.get("nodes") or []):
+        nid = node.get("id", "")
+        if nid in old and old[nid] != _node_config_of(node):
+            changed.append(nid)
+    return changed
+
+
 def _load_groups_data() -> dict:
     """读取分组数据：{"groups":[{id,name,order}], "membership":{wf_id:group_id|null}}"""
     if not os.path.exists(WORKFLOW_GROUPS_FILE):
@@ -500,6 +521,38 @@ async def execute_workflow(wf_id: str, req: WorkflowExecute):
     # 执行前产物清理：restart_clean（从头执行）清空 cache 全新开始
     if mode == "restart_clean" and task_id:
         _clear_workspace_cache(_workspace(task_id))
+    # 配置变更检测：resume/debug/restart 复用任务时，若节点配置（data.config）与上次运行
+    # 不一致，将变更节点及其下游重置为 pending 并清理旧产物，确保前端修改参数后重新执行生效
+    if mode in ("resume", "debug", "restart") and task_id:
+        from backend.control_plane.workflow_runtime import _resume_reset_set, _workspace, _clear_nodes_artifacts
+        from backend.control_plane.models import TaskNode
+        stored_workflow: dict = {}
+        with session_scope() as session:
+            stored_task = session.get(Task, task_id)
+            if stored_task is not None:
+                stored_workflow = (stored_task.payload or {}).get("workflow") or {}
+        changed_ids = _config_changed_node_ids(stored_workflow, workflow)
+        if changed_ids:
+            node_ids = [n.get("id", "") for n in workflow.get("nodes", [])]
+            edges = workflow.get("edges", []) or []
+            reset_ids: set[str] = set()
+            for cid in changed_ids:
+                downstream = _resume_reset_set(node_ids, edges, cid)
+                reset_ids |= (downstream or {cid})
+            if reset_ids:
+                _clear_nodes_artifacts(task_id, list(reset_ids), _workspace(task_id))
+                with session_scope() as session:
+                    session.query(TaskNode).filter(
+                        TaskNode.task_id == task_id,
+                        TaskNode.node_key.in_(list(reset_ids)),
+                    ).update({
+                        "status": "pending",
+                        "worker_id": None,
+                        "cancel_reason": None,
+                        "error_class": None,
+                        "checkpoint_key": None,
+                    }, synchronize_session=False)
+                print(f"[Workflow] 检测到节点配置变更，重置 {len(reset_ids)} 个节点重新执行: {sorted(reset_ids)}")
     try:
         task, created = submit_workflow(workflow, req.input, mode=mode, resume_from=req.resume_from, task_id=task_id, idempotency_scope=idempotency_scope)
     except RuntimeError as exc:

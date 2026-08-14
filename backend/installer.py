@@ -120,11 +120,66 @@ def get_torch_cuda_tag(cuda_version):
     for supported_cuda in sorted(TORCH_CUDA_VERSIONS.keys(), reverse=True):
         s_major, s_minor = supported_cuda.split('.')
         if int(major) > int(s_major) or (int(major) == int(s_major) and int(minor) >= int(s_minor)):
-            return TORCH_CUDA_VERSIONS[supported_cuda]
+            tag = TORCH_CUDA_VERSIONS[supported_cuda]
+            if supported_cuda == "12.8":
+                print(f"[提示] PyTorch {PYTORCH_VERSION} 最高提供 cu128（CUDA 12.8）构建；检测到驱动能力 CUDA {cuda_version} ≥ 12.8，")
+                print(f"       驱动向下兼容，将安装 {tag}，无需额外安装 CUDA Toolkit。")
+            else:
+                print(f"[提示] 检测到 CUDA {cuda_version} 低于推荐 12.8，将安装 {tag} 兼容构建；")
+                print(f"       如需完整支持，建议升级驱动/CUDA 至 12.8+：https://developer.nvidia.com/cuda-12-8-2-download-archive")
+            return tag
 
     # CUDA 版本过低（低于 11.8）：cu118 构建无法在其上运行，回退 CPU
     print(f"[警告] CUDA {cuda_version} 过低，PyTorch CUDA 构建最低要求 11.8，将安装 CPU 版")
     return "cpu"
+
+
+def _torch_installed_ok(cuda_tag: str) -> bool:
+    """检查当前解释器环境是否已安装匹配版本/CUDA 标签的 PyTorch 三件套。
+
+    匹配则返回 True（跳过卸载与重装）；任一包缺失或版本/标签不符返回 False。
+    """
+    import importlib.metadata as md
+
+    if sys.platform == "darwin":
+        # macOS：官方 wheel 无 +cpu/+cuXXX 后缀
+        expected = {
+            "torch": PYTORCH_VERSION,
+            "torchvision": TORCHVISION_VERSION,
+            "torchaudio": TORCHAUDIO_VERSION,
+        }
+    else:
+        suffix = f"+{cuda_tag}" if cuda_tag else "+cpu"
+        expected = {
+            "torch": f"{PYTORCH_VERSION}{suffix}",
+            "torchvision": f"{TORCHVISION_VERSION}{suffix}",
+            "torchaudio": f"{TORCHAUDIO_VERSION}{suffix}",
+        }
+    for pkg, want in expected.items():
+        try:
+            got = md.version(pkg)
+        except md.PackageNotFoundError:
+            print(f"[提示] 未安装 {pkg}，需要安装")
+            return False
+        if got != want:
+            print(f"[提示] {pkg} 已安装 {got} ≠ 期望 {want}，需要重新安装")
+            return False
+    return True
+
+
+def _verify_torch_installed() -> bool:
+    """验证并打印 PyTorch 安装结果。"""
+    print("[步骤3] 验证PyTorch安装...")
+    try:
+        import torch
+        print(f"[成功] torch版本: {torch.__version__}")
+        print(f"[成功] CUDA可用: {torch.cuda.is_available()}")
+        if torch.cuda.is_available():
+            print(f"[成功] CUDA设备: {torch.cuda.get_device_name(0)}")
+    except ImportError:
+        print("[错误] PyTorch安装失败")
+        return False
+    return True
 
 
 def install_pytorch(cuda_tag, mirror="default"):
@@ -132,6 +187,11 @@ def install_pytorch(cuda_tag, mirror="default"):
     print("\n" + "="*60)
     print(f"  安装PyTorch {PYTORCH_VERSION} (CUDA: {cuda_tag})")
     print("="*60)
+
+    # 已安装匹配版本则跳过卸载/重装，直接验证
+    if _torch_installed_ok(cuda_tag):
+        print(f"[OK] venv 中已安装匹配的 PyTorch {PYTORCH_VERSION}+{cuda_tag}，跳过卸载与重装")
+        return _verify_torch_installed()
 
     # macOS 无 CUDA：使用 PyPI 官方 wheel（含 MPS 支持），不加 +cpu 后缀
     if sys.platform == "darwin":
@@ -160,39 +220,27 @@ def install_pytorch(cuda_tag, mirror="default"):
     # 使用国内镜像加速
     if mirror in TORCH_MIRRORS and extra_index is not None:
         extra_index = f"{TORCH_MIRRORS[mirror]}/{cuda_tag}"
-    
+
     # 卸载旧版本
     print("[步骤1] 卸载旧版本PyTorch...")
-    run_cmd("pip uninstall -y torch torchvision torchaudio", check=False)
-    
+    run_cmd(f"{sys.executable} -m pip uninstall -y torch torchvision torchaudio", check=False)
+
     # 安装新版本
     print(f"[步骤2] 安装PyTorch三件套...")
     for pkg in packages:
-        cmd = f'pip install {pkg} --no-cache-dir'
+        cmd = f"{sys.executable} -m pip install {pkg} --no-cache-dir"
         if extra_index:
-            cmd += f' --extra-index-url {extra_index}'
+            cmd += f" --extra-index-url {extra_index}"
         result = run_cmd(cmd, check=False)
         if result.returncode != 0:
             print(f"[警告] 安装 {pkg} 失败，尝试使用国内镜像...")
             # 尝试使用阿里云镜像
-            cmd = f'pip install {pkg} -i {PIP_MIRRORS["aliyun"]} --trusted-host mirrors.aliyun.com'
+            cmd = f"{sys.executable} -m pip install {pkg} -i {PIP_MIRRORS['aliyun']} --trusted-host mirrors.aliyun.com"
             if extra_index:
-                cmd += f' --extra-index-url {extra_index}'
+                cmd += f" --extra-index-url {extra_index}"
             run_cmd(cmd, check=True)
-    
-    # 验证安装
-    print("[步骤3] 验证PyTorch安装...")
-    try:
-        import torch
-        print(f"[成功] torch版本: {torch.__version__}")
-        print(f"[成功] CUDA可用: {torch.cuda.is_available()}")
-        if torch.cuda.is_available():
-            print(f"[成功] CUDA设备: {torch.cuda.get_device_name(0)}")
-    except ImportError:
-        print("[错误] PyTorch安装失败")
-        return False
-    
-    return True
+
+    return _verify_torch_installed()
 
 
 def install_requirements():
@@ -213,7 +261,7 @@ def install_requirements():
     pip_mirror = PIP_MIRRORS["aliyun"]
     
     # 安装依赖
-    cmd = f'pip install -r "{requirements_file}" -i {pip_mirror} --trusted-host mirrors.aliyun.com --no-cache-dir'
+    cmd = f'{sys.executable} -m pip install -r "{requirements_file}" -i {pip_mirror} --trusted-host mirrors.aliyun.com --no-cache-dir'
     result = run_cmd(cmd, check=False)
     
     if result.returncode != 0:
@@ -223,7 +271,7 @@ def install_requirements():
             for line in f:
                 line = line.strip()
                 if line and not line.startswith('#'):
-                    cmd = f'pip install "{line}" -i {pip_mirror} --trusted-host mirrors.aliyun.com'
+                    cmd = f'{sys.executable} -m pip install "{line}" -i {pip_mirror} --trusted-host mirrors.aliyun.com'
                     run_cmd(cmd, check=False)
     
     return True

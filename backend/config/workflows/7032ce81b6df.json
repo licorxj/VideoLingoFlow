@@ -41,7 +41,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 502
+        "height": 546
       },
       "selected": false,
       "dragging": false
@@ -60,7 +60,8 @@
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
-          "url": ""
+          "url": "",
+          "sample_rate": "16000"
         },
         "status": "completed",
         "progress": 100,
@@ -74,7 +75,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 328
+        "height": 360
       },
       "selected": false,
       "dragging": false
@@ -84,7 +85,7 @@
       "type": "workflow",
       "position": {
         "x": -240,
-        "y": -1350
+        "y": -1065
       },
       "data": {
         "nodeType": "asr",
@@ -111,7 +112,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 670
+        "height": 668
       },
       "selected": false,
       "dragging": false
@@ -127,13 +128,13 @@
         "nodeType": "sentence_split",
         "label": "句子分割",
         "config": {
-          "use_llm_split": true,
+          "use_llm_split": false,
           "merge_min_duration": "0.1",
-          "max_sentence_length": "15",
-          "merge_max_gap": "0.2",
-          "split_on_speaker": true,
+          "max_sentence_length": "18",
+          "merge_max_gap": "0.1",
+          "split_on_speaker": false,
           "split_by_punct": true,
-          "pause_split_threshold": "1.8",
+          "pause_split_threshold": "3",
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
@@ -153,17 +154,17 @@
       },
       "measured": {
         "width": 420,
-        "height": 545
+        "height": 539
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
       "id": "node_1_1780948332813",
       "type": "workflow",
       "position": {
-        "x": 750,
-        "y": -705
+        "x": 780,
+        "y": -750
       },
       "data": {
         "nodeType": "summarize",
@@ -186,7 +187,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 350
+        "height": 377
       },
       "selected": false,
       "dragging": false
@@ -222,7 +223,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 414
+        "height": 450
       },
       "selected": false,
       "dragging": false
@@ -258,7 +259,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 350
+        "height": 375
       },
       "selected": false,
       "dragging": false
@@ -290,7 +291,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 443
+        "height": 441
       },
       "selected": false,
       "dragging": false
@@ -337,7 +338,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 702
+        "height": 699
       },
       "selected": false,
       "dragging": false
@@ -375,7 +376,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 311
+        "height": 332
       },
       "selected": false,
       "dragging": false
@@ -417,7 +418,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 674
+        "height": 719
       },
       "selected": false,
       "dragging": false
@@ -457,7 +458,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 591
+        "height": 640
       },
       "selected": false,
       "dragging": false
@@ -466,8 +467,8 @@
       "id": "node_2_1781973904798",
       "type": "workflow",
       "position": {
-        "x": -750,
-        "y": -975
+        "x": -780,
+        "y": -1380
       },
       "data": {
         "nodeType": "vocal_separation",
@@ -494,7 +495,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 415
+        "height": 413
       },
       "selected": false,
       "dragging": false
@@ -531,7 +532,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 370
+        "height": 418
       },
       "selected": false,
       "dragging": false
@@ -571,7 +572,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 539
+        "height": 582
       },
       "selected": false,
       "dragging": false
@@ -616,7 +617,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 591
+        "height": 588
       },
       "selected": false,
       "dragging": false
@@ -641,14 +642,16 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "skipped": true
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 217
+        "height": 395
       },
       "selected": false,
       "dragging": false
@@ -685,7 +688,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 351
+        "height": 381
       },
       "selected": false,
       "dragging": false
@@ -728,7 +731,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 443
+        "height": 477
       },
       "selected": false,
       "dragging": false
@@ -773,7 +776,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 591
+        "height": 588
       },
       "selected": false,
       "dragging": false
@@ -798,14 +801,16 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "skipped": true
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 217
+        "height": 395
       },
       "selected": false,
       "dragging": false
@@ -856,9 +861,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 767
+        "height": 871
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -896,7 +901,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 539
+        "height": 582
       },
       "selected": false,
       "dragging": false
@@ -931,7 +936,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 262
+        "height": 281
       },
       "selected": false,
       "dragging": false
@@ -965,7 +970,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 267
+        "height": 288
       },
       "selected": false,
       "dragging": false
@@ -1001,7 +1006,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 385
+        "height": 419
       },
       "selected": false,
       "dragging": false
@@ -1011,7 +1016,7 @@
       "type": "workflow",
       "position": {
         "x": 240,
-        "y": -1620
+        "y": -1695
       },
       "data": {
         "nodeType": "sentence_preprocess",
@@ -1034,7 +1039,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 380
+        "height": 412
       },
       "selected": false,
       "dragging": false
@@ -1593,5 +1598,5 @@
   ],
   "type": "user",
   "createdAt": "2026-07-07T04:56:33",
-  "updatedAt": "2026-08-14T01:28:02"
+  "updatedAt": "2026-08-14T15:10:24"
 }

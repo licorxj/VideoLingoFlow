@@ -61,12 +61,15 @@ export default function PiAssistantWindow({ visible = true, onClose, onMinimize,
     if (!visible) return;
     const el = rootRef.current;
     if (!el) return;
+    // 先清除最小化/关闭动画的 fill 残留（opacity 0 / 收缩位移），避免恢复时窗口卡在透明状态
+    el.getAnimations().forEach((animation) => animation.cancel());
+    // 从侧栏小π按钮处（窗口左上方）为源点放大并向右移展开
     const animation = el.animate(
       [
-        { transform: "translate(0, 28px) scale(0.32)", opacity: 0, transformOrigin: "bottom left" },
+        { transform: "translate(-36px, -220px) scale(0.2)", opacity: 0, transformOrigin: "bottom left" },
         { transform: "translate(0, 0) scale(1)", opacity: 1, transformOrigin: "bottom left" },
       ],
-      { duration: 340, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "backwards" },
+      { duration: 380, easing: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "backwards" },
     );
     return () => animation.cancel();
   }, [visible]);
@@ -75,12 +78,14 @@ export default function PiAssistantWindow({ visible = true, onClose, onMinimize,
     const el = rootRef.current;
     const finish = () => (kind === "minimize" ? onMinimize() : onClose());
     if (!el) return finish();
+    // 收缩回侧栏小π按钮处（与展开动画反向）。不带 fill，避免动画结束后残留 opacity 0
+    // 导致恢复时窗口卡在透明状态（minimized 隐藏由外层 invisible 类保证）
     const animation = el.animate(
       [
         { transform: "translate(0, 0) scale(1)", opacity: 1, transformOrigin: "bottom left" },
-        { transform: "translate(0, 20px) scale(0.3)", opacity: 0, transformOrigin: "bottom left" },
+        { transform: "translate(-36px, -220px) scale(0.2)", opacity: 0, transformOrigin: "bottom left" },
       ],
-      { duration: 220, easing: "cubic-bezier(0.55, 0, 1, 0.45)", fill: "forwards" },
+      { duration: 240, easing: "cubic-bezier(0.55, 0, 1, 0.45)" },
     );
     animation.onfinish = finish;
   }, [onClose, onMinimize]);

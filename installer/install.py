@@ -137,7 +137,7 @@ def python_version(exe) -> tuple[int, int] | None:
 # 步骤 1: Python 环境
 # ---------------------------------------------------------------------------
 def ensure_python() -> Path:
-    print("\n[1/7] Python 环境")
+    print("\n[1/9] Python 环境")
     vp = venv_python()
     if vp.exists():
         ver = python_version(vp)
@@ -348,6 +348,10 @@ def check_cuda() -> None:
         ok("未检测到 CUDA，将安装 CPU 版 PyTorch")
         return
     ok(f"检测到 CUDA {ver[0]}.{ver[1]}")
+    if ver >= CUDA_REQUIRED:
+        # 检测到高版本 CUDA（如 13.0）时说明 wheel 选择，避免用户困惑“为什么装的是低版本”
+        print(f"  [提示] PyTorch 2.8 最高提供 cu128（CUDA 12.8）构建；检测到 CUDA {ver[0]}.{ver[1]} ≥ 12.8，")
+        print(f"         驱动向下兼容 cu128，无需额外安装 CUDA Toolkit，将安装 cu128。")
     if ver < CUDA_REQUIRED:
         print()
         print("  ============================================================")

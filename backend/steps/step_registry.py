@@ -34,6 +34,7 @@ from backend.steps.s_pi_agent import S_PiAgent
 from backend.steps.s_imagegen import S_ImageGen
 from backend.steps.s_video_frame_extract import S_VideoFrameExtract
 from backend.steps.s_video_publish import S_VideoPublish
+from backend.steps.s_xiaopai_publish import S_XiaopaiPublish
 from backend.steps.s_resolve_path import S_ResolvePath
 from backend.steps.s_translate_task_name import S_TranslateTaskName
 from backend.steps.s_json_to_text import S_JsonToText
@@ -108,6 +109,8 @@ _STEPS = {
     "video_frame_extract": S_VideoFrameExtract(),
     "s_video_publish": S_VideoPublish(),
     "video_publish": S_VideoPublish(),
+    "s_xiaopai_publish": S_XiaopaiPublish(),
+    "xiaopai_publish": S_XiaopaiPublish(),
     "s_resolve_path": S_ResolvePath(),
     "resolve_path": S_ResolvePath(),
     "s_translate_task_name": S_TranslateTaskName(),

@@ -8,7 +8,7 @@ import { useProjectStore } from "@/stores/projectStore";
 import { useControlStore } from "@/stores/controlStore";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 
-export default function Header({ collapsed, onToggleSidebar, piDockVisible = false, onPiDockClick }: { collapsed: boolean; onToggleSidebar: () => void; piDockVisible?: boolean; onPiDockClick?: () => void }) {
+export default function Header({ collapsed, onToggleSidebar }: { collapsed: boolean; onToggleSidebar: () => void }) {
   const user = useControlStore((s) => s.user);
   const setUser = useControlStore((s) => s.setUser);
   const refreshSession = useControlStore((s) => s.refreshSession);
@@ -91,16 +91,6 @@ export default function Header({ collapsed, onToggleSidebar, piDockVisible = fal
         </div>
       </div>
       <div className="flex items-center gap-1.5">
-        {piDockVisible && (
-          <button
-            onClick={onPiDockClick}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-primary/30 bg-primary/10 transition-all duration-200 hover:bg-primary/20 active:scale-90"
-            title="恢复 Pi Agent"
-            aria-label="恢复 Pi Agent"
-          >
-            <img src="/imge/pi-lite.png" alt="Pi Agent" className="h-[18px] w-[18px] object-contain" />
-          </button>
-        )}
         <ThemeToggle />
         {user && projects.length > 0 && (
           <select

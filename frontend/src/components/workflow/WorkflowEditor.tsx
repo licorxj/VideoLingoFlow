@@ -102,7 +102,7 @@ function GroupTab({ label, active, onClick, count, onDelete, compact }: {
         onClick={onClick}
         className={cn(
           "flex items-center border transition-all rounded-md",
-          compact ? "gap-1 px-2 py-0.5 text-base font-semibold" : "gap-1.5 px-3 py-1 rounded-full text-xs font-semibold",
+          compact ? "gap-1 px-2 py-px text-sm font-semibold" : "gap-1.5 px-3 py-1 rounded-full text-xs font-semibold",
           active
             ? "bg-primary text-primary-foreground border-primary shadow-sm"
             : "bg-background text-muted-foreground border-border hover:text-foreground hover:border-primary/40 hover:bg-secondary"
@@ -1159,13 +1159,13 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           <span className="text-base font-bold text-muted-foreground">{"\u5df2\u4fdd\u5b58\u5de5\u4f5c\u6d41"}</span>
           <button
             onClick={createNew}
-            className="ml-1 flex items-center gap-1 px-2 py-0.5 text-base font-semibold text-primary border border-primary/30 hover:bg-primary/10 rounded-md transition-colors"
+            className="ml-1 flex items-center gap-1 px-2 py-px text-sm font-semibold text-primary border border-primary/30 hover:bg-primary/10 rounded-md transition-colors"
           >
             <Plus className="w-3 h-3" />{"\u65b0\u5efa"}
           </button>
           <button
             onClick={fetchWorkflows}
-            className="text-base font-semibold text-foreground border border-border px-1.5 py-0.5 rounded-md hover:bg-secondary transition-colors"
+            className="text-sm font-semibold text-foreground border border-border px-1.5 py-px rounded-md hover:bg-secondary transition-colors"
             title={"\u5237\u65b0"}
           >
             {loadingList ? <Loader2 className="w-3 h-3 animate-spin" /> : "\u5237\u65b0"}

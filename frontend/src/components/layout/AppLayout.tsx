@@ -16,6 +16,7 @@ export default function AppLayout() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [agentState, setAgentState] = useState<"closed" | "booting" | "open" | "minimized">("closed");
   const agentWakeAtRef = useRef(0);
+  const readyTimerRef = useRef<number | null>(null);
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((collapsed) => {
       const next = !collapsed;
@@ -26,13 +27,27 @@ export default function AppLayout() {
   }, []);
   const handleAgentReady = useCallback(() => {
     const remaining = Math.max(0, 1500 - (Date.now() - agentWakeAtRef.current));
-    window.setTimeout(() => setAgentState("open"), remaining);
+    if (readyTimerRef.current) window.clearTimeout(readyTimerRef.current);
+    readyTimerRef.current = window.setTimeout(() => setAgentState("open"), remaining);
   }, []);
 
+  // 导航栏 Pi 按钮：toggle。打开 ↔ 收回（minimized 保留会话，不关闭）；booting 时点击取消启动
   useEffect(() => {
     const wakeAgent = () => {
-      agentWakeAtRef.current = Date.now();
-      setAgentState((state) => (state === "closed" ? "booting" : "open"));
+      setAgentState((state) => {
+        if (state === "closed") {
+          agentWakeAtRef.current = Date.now();
+          return "booting";
+        }
+        if (state === "booting") {
+          if (readyTimerRef.current) {
+            window.clearTimeout(readyTimerRef.current);
+            readyTimerRef.current = null;
+          }
+          return "closed";
+        }
+        return state === "open" ? "minimized" : "open";
+      });
     };
     window.addEventListener("vl-pi-wake", wakeAgent);
     return () => window.removeEventListener("vl-pi-wake", wakeAgent);
@@ -56,7 +71,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen flex flex-col gradient-mesh noise-overlay">
-      <Header collapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} piDockVisible={agentState === "minimized"} onPiDockClick={() => setAgentState("open")} />
+      <Header collapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar collapsed={sidebarCollapsed} agentState={agentState} />
         <main className={isEditor ? "flex-1 min-h-0 overflow-hidden" : "flex-1 min-h-0 overflow-auto px-2 py-2"}>

@@ -2127,6 +2127,15 @@ Return ONLY the JSON array, no explanation.""".format(
         if not pause_split_enabled:
             pause_threshold = 0  # 关闭停顿断句（含最终合并的间隔限制）
 
+        # 诊断：打印本节点实际生效的参数（排查“改参数无效”时对照 backend 日志）
+        print(
+            f"[Split] effective params -> node_config={json.dumps(getattr(self, '_node_config', {}) or {}, ensure_ascii=False)} "
+            f"max_length={max_length} use_llm={use_llm} split_by_punct={split_by_punct} "
+            f"merge_min_duration={merge_min_duration} merge_max_gap={merge_max_gap} "
+            f"pause_threshold={pause_threshold} split_on_speaker={split_on_speaker} "
+            f"merge_short_enabled={merge_short_enabled} merge_gap_enabled={merge_gap_enabled} pause_split_enabled={pause_split_enabled}"
+        )
+
         # Load ASR results
         step_inputs = getattr(self, "_step_inputs", {}) or {}
         asr_path = step_inputs.get("subtitle") or find_artifact(os.path.join(task_dir, "cache"), "asr_result.json")
