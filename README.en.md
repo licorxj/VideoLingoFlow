@@ -1,5 +1,7 @@
 # VideoLingoFlow
 
+> 🌐 Language / 语言：**English** · [简体中文](README.md)
+
 An AI-powered automation & creation framework built around **local-first, infinitely extensible, and multi-user collaborative** principles. It turns video subtitling, translation, dubbing, editing, AI enhancement, batch production, and multi-platform publishing into a three-pillar system — **node-based workflows + chat-driven Agent execution + pluggable capability interfaces**. Whether you are a solo creator, a studio, or a distributed team, you can orchestrate any task with the same framework.
 
 > **In one sentence**: every task is a visual node graph; every capability is a pluggable interface; every instruction executes via conversation. Nodes, interfaces, and Agents combine freely — infinite tasks, full freedom.
