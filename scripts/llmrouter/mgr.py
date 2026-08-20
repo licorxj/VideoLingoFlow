@@ -7,7 +7,7 @@ LocalRouter 第三方项目管理脚本 (VideoLingoFlow)
 因此第三方项目的 git pull / git update 永远不会破坏本管理逻辑。
 
 运行方式与主项目管理器 (backend/manager.py) 完全对齐:
-    - 后端环境: 复用主项目共享 venv (backend/venv312), 不创建独立虚拟环境
+    - 后端环境: 复用主项目共享 venv (venv312), 不创建独立虚拟环境
     - 后端端口: 8800 (与主项目 LLM_ROUTER_PORT 一致)
     - 后端进程: 复用 manager._setup_env() 构造环境 (CUDA/模型缓存/venv 路径)
 
@@ -54,7 +54,7 @@ FRONTEND_DIR = THIRD_PARTY / "frontend"
 DATA_DIR = BACKEND_DIR / "data"
 DB_FILE = DATA_DIR / "app.db"
 # 共享主项目 venv (与主项目 manager.py 一致, 避免双环境)
-VENV_DIR = PROJECT_ROOT / "backend" / "venv312"
+VENV_DIR = PROJECT_ROOT / "venv312"
 RUN_DIR = SCRIPT_DIR / "run"
 
 # 端口对齐主项目管理器 (manager.py 中 LLM_ROUTER_PORT = 8800)

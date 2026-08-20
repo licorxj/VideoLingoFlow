@@ -214,8 +214,8 @@ export default function Strategies() {
               <CardContent className='p-5'>
                 <div className='flex items-start justify-between mb-4'>
                   <div className='flex items-center gap-3'>
-                    <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10'>
-                      <GitBranch className='h-5 w-5 text-purple-400' />
+                    <div className='flex h-10 w-10 items-center justify-center rounded-xl bg-ai/10'>
+                      <GitBranch className='h-5 w-5 text-ai' />
                     </div>
                     <div>
                       <h3 className='font-semibold'>{s.name}</h3>
@@ -225,13 +225,13 @@ export default function Strategies() {
                   <div className='flex items-center gap-2'>
                     <Badge variant='outline'>{lbOptions.find(l => l.value === s.lb_strategy)?.label || s.lb_strategy}</Badge>
                     {s.lb_strategy === 'token_threshold' && s.rule_token_threshold > 0 && (
-                      <Badge variant='outline' className='bg-green-500/10 text-green-400 border-green-500/20'>
+                      <Badge variant='outline' className='bg-success/10 text-success border-success/25'>
                         {t('strategies.tokenThreshold')}: {s.rule_token_threshold.toLocaleString()} / {tokenPeriodOptions.find(p => p.value === (s.rule_token_period || 'per_day'))?.label || s.rule_token_period}
                       </Badge>
                     )}
-                    <Badge variant='outline' className='bg-blue-500/10 text-blue-400 border-blue-500/20'>Key: {keyStrategyOptions.find(k => k.value === (s.key_strategy || 'round_robin'))?.label || s.key_strategy}</Badge>
+                    <Badge variant='outline' className='bg-info/10 text-info border-info/25'>Key: {keyStrategyOptions.find(k => k.value === (s.key_strategy || 'round_robin'))?.label || s.key_strategy}</Badge>
                     {s.key_switch_mode && s.key_switch_mode !== 'none' && (
-                      <Badge variant='outline' className='bg-amber-500/10 text-amber-400 border-amber-500/20'>
+                      <Badge variant='outline' className='bg-warning/10 text-warning border-warning/25'>
                         {s.key_switch_mode === 'rpm_threshold' ? 'RPM>' + s.key_rpm_threshold : s.key_count_threshold + t('strategies.countUnit')}
                       </Badge>
                     )}
@@ -271,7 +271,7 @@ export default function Strategies() {
                     <Trash2 className='h-3.5 w-3.5' />{t('common.delete')}
                   </Button>
                   {testResults[s.id] && (
-                    <span className={'text-xs ml-auto self-center ' + (testResults[s.id].success ? 'text-green-400' : 'text-red-400')}>
+                    <span className={'text-xs ml-auto self-center ' + (testResults[s.id].success ? 'text-success' : 'text-destructive')}>
                       {testResults[s.id].message}
                     </span>
                   )}

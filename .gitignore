@@ -42,6 +42,10 @@ ENV/
 env.bak/
 venv.bak/
 backend/venv*/
+/venv312/
+/python-base/
+/Windows分发包-*/
+VLF_for_20-Windows_*/
 **/.venv/
 
 # IDE
@@ -71,7 +75,6 @@ cache/
 *_cache/
 tasks/
 !backend/voiceforge/tasks/
-voiceforge_data/
 .dbg/
 .runtime/*
 !.runtime/README.md
@@ -83,6 +86,8 @@ backend/auth/cloud_auth_service.py
 backend/auth/subscription_guard.py
 backend/auth/error_codes.json
 backend/control_plane/workflow_runtime.py
+backend/control_plane/runtime.py
+backend/control_plane/custom_node_runtime.py
 
 # 受保护编译产物（分平台二进制）随公开仓库分发（源码已闭源）
 !backend/auth_binaries/cp312/
@@ -147,8 +152,15 @@ share/
 # 任务工作区（用户素材/产物）
 control_plane_workspaces/
 
-# 本机临时诊断脚本（一次性脚本，不入库）
+# 本机临时诊断/补丁/验证脚本（一次性脚本，不入库）
 _diag_router.py
+check_syntax.py
+patch_*.js
+run_validation.*
+tepss07_*
+
+# Debug session notes
+debug-*.md
 
 # OS
 Thumbs.db

@@ -11,6 +11,8 @@ import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { getLanMode, setLanMode, getRemoteMode, setRemoteMode, bootstrapAdmin } from "@/api/collaboration";
 import CollaborationOverview from "@/components/collaboration/CollaborationOverview";
 import ResourceCenter from "@/components/collaboration/ResourceCenter";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageBackground } from "@/components/shared/PageBackground";
 
 function isHostMachine(): boolean {
   const hostname = window.location.hostname;
@@ -197,26 +199,23 @@ export default function Collaboration() {
   ];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
-      {/* 顶栏：标题 + 局域网协作开关 + 远程网络协作开关 */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <Users className="h-5 w-5 text-primary" />
-          <div>
-            <h1 className="text-lg font-bold">多人协作</h1>
-            <p className="text-xs text-muted-foreground">以本机为中心的局域网团队协作</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center justify-end gap-4">
-          <LanModeSwitch isSubscribed={isSubscribed} />
-          <RemoteModeSwitch isSubscribed={isSubscribed} />
-        </div>
-      </div>
+    <PageBackground tone="collab" className="max-w-4xl mx-auto space-y-4 p-1">
+      <PageHeader
+        icon={Users}
+        title="多人协作"
+        detail="以本机为中心的局域网团队协作"
+        actions={
+          <>
+            <LanModeSwitch isSubscribed={isSubscribed} />
+            <RemoteModeSwitch isSubscribed={isSubscribed} />
+          </>
+        }
+      />
 
       {/* 第二行：本机角色 */}
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-border bg-muted/40 px-4 py-2.5">
         <span className="text-sm text-muted-foreground">你是：</span>
-        <span className={cn("text-sm font-semibold", youAre === "管理员" ? "text-primary" : "text-sky-600 dark:text-sky-400")}>
+        <span className={cn("text-sm font-semibold", youAre === "管理员" ? "text-primary" : "text-info")}>
           {youAre}
         </span>
         {user && (
@@ -227,7 +226,7 @@ export default function Collaboration() {
         )}
         <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setGuideOpen(true)}>
-            <BookOpen className="h-3.5 w-3.5" />云协作安装指南
+            <BookOpen className="mr-1.5 h-4 w-4" />云协作安装指南
           </Button>
           <span className="hidden text-xs text-muted-foreground sm:inline">
             {isHostMachine() ? "本机为协作主机" : "本机为局域网成员机"}
@@ -259,6 +258,6 @@ export default function Collaboration() {
       {tab === "overview" ? <CollaborationOverview /> : <ResourceCenter />}
 
       <CloudGuideDialog open={guideOpen} onOpenChange={setGuideOpen} />
-    </div>
+    </PageBackground>
   );
 }

@@ -14,7 +14,7 @@ VideoLingoFlow (Chinese name: 流连视听) is a local-first AI video localizati
 - `backend/api/`: feature-scoped REST and WebSocket routers.
 - `backend/engine/`: task orchestration, batch execution, scheduling, artifacts, and step running.
 - `backend/steps/`: executable workflow node implementations.
-- `backend/control_plane/`: persistent task/workspace models, queue dispatch, checkpoints, assets, migration, and backup.
+- `backend/control_plane/`: persistent task/workspace models, queue dispatch, checkpoints, assets, migration, backup, and custom-node runtime execution.
 - `backend/config/`: YAML/JSON configuration, node schemas, workflow definitions, subtitle presets, and this agent knowledge directory.
 - `data/`: mutable local runtime data, assets, databases, workspace files, session data, and generated outputs.
 - `data/workspace/`: default safe workspace for Pi sessions and generated task materials.
@@ -40,11 +40,11 @@ The local environment source is `.runtime/local_env.bat`. It defines local-mode 
 - `CONTROL_PLANE_ASSET_ROOT=data/assets`
 - Redis: `redis://127.0.0.1:6379/2` for broker-related work and `redis://127.0.0.1:6379/3` for results.
 
-The local startup wrapper is `后端启动管理器.bat`. It discovers Node, Bun, and Redis before constructing a controlled process environment. It activates `backend/venv312`, applies database migrations, and starts `backend/manager.py`.
+On Windows, `start.bat` and the root launch scripts load `.runtime/local_env.bat`, discover local tools, activate `venv312`, and start `backend/manager.py`. Production launch scripts serve `frontend/dist`; development launch can start Vite after dependencies are available.
 
 ## Backend Virtual Environment
 
-Use `backend/venv312` for backend Python execution. Do not assume a system Python has the required packages.
+Use `venv312` for backend Python execution. Do not assume a system Python has the required packages.
 
 Key backend technologies are Python 3.12, FastAPI/Uvicorn, Pydantic, SQLAlchemy, Alembic, Redis, Celery, FFmpeg, MoviePy, OpenCV, ASR engines, TTS engines, and model-provider integrations.
 
@@ -57,6 +57,10 @@ Key backend technologies are Python 3.12, FastAPI/Uvicorn, Pydantic, SQLAlchemy,
 - LLM Router: `http://127.0.0.1:8800`
 - Social backend: `http://127.0.0.1:5409`
 - Social MCP: `http://127.0.0.1:5410`
+
+## Optional GPU Service
+
+`backend/gpu_service/` is a Redis-backed local GPU lane manager, separate from Celery resource queues. When `GPU_SERVICE_ENABLED` is true, Manager starts it and the runtime can dispatch ASR and separation work through it. Lanes are constrained by `GPU_SERVICE_MAX_LANES`, `GPU_SERVICE_VRAM_HEADROOM_GB`, `GPU_SERVICE_LANE_IDLE_TIMEOUT`, and `GPU_SERVICE_JOB_TIMEOUT`; unavailable service paths fall back to the existing execution route.
 
 ## Safety Boundary
 

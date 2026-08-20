@@ -32,9 +32,9 @@ poll_port() {
     return 1
 }
 
-PY="backend/venv312/bin/python"
+PY="venv312/bin/python"
 if [ ! -x "$PY" ]; then
-    echo "[错误] 未找到 Python 虚拟环境 backend/venv312，请先运行 install.sh"
+    echo "[错误] 未找到 Python 虚拟环境 venv312，请先运行 install.sh"
     exit 1
 fi
 

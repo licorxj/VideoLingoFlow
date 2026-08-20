@@ -18,6 +18,8 @@ export interface NodeTypeConfig {
   execFile?: string;
   execTimeout?: number;
   codeDir?: string;
+  kind?: "normal" | "group";
+  groupDefinition?: Record<string, any>;
 }
 
 export interface NodeSchemaOption {

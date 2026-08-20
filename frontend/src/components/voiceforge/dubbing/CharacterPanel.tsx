@@ -126,7 +126,7 @@ export function CharacterPanel({
   /* ── Render ────────────────────────────────────────────────────── */
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-[50%] flex-col">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-3">
         <Users className="h-4 w-4 text-muted-foreground" />
@@ -139,9 +139,9 @@ export function CharacterPanel({
       {/* Action buttons */}
       <div className="flex gap-2 border-b border-border/60 px-3 py-2.5">
         <Button
-          variant="outline"
+          variant="ai-soft"
           size="sm"
-          className="flex-1 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+          className="flex-1"
           onClick={onAIExtract}
         >
           <Sparkles className="mr-1 h-3.5 w-3.5" />
@@ -167,9 +167,8 @@ export function CharacterPanel({
         </Button>
         {characters.length > 0 && (
           <Button
-            variant="outline"
+            variant="destructive"
             size="sm"
-            className="border-red-500/30 text-red-400 hover:bg-red-500/20"
             onClick={() => {
               if (confirm("确认清空所有角色？")) {
                 onClearAll();
@@ -397,10 +396,8 @@ export function CharacterPanel({
                   {/* Gender badge */}
                   {gender && (
                     <span
-                      className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium ${
-                        gender === "male"
-                          ? "bg-blue-500/15 text-blue-400"
-                          : "bg-pink-500/15 text-pink-400"
+                      className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
+                        gender === "male" ? "gender-male" : "gender-female"
                       }`}
                     >
                       {gender === "male" ? "男" : "女"}
@@ -416,7 +413,7 @@ export function CharacterPanel({
 
                   {/* Bound badge */}
                   {bound && (
-                    <span className="shrink-0 rounded-full bg-green-500/15 px-1.5 py-0.5 text-[10px] font-medium text-green-400">
+                    <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
                       已绑定
                     </span>
                   )}

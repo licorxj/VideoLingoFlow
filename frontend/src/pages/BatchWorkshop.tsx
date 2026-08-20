@@ -1,12 +1,70 @@
 import { useState, useEffect, useCallback } from "react";
 import { Layers, Plus, RefreshCw, Play, Inbox, Square } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { batchApi, BatchDetail } from "@/api/batch";
+import { batchApi, BatchDetail, RuntimeStatus } from "@/api/batch";
 import CreateBatchDialog from "@/components/batch/CreateBatchDialog";
 import BatchGroupCard from "@/components/batch/BatchGroupCard";
+import BatchRuntimePanel from "@/components/batch/BatchRuntimePanel";
 import { useAlert } from "@/components/ui/AlertProvider";
 import { getSubscriptionError, isDeviceLimitError, isSubscriptionBlocked, getQuotaExhaustedMessage } from "@/api/subscription";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageBackground } from "@/components/shared/PageBackground";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingState } from "@/components/shared/LoadingState";
+
+function buildRuntimeFallback(batches: BatchDetail[], maxConcurrent: number, taskStartInterval: number): RuntimeStatus {
+  const tasks = batches.flatMap((batch) => batch.tasks || []);
+  const runningTasks = tasks.filter((task) => task.status === "running").length;
+  const queuedTasks = tasks.filter((task) => task.status === "created").length;
+  const pausedTasks = tasks.filter((task) => task.status === "paused" || task.status === "interrupted").length;
+  const stoppingTasks = 0;
+  const inflightTasks = tasks.filter((task) => task.status === "running" || task.status === "created").length;
+  const runningBatches = batches.filter((batch) => batch.status === "running").length;
+  const pausedBatches = batches.filter((batch) => batch.status === "paused" || batch.status === "interrupted").length;
+
+  return {
+    batch: {
+      inflight_tasks: inflightTasks,
+      running_batches: runningBatches,
+      paused_batches: pausedBatches,
+    },
+    control_plane: {
+      tasks: {
+        running: runningTasks,
+        queued: queuedTasks,
+        paused: pausedTasks,
+        stopping: stoppingTasks,
+      },
+      queues: {},
+      workers: {
+        available: false,
+        stats: {},
+        active: {},
+        reserved: {},
+      },
+      resources: {
+        capacity: {},
+        gpu_service_enabled: false,
+        batch_max_inflight_tasks: maxConcurrent,
+        batch_task_start_interval: taskStartInterval,
+      },
+      error: "当前显示为批量页本地统计，后端运行态接口暂不可用",
+    },
+    gpu_service: {
+      enabled: false,
+      available: false,
+    },
+    system: {
+      available: false,
+      cpu_percent: null,
+      ram_percent: null,
+      gpu_percent: null,
+      vram_percent: null,
+    },
+  };
+}
 
 export default function BatchWorkshop() {
   const { alert: showAlert, confirm: showConfirm } = useAlert();
@@ -16,6 +74,7 @@ export default function BatchWorkshop() {
   const [maxConcurrent, setMaxConcurrent] = useState(3);
   const [taskStartInterval, setTaskStartInterval] = useState(0);
   const [configLoading, setConfigLoading] = useState(false);
+  const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus | null>(null);
 
   const loadBatches = useCallback(async () => {
     setLoading(true);
@@ -37,18 +96,32 @@ export default function BatchWorkshop() {
     } catch {}
   }, []);
 
+  const loadRuntimeStatus = useCallback(async () => {
+    try {
+      const result = await batchApi.getRuntimeStatus();
+      setRuntimeStatus(result);
+    } catch {
+      setRuntimeStatus(null);
+    }
+  }, []);
+
   useEffect(() => {
     loadBatches();
     loadConfig();
-  }, [loadBatches, loadConfig]);
+    loadRuntimeStatus();
+  }, [loadBatches, loadConfig, loadRuntimeStatus]);
 
   // Auto-refresh every 5 seconds when there are running tasks
   useEffect(() => {
     const hasRunning = batches.some((b) => b.status === "running");
-    if (!hasRunning) return;
-    const timer = setInterval(loadBatches, 5000);
+    const hasInterrupted = batches.some((b) => b.status === "interrupted");
+    if (!hasRunning && !hasInterrupted) return;
+    const timer = setInterval(() => {
+      loadBatches();
+      loadRuntimeStatus();
+    }, 5000);
     return () => clearInterval(timer);
-  }, [batches, loadBatches]);
+  }, [batches, loadBatches, loadRuntimeStatus]);
 
   const handleUpdateConfig = async (val: number) => {
     setConfigLoading(true);
@@ -125,26 +198,61 @@ export default function BatchWorkshop() {
     }
   };
 
-  return (
-    <div className="max-w-7xl mx-auto space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5">
-            <Layers className="w-6 h-6 text-primary" />
-            批量工作台
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            批量创建和管理视频处理任务
-          </p>
-        </div>
-      </div>
+  const effectiveRuntimeStatus = runtimeStatus
+    ? {
+        ...buildRuntimeFallback(batches, maxConcurrent, taskStartInterval),
+        ...runtimeStatus,
+        batch: {
+          ...buildRuntimeFallback(batches, maxConcurrent, taskStartInterval).batch,
+          ...(runtimeStatus.batch || {}),
+        },
+        control_plane: {
+          ...buildRuntimeFallback(batches, maxConcurrent, taskStartInterval).control_plane,
+          ...(runtimeStatus.control_plane || {}),
+          tasks: {
+            ...buildRuntimeFallback(batches, maxConcurrent, taskStartInterval).control_plane.tasks,
+            ...(runtimeStatus.control_plane?.tasks || {}),
+          },
+          resources: {
+            ...buildRuntimeFallback(batches, maxConcurrent, taskStartInterval).control_plane.resources,
+            ...(runtimeStatus.control_plane?.resources || {}),
+          },
+        },
+      }
+    : buildRuntimeFallback(batches, maxConcurrent, taskStartInterval);
 
-      {/* Toolbar: config + actions */}
-      <div className="flex items-center gap-3 flex-wrap">
-        {/* Parallel count */}
-        <div className="flex items-center gap-2 px-3 py-2 border border-border/60 rounded-xl bg-card/50">
-          <span className="text-xs font-semibold text-muted-foreground">并行数量</span>
+  return (
+    <PageBackground tone="batch" className="max-w-7xl mx-auto space-y-5 p-1">
+      <PageHeader
+        icon={Layers}
+        title="批量工作台"
+        detail="批量创建、投递和恢复视频处理任务"
+        actions={
+          <>
+            <Button variant="destructive" size="sm" onClick={handleStopAll} disabled={loading}>
+              <Square className="mr-1.5 h-4 w-4" />
+              全部停止
+            </Button>
+            <Button variant="success-soft" size="sm" onClick={handleResumeUnfinished} disabled={loading}>
+              <Play className="mr-1.5 h-4 w-4" />
+              全局继续中断任务
+            </Button>
+            <Button size="sm" onClick={handleOpenCreateDialog}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              新建批量任务
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { loadBatches(); loadRuntimeStatus(); }} disabled={loading}>
+              <RefreshCw className={cn("mr-1.5 h-4 w-4", loading && "animate-spin")} />
+              刷新
+            </Button>
+          </>
+        }
+      />
+
+      {/* Toolbar: config (parallel / interval) */}
+      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card p-3">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/40">
+          <span className="text-xs font-semibold text-muted-foreground">最大同时在途任务数</span>
           <select
             className="text-xs font-semibold bg-transparent border-none outline-none cursor-pointer"
             value={maxConcurrent}
@@ -157,8 +265,7 @@ export default function BatchWorkshop() {
           </select>
         </div>
 
-        {/* Task start interval */}
-        <div className="flex items-center gap-2 px-3 py-2 border border-border/60 rounded-xl bg-card/50">
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/40">
           <span className="text-xs font-semibold text-muted-foreground">启动间隔</span>
           <input
             type="number"
@@ -172,64 +279,25 @@ export default function BatchWorkshop() {
           />
           <span className="text-xs text-muted-foreground">秒</span>
         </div>
-
-        <span className="w-px h-6 bg-border/40" />
-
-        {/* Stop all */}
-        <button
-          onClick={handleStopAll}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3.5 py-2 border border-red-500/40 rounded-xl text-xs font-semibold text-red-600 hover:bg-red-500/10 transition-all duration-200 active:scale-95 disabled:opacity-50"
-        >
-          <Square className="w-3.5 h-3.5" />
-          全部停止
-        </button>
-
-        {/* Resume unfinished */}
-        <button
-          onClick={handleResumeUnfinished}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3.5 py-2 border border-border/60 rounded-xl text-xs font-semibold hover:bg-accent/60 transition-all duration-200 active:scale-95 disabled:opacity-50"
-        >
-          <Play className="w-3.5 h-3.5 text-emerald-500" />
-          继续未完成任务
-        </button>
-
-        {/* New batch */}
-        <button
-          onClick={handleOpenCreateDialog}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-xs font-semibold hover:bg-primary/90 transition-all duration-200 active:scale-95 shadow-sm shadow-primary/20"
-        >
-          <Plus className="w-3.5 h-3.5" />
-          新建批量任务
-        </button>
-
-        {/* Refresh */}
-        <button
-          onClick={loadBatches}
-          disabled={loading}
-          className="flex items-center gap-1.5 px-3.5 py-2 border border-border/60 rounded-xl text-xs font-semibold hover:bg-accent/60 transition-all duration-200 active:scale-95 disabled:opacity-50 ml-auto"
-        >
-          <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
-          刷新
-        </button>
       </div>
+
+      <BatchRuntimePanel runtime={effectiveRuntimeStatus} loading={loading && !runtimeStatus} />
 
       {/* Batch list */}
       {loading && batches.length === 0 ? (
-        <div className="flex items-center justify-center py-16">
-          <RefreshCw className="w-6 h-6 animate-spin text-muted-foreground" />
-        </div>
+        <LoadingState label="正在加载批量任务…" />
       ) : batches.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-            <Inbox className="w-8 h-8 text-muted-foreground/40" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground">暂无批量任务</p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
-            点击"新建批量任务"创建你的第一个批量任务
-          </p>
-        </div>
+        <EmptyState
+          icon={Inbox}
+          title="暂无批量任务"
+          detail='点击"新建批量任务"创建你的第一个批量任务'
+          action={
+            <Button onClick={handleOpenCreateDialog}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              新建批量任务
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {batches.map((batch) => (
@@ -237,7 +305,10 @@ export default function BatchWorkshop() {
               key={batch.batch_id}
               batch={batch}
               loading={loading}
-              onRefresh={loadBatches}
+              onRefresh={() => {
+                loadBatches();
+                loadRuntimeStatus();
+              }}
             />
           ))}
         </div>
@@ -250,6 +321,6 @@ export default function BatchWorkshop() {
           onCreated={loadBatches}
         />
       )}
-    </div>
+    </PageBackground>
   );
 }

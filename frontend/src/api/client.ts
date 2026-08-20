@@ -15,7 +15,7 @@ export function normalizeApiError(error: unknown): ApiError {
 
   const response = error.response;
   const detail = response?.data?.detail;
-  const payload = detail && typeof detail === "object" ? detail as Record<string, unknown> : undefined;
+  const payload = detail && typeof detail === "object" ? detail as Record<string, unknown> : response?.data;
   const message = typeof detail === "string"
     ? detail
     : typeof payload?.message === "string"

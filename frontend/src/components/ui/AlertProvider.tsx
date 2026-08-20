@@ -308,7 +308,7 @@ export default function AlertProvider({ children }: { children: ReactNode }) {
   const Icon = cfg.icon;
 
   const alertModal = alertState.open ? (
-    <div className="pointer-events-auto fixed inset-0 z-[99999] flex items-center justify-center p-4" role="dialog" aria-modal="true">
+    <div id="avl-alert-overlay" className="pointer-events-auto fixed inset-0 z-[99999] flex items-center justify-center p-4" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm animate-fade-in" onClick={closeAlert} />
       <div className={cn(
         "relative w-full max-w-sm bg-card border rounded-2xl shadow-2xl p-0 overflow-hidden",

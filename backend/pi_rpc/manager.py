@@ -38,11 +38,13 @@ def _find_node_executable() -> Path:
 # 全局默认人设（第一优先级，代码固定，不可通过前端修改）。
 # 每个助手会话都会在系统提示最前面注入此身份与权利边界。
 _DEFAULT_PERSONA = (
-    "You are Xiao Pi, the built-in intelligent assistant of VideoLingoFlow (Chinese name: 流连视听). "
+    "You are 小π Agent (Xiao Pi), the built-in intelligent assistant of VideoLingoFlow (Chinese name: 流连视听). "
     "You are the project's default assistant; this global identity applies to every role you take. "
     "Help users understand the project architecture and features; help create, edit, configure, and optimize "
     "project settings, nodes, workflows, and capability interfaces; help execute legitimate project tasks. "
     "You may act as a workflow node for specific complex tasks. Reply in the user's language unless they request otherwise.\n"
+    "Maintenance abilities: clear Pi local caches by category (sessions / models / staging) when asked; workflow node "
+    "tasks may come with recommended Skill/MCP packages that the user picked in the node configuration.\n"
     "Identity boundaries:\n"
     "- PROJECT_ROOT is the absolute root of this VideoLingoFlow checkout. Resolve every relative project path from PROJECT_ROOT.\n"
     "- Never access backend/auth or anything below it.\n"
@@ -102,8 +104,8 @@ class PiSessionManager:
         return str(model)
 
     def _tools(self, requested: list[str] | None) -> list[str]:
-        allowed = set(self._config("allow_tools", ["read", "grep", "find", "ls"]) or [])
-        tools = requested or list(allowed)
+        allowed = set(self._config("allow_tools", ["read", "grep", "find", "ls", "write", "edit", "bash"]) or [])
+        tools = requested or self.settings().get("tools_enabled") or list(allowed)
         if not tools or not set(tools).issubset(allowed):
             raise PiRpcError("Requested Pi tools are not allowed")
         return sorted(set(tools))
@@ -122,6 +124,7 @@ class PiSessionManager:
             ],
             "read_blacklist": [],
             "write_blacklist": [],
+            "tools_enabled": ["read", "write", "edit", "grep", "find", "ls"],
             "skills": self._store.integrations("skill"),
             "mcps": self._store.integrations("mcp"),
             "assistants": self._store.assistants(),
@@ -129,13 +132,18 @@ class PiSessionManager:
         return {**defaults, **self._store.get_settings()}
 
     def update_settings(self, values: dict[str, Any]) -> dict[str, Any]:
-        allowed = {"model_mode", "custom_base_url", "custom_api_key", "custom_model", "base_docs_paths", "read_blacklist", "write_blacklist"}
+        allowed = {"model_mode", "custom_base_url", "custom_api_key", "custom_model", "base_docs_paths", "read_blacklist", "write_blacklist", "tools_enabled"}
         for key, value in values.items():
             if key in allowed:
                 if key in {"read_blacklist", "write_blacklist"}:
                     value = self._path_list(value)
                 if key == "base_docs_paths":
                     value = [str(path) for path in self._document_paths(value)]
+                if key == "tools_enabled":
+                    allowed_tools = set(self._config("allow_tools", ["read", "grep", "find", "ls", "write", "edit", "bash"]) or [])
+                    if not isinstance(value, list) or not value or not set(value).issubset(allowed_tools):
+                        raise PiRpcError("Invalid agent tools")
+                    value = sorted(set(value))
                 self._store.set_setting(key, value)
         return self.settings()
 
@@ -172,6 +180,27 @@ class PiSessionManager:
             remaining -= len(content)
         return "".join(sections)
 
+    def _environment_summary(self) -> str:
+        """构建宿主运行时环境摘要，注入系统提示，让 Pi 无需探测即可了解运行环境。"""
+        import platform as _platform
+        try:
+            root = self._root().resolve()
+            sep = "\\" if os.name == "nt" else "/"
+            router_url = str(config.get("llm.router_url") or "").strip()
+            lines = [
+                "## Runtime environment summary (injected automatically)",
+                f"- OS: {_platform.system()} {_platform.release()} ({_platform.machine()})",
+                f"- Python: {_platform.python_version()}",
+                f"- PROJECT_ROOT: {root}",
+                f"- Working directory: {Path.cwd()}",
+                f"- Path separator: {sep}",
+            ]
+            if router_url:
+                lines.append(f"- LLM router endpoint: {router_url}")
+            return "\n".join(lines)
+        except Exception:
+            return ""
+
     def update_assistant(self, assistant_id: str, values: dict[str, Any]) -> dict[str, Any]:
         if assistant_id not in {"general", "node", "workflow", "execution", "files", "publish", "installer"}:
             raise PiRpcError("Unknown assistant")
@@ -192,16 +221,19 @@ class PiSessionManager:
         if kind == "docs":
             directory = root / "backend" / "config" / "agent" / "docs"
             return [{"name": path.name, "path": str(path)} for path in sorted(directory.glob("*.md"))] if directory.is_dir() else []
-        if kind == "skill":
+        if kind in ("skill", "skills"):
             candidates = [
                 root / "backend" / "config" / "agent" / "skills",
+                Path.home() / ".claude" / "skills",
+                Path.home() / ".codex" / "skills",
                 Path.home() / ".trae" / "skills",
                 Path.home() / ".agents" / "skills",
                 Path.home() / ".agent" / "skills",
             ]
-        elif kind == "mcp":
+        elif kind in ("mcp", "mcps"):
             candidates = [
                 root / "backend" / "config" / "agent" / "mcp",
+                Path.home() / ".claude" / "mcps",
                 Path.home() / ".trae" / "mcps",
                 Path.home() / ".agents" / "mcps",
                 Path.home() / ".agent" / "mcps",
@@ -220,16 +252,177 @@ class PiSessionManager:
                         continue
                     seen.add(resolved)
                     item_id = f"{kind}:{resolved}"
-                    items.append({"item_id": item_id, "name": path.stem if path.is_file() else path.name, "path": resolved, "enabled": False})
+                    items.append({
+                        "item_id": item_id,
+                        "name": path.stem if path.is_file() else path.name,
+                        "path": resolved,
+                        "description": self._integration_description(kind, path),
+                        "enabled": False,
+                    })
         existing = {item["item_id"]: item["enabled"] for item in self._store.integrations(kind)}
         for item in items:
             item["enabled"] = existing.get(item["item_id"], False)
-        return self._store.replace_integrations(kind, items)
+        self._store.replace_integrations(kind, items)
+        return items
+
+    def _integration_description(self, kind: str, path: Path) -> str:
+        """提取 Skill/MCP 包的人类可读介绍，供节点弹窗右侧预览。"""
+        try:
+            if kind == "skill":
+                if path.is_dir():
+                    for candidate in ("SKILL.md", "skill.md", "README.md"):
+                        markdown = path / candidate
+                        if markdown.is_file():
+                            return self._frontmatter_description(markdown)
+                    return ""
+                if path.suffix.lower() == ".md":
+                    return self._frontmatter_description(path)
+                return ""
+            # kind == "mcp"
+            if path.is_dir():
+                for candidate in ("mcp.json", "MCP.json", "README.md", "SKILL.md", "skill.md"):
+                    target = path / candidate
+                    if not target.is_file():
+                        continue
+                    if target.suffix.lower() == ".json":
+                        desc = self._json_description(target)
+                        if desc:
+                            return desc
+                    else:
+                        desc = self._frontmatter_description(target)
+                        if desc:
+                            return desc
+                # 嵌套结构（如 ~/.trae/mcps/<pkg>/search/<skill>/SKILL.md）：递归查找
+                return self._recursive_description(path, [200])
+            if path.suffix.lower() == ".json":
+                return self._json_description(path)
+            if path.suffix.lower() == ".md":
+                return self._frontmatter_description(path)
+            return ""
+        except Exception:
+            return ""
+
+    def _recursive_description(self, directory: Path, budget: list[int]) -> str:
+        """递归查找 SKILL.md / README.md / mcp.json 的描述，受扫描量限制。"""
+        if budget[0] <= 0:
+            return ""
+        try:
+            entries = sorted(directory.iterdir())
+        except OSError:
+            return ""
+        for entry in entries:
+            budget[0] -= 1
+            if budget[0] <= 0:
+                return ""
+            try:
+                if entry.is_dir():
+                    desc = self._recursive_description(entry, budget)
+                    if desc:
+                        return desc
+                elif entry.name.lower() in ("skill.md", "readme.md", "mcp.json", "server_metadata.json"):
+                    desc = self._json_description(entry) if entry.suffix.lower() == ".json" else self._frontmatter_description(entry)
+                    if desc:
+                        return desc
+            except OSError:
+                continue
+        return ""
+
+    @staticmethod
+    def _json_description(path: Path) -> str:
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8", errors="replace"))
+        except (OSError, json.JSONDecodeError):
+            return ""
+        if isinstance(payload, dict):
+            desc = payload.get("description") or payload.get("name") or payload.get("server_name") or ""
+            return str(desc).strip()[:400]
+        return ""
+
+    @staticmethod
+    def _frontmatter_description(path: Path) -> str:
+        """读取 Markdown 前导 frontmatter 的 description（支持 > 引用块），无则取正文首段。"""
+        try:
+            text = path.read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            return ""
+        match = re.match(r"\A---\s*\n(.*?)\n---", text, re.DOTALL)
+        if match:
+            frontmatter = match.group(1)
+            desc_match = re.search(r"(?m)^\s*description:\s*(.*?)$", frontmatter)
+            if desc_match:
+                first = desc_match.group(1).strip()
+                if first.startswith(">"):
+                    lines = frontmatter.splitlines()
+                    idx = next((i for i, line in enumerate(lines) if "description:" in line), -1)
+                    parts = [line.strip() for line in lines[idx + 1:] if line.strip() and line.startswith(" ")]
+                    folded = " ".join(parts) or first
+                    return folded[:400]
+                if first:
+                    return first[:400]
+            body = text[len(match.group(0)):]
+        else:
+            body = re.sub(r"(?m)^#+ .*$", "", text)
+        cleaned = " ".join(body.split()).strip()
+        return cleaned[:300]
 
     def set_integration(self, kind: str, item_id: str, enabled: bool) -> None:
         if kind not in {"skill", "mcp"}:
             raise PiRpcError("Unknown integration type")
         self._store.set_integration(kind, item_id, enabled)
+
+    def clear_cache(self, category: str = "all") -> dict[str, int]:
+        """分类清除小 π Agent 缓存。
+
+        - sessions: 删除已结束的会话目录与记录（活跃会话保留）
+        - models:   删除 Pi 模型清单缓存（models-store.json，启动时自动重建）
+        - staging:  清空暂存安装目录
+        - all:      以上全部
+        """
+        category = str(category or "all").lower()
+        if category not in {"sessions", "models", "staging", "all"}:
+            raise PiRpcError("Unknown cache category")
+        root = self._root()
+        result = {"sessions": 0, "models": 0, "staging": 0}
+        if category in ("sessions", "all"):
+            active = {client.info.session_id for client in self._sessions.values() if not client.info.closed}
+            sessions_root = root / "data" / "workspace" / "pi-sessions"
+            if sessions_root.is_dir():
+                for entry in sessions_root.iterdir():
+                    if entry.name in active:
+                        continue
+                    if entry.name.startswith("pi_sessions.db"):
+                        # 数据库文件保留（只清记录），避免删除后重建空库导致表缺失
+                        continue
+                    try:
+                        if entry.is_dir():
+                            shutil.rmtree(entry)
+                        else:
+                            entry.unlink(missing_ok=True)
+                        result["sessions"] += 1
+                    except OSError:
+                        continue
+            self._store.clear_sessions()
+        if category in ("models", "all"):
+            store_file = root / "data" / "workspace" / "pi-agent-config" / "models-store.json"
+            if store_file.is_file():
+                try:
+                    store_file.unlink()
+                    result["models"] = 1
+                except OSError:
+                    pass
+        if category in ("staging", "all"):
+            staging = root / "data" / "workspace" / "pi-install-staging"
+            if staging.is_dir():
+                for entry in staging.iterdir():
+                    try:
+                        if entry.is_dir():
+                            shutil.rmtree(entry)
+                        else:
+                            entry.unlink(missing_ok=True)
+                        result["staging"] += 1
+                    except OSError:
+                        continue
+        return result
 
     def staging(self) -> list[dict[str, str]]:
         """List ready-to-install packages under the Pi install staging directory."""
@@ -282,7 +475,7 @@ class PiSessionManager:
         - level "project": copied into backend/config/agent/{skills,mcps}/{name},
           authorized by default (enabled=True).
         - level "system": copied into ~/.agent/{skills,mcps}/{name},
-          disabled by default; the user must enable it in the Pi Agent settings.
+          disabled by default; the user must enable it in the 小π Agent settings.
         """
         if kind not in {"skill", "mcp"}:
             raise PiRpcError("Unknown integration type")
@@ -499,12 +692,13 @@ class PiSessionManager:
                 "PROJECT_ROOT is the absolute root of this VideoLingoFlow checkout. Resolve every relative project path from PROJECT_ROOT.",
                 "Path access is enforced by the runtime policy. Do not attempt to bypass it with shell commands.",
                 self._document_context([*base_documents, *assistant_documents]),
+                self._environment_summary(),
             ]
             env = {
                 "OPENAI_BASE_URL": str(base_url or "").rstrip("/") + ("" if str(base_url or "").rstrip("/").endswith("/v1") else "/v1"),
                 "OPENAI_API_KEY": str(api_key or ""),
                 "NO_PROXY": "127.0.0.1,localhost",
-                "VIDEOLINGO_PI_PATH_POLICY": json.dumps({"read_blacklist": read_blacklist, "write_blacklist": write_blacklist}),
+                "VIDEOLINGO_PI_PATH_POLICY": json.dumps({"read_blacklist": read_blacklist, "write_blacklist": write_blacklist, "bash_enabled": "bash" in selected_tools}),
             }
             client = PiRpcClient(
                 project_root=str(root),
@@ -560,7 +754,13 @@ class PiSessionManager:
             base_url = agent_settings.get("custom_base_url") or base_url
             api_key = agent_settings.get("custom_api_key") or api_key
             model = agent_settings.get("custom_model") or model
-        selected_tools = self._tools(tools)
+        # 节点 agent 需要完整能力（含 Shell）以完成复杂任务，默认授予全部允许工具；
+        # 若调用方显式传入 tools，则按传入列表执行。
+        if tools:
+            selected_tools = self._tools(tools)
+        else:
+            allowed_tools = set(self._config("allow_tools", ["read", "grep", "find", "ls", "write", "edit", "bash"]) or [])
+            selected_tools = sorted(allowed_tools) or ["read"]
         read_blacklist = self._path_list([
             "backend/auth",
             *agent_settings.get("read_blacklist", []),
@@ -577,7 +777,7 @@ class PiSessionManager:
             "OPENAI_BASE_URL": str(base_url or "").rstrip("/") + ("" if str(base_url or "").rstrip("/").endswith("/v1") else "/v1"),
             "OPENAI_API_KEY": str(api_key or ""),
             "NO_PROXY": "127.0.0.1,localhost",
-            "VIDEOLINGO_PI_PATH_POLICY": json.dumps({"read_blacklist": read_blacklist, "write_blacklist": write_blacklist}),
+            "VIDEOLINGO_PI_PATH_POLICY": json.dumps({"read_blacklist": read_blacklist, "write_blacklist": write_blacklist, "bash_enabled": "bash" in selected_tools}),
         }
         client = PiRpcClient(
             project_root=str(root),
@@ -586,7 +786,7 @@ class PiSessionManager:
             cwd=str(safe_cwd),
             model=self._model(model),
             tools=selected_tools,
-            system_prompt=system_prompt[:32000],
+            system_prompt=(system_prompt + "\n\n" + self._environment_summary())[:32000],
             node_path=runtime["node_path"],
             cli_path=runtime["cli_path"],
             session_dir=str(session_dir),

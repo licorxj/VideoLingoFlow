@@ -39,12 +39,12 @@ const MODEL_TYPE_ICONS: Record<ModelType, typeof Bot> = {
 };
 
 const MODEL_TYPE_COLORS: Record<ModelType, string> = {
-  text: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
-  image: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
-  tts: 'bg-green-500/10 text-green-600 dark:text-green-400',
-  video: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
-  audio: 'bg-green-500/10 text-green-600 dark:text-green-400',
-  embedding: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
+  text: 'bg-info/10 text-info',
+  image: 'bg-ai/10 text-ai',
+  tts: 'bg-success/10 text-success',
+  video: 'bg-warning/10 text-warning',
+  audio: 'bg-success/10 text-success',
+  embedding: 'bg-muted text-muted-foreground',
 };
 export default function Chat() {
   const { t } = useI18n();
@@ -297,7 +297,7 @@ export default function Chat() {
                 {msg.files && msg.files.length > 0 && <div className='flex flex-wrap gap-2 mb-2'>{msg.files.map((f, fi) => <div key={fi}>{f.preview ? <img src={f.preview} alt={f.name} className='h-20 rounded-lg border object-cover' /> : <div className='flex items-center gap-1.5 text-xs bg-background/10 rounded-lg px-2 py-1'><FileText className='h-3 w-3' />{f.name}</div>}</div>)}</div>}
                 {msg.richType === 'image' && msg.imageUrls && msg.imageUrls.length > 0 && <div className='flex flex-wrap gap-2 mb-2'>{msg.imageUrls.map((url, ui) => <a key={ui} href={url} target='_blank' rel='noopener noreferrer' className='block'><img src={url} alt={'Generated ' + (ui + 1)} className='max-w-xs max-h-80 rounded-lg border object-contain hover:opacity-90 transition-opacity' /></a>)}</div>}
                 {msg.richType === 'audio' && msg.audioUrl && <div className='mb-2'><audio controls src={msg.audioUrl} className='w-full max-w-sm h-10' /><a href={msg.audioUrl} download='speech.mp3' className='flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1'><Download className='h-3 w-3' />{t('chat.downloadAudio')}</a></div>}
-                {msg.richType === 'video_task' && msg.videoTask && <div className='mb-2'>{msg.videoTask.status === 'completed' && msg.videoTask.videoUrl ? <div><video controls src={msg.videoTask.videoUrl} className='max-w-sm max-h-64 rounded-lg border' /><a href={msg.videoTask.videoUrl} target='_blank' rel='noopener noreferrer' className='flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1'><Download className='h-3 w-3' />{t('chat.downloadVideo')}</a></div> : <div className='flex items-center gap-2 text-xs text-muted-foreground'>{msg.videoTask.status !== 'failed' && <Loader2 className='h-4 w-4 animate-spin text-orange-500' />}<span className='font-medium'>{t('chat.videoStatus')}: </span><span className={msg.videoTask.status === 'failed' ? 'text-destructive' : 'text-orange-600 dark:text-orange-400'}>{msg.videoTask.status}</span>{msg.videoTask.id && <span className='text-[10px] opacity-60'> ({msg.videoTask.id})</span>}</div>}</div>}
+                {msg.richType === 'video_task' && msg.videoTask && <div className='mb-2'>{msg.videoTask.status === 'completed' && msg.videoTask.videoUrl ? <div><video controls src={msg.videoTask.videoUrl} className='max-w-sm max-h-64 rounded-lg border' /><a href={msg.videoTask.videoUrl} target='_blank' rel='noopener noreferrer' className='flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1'><Download className='h-3 w-3' />{t('chat.downloadVideo')}</a></div> : <div className='flex items-center gap-2 text-xs text-muted-foreground'>{msg.videoTask.status !== 'failed' && <Loader2 className='h-4 w-4 animate-spin text-warning' />}<span className='font-medium'>{t('chat.videoStatus')}: </span><span className={msg.videoTask.status === 'failed' ? 'text-destructive' : 'text-warning'}>{msg.videoTask.status}</span>{msg.videoTask.id && <span className='text-[10px] opacity-60'> ({msg.videoTask.id})</span>}</div>}</div>}
                 {msg.content ? <div className='whitespace-pre-wrap break-words'>{msg.content}</div> : msg.role === 'assistant' && isStreaming && idx === messages.length - 1 && <div className='flex items-center gap-1.5 text-muted-foreground'><Loader2 className='h-3.5 w-3.5 animate-spin' /><span className='text-xs'>{t('chat.thinking')}</span></div>}
                 {msg.role === 'assistant' && msg.content && <button onClick={() => copyMessage(msg.content, idx)} className='mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors'>{copiedIdx === idx ? <Check className='h-3 w-3' /> : <Copy className='h-3 w-3' />}{copiedIdx === idx ? t('common.copied') : t('common.copy')}</button>}
               </div>

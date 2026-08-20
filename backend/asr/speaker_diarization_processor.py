@@ -278,11 +278,149 @@ class CamPlusDiarizationProcessor(SpeakerDiarizationProcessor):
         )
 
 
+class DiarizeLibProcessor(SpeakerDiarizationProcessor):
+    """diarize 库说话人识别处理器（纯本地 CPU）
+
+    基于已安装的 `diarize` 包（Silero VAD + WeSpeaker ResNet34-LM 嵌入 +
+    GMM BIC 自动估计说话人数 + 谱聚类），无需 API Key / HF Token。
+    """
+
+    def diarize(self, audio_path: str,
+                num_speakers: Optional[int] = None,
+                min_speakers: Optional[int] = None,
+                max_speakers: Optional[int] = None,
+                **kwargs) -> SpeakerDiarizationResult:
+        """使用 diarize 库进行说话人识别。
+
+        kwargs 静默忽略 model_name / hf_token 等上游可能注入的无关选项。
+        """
+        try:
+            from diarize import diarize as _lib_diarize
+        except ImportError:
+            raise ImportError("diarize package required for 'diarize' diarization engine")
+
+        converted = self._ensure_readable_audio(audio_path)
+        try:
+            call_kwargs: Dict[str, Any] = {}
+            if num_speakers:
+                call_kwargs["num_speakers"] = int(num_speakers)
+            if min_speakers:
+                call_kwargs["min_speakers"] = int(min_speakers)
+            if max_speakers:
+                call_kwargs["max_speakers"] = int(max_speakers)
+
+            print(f"[Diarization] Running local diarize library: {os.path.basename(audio_path)}")
+            result = _lib_diarize(converted, **call_kwargs)
+        finally:
+            if converted != audio_path:
+                try:
+                    os.unlink(converted)
+                except OSError:
+                    pass
+
+        parsed = self._parse_result(result)
+        print(f"[Diarization] diarize library completed: "
+              f"{len(parsed.speakers)} speaker(s), {len(parsed.segments)} segment(s)")
+        return parsed
+
+    def _parse_result(self, result: Any) -> SpeakerDiarizationResult:
+        """将 diarize 库的 DiarizeResult 映射为项目内数据结构。"""
+        segments = [
+            SpeakerSegment(start=float(seg.start), end=float(seg.end), speaker=seg.speaker)
+            for seg in result.segments
+        ]
+        return SpeakerDiarizationResult(segments=segments, speakers=list(result.speakers))
+
+    def _ensure_readable_audio(self, audio_path: str) -> str:
+        """soundfile 无法读取的格式（mp4/mkv 等视频容器）经 ffmpeg 预转为 16kHz 单声道 WAV。
+
+        可读时原样返回路径；转换后返回临时 WAV 路径（调用方负责清理）。
+        """
+        try:
+            import soundfile as sf
+            sf.info(audio_path)
+            return audio_path
+        except Exception:
+            pass
+
+        import shutil
+        import subprocess
+        import tempfile
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            raise RuntimeError(
+                f"Audio format not readable by soundfile and ffmpeg not found: {audio_path}")
+
+        tmp_path = os.path.join(tempfile.mkdtemp(prefix="diarize_lib_"), "audio.wav")
+        cmd = [ffmpeg, "-y", "-i", audio_path, "-vn", "-ac", "1", "-ar", "16000", tmp_path]
+        proc = subprocess.run(cmd, capture_output=True, text=True)
+        if proc.returncode != 0:
+            raise RuntimeError(f"ffmpeg conversion failed: {proc.stderr[-500:]}")
+        print(f"[Diarization] Converted to temp WAV for diarize library: {tmp_path}")
+        return tmp_path
+
+
+def _speaker_at(time_point: float, diarization_result: SpeakerDiarizationResult) -> Optional[str]:
+    """返回覆盖指定时间点的说话人；无覆盖时取时间上最近的说话人段。"""
+    for spk_seg in diarization_result.segments:
+        if spk_seg.start <= time_point <= spk_seg.end:
+            return spk_seg.speaker
+    best_speaker, best_dist = None, float("inf")
+    for spk_seg in diarization_result.segments:
+        dist = min(abs(time_point - spk_seg.start), abs(time_point - spk_seg.end))
+        if dist < best_dist:
+            best_dist, best_speaker = dist, spk_seg.speaker
+    return best_speaker
+
+
+def _split_segment_by_speakers(seg: dict, diarization_result: SpeakerDiarizationResult) -> List[dict]:
+    """按词级时间戳将超长 segment 拆分为单一说话人的子段。
+
+    每个词归属覆盖其时间中点的说话人，相邻同说话人的词合并为一个子段；
+    文本按 CJK/拉丁语系自动选择无空格/空格拼接，子段保留对应 words。
+    """
+    words = [w for w in seg.get("words", []) if w.get("start") is not None]
+    if not words:
+        return []
+
+    groups: List[Dict[str, Any]] = []
+    for w in sorted(words, key=lambda x: x.get("start", 0)):
+        mid = (w.get("start", 0.0) + w.get("end", w.get("start", 0.0))) / 2
+        speaker = _speaker_at(mid, diarization_result)
+        if speaker and groups and groups[-1]["speaker"] == speaker:
+            groups[-1]["words"].append(w)
+        elif speaker:
+            groups.append({"speaker": speaker, "words": [w]})
+
+    if not groups:
+        return []
+
+    sub_segments: List[dict] = []
+    for g in groups:
+        g_words = g["words"]
+        text_parts = [w.get("word", "") for w in g_words]
+        is_cjk = any('\u4e00' <= c <= '\u9fff' for c in text_parts[0])
+        text = "".join(text_parts) if is_cjk else " ".join(text_parts)
+        sub_segments.append({
+            "start": round(g_words[0].get("start", seg.get("start", 0.0)), 3),
+            "end": round(g_words[-1].get("end", seg.get("end", 0.0)), 3),
+            "text": text.strip(),
+            "words": g_words,
+            "speaker": g["speaker"],
+        })
+    return [s for s in sub_segments if s["text"]]
+
+
 def assign_speakers_to_segments(asr_segments: List[dict], 
                                  diarization_result: SpeakerDiarizationResult,
                                  overlap_threshold: float = 0.5) -> List[dict]:
     """将说话人标签分配给ASR结果中的segments
-    
+
+    策略：
+    1. 单一说话人主导（最大重叠 ≥ overlap_threshold）→ 直接打标签；
+    2. 跨说话人的长 segment 且含词级时间戳 → 按说话人边界拆分为子段；
+    3. 其余情况兜底取最大重叠说话人，避免长 segment 永远无标签。
+
     Parameters
     ----------
     asr_segments : List[dict]
@@ -290,48 +428,70 @@ def assign_speakers_to_segments(asr_segments: List[dict],
     diarization_result : SpeakerDiarizationResult
         说话人识别结果
     overlap_threshold : float
-        重叠时间阈值（0-1），用于判断segment属于哪个说话人
+        重叠时间阈值（0-1），用于判断segment是否由单一说话人主导
         
     Returns
     -------
     List[dict]
-        添加了speaker标签的segments
+        添加了speaker标签的segments（长 segment 可能被拆分为多段）
     """
     if not diarization_result.segments:
         return asr_segments
-    
-    # 为每个ASR segment找到最匹配的说话人
+
+    result_segments: List[dict] = []
+
     for seg in asr_segments:
         seg_start = seg.get("start", 0.0)
         seg_end = seg.get("end", 0.0)
-        
-        # 找到与当前segment重叠最大的说话人segment
+        seg_duration = seg_end - seg_start
+
+        # 找到与当前segment重叠最大的说话人
         best_speaker = None
         best_overlap = 0
-        
+        speakers_in_seg = set()
+
         for spk_seg in diarization_result.segments:
-            # 计算重叠时间
             overlap_start = max(seg_start, spk_seg.start)
             overlap_end = min(seg_end, spk_seg.end)
             overlap_duration = max(0, overlap_end - overlap_start)
-            
-            # 计算重叠比例
-            seg_duration = seg_end - seg_start
-            if seg_duration > 0:
-                overlap_ratio = overlap_duration / seg_duration
-            else:
-                overlap_ratio = 0
-            
-            # 更新最佳匹配
-            if overlap_ratio > best_overlap and overlap_ratio >= overlap_threshold:
+            if overlap_duration <= 0:
+                continue
+
+            speakers_in_seg.add(spk_seg.speaker)
+
+            overlap_ratio = overlap_duration / seg_duration if seg_duration > 0 else 0
+            if overlap_ratio > best_overlap:
                 best_overlap = overlap_ratio
                 best_speaker = spk_seg.speaker
-        
-        # 分配说话人标签
-        if best_speaker:
+
+        if best_speaker is None:
+            result_segments.append(seg)
+            continue
+
+        # 单一说话人主导：直接打标签
+        if best_overlap >= overlap_threshold:
             seg["speaker"] = best_speaker
-    
-    return asr_segments
+            result_segments.append(seg)
+            continue
+
+        # 跨多说话人的长 segment：按词级时间戳拆分
+        if len(speakers_in_seg) > 1:
+            sub_segments = _split_segment_by_speakers(seg, diarization_result)
+            if sub_segments:
+                print(f"[Diarization] Segment {seg.get('id')} ({seg_start:.1f}-{seg_end:.1f}s) "
+                      f"split into {len(sub_segments)} speaker sub-segments")
+                result_segments.extend(sub_segments)
+                continue
+
+        # 兜底：取最大重叠说话人，避免无标签
+        seg["speaker"] = best_speaker
+        result_segments.append(seg)
+
+    # 拆分后重新编号
+    for idx, seg in enumerate(result_segments):
+        seg["id"] = idx + 1
+
+    return result_segments
 
 
 def merge_diarization_with_asr(asr_result: dict, 

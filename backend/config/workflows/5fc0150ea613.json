@@ -27,7 +27,8 @@
           "var1": "",
           "var1Required": false,
           "var2": "",
-          "var2Required": false
+          "var2Required": false,
+          "filePath": ""
         },
         "status": "completed",
         "disableExecute": false,
@@ -45,58 +46,23 @@
       },
       "measured": {
         "width": 420,
-        "height": 478
+        "height": 500
       },
       "selected": false
-    },
-    {
-      "id": "node_2_1783324281016",
-      "type": "workflow",
-      "position": {
-        "x": -1425,
-        "y": -2280
-      },
-      "data": {
-        "nodeType": "platform_download",
-        "label": "平台视频下载",
-        "config": {
-          "download_subs": true,
-          "download_cover": true,
-          "resolution": "best",
-          "cookie_file": "",
-          "use_as_task_name": true
-        },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "video": "cache\\s00_platform_download_video_开源minimax h3 一键复刻爆款视频 skill 公开了.mp4",
-          "image": "cache\\s00_platform_download_cover_开源minimax h3 一键复刻爆款视频 skill 公开了.jpg"
-        },
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 411
-      },
-      "selected": false,
-      "dragging": false
     },
     {
       "id": "node_1_1786496185089",
       "type": "workflow",
       "position": {
-        "x": -765,
-        "y": -2265
+        "x": -405,
+        "y": -2250
       },
       "data": {
         "nodeType": "video_preview",
         "label": "视频预览器",
         "config": {
           "title": "",
-          "fontSize": 24,
+          "fontSize": 12,
           "fontFamily": "sans-serif",
           "fontColor": "#ffffff",
           "backgroundColor": "rgba(0,0,0,0.6)",
@@ -111,32 +77,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 429
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_1_1786605666798",
-      "type": "workflow",
-      "position": {
-        "x": -930,
-        "y": -1620
-      },
-      "data": {
-        "nodeType": "video_frame_extract",
-        "label": "视频抽帧",
-        "config": {
-          "video_source": "input_node",
-          "time_point": 1,
-          "time_mode": "positive",
-          "avoid_subtitles": false
-        },
-        "status": "pending"
-      },
-      "measured": {
-        "width": 420,
-        "height": 265
+        "height": 171
       },
       "selected": false,
       "dragging": false
@@ -145,8 +86,8 @@
       "id": "node_2_1786605687528",
       "type": "workflow",
       "position": {
-        "x": -345,
-        "y": -1665
+        "x": -435,
+        "y": -1755
       },
       "data": {
         "nodeType": "image_preview",
@@ -154,71 +95,218 @@
         "config": {
           "fit": "contain"
         },
-        "status": "pending"
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "skipped": true
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 227
+        "height": 241
       },
       "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "group_msvicl14_sk47",
+      "type": "workflow",
+      "position": {
+        "x": -1110,
+        "y": -1980
+      },
+      "selected": false,
+      "data": {
+        "kind": "group",
+        "nodeType": "group_inline",
+        "label": "组合",
+        "config": {},
+        "status": "pending",
+        "groupMeta": {
+          "version": 1,
+          "internalWorkflow": {
+            "nodes": [
+              {
+                "id": "node_2_1783324281016",
+                "type": "workflow",
+                "position": {
+                  "x": 0,
+                  "y": 0
+                },
+                "data": {
+                  "nodeType": "platform_download",
+                  "label": "平台视频下载",
+                  "config": {
+                    "download_subs": false,
+                    "download_cover": false,
+                    "resolution": "best",
+                    "cookie_file": "",
+                    "use_as_task_name": true
+                  },
+                  "status": "completed",
+                  "disableExecute": false,
+                  "progress": 100,
+                  "message": "Completed",
+                  "outputs": {
+                    "video": "cache\\s00_platform_download_video_开源minimax h3 一键复刻爆款视频 skill 公开了.mp4",
+                    "image": "cache\\s00_platform_download_cover_开源minimax h3 一键复刻爆款视频 skill 公开了.jpg"
+                  },
+                  "error": "",
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 221
+                },
+                "selected": false,
+                "dragging": false
+              },
+              {
+                "id": "node_1_1786605666798",
+                "type": "workflow",
+                "position": {
+                  "x": 495,
+                  "y": 660
+                },
+                "data": {
+                  "nodeType": "video_frame_extract",
+                  "label": "视频抽帧",
+                  "config": {
+                    "video_source": "input_node",
+                    "time_point": 1,
+                    "time_mode": "positive",
+                    "avoid_subtitles": false
+                  },
+                  "status": "completed",
+                  "progress": 100,
+                  "message": "Completed",
+                  "outputs": {
+                    "image": "cache/key_frame_node_1_1786605666798.png"
+                  },
+                  "error": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 192
+                },
+                "selected": false,
+                "dragging": false
+              }
+            ],
+            "edges": [
+              {
+                "type": "smoothstep",
+                "animated": true,
+                "style": {
+                  "stroke": "#6366f1",
+                  "strokeWidth": 2
+                },
+                "source": "node_2_1783324281016",
+                "sourceHandle": "out-video",
+                "target": "node_1_1786605666798",
+                "targetHandle": "in-video",
+                "id": "xy-edge__node_2_1783324281016out-video-node_1_1786605666798in-video",
+                "selected": false
+              }
+            ]
+          },
+          "inputMappings": [
+            {
+              "exposedPortId": "gin_1",
+              "exposedLabel": "平台视频下载 / URL",
+              "targetNodeId": "node_2_1783324281016",
+              "targetPortId": "url",
+              "type": "url"
+            }
+          ],
+          "outputMappings": [
+            {
+              "exposedPortId": "gout_1",
+              "exposedLabel": "平台视频下载 / 视频",
+              "internalNodeId": "node_2_1783324281016",
+              "internalPortId": "video",
+              "type": "video",
+              "enabled": true
+            },
+            {
+              "exposedPortId": "gout_2",
+              "exposedLabel": "视频抽帧 / 帧图片",
+              "internalNodeId": "node_1_1786605666798",
+              "internalPortId": "image",
+              "type": "image",
+              "enabled": true
+            }
+          ],
+          "layout": {
+            "memberPositionsRelativeToGroup": {
+              "node_2_1783324281016": {
+                "x": 0,
+                "y": 0
+              },
+              "node_1_1786605666798": {
+                "x": 495,
+                "y": 660
+              }
+            }
+          },
+          "groupId": "group_msvicl14_sk47",
+          "name": "组合"
+        },
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 440,
+        "height": 493
+      },
       "dragging": false
     }
   ],
   "edges": [
     {
-      "type": "smoothstep",
+      "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#60a5fa",
+        "stroke": "#a78bfa",
         "strokeWidth": 2
       },
       "source": "node_1_1783324270560",
       "sourceHandle": "out-url",
-      "target": "node_2_1783324281016",
-      "targetHandle": "in-url",
-      "id": "xy-edge__node_1_1783324270560out-url-node_2_1783324281016in-url"
+      "target": "group_msvicl14_sk47",
+      "targetHandle": "in-gin_1",
+      "id": "xy-edge__node_1_1783324270560out-url-group_msvicl14_sk47in-gin_1"
     },
     {
-      "type": "smoothstep",
+      "type": "bezier",
       "animated": true,
       "style": {
         "stroke": "#34d399",
         "strokeWidth": 2
       },
-      "source": "node_2_1783324281016",
-      "sourceHandle": "out-video",
-      "target": "node_1_1786496185089",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_2_1783324281016out-video-node_1_1786496185089in-video"
-    },
-    {
-      "type": "smoothstep",
-      "animated": true,
-      "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1783324281016",
-      "sourceHandle": "out-video",
-      "target": "node_1_1786605666798",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_2_1783324281016out-video-node_1_1786605666798in-video"
-    },
-    {
-      "type": "smoothstep",
-      "animated": true,
-      "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1786605666798",
-      "sourceHandle": "out-image",
+      "source": "group_msvicl14_sk47",
+      "sourceHandle": "out-gout_2",
       "target": "node_2_1786605687528",
       "targetHandle": "in-image",
-      "id": "xy-edge__node_1_1786605666798out-image-node_2_1786605687528in-image"
+      "id": "xy-edge__group_msvicl14_sk47out-gout_2-node_2_1786605687528in-image"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "group_msvicl14_sk47",
+      "sourceHandle": "out-gout_1",
+      "target": "node_1_1786496185089",
+      "targetHandle": "in-video",
+      "id": "xy-edge__group_msvicl14_sk47out-gout_1-node_1_1786496185089in-video"
     }
   ],
   "type": "user",
   "createdAt": "2026-07-06T15:53:12",
-  "updatedAt": "2026-08-13T15:21:46"
+  "updatedAt": "2026-08-17T05:20:32",
+  "revision": 2
 }

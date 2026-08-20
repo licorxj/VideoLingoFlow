@@ -1,44 +1,46 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useWorkflowStore } from "@/stores/workflowStore";
-import { ReactFlow, Controls, ControlButton, Background, BackgroundVariant, addEdge, useNodesState, useEdgesState } from "@xyflow/react";
+import { ReactFlow, Controls, ControlButton, Background, BackgroundVariant, BezierEdge, addEdge, useNodesState, useEdgesState } from "@xyflow/react";
 import type { Connection, ReactFlowInstance } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { type WorkflowNode, type WorkflowEdge, type Workflow, type NodeTypeDef, getNodeTypeDef, canConnect, PORT_COLORS } from "@/lib/workflowTypes";
+import { type GroupOutputMapping, type WorkflowNode, type WorkflowEdge, type Workflow, type NodeTypeDef, getNodeTypeDefFromNode, canConnect, PORT_COLORS, isGroupNodeData } from "@/lib/workflowTypes";
 import WorkflowNodeComponent from "./WorkflowNode";
 import NodePalette from "./NodePalette";
 import ContextMenu from "./ContextMenu";
 import {
   Save, FolderOpen, Play, Trash2, RotateCcw, FileText, Loader2,
   Plus, Workflow as WorkflowIcon, Clock, CheckCircle2, Pause, Square, Copy,
-  ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2,
+  ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2, Layers3, Group, Ungroup, Settings2, CornerDownRight, Spline, Minus,
 } from "lucide-react";
 import client from "@/api/client";
 import { TaskMonitor } from "@/api/taskMonitor";
 import { getWebSocketUrl } from "@/api/ws";
-import { saveControlWorkflow, type RevisionConflictError } from "@/api/controlPlane";
+import { restoreLocalControlSession, saveControlWorkflow, type RevisionConflictError } from "@/api/controlPlane";
 import { packWorkflow, publishPackage, type PublishResult } from "@/api/community";
 import SharePackDialog, { type SharePackFields } from "@/components/community/SharePackDialog";
 import { captureWorkflowCanvas } from "@/lib/snapshot";
+import { buildGroupNode, createNodeDataFromType, expandGroupNodesForExecution, groupNodeToNodeTypeConfig, ungroupNode, updateGroupOutputMappings } from "@/lib/groupWorkflow";
 import { useProjectStore } from "@/stores/projectStore";
 import { useControlStore } from "@/stores/controlStore";
 import { getSubscriptionError, isDeviceLimitError, isSubscriptionBlocked, getQuotaExhaustedMessage } from "@/api/subscription";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import ExecutionModeModal, { type ExecutionMode } from "./ExecutionModeModal";
+import { createNodeType } from "@/api/nodeTypes";
 
 const nodeTypes = { workflow: WorkflowNodeComponent };
+const edgeTypes = { bezier: BezierEdge };
 let nodeIdCounter = 0;
 const getNextId = () => "node_" + (++nodeIdCounter) + "_" + Date.now();
 
-function createNodeData(nodeType: NodeTypeDef) {
-  return {
-    nodeType: nodeType.id,
-    label: nodeType.name,
-    config: { ...(nodeType.defaultConfig || {}) },
-    status: "pending" as const,
-  };
-}
+const EDGE_TYPES = [
+  { value: "smoothstep", label: "圆角直角线", description: "转折处使用圆角连接", icon: CornerDownRight },
+  { value: "bezier", label: "贝塞尔曲线", description: "平滑弯曲的连接线", icon: Spline },
+  { value: "straight", label: "直线", description: "节点间的最短直连", icon: Minus },
+] as const;
+
+type EdgeType = typeof EDGE_TYPES[number]["value"];
 
 /**
  * 确保节点数组每个元素都有 position（React Flow 必需字段），
@@ -50,6 +52,56 @@ function ensureNodePositions(nodes: any[]): any[] {
       ? n
       : { ...(n || {}), position: { x: 80 + (index % 8) * 260, y: 80 + Math.floor(index / 8) * 160 } }
   );
+}
+
+function runtimeStatus(status: string | undefined) {
+  return status === "succeeded" ? "completed" : status || "pending";
+}
+
+function projectGroupRuntimeState(node: any, taskNodes: Record<string, any>) {
+  const meta = node.data?.groupMeta;
+  if (!meta?.internalWorkflow?.nodes) return node;
+  const prefix = `${node.id}__`;
+  const members = meta.internalWorkflow.nodes.map((member: any) => {
+    const runtime = taskNodes[`${prefix}${member.id}`];
+    if (!runtime) return member;
+    return {
+      ...member,
+      data: {
+        ...member.data,
+        status: runtimeStatus(runtime.status),
+        progress: runtime.progress || 0,
+        message: runtime.message || "",
+        outputs: runtime.outputs || {},
+        error: runtime.error || "",
+      },
+    };
+  });
+  const statuses = members.map((member: any) => member.data?.status || "pending");
+  const failedMember = members.find((member: any) => member.data?.status === "failed");
+  const runningMember = members.find((member: any) => ["running", "streaming", "waiting"].includes(member.data?.status));
+  const allTerminal = statuses.length > 0 && statuses.every((status: string) => ["completed", "skipped", "cancelled"].includes(status));
+  const status = failedMember ? "failed" : runningMember ? (runningMember.data.status === "waiting" ? "waiting" : "running") : allTerminal ? "completed" : "pending";
+  const outputs: Record<string, any> = {};
+  (meta.outputMappings || []).filter((mapping: any) => mapping.enabled !== false).forEach((mapping: any) => {
+    const member = members.find((item: any) => item.id === mapping.internalNodeId);
+    const value = member?.data?.outputs?.[mapping.internalPortId];
+    if (value !== undefined && value !== null && value !== "") outputs[mapping.exposedPortId] = value;
+  });
+  const progress = members.length ? Math.round(members.reduce((sum: number, member: any) => sum + (Number(member.data?.progress) || 0), 0) / members.length) : 0;
+  const activeMember = failedMember || runningMember;
+  return {
+    ...node,
+    data: {
+      ...node.data,
+      status,
+      progress: status === "completed" ? 100 : progress,
+      message: activeMember?.data?.message || "",
+      outputs,
+      error: failedMember?.data?.error || "",
+      groupMeta: { ...meta, internalWorkflow: { ...meta.internalWorkflow, nodes: members } },
+    },
+  };
 }
 
 interface SavedWorkflow {
@@ -69,6 +121,8 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   video_preview: "视频预览",
   image_preview: "图片预览",
   s02_asr: "语音识别",
+    asr_recognize: "ASR识别",
+    asr_postprocess: "ASR后处理",
   s03_sentence_split: "断句",
   s05_translate: "翻译",
   s06_subtitle_gen: "字幕生成",
@@ -169,7 +223,11 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const taskModeId = store.taskModeId;
   const [saving, setSaving] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
-  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance | null>(null);
+  const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
+  const reactFlowInstanceRef = useRef<ReactFlowInstance<any, any> | null>(null);
+  // 右键菜单点选节点后的“粘附光标”放置模式：节点跟随鼠标，再次点击落入画布
+  const [placingNode, setPlacingNode] = useState<NodeTypeDef | null>(null);
+  const [placingPos, setPlacingPos] = useState({ x: 0, y: 0 });
   const [savedWorkflows, setSavedWorkflows] = useState<SavedWorkflow[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [execModeModalOpen, setExecModeModalOpen] = useState(false);
@@ -181,6 +239,14 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const [contextMenu, setContextMenu] = useState<{ visible: boolean; position: { x: number; y: number } }>({ visible: false, position: { x: 0, y: 0 } });
   const [wfListCollapsed, setWfListCollapsed] = useState(false);
   const [hoveredWf, setHoveredWf] = useState<SavedWorkflow | null>(null);
+  const [groupConfigOpen, setGroupConfigOpen] = useState(false);
+  const [groupConfigTargetId, setGroupConfigTargetId] = useState<string | null>(null);
+  const [groupDraftName, setGroupDraftName] = useState("组合");
+  const [groupSaveNodeId, setGroupSaveNodeId] = useState("");
+  const [groupDraftOutputs, setGroupDraftOutputs] = useState<GroupOutputMapping[]>([]);
+  const [groupSaveLoading, setGroupSaveLoading] = useState(false);
+  const [canvasSettingsOpen, setCanvasSettingsOpen] = useState(false);
+  const [edgeType, setEdgeType] = useState<EdgeType>("bezier");
 
   // 工作流分组（独立于 workflow 定义的分组索引表）
   const [groups, setGroups] = useState<{ id: string; name: string; order: number }[]>([]);
@@ -216,10 +282,26 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const EDGE_COLORS = ["#6366f1", "#22d3ee", "#a78bfa", "#34d399", "#fb923c", "#f472b6", "#60a5fa", "#facc15"];
   const randomEdgeColor = useCallback(() => EDGE_COLORS[Math.floor(Math.random() * EDGE_COLORS.length)], []);
 
+  // 自动适配视角：缩放画布使全部节点可见并居中（与工具栏适配视图按钮同效），
+  // 用 ref 读取实例避免异步回调闭包捕获旧值；延迟等待节点渲染测量完成
+  const fitViewToAll = useCallback((delay = 120) => {
+    window.setTimeout(() => {
+      reactFlowInstanceRef.current?.fitView({ padding: 0.15, duration: 300 });
+    }, delay);
+  }, []);
+
   const fetchWorkflows = useCallback(async () => {
     setLoadingList(true);
     try {
-      const res = await client.get("/api/workflows");
+      let res;
+      try {
+        res = await client.get("/api/workflows");
+      } catch (error: any) {
+        if (Number(error?.status ?? error?.response?.status ?? 0) !== 401) throw error;
+        const user = await restoreLocalControlSession();
+        if (!user) throw error;
+        res = await client.get("/api/workflows");
+      }
       setSavedWorkflows(res.data?.workflows || []);
       setGroups(res.data?.groups || []);
     } catch (err) {
@@ -350,6 +432,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               });
               setNodes(mergedNodes);
               setEdges(wf.edges || []);
+              // 载入任务工作流后自动适配视角：缩放显示全部并居中
+              fitViewToAll();
             }
           }).catch(() => {
             // Fallback: try to load from task.json nodes/edges
@@ -362,6 +446,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               setNodes(ensureNodePositions(wfNodes));
             }
             if (task.edges) setEdges(task.edges);
+            fitViewToAll();
           });
         }
       }).catch(console.error);
@@ -389,6 +474,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         saveCurrentId(wf.id);
         setNodes(wf.nodes || []);
         setEdges(wf.edges || []);
+        // 载入工作流后自动适配视角：缩放显示全部并居中
+        fitViewToAll();
 
         // Warn if some edges were dropped by port mismatch normalization
         const removedEdges = Array.isArray(res.data?.removed_edges)
@@ -444,7 +531,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     } catch (err) {
       console.error("Failed to load workflow:", err);
     }
-  }, [setNodes, setEdges, saveCurrentId]);
+  }, [setNodes, setEdges, saveCurrentId, fitViewToAll]);
 
   // Create new empty workflow
   const createNew = useCallback(() => {
@@ -466,41 +553,79 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     const sourceNode = nodes.find((n) => n.id === connection.source);
     const targetNode = nodes.find((n) => n.id === connection.target);
     if (!sourceNode || !targetNode) return;
-    const srcType = getNodeTypeDef((sourceNode.data as any).nodeType);
-    const tgtType = getNodeTypeDef((targetNode.data as any).nodeType);
+    const srcType = getNodeTypeDefFromNode(sourceNode as any);
+    const tgtType = getNodeTypeDefFromNode(targetNode as any);
     if (!srcType || !tgtType) return;
     const srcPort = srcType.outputs.find((p) => p.id === (connection.sourceHandle || "").replace("out-", ""));
     const tgtPort = tgtType.inputs.find((p) => p.id === (connection.targetHandle || "").replace("in-", ""));
     if (!srcPort || !tgtPort) return;
     if (!canConnect(srcPort.type, tgtPort.type)) return;
-    setEdges((eds) => addEdge({ ...connection, type: "smoothstep", animated: true, style: { stroke: randomEdgeColor(), strokeWidth: 2 } }, eds));
-  }, [nodes, setEdges]);
+    setEdges((eds) => addEdge({ ...connection, type: edgeType, animated: true, style: { stroke: randomEdgeColor(), strokeWidth: 2 } }, eds));
+  }, [edgeType, nodes, setEdges]);
+
+  const handleEdgeTypeChange = useCallback((nextType: EdgeType) => {
+    setEdgeType(nextType);
+    setEdges((eds) => eds.map((edge: any) => ({ ...edge, type: nextType })));
+  }, [setEdges]);
 
   const onDragOver = useCallback((e: React.DragEvent) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }, []);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     const data = e.dataTransfer.getData("application/reactflow");
-    if (!data || !reactFlowInstance || !reactFlowWrapper.current) return;
+    if (!data || !reactFlowInstance) return;
     const nodeType: NodeTypeDef = JSON.parse(data);
-    const bounds = reactFlowWrapper.current.getBoundingClientRect();
-    const position = reactFlowInstance.screenToFlowPosition({ x: e.clientX - bounds.left, y: e.clientY - bounds.top });
-    setNodes((nds) => [...nds, { id: getNextId(), type: "workflow", position, data: createNodeData(nodeType) }]);
+    // v12 的 screenToFlowPosition 直接接收屏幕坐标；节点 position 以左上角为锚点，
+    // 因此落点即节点左上角落在鼠标处
+    const position = reactFlowInstance.screenToFlowPosition({ x: e.clientX, y: e.clientY });
+    setNodes((nds) => [...nds, { id: getNextId(), type: "workflow", position, data: createNodeDataFromType(nodeType) }]);
   }, [reactFlowInstance, setNodes]);
 
   const addNodeAtCenter = useCallback((nodeType: NodeTypeDef) => {
     const vp = reactFlowInstance ? reactFlowInstance.getViewport() : { x: 0, y: 0, zoom: 1 };
     const cx = (reactFlowWrapper.current?.clientWidth || 600) / 2 / (vp.zoom || 1) - (vp.x || 0);
     const cy = (reactFlowWrapper.current?.clientHeight || 400) / 2 / (vp.zoom || 1) - (vp.y || 0);
-    setNodes((nds) => [...nds, { id: getNextId(), type: "workflow", position: { x: cx, y: cy }, data: createNodeData(nodeType) }]);
+    setNodes((nds) => [...nds, { id: getNextId(), type: "workflow", position: { x: cx, y: cy }, data: createNodeDataFromType(nodeType) }]);
   }, [reactFlowInstance, setNodes]);
 
   const addNodeAtPosition = useCallback((nodeType: NodeTypeDef, screenX: number, screenY: number) => {
-    if (!reactFlowInstance || !reactFlowWrapper.current) return;
-    const bounds = reactFlowWrapper.current.getBoundingClientRect();
-    const position = reactFlowInstance.screenToFlowPosition({ x: screenX - bounds.left, y: screenY - bounds.top });
-    setNodes((nds) => [...nds, { id: getNextId(), type: "workflow", position, data: createNodeData(nodeType) }]);
+    if (!reactFlowInstance) return;
+    // 直接传屏幕坐标（clientX/clientY），节点左上角落在鼠标点
+    const position = reactFlowInstance.screenToFlowPosition({ x: screenX, y: screenY });
+    setNodes((nds) => [...nds, { id: getNextId(), type: "workflow", position, data: createNodeDataFromType(nodeType) }]);
   }, [reactFlowInstance, setNodes]);
+
+  // “粘附光标”放置模式：跟随鼠标移动，在画布内点击左键落下节点，Esc/右键取消
+  useEffect(() => {
+    if (!placingNode) return;
+    const handleMove = (e: MouseEvent) => setPlacingPos({ x: e.clientX, y: e.clientY });
+    const handleDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      const bounds = reactFlowWrapper.current?.getBoundingClientRect();
+      if (bounds && e.clientX >= bounds.left && e.clientX <= bounds.right && e.clientY >= bounds.top && e.clientY <= bounds.bottom) {
+        addNodeAtPosition(placingNode, e.clientX, e.clientY);
+        setPlacingNode(null);
+      }
+    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") setPlacingNode(null); };
+    const handleCtx = (e: MouseEvent) => { e.preventDefault(); setPlacingNode(null); };
+    document.addEventListener("mousemove", handleMove);
+    document.addEventListener("keydown", handleKey);
+    document.addEventListener("contextmenu", handleCtx, true);
+    // 延迟注册 mousedown，避免选中节点的那次点击立即触发落下
+    let cleanupDown: (() => void) | null = null;
+    const armTimer = window.setTimeout(() => {
+      document.addEventListener("mousedown", handleDown, true);
+      cleanupDown = () => document.removeEventListener("mousedown", handleDown, true);
+    }, 0);
+    return () => {
+      window.clearTimeout(armTimer);
+      cleanupDown?.();
+      document.removeEventListener("mousemove", handleMove);
+      document.removeEventListener("keydown", handleKey);
+      document.removeEventListener("contextmenu", handleCtx, true);
+    };
+  }, [placingNode, addNodeAtPosition]);
 
   const handleCanvasContextMenu = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -533,6 +658,115 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
     setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
   }, [setNodes, setEdges]);
+
+  const openGroupConfig = useCallback((groupNodeId: string) => {
+    const groupNode = nodes.find((node: any) => node.id === groupNodeId);
+    if (!groupNode?.data?.groupMeta) return;
+    setGroupConfigTargetId(groupNodeId);
+    setGroupDraftName(groupNode.data.groupMeta.name || groupNode.data.label || "组合");
+    setGroupDraftOutputs(groupNode.data.groupMeta.outputMappings || []);
+    setGroupConfigOpen(true);
+  }, [nodes]);
+
+  const handleGroupSelected = useCallback(() => {
+    const selectedIds = nodes.filter((node: any) => node.selected).map((node: any) => node.id);
+    try {
+      const grouped = buildGroupNode(nodes as WorkflowNode[], edges as WorkflowEdge[], selectedIds);
+      setNodes(grouped.nodes);
+      setEdges(grouped.edges);
+      openGroupConfig(grouped.groupNodeId);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "组合失败");
+    }
+  }, [edges, nodes, openGroupConfig, setEdges, setNodes]);
+
+  const handleUngroupNode = useCallback((groupNodeId: string) => {
+    try {
+      const next = ungroupNode(nodes as WorkflowNode[], edges as WorkflowEdge[], groupNodeId);
+      setNodes(next.nodes);
+      setEdges(next.edges);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "解散组合失败");
+    }
+  }, [edges, nodes, setEdges, setNodes]);
+
+  const handleSaveGroupAsNodeType = useCallback(async (groupNodeId: string) => {
+    const groupNode = nodes.find((node: any) => node.id === groupNodeId) as WorkflowNode | undefined;
+    if (!groupNode) return;
+    const nodeName = groupDraftName.trim() || groupNode.data?.groupMeta?.name || groupNode.data?.label || "组合节点";
+    const nodeId = groupSaveNodeId.trim() || `groupnode_${Date.now().toString(36)}`;
+    if (!/^[A-Za-z0-9_-]+$/.test(nodeId)) {
+      alert("组合节点 ID 仅支持字母、数字、_ 和 -");
+      return;
+    }
+    try {
+      setGroupSaveLoading(true);
+      const outputMappings = groupDraftOutputs.map((item) => ({
+        ...item,
+        exposedLabel: item.exposedLabel.trim() || item.exposedPortId,
+      }));
+      const groupNodeForSave: WorkflowNode = {
+        ...groupNode,
+        data: {
+          ...groupNode.data,
+          label: nodeName,
+          groupMeta: {
+            ...groupNode.data.groupMeta,
+            name: nodeName,
+            outputMappings,
+          } as NonNullable<WorkflowNode["data"]["groupMeta"]>,
+        },
+      };
+      const payload = groupNodeToNodeTypeConfig(groupNodeForSave);
+      payload.id = nodeId.trim();
+      payload.name = nodeName.trim();
+      payload.description = `${nodeName.trim()}（组合节点）`;
+      await createNodeType(payload as any);
+      setNodes((nds) => nds.map((node: any) => node.id === groupNodeId ? {
+        ...node,
+        data: {
+          ...node.data,
+          nodeType: payload.id,
+          label: payload.name,
+          groupMeta: {
+            ...node.data.groupMeta,
+            name: payload.name,
+            savedNodeTypeId: payload.id,
+          },
+        },
+      } : node));
+      alert("组合节点已保存到节点库");
+      setGroupSaveNodeId("");
+    } catch (error: any) {
+      alert(`保存组合节点失败：${error?.response?.data?.detail || error?.message || "未知错误"}`);
+    } finally {
+      setGroupSaveLoading(false);
+    }
+  }, [groupDraftName, groupDraftOutputs, groupSaveNodeId, nodes, setNodes]);
+
+  const applyGroupConfigDraft = useCallback(() => {
+    if (!groupConfigTargetId) return;
+    const nextOutputs = groupDraftOutputs.map((item) => ({
+      ...item,
+      exposedLabel: item.exposedLabel.trim() || item.exposedPortId,
+    }));
+    setNodes((nds) => nds.map((node: any) => node.id === groupConfigTargetId ? {
+      ...node,
+      data: {
+        ...node.data,
+        label: groupDraftName.trim() || "组合",
+        groupMeta: {
+          ...node.data.groupMeta,
+          name: groupDraftName.trim() || "组合",
+          outputMappings: nextOutputs,
+        },
+      },
+    } : node));
+    const updated = updateGroupOutputMappings(nodes as WorkflowNode[], edges as WorkflowEdge[], groupConfigTargetId, nextOutputs);
+    setEdges(updated.edges);
+    setGroupConfigOpen(false);
+    setGroupConfigTargetId(null);
+  }, [edges, groupConfigTargetId, groupDraftName, groupDraftOutputs, nodes, setEdges, setNodes]);
 
   const collectDownstreamNodeIds = useCallback((startNodeId: string) => {
     const downstream = new Set<string>();
@@ -612,6 +846,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       if (isInput) return;
       const ctrl = e.ctrlKey || e.metaKey;
       if (e.key === "Delete" || e.key === "Backspace") { deleteSelected(); e.preventDefault(); }
+      else if (ctrl && e.key.toLowerCase() === "g") { handleGroupSelected(); e.preventDefault(); }
       else if (ctrl && e.key === "c") { copySelected(); e.preventDefault(); }
       else if (ctrl && e.key === "v") { pasteClipboard(); e.preventDefault(); }
       else if (ctrl && e.shiftKey && e.key === "S") { setSaveAsModalOpen(true); e.preventDefault(); }
@@ -620,7 +855,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [deleteSelected, copySelected, pasteClipboard, handleSave, selectAll]);
+  }, [deleteSelected, handleGroupSelected, copySelected, pasteClipboard, handleSave, selectAll]);
 
   const handleSaveAs = async () => {
     setSaveAsName(workflowName || "未命名工作流");
@@ -728,6 +963,11 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     if (!task?.nodes) return;
     const outputs: Record<string, any> = {};
     setNodes((nds) => nds.map((n: any) => {
+      if (isGroupNodeData(n.data)) {
+        const projected = projectGroupRuntimeState(n, task.nodes);
+        if (Object.keys(projected.data?.outputs || {}).length > 0) outputs[n.id] = { outputs: projected.data.outputs };
+        return projected;
+      }
       const ninfo = task.nodes?.[n.id];
       if (!ninfo) return n;
       if (ninfo.outputs && Object.keys(ninfo.outputs).length > 0) {
@@ -803,6 +1043,10 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   useEffect(() => () => taskMonitorRef.current?.stop(), []);
 
   const hasRunningNodes = nodes.some((n: any) => n.data?.status === "running" || n.data?.status === "streaming");
+  const totalNodeCount = nodes.length;
+  const completedNodeCount = nodes.filter((n: any) => n.data?.status === "completed").length;
+  const workflowProgress = totalNodeCount > 0 ? Math.round((completedNodeCount / totalNodeCount) * 100) : 0;
+  const showWorkflowProgress = executing || !!executingNode || cancelling || hasRunningNodes;
 
   // 连线颜色：基于接口类型 + 运行状态叠加
   const styledEdges = useMemo(() => {
@@ -813,7 +1057,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       const tgtStatus = tgtNode?.data?.status || "pending";
 
       // 根据源端口类型获取颜色
-      const srcNodeType = getNodeTypeDef(srcNode?.data?.nodeType);
+      const srcNodeType = getNodeTypeDefFromNode(srcNode as any);
       const srcPort = srcNodeType?.outputs?.find((p) => p.id === (e.sourceHandle || "").replace("out-", ""));
       const portType = srcPort?.type || "any";
       let color = PORT_COLORS[portType] || "#6b7280";
@@ -881,7 +1125,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           setCancelling(false);
         }
       },
-      onEvent: (data) => {
+      onEvent: (data: any) => {
         const stepId = typeof data.node_id === "string"
           ? data.node_id
           : typeof data.step_id === "string"
@@ -890,17 +1134,23 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         const progress = typeof data.progress === "number" ? data.progress : 0;
         const message = typeof data.message === "string" ? data.message : "";
         if (stepId === "__task__") return;
-        setNodes((nds) => nds.map((node: any) => node.id === stepId ? {
-          ...node,
-          data: {
-            ...node.data,
-            status: progress === -1 || data.status === "failed" ? "failed" : data.status === "succeeded" ? "completed" : data.status || (progress >= 100 ? "completed" : progress > 0 ? "running" : "pending"),
-            progress: Math.max(0, progress),
-            message: progress === -1 && message.startsWith("ERROR: ") ? message.slice(7) : message,
-            outputs: data.outputs || node.data?.outputs || {},
-            error: typeof data.error === "string" ? data.error : progress === -1 ? message : "",
-          },
-        } : node));
+        setNodes((nds) => {
+          const taskNodes = {
+            [stepId]: {
+              status: data.status || (progress === -1 ? "failed" : progress >= 100 ? "succeeded" : progress > 0 ? "running" : "pending"),
+              progress: Math.max(0, progress),
+              message: progress === -1 && message.startsWith("ERROR: ") ? message.slice(7) : message,
+              outputs: data.outputs?.outputs || data.outputs || {},
+              error: typeof data.error === "string" ? data.error : progress === -1 ? message : "",
+            },
+          };
+          return nds.map((node: any) => {
+            if (isGroupNodeData(node.data)) return projectGroupRuntimeState(node, taskNodes);
+            if (node.id !== stepId) return node;
+            const ninfo = taskNodes[stepId];
+            return { ...node, data: { ...node.data, status: runtimeStatus(ninfo.status), progress: ninfo.progress, message: ninfo.message, outputs: ninfo.outputs, error: ninfo.error } };
+          });
+        });
       },
     });
     taskMonitorRef.current = monitor;
@@ -954,16 +1204,18 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       // Use reactFlowInstance to get the latest nodes (includes unsaved config changes)
       const latestNodes = reactFlowInstance ? reactFlowInstance.getNodes() : nodes;
       const latestEdges = reactFlowInstance ? reactFlowInstance.getEdges() : edges;
+      const isGroup = isGroupNodeData(node.data);
+      const expanded = expandGroupNodesForExecution({ nodes: latestNodes as WorkflowNode[], edges: latestEdges as WorkflowEdge[] }, { targetGroupNodeId: nodeId, targetScope: "node" });
       const inputNode = latestNodes.find((n: any) => n.data?.nodeType === "input");
       const inputConfig = inputNode?.data?.config || {};
 
       const res = await client.post(`/api/workflows/${wfId}/execute-node`, {
-        nodes: latestNodes,
-        edges: latestEdges,
+        nodes: expanded.nodes,
+        edges: expanded.edges,
         input: inputConfig,
         task_id: activeTaskId || taskModeId || "",
-        node_id: nodeId,
-        scope: "node",
+        node_id: isGroup ? nodeId : (expanded.targetNodeId || nodeId),
+        scope: isGroup ? "group" : "node",
       });
 
       const taskId = res.data?.task_id;
@@ -1003,16 +1255,19 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     try {
       const latestNodes = reactFlowInstance ? reactFlowInstance.getNodes() : nodes;
       const latestEdges = reactFlowInstance ? reactFlowInstance.getEdges() : edges;
+      const selectedNode = latestNodes.find((item: any) => item.id === nodeId);
+      const isGroup = isGroupNodeData(selectedNode?.data);
+      const expanded = expandGroupNodesForExecution({ nodes: latestNodes as WorkflowNode[], edges: latestEdges as WorkflowEdge[] }, { targetGroupNodeId: nodeId, targetScope: "downstream" });
       const inputNode = latestNodes.find((n: any) => n.data?.nodeType === "input");
       const inputConfig = inputNode?.data?.config || {};
       const res = await client.post(`/api/workflows/${wfId}/execute-node`, {
-        nodes: latestNodes,
-        edges: latestEdges,
+        nodes: expanded.nodes,
+        edges: expanded.edges,
         input: inputConfig,
         task_id: activeTaskId || taskModeId || "",
-        node_id: nodeId,
-        run_downstream: true,
-        scope: "downstream",
+        node_id: isGroup ? nodeId : (expanded.targetNodeId || nodeId),
+        run_downstream: !isGroup,
+        scope: isGroup ? "group_downstream" : "downstream",
       });
 
       const nextTaskId = res.data?.task_id;
@@ -1033,6 +1288,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     // Use reactFlowInstance to get the latest nodes (includes unsaved config changes)
     const latestNodes = reactFlowInstance ? reactFlowInstance.getNodes() : nodes;
     const latestEdges = reactFlowInstance ? reactFlowInstance.getEdges() : edges;
+    const expanded = expandGroupNodesForExecution({ nodes: latestNodes as WorkflowNode[], edges: latestEdges as WorkflowEdge[] });
     if (latestNodes.length === 0) return;
 
     if (!(await ensureTaskAllowed())) return;
@@ -1058,7 +1314,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       resetExecutionDisplay({ clearTaskId: true });
       try {
         const res = await client.post("/api/workflows/" + wfId + "/execute", {
-          nodes: latestNodes, edges: latestEdges, input: inputConfig, mode: "new",
+          nodes: expanded.nodes, edges: expanded.edges, input: inputConfig, mode: "new",
           task_id: activeTaskId || taskModeId || "",
         });
         const newTaskId = res.data?.task_id;
@@ -1092,7 +1348,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       // restart（从头执行）→ restart_clean：后端清空 cache 全新开始
       const backendMode = mode === "restart" ? "restart_clean" : mode;
       const executeBody: any = {
-        nodes: latestNodes, edges: latestEdges, input: inputConfig, mode: backendMode,
+        nodes: expanded.nodes, edges: expanded.edges, input: inputConfig, mode: backendMode,
         task_id: previousTaskId,
       };
       const res = await client.post("/api/workflows/" + wfId + "/execute", executeBody);
@@ -1139,7 +1395,14 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   handleExecuteNodeRef.current = handleExecuteNode;
   const handleExecuteFromNodeRef = useRef(handleExecuteFromNode);
   handleExecuteFromNodeRef.current = handleExecuteFromNode;
+  const handleUngroupNodeRef = useRef(handleUngroupNode);
+  handleUngroupNodeRef.current = handleUngroupNode;
+  const handleSaveGroupAsNodeTypeRef = useRef(handleSaveGroupAsNodeType);
+  handleSaveGroupAsNodeTypeRef.current = handleSaveGroupAsNodeType;
+  const openGroupConfigRef = useRef(openGroupConfig);
+  openGroupConfigRef.current = openGroupConfig;
   const disableExecute = executing || !!executingNode || cancelling;
+  const selectedNodeCount = nodes.filter((node: any) => node.selected).length;
 
   const flowNodes = nodes.map(n => ({
     ...n,
@@ -1147,6 +1410,9 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       ...n.data,
       onExecuteNode: (id: string) => handleExecuteNodeRef.current(id),
       onExecuteFromNode: (id: string) => handleExecuteFromNodeRef.current(id),
+      onUngroupNode: (id: string) => handleUngroupNodeRef.current(id),
+      onSaveAsGroupNode: (id: string) => handleSaveGroupAsNodeTypeRef.current(id),
+      onEditGroupNode: (id: string) => openGroupConfigRef.current(id),
       disableExecute,
     }
   }));
@@ -1172,14 +1438,15 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           </button>
           {/* 分组标签栏：全部 / 未分组 / 各分组 / + （紧跟刷新按钮，紧凑横排） */}
           <div className="flex items-center gap-1 px-1 ml-1 max-w-[60%] overflow-x-auto">
-            <GroupTab label={"全部"} active={activeGroup === "all"} onClick={() => setActiveGroup("all")} compact />
-            <GroupTab label={"未分组"} active={activeGroup === "ungrouped"} onClick={() => setActiveGroup("ungrouped")} compact />
+            <GroupTab label={"全部"} active={activeGroup === "all"} onClick={() => setActiveGroup("all")} count={savedWorkflows.length} compact />
+            <GroupTab label={"未分组"} active={activeGroup === "ungrouped"} onClick={() => setActiveGroup("ungrouped")} count={savedWorkflows.filter((w) => !w.groupId).length} compact />
             {groups.map((g) => (
               <GroupTab
                 key={g.id}
                 label={g.name}
                 active={activeGroup === g.id}
                 onClick={() => setActiveGroup(g.id)}
+                count={savedWorkflows.filter((w) => w.groupId === g.id).length}
                 onDelete={() => setDeleteGroupTarget({ id: g.id, name: g.name })}
                 compact
               />
@@ -1217,7 +1484,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               <button
                 onClick={() => loadWorkflow(wf.id)}
                 className={cn(
-                  "w-full p-3 rounded-2xl text-left transition-all duration-300",
+                  "w-full h-[112px] p-3 rounded-2xl text-left transition-all duration-300 flex flex-col",
                   "border bg-gradient-to-b from-card to-card/90",
                   "shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.6)]",
                   "hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),0_10px_24px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.7)]",
@@ -1237,7 +1504,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                 {wf.description && (
                   <div className="mt-1.5 text-[10px] text-muted-foreground/80 line-clamp-2 leading-snug">{wf.description}</div>
                 )}
-                <div className="mt-2.5 flex items-center gap-1.5 flex-wrap">
+                <div className="mt-auto flex items-center gap-1.5 flex-wrap">
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-400/20">
                     <span className="w-1 h-1 rounded-full bg-sky-500" />
                     {wf.nodeCount || 0} 节点
@@ -1375,6 +1642,14 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                 setPackOpen(true);
               }} />
               <Btn icon={RotateCcw} label={"\u6e05\u7a7a"} onClick={handleClear} />
+              <button
+                onClick={handleGroupSelected}
+                disabled={selectedNodeCount < 2}
+                className="flex items-center gap-1 px-2.5 py-2 text-sm font-bold text-violet-700 border border-violet-400/40 bg-violet-500/10 rounded-lg hover:bg-violet-500/20 active:scale-[0.97] disabled:opacity-40 transition-all"
+                title="选中节点后按 Ctrl+G 组合"
+              >
+                <Group className="w-3 h-3" /> 组合
+              </button>
               <div className="w-px h-4 bg-border/40 mx-0.5" />
               <button onClick={handleExecute} disabled={nodes.length === 0 || executing || !!executingNode || cancelling}
                 className="flex items-center gap-1 px-2.5 py-2 text-sm font-bold text-primary-foreground border border-primary/60 bg-primary rounded-lg hover:shadow-lg hover:shadow-primary/30 active:scale-[0.97] disabled:opacity-40 transition-all">
@@ -1395,11 +1670,12 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           {/* Canvas */}
           <div ref={reactFlowWrapper} className="flex-1 relative">
             <ReactFlow nodes={flowNodes} edges={styledEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-              onConnect={onConnect} onInit={setReactFlowInstance} onDragOver={onDragOver} onDrop={onDrop}
+              onConnect={onConnect} onInit={(inst) => { reactFlowInstanceRef.current = inst; setReactFlowInstance(inst); }} onDragOver={onDragOver} onDrop={onDrop}
               onPaneContextMenu={(e) => { e.preventDefault(); setContextMenu({ visible: true, position: { x: e.clientX, y: e.clientY } }); }}
-              nodeTypes={nodeTypes} fitView snapToGrid snapGrid={[15, 15]}
+              nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView snapToGrid snapGrid={[15, 15]}
+              selectionOnDrag selectionKeyCode="Shift" multiSelectionKeyCode="Shift"
               minZoom={0.05} maxZoom={4}
-              defaultEdgeOptions={{ type: "smoothstep", animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } }}
+              defaultEdgeOptions={{ type: edgeType, animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } }}
               proOptions={{ hideAttribution: true }}>
               <Controls style={{ top: 12, left: 0, right: "auto", bottom: "auto", transform: "none" }}>
                 <ControlButton
@@ -1410,8 +1686,22 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                 >
                   {trackEnabled ? <Crosshair className="w-3.5 h-3.5 animate-pulse" /> : <LocateFixed className="w-3.5 h-3.5" />}
                 </ControlButton>
+                <ControlButton onClick={() => setCanvasSettingsOpen(true)} title="画布设置与快捷键">
+                  <Settings2 className="w-3.5 h-3.5" />
+                </ControlButton>
               </Controls>
               <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--border))" />
+              {showWorkflowProgress && (
+                <div className="absolute bottom-4 left-1/2 z-10 w-[min(520px,calc(100%-32px))] -translate-x-1/2 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-xl backdrop-blur-sm">
+                  <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+                    <span className="font-semibold text-foreground">工作流进度</span>
+                    <span className="font-mono text-muted-foreground">{completedNodeCount} / {totalNodeCount} 节点 · {workflowProgress}%</span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="工作流进度" aria-valuemin={0} aria-valuemax={totalNodeCount} aria-valuenow={completedNodeCount}>
+                    <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${workflowProgress}%` }} />
+                  </div>
+                </div>
+              )}
               {/* Task ID indicator */}
 
               {(activeTaskId || taskModeId || currentWfId) && (
@@ -1471,6 +1761,56 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         />
       </div>
     
+      <Dialog open={canvasSettingsOpen} onOpenChange={setCanvasSettingsOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Settings2 className="w-4 h-4" />画布设置</DialogTitle>
+            <DialogDescription>切换线型后立即刷新当前画布，并用于后续新建连接。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-5">
+            <div className="space-y-2">
+              <div className="text-xs font-medium text-muted-foreground">连线线型</div>
+              <div className="grid gap-2">
+                {EDGE_TYPES.map((option) => {
+                  const Icon = option.icon;
+                  const selected = edgeType === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => handleEdgeTypeChange(option.value)}
+                      className={cn(
+                        "flex items-center gap-3 border px-3 py-2.5 text-left transition-colors rounded-lg",
+                        selected ? "border-primary bg-primary/10 text-foreground" : "border-border/60 hover:bg-secondary/60"
+                      )}
+                    >
+                      <Icon className={cn("h-4 w-4 shrink-0", selected ? "text-primary" : "text-muted-foreground")} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-sm font-medium">{option.label}</span>
+                        <span className="block text-xs text-muted-foreground">{option.description}</span>
+                      </span>
+                      <span className={cn("h-2.5 w-2.5 rounded-full border", selected ? "border-primary bg-primary" : "border-muted-foreground/50")} />
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="border-t border-border/60 pt-4">
+              <div className="mb-2 text-xs font-medium text-muted-foreground">快捷键</div>
+              <div className="grid grid-cols-2 gap-x-5 gap-y-2 text-xs">
+                <span className="text-muted-foreground">保存 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + S</kbd></span>
+                <span className="text-muted-foreground">另存为 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + Shift + S</kbd></span>
+                <span className="text-muted-foreground">复制 / 粘贴 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + C/V</kbd></span>
+                <span className="text-muted-foreground">全选 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + A</kbd></span>
+                <span className="text-muted-foreground">组合 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + G</kbd></span>
+                <span className="text-muted-foreground">删除 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Delete / Backspace</kbd></span>
+                <span className="text-muted-foreground">框选 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Shift + 鼠标拖拽</kbd></span>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <ExecutionModeModal
         isOpen={execModeModalOpen}
         onConfirm={handleExecuteWithMode}
@@ -1478,6 +1818,92 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         hasCompletedSteps={hasCompletedSteps}
         isBatchTask={store.isBatchTask}
       />
+
+      <Dialog open={groupConfigOpen} onOpenChange={(open) => { setGroupConfigOpen(open); if (!open) setGroupConfigTargetId(null); }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2"><Layers3 className="w-4 h-4 text-violet-500" />组合设置</DialogTitle>
+            <DialogDescription>设置组合名称，并选择需要暴露到组合外部的输出端点。</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">组合名称</label>
+              <input
+                type="text"
+                value={groupDraftName}
+                onChange={(e) => setGroupDraftName(e.target.value)}
+                className="w-full px-3 py-2 border border-border/50 rounded-lg bg-background/50 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                placeholder="请输入组合名称"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-muted-foreground mb-1 block">组合节点 ID</label>
+              <input
+                type="text"
+                value={groupSaveNodeId}
+                onChange={(e) => setGroupSaveNodeId(e.target.value)}
+                className="w-full px-3 py-2 border border-border/50 rounded-lg bg-background/50 text-sm focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                placeholder="留空时自动生成"
+              />
+            </div>
+            <div className="rounded-xl border border-border/60 bg-background/40">
+              <div className="px-4 py-3 border-b border-border/60 text-sm font-semibold">输出暴露</div>
+              <div className="max-h-[360px] overflow-y-auto divide-y divide-border/50">
+                {groupDraftOutputs.length ? groupDraftOutputs.map((item, index) => (
+                  <label key={item.exposedPortId} className="flex items-start gap-3 px-4 py-3 cursor-pointer hover:bg-secondary/30">
+                    <input
+                      type="checkbox"
+                      checked={item.enabled !== false}
+                      onChange={(e) => setGroupDraftOutputs((current) => current.map((entry, entryIndex) => entryIndex === index ? { ...entry, enabled: e.target.checked } : entry))}
+                      className="mt-1"
+                    />
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div className="text-xs text-muted-foreground">内部输出</div>
+                      <div className="text-sm font-medium">{item.exposedLabel}</div>
+                      <input
+                        type="text"
+                        value={item.exposedLabel}
+                        onChange={(e) => setGroupDraftOutputs((current) => current.map((entry, entryIndex) => entryIndex === index ? { ...entry, exposedLabel: e.target.value } : entry))}
+                        className="w-full px-2.5 py-1.5 border border-border/50 rounded-md bg-background text-xs"
+                        placeholder="外部端口显示名称"
+                      />
+                    </div>
+                  </label>
+                )) : (
+                  <div className="px-4 py-8 text-center text-sm text-muted-foreground">当前组合没有可暴露的输出端点。</div>
+                )}
+              </div>
+            </div>
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={() => groupConfigTargetId && handleSaveGroupAsNodeType(groupConfigTargetId)}
+                disabled={!groupConfigTargetId || groupSaveLoading}
+                className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-medium rounded-lg border border-violet-400/30 text-violet-700 bg-violet-500/10 hover:bg-violet-500/20 disabled:opacity-40 transition-all"
+              >
+                {groupSaveLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Share2 className="w-3 h-3" />}
+                保存为组合节点
+              </button>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setGroupConfigOpen(false)}
+                  className="px-4 py-2 text-xs font-medium rounded-lg border border-border/50 hover:bg-secondary/60 text-muted-foreground transition-all"
+                >
+                  取消
+                </button>
+                <button
+                  type="button"
+                  onClick={applyGroupConfigDraft}
+                  className="px-4 py-2 text-xs font-medium rounded-lg bg-primary text-primary-foreground hover:opacity-90 transition-all"
+                >
+                  保存设置
+                </button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Save As Modal */}
       {saveAsModalOpen && (
@@ -1667,8 +2093,25 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         visible={contextMenu.visible}
         position={contextMenu.position}
         onClose={() => setContextMenu((p) => ({ ...p, visible: false }))}
-        onSelectNode={(nodeType) => addNodeAtPosition(nodeType, contextMenu.position.x, contextMenu.position.y)}
+        onSelectNode={(nodeType, screenPos) => {
+          // 点选后进入“粘附光标”模式，由用户再次点击决定落点
+          setContextMenu((p) => ({ ...p, visible: false }));
+          if (screenPos) setPlacingPos(screenPos);
+          setPlacingNode(nodeType);
+        }}
       />
+
+      {/* 粘附光标的节点预览：跟随鼠标，点击画布落下 */}
+      {placingNode && (
+        <div
+          className="fixed z-[10000] pointer-events-none flex items-center gap-2 px-3 py-2 rounded-lg border border-primary/60 bg-card/95 shadow-xl backdrop-blur-sm"
+          style={{ left: placingPos.x + 14, top: placingPos.y + 12 }}
+        >
+          <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: placingNode.color }} />
+          <span className="text-xs font-medium whitespace-nowrap">{placingNode.name}</span>
+          <span className="text-[10px] text-muted-foreground/70 whitespace-nowrap">点击画布放置 · Esc 取消</span>
+        </div>
+      )}
 
       {/* Workflow detail dialog */}
       <Dialog open={!!hoveredWf} onOpenChange={(open) => { if (!open) setHoveredWf(null); }}>

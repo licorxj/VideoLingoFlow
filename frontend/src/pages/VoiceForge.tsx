@@ -9,6 +9,10 @@ import { getWebSocketUrl } from "@/api/ws";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageBackground } from "@/components/shared/PageBackground";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingState } from "@/components/shared/LoadingState";
 import { VoiceEditorDialog } from "@/components/voiceforge/VoiceEditorDialog";
 import { EmotionTagDialog } from "@/components/voiceforge/EmotionTagDialog";
 import { EmotionDesignDialog } from "@/components/voiceforge/EmotionDesignDialog";
@@ -18,20 +22,7 @@ import { AssetLibrary } from "@/components/voiceforge/assets/AssetLibrary";
 import { ProjectCreateDialog } from "@/components/voiceforge/ProjectCreateDialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
-function PageTitle({ icon: Icon, title, detail, actions }: { icon: any; title: string; detail: string; actions?: React.ReactNode }) {
-  return <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-    <div>
-      <h2 className="flex items-center gap-2.5 text-2xl font-extrabold"><Icon className="h-6 w-6 text-primary" />{title}</h2>
-      <p className="mt-1 text-sm text-muted-foreground">{detail}</p>
-    </div>
-    {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-  </div>;
-}
-
-function ActionButton({ children, onClick, variant = "primary", disabled = false, type = "button" }: { children: React.ReactNode; onClick?: () => void; variant?: "primary" | "secondary" | "danger"; disabled?: boolean; type?: "button" | "submit" }) {
-  const colors = variant === "primary" ? "bg-primary text-primary-foreground hover:bg-primary/90" : variant === "danger" ? "border border-red-500/30 text-red-600 hover:bg-red-500/10" : "border border-border/60 hover:bg-accent/60";
-  return <button type={type} disabled={disabled} onClick={onClick} className={`inline-flex h-9 items-center gap-1.5 rounded-lg px-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${colors}`}>{children}</button>;
-}
+/* ActionButton 已被 Button 语义变体替代（success/info/ai/destructive/outline）。 */
 
 export function VoiceForgeHome() {
   const [projects, setProjects] = useState<VoiceForgeProject[]>([]);
@@ -56,15 +47,145 @@ export function VoiceForgeHome() {
     const first = result.data.projects[0];
     if (first) navigate(`/voiceforge/projects/${first.id}`);
   };
-  return <div className="mx-auto max-w-7xl space-y-6">
-    <PageTitle icon={Mic2} title="晴沐配音谷" detail="项目、配音任务与音频产出的统一管理台" actions={<><Link to="/voiceforge/voices"><ActionButton variant="secondary"><UserRound className="h-4 w-4" />音色库</ActionButton></Link><ActionButton variant="secondary" onClick={() => void openWorkspace()}><Music2 className="h-4 w-4" />配音台</ActionButton><Link to="/voiceforge/assets"><ActionButton variant="secondary"><FolderOpen className="h-4 w-4" />素材库</ActionButton></Link><ActionButton onClick={load}><RefreshCw className="h-4 w-4" />刷新</ActionButton></>} />
-    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><OverviewItem icon={AudioLines} label="项目总数" value={overview?.project_count || 0} detail={`${dashboard?.project_statuses.processing || 0} 个制作中`} /><OverviewItem icon={Clock3} label="待合成句子" value={overview?.sentence_pending || 0} detail={`${overview?.sentence_generating || 0} 句正在生成`} /><OverviewItem icon={CircleAlert} label="待处理异常" value={overview?.sentence_error || 0} detail={`${overview?.task_failed || 0} 个失败任务`} tone="error" /><OverviewItem icon={Music2} label="已生成时长" value={formatDuration(overview?.audio_duration_done || 0)} detail={`${overview?.sentence_done || 0} 句已完成`} /></section>
-    <section className="border border-border/60 bg-card"><div className="flex flex-col gap-3 border-b border-border/60 p-4 lg:flex-row lg:items-center"><ActionButton onClick={() => setCreateOpen(true)}><Plus className="h-4 w-4" />新建项目</ActionButton><div className="flex flex-wrap gap-2"><div className="relative"><Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" /><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索项目" className="h-10 w-48 border border-border bg-background pl-9 pr-3 text-sm" /></div><select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 border border-border bg-background px-3 text-sm"><option value="">全部状态</option><option value="draft">草稿</option><option value="processing">制作中</option><option value="completed">已完成</option><option value="archived">已归档</option></select><ActionButton variant="secondary" onClick={load}>筛选</ActionButton></div></div>
-      {editing && <div className="flex flex-col gap-2 border-b border-border/60 bg-muted/20 p-4 md:flex-row"><input value={editName} onChange={(event) => setEditName(event.target.value)} className="h-10 flex-1 border border-border bg-background px-3 text-sm" /><input value={editDescription} onChange={(event) => setEditDescription(event.target.value)} placeholder="项目说明" className="h-10 flex-[2] border border-border bg-background px-3 text-sm" /><ActionButton onClick={saveProject} disabled={busyProjectId === editing.id}>保存</ActionButton><ActionButton variant="secondary" onClick={() => setEditing(null)}>取消</ActionButton></div>}
-      {loading ? <Loading /> : projects.length ? <Table><TableHeader><TableRow><TableHead>项目</TableHead><TableHead>状态</TableHead><TableHead>配音进度</TableHead><TableHead>队列与异常</TableHead><TableHead>已生成</TableHead><TableHead>最近更新</TableHead><TableHead className="text-right">操作</TableHead></TableRow></TableHeader><TableBody>{projects.map((project) => <TableRow key={project.id}><TableCell className="min-w-52"><button type="button" onClick={() => navigate(`/voiceforge/projects/${project.id}`)} className="text-left hover:text-primary"><span className="block font-medium">{project.name}</span><span className="mt-0.5 block max-w-64 truncate text-xs text-muted-foreground">{project.description || "未添加项目说明"}</span></button></TableCell><TableCell><ProjectStatus status={project.status} /></TableCell><TableCell className="min-w-36"><div className="flex items-center justify-between text-xs"><span>{project.done_count || 0} / {project.sentence_count || 0}</span><span>{progressPercent(project)}%</span></div><div className="mt-2 h-1.5 w-full overflow-hidden bg-muted"><div className="h-full bg-primary transition-all" style={{ width: `${progressPercent(project)}%` }} /></div></TableCell><TableCell className="text-xs text-muted-foreground"><span>{project.active_task_count || 0} 个活动任务</span>{project.error_count ? <span className="mt-1 flex items-center gap-1 text-destructive"><CircleAlert className="h-3.5 w-3.5" />{project.error_count} 句失败</span> : null}</TableCell><TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDuration(project.audio_duration || 0)}</TableCell><TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(project.updated_at)}</TableCell><TableCell><div className="flex justify-end gap-1"><button type="button" onClick={() => navigate(`/voiceforge/projects/${project.id}`)} disabled={busyProjectId === project.id} className="flex items-center gap-1 rounded px-2 py-1 text-xs text-primary hover:bg-primary/10" title={`进入 ${project.name} 配音台`}><Mic2 className="h-3.5 w-3.5" />进入配音</button><button type="button" aria-label={`编辑 ${project.name}`} onClick={() => beginEdit(project)} disabled={busyProjectId === project.id} className="p-2 text-muted-foreground hover:text-foreground"><Pencil className="h-4 w-4" /></button><button type="button" onClick={() => removeProject(project)} disabled={busyProjectId === project.id} className="px-2 text-xs text-destructive hover:underline">{busyProjectId === project.id ? "处理中" : "删除"}</button></div></TableCell></TableRow>)}</TableBody></Table> : <Empty title="尚未找到配音项目" detail="调整筛选条件，或新建项目后导入文本开始制作。" />}
-    </section>
-    <ProjectCreateDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(projectId) => navigate(`/voiceforge/projects/${projectId}`)} />
-  </div>;
+  return (
+    <PageBackground tone="voiceforge" className="mx-auto max-w-7xl space-y-6 p-1">
+      <PageHeader
+        icon={Mic2}
+        title="晴沐配音谷"
+        detail="项目、配音任务与音频产出的统一管理台"
+        breadcrumbs={[{ label: "晴沐配音谷" }]}
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link to="/voiceforge/voices">
+                <UserRound className="mr-1.5 h-4 w-4" />音色库
+              </Link>
+            </Button>
+            <Button variant="outline" asChild>
+              <Link to="/voiceforge/assets">
+                <FolderOpen className="mr-1.5 h-4 w-4" />素材库
+              </Link>
+            </Button>
+            <Button variant="ai-soft" onClick={() => void openWorkspace()}>
+              <Music2 className="mr-1.5 h-4 w-4" />配音台
+            </Button>
+            <Button onClick={load}>
+              <RefreshCw className="mr-1.5 h-4 w-4" />刷新
+            </Button>
+          </>
+        }
+      />
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <OverviewItem icon={AudioLines} label="项目总数" value={overview?.project_count || 0} detail={`${dashboard?.project_statuses.processing || 0} 个制作中`} />
+        <OverviewItem icon={Clock3} label="待合成句子" value={overview?.sentence_pending || 0} detail={`${overview?.sentence_generating || 0} 句正在生成`} />
+        <OverviewItem icon={CircleAlert} label="待处理异常" value={overview?.sentence_error || 0} detail={`${overview?.task_failed || 0} 个失败任务`} tone="error" />
+        <OverviewItem icon={Music2} label="已生成时长" value={formatDuration(overview?.audio_duration_done || 0)} detail={`${overview?.sentence_done || 0} 句已完成`} />
+      </section>
+      <section className="border border-border/60 bg-card">
+        <div className="flex flex-col gap-3 border-b border-border/60 p-4 lg:flex-row lg:items-center">
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="mr-1.5 h-4 w-4" />新建项目
+          </Button>
+          <div className="flex flex-wrap gap-2">
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索项目" className="h-10 w-48 border border-border bg-background pl-9 pr-3 text-sm" />
+            </div>
+            <select value={status} onChange={(event) => setStatus(event.target.value)} className="h-10 border border-border bg-background px-3 text-sm">
+              <option value="">全部状态</option>
+              <option value="draft">草稿</option>
+              <option value="processing">制作中</option>
+              <option value="completed">已完成</option>
+              <option value="archived">已归档</option>
+            </select>
+            <Button variant="outline" onClick={load}>筛选</Button>
+          </div>
+        </div>
+        {editing && (
+          <div className="flex flex-col gap-2 border-b border-border/60 bg-muted/20 p-4 md:flex-row">
+            <input value={editName} onChange={(event) => setEditName(event.target.value)} className="h-10 flex-1 border border-border bg-background px-3 text-sm" />
+            <input value={editDescription} onChange={(event) => setEditDescription(event.target.value)} placeholder="项目说明" className="h-10 flex-[2] border border-border bg-background px-3 text-sm" />
+            <Button onClick={saveProject} disabled={busyProjectId === editing.id}>保存</Button>
+            <Button variant="outline" onClick={() => setEditing(null)}>取消</Button>
+          </div>
+        )}
+        {loading ? (
+          <LoadingState label="正在加载项目…" />
+        ) : !projects.length ? (
+          <EmptyState
+            icon={Mic2}
+            title="还没有配音项目"
+            detail="新建项目后即可导入文本、合成语音、导出音频。"
+            action={
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" />新建第一个项目
+              </Button>
+            }
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>项目</TableHead>
+                <TableHead>状态</TableHead>
+                <TableHead>配音进度</TableHead>
+                <TableHead>队列与异常</TableHead>
+                <TableHead>已生成</TableHead>
+                <TableHead>最近更新</TableHead>
+                <TableHead className="text-right">操作</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {projects.map((project) => (
+                <TableRow key={project.id}>
+                  <TableCell className="min-w-52">
+                    <button type="button" onClick={() => navigate(`/voiceforge/projects/${project.id}`)} className="text-left hover:text-primary">
+                      <span className="block font-medium">{project.name}</span>
+                      <span className="mt-0.5 block max-w-64 truncate text-xs text-muted-foreground">{project.description || "未添加项目说明"}</span>
+                    </button>
+                  </TableCell>
+                  <TableCell><ProjectStatus status={project.status} /></TableCell>
+                  <TableCell className="min-w-36">
+                    <div className="flex items-center justify-between text-xs">
+                      <span>{project.done_count || 0} / {project.sentence_count || 0}</span>
+                      <span>{progressPercent(project)}%</span>
+                    </div>
+                    <div className="mt-2 h-1.5 w-full overflow-hidden bg-muted">
+                      <div className="h-full bg-primary transition-all" style={{ width: `${progressPercent(project)}%` }} />
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    <span>{project.active_task_count || 0} 个活动任务</span>
+                    {project.error_count ? (
+                      <span className="mt-1 flex items-center gap-1 text-destructive">
+                        <CircleAlert className="h-3.5 w-3.5" />{project.error_count} 句失败
+                      </span>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDuration(project.audio_duration || 0)}</TableCell>
+                  <TableCell className="whitespace-nowrap text-xs text-muted-foreground">{formatDate(project.updated_at)}</TableCell>
+                  <TableCell>
+                    <div className="flex justify-end gap-1">
+                      <Button size="sm" variant="ghost" onClick={() => navigate(`/voiceforge/projects/${project.id}`)} disabled={busyProjectId === project.id} title={`进入 ${project.name} 配音台`}>
+                        <Mic2 className="mr-1 h-3.5 w-3.5" />进入
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => beginEdit(project)} disabled={busyProjectId === project.id} title={`编辑 ${project.name}`}>
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => void removeProject(project)} disabled={busyProjectId === project.id}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </section>
+      <ProjectCreateDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(projectId) => navigate(`/voiceforge/projects/${projectId}`)} />
+    </PageBackground>
+  );
 }
 
 export { DubbingWorkspace as VoiceForgeWorkspace };
@@ -105,14 +226,38 @@ function LegacyVoiceForgeWorkspace() {
   const applyBatch = async () => { if (!selected.length) return; setBusy("batch"); try { await voiceForgeApi.bulkUpdateSentences(projectId, { sentence_ids: selected, voice_profile_id: batchVoice || undefined, speed: Number(batchSpeed) || 1 }); await load(); } finally { setBusy(null); } };
   const synthesizeSelected = async (retry_failed = false) => { setBusy("batch-synthesis"); try { await voiceForgeApi.synthesizeProject(projectId, selected.length ? { sentence_ids: selected } : { retry_failed }); setSelected([]); } finally { setBusy(null); } };
   const filtered = activeChapter ? sentences.filter((sentence) => sentence.chapter_id === activeChapter) : sentences;
-  return <div className="mx-auto max-w-7xl space-y-5">
-    <PageTitle icon={Mic2} title={project?.name || "配音台"} detail="以章节、角色和句子为中心完成配音制作，不包含视频时间线。" actions={<><Link to="/voiceforge"><ActionButton variant="secondary"><ChevronLeft className="h-4 w-4" />项目</ActionButton></Link><ActionButton onClick={analyze} disabled={busy === "analysis"}>{busy === "analysis" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}剧本分析</ActionButton><ActionButton onClick={() => voiceForgeApi.exportMergedAudio(projectId)} variant="secondary"><Music2 className="h-4 w-4" />合并音频</ActionButton><a href={voiceForgeApi.srtUrl(projectId)}><ActionButton variant="secondary"><FileText className="h-4 w-4" />SRT</ActionButton></a><a href={voiceForgeApi.audioZipUrl(projectId)}><ActionButton variant="secondary"><Download className="h-4 w-4" />逐句音频</ActionButton></a></>} />
+  return (
+    <PageBackground tone="voiceforge" className="mx-auto max-w-7xl space-y-5 p-1">
+      <PageHeader
+        icon={Mic2}
+        title={project?.name || "配音台"}
+        detail="以章节、角色和句子为中心完成配音制作，不包含视频时间线。"
+        back={{ to: "/voiceforge", label: "项目" }}
+        actions={
+          <>
+            <Button variant="ai-soft" onClick={analyze} disabled={busy === "analysis"}>
+              {busy === "analysis" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Sparkles className="mr-1.5 h-4 w-4" />}
+              剧本分析
+            </Button>
+            <Button variant="outline" onClick={() => voiceForgeApi.exportMergedAudio(projectId)}>
+              <Music2 className="mr-1.5 h-4 w-4" />合并音频
+            </Button>
+            <Button variant="outline" asChild>
+              <a href={voiceForgeApi.srtUrl(projectId)}><FileText className="mr-1.5 h-4 w-4" />SRT</a>
+            </Button>
+            <Button variant="outline" asChild>
+              <a href={voiceForgeApi.audioZipUrl(projectId)}><Download className="mr-1.5 h-4 w-4" />逐句音频</a>
+            </Button>
+          </>
+        }
+      />
     {analysis && <AnalysisPanel analysis={analysis} selected={selectedAnalysisCharacters} onToggle={(name) => setSelectedAnalysisCharacters((current) => current.includes(name) ? current.filter((item) => item !== name) : [...current, name])} onApply={applyAnalysis} onClose={() => setAnalysis(null)} applying={busy === "apply-analysis"} />}
     <div className="grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]">
-      <aside className="space-y-4"><section className="rounded-xl border border-border/60 bg-card p-4"><div className="flex items-center gap-2 text-sm font-semibold"><ListMusic className="h-4 w-4 text-primary" />章节</div><button onClick={() => setActiveChapter("")} className={`mt-3 w-full rounded-lg px-3 py-2 text-left text-sm ${!activeChapter ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}>全部句子 <span className="float-right">{sentences.length}</span></button>{chapters.map((chapter) => <div key={chapter.id} className="mt-1 flex items-center gap-1"><button onClick={() => setActiveChapter(chapter.id)} className={`min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-sm ${activeChapter === chapter.id ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}>{chapter.title}<span className="float-right">{chapter.sentence_count}</span></button><button onClick={async () => { if (confirm(`删除章节“${chapter.title}”？句子会保留为未归类。`)) { await voiceForgeApi.deleteChapter(chapter.id); load(); } }} className="p-1 text-muted-foreground hover:text-red-600"><X className="h-3.5 w-3.5" /></button></div>)}<div className="mt-3 flex gap-2"><input value={chapterTitle} onChange={(event) => setChapterTitle(event.target.value)} placeholder="章节名称" className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs" /><button onClick={createChapter} className="rounded-md border border-border p-1"><Plus className="h-4 w-4" /></button></div></section><section className="rounded-xl border border-border/60 bg-card p-4"><div className="flex items-center gap-2 text-sm font-semibold"><UserRound className="h-4 w-4 text-primary" />角色</div><div className="mt-3 space-y-2">{characters.map((character) => <div key={character.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm"><span>{character.name}</span><button onClick={async () => { if (confirm("删除角色？")) { await voiceForgeApi.deleteCharacter(character.id); load(); } }}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-red-600" /></button></div>)}</div><div className="mt-3 flex gap-2"><input value={characterName} onChange={(event) => setCharacterName(event.target.value)} placeholder="新增角色" className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs" /><button onClick={createCharacter} className="rounded-md border border-border p-1"><Plus className="h-4 w-4" /></button></div></section><section className="rounded-xl border border-border/60 bg-card p-4"><div className="text-sm font-semibold">文本导入</div><textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="每行一条句子，导入后自动建立章节" className="mt-3 min-h-32 w-full resize-y rounded-lg border border-border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30" /><ActionButton onClick={importText} disabled={!text.trim() || busy === "import"}>{busy === "import" && <Loader2 className="h-4 w-4 animate-spin" />}导入文本</ActionButton></section></aside>
-      <section className="overflow-hidden rounded-xl border border-border/60 bg-card"><div className="flex flex-col gap-3 border-b border-border/60 p-4"><div className="flex items-center justify-between"><div className="font-semibold">句子列表 <span className="ml-1 text-sm font-normal text-muted-foreground">{filtered.length}</span></div><button onClick={load} className="text-muted-foreground hover:text-foreground"><RefreshCw className="h-4 w-4" /></button></div><div className="flex flex-wrap items-center gap-2"><ActionButton variant="secondary" onClick={() => setSelected(selected.length === filtered.length ? [] : filtered.map((item) => item.id))}><CheckSquare className="h-4 w-4" />{selected.length ? `已选 ${selected.length}` : "全选"}</ActionButton><select value={batchVoice} onChange={(event) => setBatchVoice(event.target.value)} className="h-9 rounded-lg border border-border bg-background px-2 text-sm"><option value="">批量设置音色</option>{voices.map((voice) => <option key={voice.id} value={voice.id}>{voice.display_name}</option>)}</select><input value={batchSpeed} onChange={(event) => setBatchSpeed(event.target.value)} type="number" min="0.5" max="2" step="0.1" className="h-9 w-20 rounded-lg border border-border bg-background px-2 text-sm" /><ActionButton variant="secondary" onClick={applyBatch} disabled={!selected.length || busy === "batch"}>应用</ActionButton><ActionButton onClick={() => synthesizeSelected()} disabled={busy === "batch-synthesis"}>{busy === "batch-synthesis" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}{selected.length ? "合成选中" : "合成未完成"}</ActionButton><ActionButton variant="secondary" onClick={() => synthesizeSelected(true)}>重试失败</ActionButton><ActionButton variant="danger" onClick={async () => { if (selected.length && confirm("删除选中的句子？")) { await voiceForgeApi.deleteSentences(projectId, selected); setSelected([]); load(); } }} disabled={!selected.length}><Trash2 className="h-4 w-4" />删除</ActionButton></div></div><div className="divide-y divide-border/50">{filtered.map((sentence) => <div key={sentence.id} className="grid gap-3 p-4 lg:grid-cols-[24px_34px_minmax(0,1fr)_145px_115px]"><input checked={selected.includes(sentence.id)} onChange={() => toggleSelected(sentence.id)} type="checkbox" className="mt-2" /><span className="pt-2 text-xs text-muted-foreground">{sentence.order_index}</span><div><textarea defaultValue={sentence.edited_text || sentence.text} onBlur={(event) => { if (event.target.value !== (sentence.edited_text || sentence.text)) updateText(sentence, event.target.value); }} className="min-h-14 w-full resize-y rounded-lg border border-border/60 bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30" /><div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><label>语速 <input defaultValue={sentence.speed} type="number" min="0.5" max="2" step="0.1" onBlur={(event) => voiceForgeApi.updateSentence(sentence.id, { speed: Number(event.target.value), version: sentence.version }).then(load)} className="ml-1 w-14 rounded border border-border bg-background px-1" /></label><label>情绪 <input defaultValue={sentence.emotion} onBlur={(event) => voiceForgeApi.updateSentence(sentence.id, { emotion: event.target.value, version: sentence.version }).then(load)} className="ml-1 w-20 rounded border border-border bg-background px-1" /></label>{sentence.status === "done" && <audio controls className="h-7" src={voiceForgeApi.sentenceAudioUrl(sentence.id)} />}</div></div><select value={sentence.voice_profile_id || ""} onChange={(event) => bindVoice(sentence, event.target.value)} className="h-9 rounded-lg border border-border bg-background px-2 text-sm"><option value="">使用项目默认音色</option>{voices.map((voice) => <option key={voice.id} value={voice.id}>{voice.display_name}</option>)}</select><ActionButton onClick={() => synthesize(sentence.id)} disabled={busy === sentence.id || sentence.status === "generating"}>{busy === sentence.id || sentence.status === "generating" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}{sentence.status === "done" ? "重做" : "合成"}</ActionButton>{sentence.error_message && <p className="lg:col-start-3 lg:col-span-3 text-xs text-red-600">{sentence.error_message}</p>}</div>)}</div>{!filtered.length && <Empty title="配音台尚无句子" detail="在左侧导入文本后开始编辑和生成音频。" />}</section>
+      <aside className="space-y-4"><section className="rounded-xl border border-border/60 bg-card p-4"><div className="flex items-center gap-2 text-sm font-semibold"><ListMusic className="h-4 w-4 text-primary" />章节</div><button onClick={() => setActiveChapter("")} className={`mt-3 w-full rounded-lg px-3 py-2 text-left text-sm ${!activeChapter ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}>全部句子 <span className="float-right">{sentences.length}</span></button>{chapters.map((chapter) => <div key={chapter.id} className="mt-1 flex items-center gap-1"><button onClick={() => setActiveChapter(chapter.id)} className={`min-w-0 flex-1 truncate rounded-lg px-3 py-2 text-left text-sm ${activeChapter === chapter.id ? "bg-primary/10 text-primary" : "hover:bg-muted"}`}>{chapter.title}<span className="float-right">{chapter.sentence_count}</span></button><button onClick={async () => { if (confirm(`删除章节“${chapter.title}”？句子会保留为未归类。`)) { await voiceForgeApi.deleteChapter(chapter.id); load(); } }} className="p-1 text-muted-foreground hover:text-red-600"><X className="h-3.5 w-3.5" /></button></div>)}<div className="mt-3 flex gap-2"><input value={chapterTitle} onChange={(event) => setChapterTitle(event.target.value)} placeholder="章节名称" className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs" /><button onClick={createChapter} className="rounded-md border border-border p-1"><Plus className="h-4 w-4" /></button></div></section><section className="rounded-xl border border-border/60 bg-card p-4"><div className="flex items-center gap-2 text-sm font-semibold"><UserRound className="h-4 w-4 text-primary" />角色</div><div className="mt-3 space-y-2">{characters.map((character) => <div key={character.id} className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-sm"><span>{character.name}</span><button onClick={async () => { if (confirm("删除角色？")) { await voiceForgeApi.deleteCharacter(character.id); load(); } }}><X className="h-3.5 w-3.5 text-muted-foreground hover:text-red-600" /></button></div>)}</div><div className="mt-3 flex gap-2"><input value={characterName} onChange={(event) => setCharacterName(event.target.value)} placeholder="新增角色" className="min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs" /><button onClick={createCharacter} className="rounded-md border border-border p-1"><Plus className="h-4 w-4" /></button></div></section><section className="rounded-xl border border-border/60 bg-card p-4"><div className="text-sm font-semibold">文本导入</div><textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="每行一条句子，导入后自动建立章节" className="mt-3 min-h-32 w-full resize-y rounded-lg border border-border bg-background p-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/30" /><Button onClick={importText} disabled={!text.trim() || busy === "import"}>{busy === "import" && <Loader2 className="h-4 w-4 animate-spin" />}导入文本</Button></section></aside>
+      <section className="overflow-hidden rounded-xl border border-border/60 bg-card"><div className="flex flex-col gap-3 border-b border-border/60 p-4"><div className="flex items-center justify-between"><div className="font-semibold">句子列表 <span className="ml-1 text-sm font-normal text-muted-foreground">{filtered.length}</span></div><button onClick={load} className="text-muted-foreground hover:text-foreground"><RefreshCw className="h-4 w-4" /></button></div><div className="flex flex-wrap items-center gap-2"><Button variant="outline" onClick={() => setSelected(selected.length === filtered.length ? [] : filtered.map((item) => item.id))}><CheckSquare className="h-4 w-4" />{selected.length ? `已选 ${selected.length}` : "全选"}</Button><select value={batchVoice} onChange={(event) => setBatchVoice(event.target.value)} className="h-9 rounded-lg border border-border bg-background px-2 text-sm"><option value="">批量设置音色</option>{voices.map((voice) => <option key={voice.id} value={voice.id}>{voice.display_name}</option>)}</select><input value={batchSpeed} onChange={(event) => setBatchSpeed(event.target.value)} type="number" min="0.5" max="2" step="0.1" className="h-9 w-20 rounded-lg border border-border bg-background px-2 text-sm" /><Button variant="outline" onClick={applyBatch} disabled={!selected.length || busy === "batch"}>应用</Button><Button onClick={() => synthesizeSelected()} disabled={busy === "batch-synthesis"}>{busy === "batch-synthesis" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}{selected.length ? "合成选中" : "合成未完成"}</Button><Button variant="outline" onClick={() => synthesizeSelected(true)}>重试失败</Button><Button variant="destructive" onClick={async () => { if (selected.length && confirm("删除选中的句子？")) { await voiceForgeApi.deleteSentences(projectId, selected); setSelected([]); load(); } }} disabled={!selected.length}><Trash2 className="h-4 w-4" />删除</Button></div></div><div className="divide-y divide-border/50">{filtered.map((sentence) => <div key={sentence.id} className="grid gap-3 p-4 lg:grid-cols-[24px_34px_minmax(0,1fr)_145px_115px]"><input checked={selected.includes(sentence.id)} onChange={() => toggleSelected(sentence.id)} type="checkbox" className="mt-2" /><span className="pt-2 text-xs text-muted-foreground">{sentence.order_index}</span><div><textarea defaultValue={sentence.edited_text || sentence.text} onBlur={(event) => { if (event.target.value !== (sentence.edited_text || sentence.text)) updateText(sentence, event.target.value); }} className="min-h-14 w-full resize-y rounded-lg border border-border/60 bg-background p-2 text-sm outline-none focus:ring-2 focus:ring-primary/30" /><div className="mt-2 flex flex-wrap items-center gap-2 text-xs"><label>语速 <input defaultValue={sentence.speed} type="number" min="0.5" max="2" step="0.1" onBlur={(event) => voiceForgeApi.updateSentence(sentence.id, { speed: Number(event.target.value), version: sentence.version }).then(load)} className="ml-1 w-14 rounded border border-border bg-background px-1" /></label><label>情绪 <input defaultValue={sentence.emotion} onBlur={(event) => voiceForgeApi.updateSentence(sentence.id, { emotion: event.target.value, version: sentence.version }).then(load)} className="ml-1 w-20 rounded border border-border bg-background px-1" /></label>{sentence.status === "done" && <audio controls className="h-7" src={voiceForgeApi.sentenceAudioUrl(sentence.id)} />}</div></div><select value={sentence.voice_profile_id || ""} onChange={(event) => bindVoice(sentence, event.target.value)} className="h-9 rounded-lg border border-border bg-background px-2 text-sm"><option value="">使用项目默认音色</option>{voices.map((voice) => <option key={voice.id} value={voice.id}>{voice.display_name}</option>)}</select><Button onClick={() => synthesize(sentence.id)} disabled={busy === sentence.id || sentence.status === "generating"}>{busy === sentence.id || sentence.status === "generating" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Volume2 className="h-4 w-4" />}{sentence.status === "done" ? "重做" : "合成"}</Button>{sentence.error_message && <p className="lg:col-start-3 lg:col-span-3 text-xs text-red-600">{sentence.error_message}</p>}</div>)}</div>{!filtered.length && <EmptyState icon={UserRound} title="配音台尚无句子" detail="在左侧导入文本后开始编辑和生成音频。" />}</section>
     </div>
-  </div>;
+    </PageBackground>
+  );
 }
 
 function LegacyVoiceForgeVoicesBasic() {
@@ -120,7 +265,14 @@ function LegacyVoiceForgeVoicesBasic() {
   const load = async () => { const [v, c] = await Promise.all([voiceForgeApi.voices(search), voiceForgeApi.capabilities()]); setVoices(v.data.voices); setCaps(c.data.capabilities ?? c.data.interfaces ?? []); };
   useEffect(() => { load(); }, []);
   const create = async (event: FormEvent) => { event.preventDefault(); if (!name.trim()) return; await voiceForgeApi.createVoice({ name, display_name: name, interface_id: interfaceId || null }); setName(""); await load(); };
-  return <div className="mx-auto max-w-7xl space-y-6"><PageTitle icon={UserRound} title="音色库" detail="保存可复用的逻辑音色，并引用全局 TTS 接口能力。" actions={<Link to="/voiceforge"><ActionButton variant="secondary"><ChevronLeft className="h-4 w-4" />返回</ActionButton></Link>} /><form onSubmit={create} className="grid gap-2 rounded-xl border border-border/60 bg-card p-4 md:grid-cols-[1fr_220px_auto]"><input value={name} onChange={(event) => setName(event.target.value)} placeholder="音色名称" className="h-10 rounded-lg border border-border bg-background px-3 text-sm" /><select value={interfaceId} onChange={(event) => setInterfaceId(event.target.value)} className="h-10 rounded-lg border border-border bg-background px-3 text-sm"><option value="">稍后绑定接口</option>{caps.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><ActionButton><Plus className="h-4 w-4" />新建音色</ActionButton></form><div className="flex gap-2"><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索音色名称或标签" className="h-10 flex-1 rounded-lg border border-border bg-background px-3 text-sm" /><ActionButton variant="secondary" onClick={load}>搜索</ActionButton></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{voices.map((voice) => <article key={voice.id} className="rounded-xl border border-border/60 bg-card p-5"><div className="flex items-start justify-between"><div><h3 className="font-semibold">{voice.display_name}</h3><p className="mt-1 text-xs text-muted-foreground">{voice.interface_id || "未绑定 TTS 接口"}</p></div><Mic2 className="h-5 w-5 text-primary/70" /></div>{editing === voice.id ? <div className="mt-4 space-y-2"><input defaultValue={voice.display_name} onChange={(event) => setName(event.target.value)} className="h-8 w-full rounded border border-border bg-background px-2 text-sm" /><input defaultValue={voice.tags.join(",")} onChange={(event) => setTags(event.target.value)} placeholder="标签，以逗号分隔" className="h-8 w-full rounded border border-border bg-background px-2 text-sm" /><div className="flex gap-2"><ActionButton variant="secondary" onClick={async () => { await voiceForgeApi.updateVoice(voice.id, { display_name: name || voice.display_name, tags: (tags || voice.tags.join(",")).split(",").map((item) => item.trim()).filter(Boolean) }); setEditing(null); setName(""); setTags(""); load(); }}>保存</ActionButton><ActionButton variant="secondary" onClick={() => setEditing(null)}>取消</ActionButton></div></div> : <><div className="mt-4 flex flex-wrap gap-1">{voice.tags.map((tag) => <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs">{tag}</span>)}</div><div className="mt-5 flex gap-3"><button onClick={() => { setEditing(voice.id); setName(voice.display_name); setTags(voice.tags.join(",")); }} className="text-xs text-primary hover:underline">编辑</button><button onClick={async () => { if (confirm("删除此音色？")) { await voiceForgeApi.deleteVoice(voice.id); load(); } }} className="text-xs text-red-600 hover:underline">删除</button></div></>}</article>)}</div>{!voices.length && <Empty title="音色库为空" detail="创建逻辑音色后，可在配音台按句子绑定。" />}</div>;
+  return (
+    <PageBackground tone="voiceforge" className="mx-auto max-w-7xl space-y-6 p-1">
+      <PageHeader
+        icon={UserRound}
+        title="音色库（基础）"
+        detail="保存可复用的逻辑音色，并引用全局 TTS 接口能力。"
+        back={{ to: "/voiceforge", label: "配音谷" }}
+      /><form onSubmit={create} className="grid gap-2 rounded-xl border border-border/60 bg-card p-4 md:grid-cols-[1fr_220px_auto]"><input value={name} onChange={(event) => setName(event.target.value)} placeholder="音色名称" className="h-10 rounded-lg border border-border bg-background px-3 text-sm" /><select value={interfaceId} onChange={(event) => setInterfaceId(event.target.value)} className="h-10 rounded-lg border border-border bg-background px-3 text-sm"><option value="">稍后绑定接口</option>{caps.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select><Button><Plus className="h-4 w-4" />新建音色</Button></form><div className="flex gap-2"><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索音色名称或标签" className="h-10 flex-1 rounded-lg border border-border bg-background px-3 text-sm" /><Button variant="outline" onClick={load}>搜索</Button></div><div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{voices.map((voice) => <article key={voice.id} className="rounded-xl border border-border/60 bg-card p-5"><div className="flex items-start justify-between"><div><h3 className="font-semibold">{voice.display_name}</h3><p className="mt-1 text-xs text-muted-foreground">{voice.interface_id || "未绑定 TTS 接口"}</p></div><Mic2 className="h-5 w-5 text-primary/70" /></div>{editing === voice.id ? <div className="mt-4 space-y-2"><input defaultValue={voice.display_name} onChange={(event) => setName(event.target.value)} className="h-8 w-full rounded border border-border bg-background px-2 text-sm" /><input defaultValue={voice.tags.join(",")} onChange={(event) => setTags(event.target.value)} placeholder="标签，以逗号分隔" className="h-8 w-full rounded border border-border bg-background px-2 text-sm" /><div className="flex gap-2"><Button variant="outline" onClick={async () => { await voiceForgeApi.updateVoice(voice.id, { display_name: name || voice.display_name, tags: (tags || voice.tags.join(",")).split(",").map((item) => item.trim()).filter(Boolean) }); setEditing(null); setName(""); setTags(""); load(); }}>保存</Button><Button variant="outline" onClick={() => setEditing(null)}>取消</Button></div></div> : <><div className="mt-4 flex flex-wrap gap-1">{voice.tags.map((tag) => <span key={tag} className="rounded-full bg-muted px-2 py-0.5 text-xs">{tag}</span>)}</div><div className="mt-5 flex gap-3"><button onClick={() => { setEditing(voice.id); setName(voice.display_name); setTags(voice.tags.join(",")); }} className="text-xs text-primary hover:underline">编辑</button><button onClick={async () => { if (confirm("删除此音色？")) { await voiceForgeApi.deleteVoice(voice.id); load(); } }} className="text-xs text-red-600 hover:underline">删除</button></div></>}</article>)}</div>{!voices.length && <EmptyState icon={UserRound} title="音色库为空" detail="创建逻辑音色后，可在配音台按句子绑定。" />}</PageBackground>);
 }
 
 function LegacyVoiceForgeVoicesAdvanced() {
@@ -132,14 +284,27 @@ function LegacyVoiceForgeVoicesAdvanced() {
   const [tagsOpen, setTagsOpen] = useState(false);
   const load = async () => { const [voiceResult, capResult] = await Promise.all([voiceForgeApi.voices(search), voiceForgeApi.capabilities()]); setVoices(voiceResult.data.voices); setCaps(capResult.data.capabilities ?? capResult.data.interfaces ?? []); };
   useEffect(() => { load(); }, []);
-  return <div className="mx-auto max-w-7xl space-y-6">
-    <PageTitle icon={UserRound} title="音色库" detail="建立可复用的音色档案，选择接口能力后试听并用于配音项目。" actions={<><Link to="/voiceforge"><ActionButton variant="secondary"><ChevronLeft className="h-4 w-4" />返回</ActionButton></Link><ActionButton variant="secondary" onClick={() => setTagsOpen(true)}>情绪标签</ActionButton><ActionButton onClick={() => setEditing(null)}><Plus className="h-4 w-4" />新建音色</ActionButton></>} />
-    <div className="flex gap-2 border border-border/60 bg-card p-4"><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索音色名称或标签" className="h-10 min-w-0 flex-1 border border-border bg-background px-3 text-sm" /><ActionButton variant="secondary" onClick={load}>搜索</ActionButton></div>
+  return (
+    <PageBackground tone="voiceforge" className="mx-auto max-w-7xl space-y-6 p-1">
+      <PageHeader
+        icon={UserRound}
+        title="音色库（高级）"
+        detail="建立可复用的音色档案，选择接口能力后试听并用于配音项目。"
+        back={{ to: "/voiceforge", label: "配音谷" }}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setTagsOpen(true)}>情绪标签</Button>
+            <Button onClick={() => setEditing(null)}><Plus className="mr-1.5 h-4 w-4" />新建音色</Button>
+          </>
+        }
+      />
+    <div className="flex gap-2 border border-border/60 bg-card p-4"><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索音色名称或标签" className="h-10 min-w-0 flex-1 border border-border bg-background px-3 text-sm" /><Button variant="outline" onClick={load}>搜索</Button></div>
     <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{voices.map((voice) => <article key={voice.id} className="border border-border/60 bg-card p-5"><div className="flex items-start justify-between gap-3"><div className="min-w-0"><h3 className="truncate font-semibold">{voice.display_name}</h3><p className="mt-1 truncate text-xs text-muted-foreground">{voice.interface_id || "未绑定 TTS 接口"}{voice.voice_id ? ` · ${voice.voice_id}` : ""}</p></div><Mic2 className="h-5 w-5 shrink-0 text-primary/70" /></div><div className="mt-3 flex flex-wrap gap-1"><Badge variant="outline">{({ preset_voice: "预置", clone: "克隆", controllable_clone: "可控克隆", voice_design: "设计" } as Record<string, string>)[voice.mode] || voice.mode}</Badge>{voice.tags.map((tag) => <span key={tag} className="border border-border/60 px-1.5 py-0.5 text-xs text-muted-foreground">{tag}</span>)}</div>{voice.description && <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{voice.description}</p>}{voice.preview_storage_key && <audio className="mt-3 w-full" controls src={voiceForgeApi.voicePreviewUrl(voice.preview_storage_key)} />}<div className="mt-4 flex justify-between border-t border-border/60 pt-3"><button type="button" onClick={() => setEditing(voice)} className="text-sm text-primary">配置与试听</button><button type="button" onClick={async () => { if (confirm(`删除音色“${voice.display_name}”？`)) { await voiceForgeApi.deleteVoice(voice.id); await load(); } }} className="text-sm text-destructive">删除</button></div></article>)}</div>
-    {!voices.length && <Empty title="尚未建立音色档案" detail="新建音色后选择 TTS 接口、模式并试听，再用于角色和句子。" />}
+    {!voices.length && <EmptyState icon={UserRound} title="尚未建立音色档案" detail="新建音色后选择 TTS 接口、模式并试听，再用于角色和句子。" />}
     <VoiceEditorDialog open={editing !== undefined} voice={editing || null} capabilities={caps} onOpenChange={(open) => !open && setEditing(undefined)} onSaved={load} />
     <EmotionTagDialog open={tagsOpen} onOpenChange={setTagsOpen} />
-  </div>;
+    </PageBackground>
+  );
 }
 
 export function VoiceForgeVoices() {
@@ -165,13 +330,43 @@ export function VoiceForgeVoices() {
   const toggleAll = () => setSelected(selected.length === voices.length ? [] : voices.map((voice) => voice.id));
   const batchDelete = async () => { if (!selected.length || !confirm(`删除选中的 ${selected.length} 个音色？`)) return; await Promise.all(selected.map((id) => voiceForgeApi.deleteVoice(id))); await load(); };
   const moveToGroup = async () => { if (!selected.length) return; await voiceForgeApi.batchGroupVoices(selected, groupName); setGroupOpen(false); setGroupName(""); await load(); };
-  return <div className="voice-library-page mx-auto max-w-[1600px] space-y-4">
-    <div className="flex flex-col gap-3 border-b border-border/60 pb-3 lg:flex-row lg:items-center lg:justify-between"><PageTitle icon={UserRound} title="音色库" detail="管理预置音色、声音设计和情绪片段" /><div className="flex flex-wrap gap-2"><Link to="/voiceforge"><ActionButton variant="secondary"><ChevronLeft className="h-4 w-4" />返回</ActionButton></Link><ActionButton variant="secondary" onClick={() => setTagsOpen(true)}>情绪标签管理</ActionButton><ActionButton variant="secondary" onClick={() => setBatchEmotionOpen(true)}>批量生成情绪</ActionButton><ActionButton variant="secondary" onClick={() => setGroupOpen(true)} disabled={!selected.length}>添加到分组</ActionButton><ActionButton variant="danger" onClick={batchDelete} disabled={!selected.length}><Trash2 className="h-4 w-4" />删除选中{selected.length ? ` (${selected.length})` : ""}</ActionButton><ActionButton variant="secondary" onClick={toggleAll}>{selected.length === voices.length && voices.length ? "取消全选" : "全选"}</ActionButton><ActionButton onClick={() => { setEditingMode("voice_design"); setEditing(null); }}><Plus className="h-4 w-4" />声音设计</ActionButton></div></div>
-    <div className="flex flex-wrap gap-2 border border-border/60 bg-card/70 p-3"><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索名称、标签或说明" className="h-9 min-w-48 flex-1 border border-border bg-background px-3 text-sm" /><FilterSelect value={filters.interface_id} onChange={(value) => setFilters({ ...filters, interface_id: value })} placeholder="全部引擎" options={caps.map((item) => ({ value: item.id, label: item.name }))} /><FilterSelect value={filters.gender} onChange={(value) => setFilters({ ...filters, gender: value })} placeholder="全部性别" options={["male", "female", "儿童", "老年", "中性"].map((value) => ({ value, label: value }))} /><FilterSelect value={filters.age} onChange={(value) => setFilters({ ...filters, age: value })} placeholder="全部年龄" options={["儿童", "少年", "青年", "中年", "老年"].map((value) => ({ value, label: value }))} /><FilterSelect value={filters.pitch} onChange={(value) => setFilters({ ...filters, pitch: value })} placeholder="全部音高" options={["极低", "低", "中", "高", "极高"].map((value) => ({ value, label: value }))} /><input value={filters.dialect} onChange={(event) => setFilters({ ...filters, dialect: event.target.value })} placeholder="方言" className="h-9 w-24 border border-border bg-background px-3 text-sm" /><ActionButton variant="secondary" onClick={load}>筛选</ActionButton></div>
-    {groupOpen && <section className="flex flex-wrap items-center gap-2 border border-primary/30 bg-primary/5 p-3 text-sm"><span>已选 {selected.length} 个音色，移动到：</span><input autoFocus value={groupName} onChange={(event) => setGroupName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && moveToGroup()} placeholder="输入分组名称，留空表示未分组" className="h-9 min-w-48 flex-1 border border-border bg-background px-3" /><ActionButton onClick={moveToGroup}>确认分组</ActionButton><ActionButton variant="secondary" onClick={() => setGroupOpen(false)}>取消</ActionButton></section>}
-    {!voices.length ? <Empty title="暂无音色" detail="通过声音设计创建音色档案后，音色会按分组显示在这里。" /> : groupKeys.map((group) => <section key={group} className="overflow-hidden border border-border/60 bg-card/70"><button type="button" onClick={() => setCollapsed((current) => current.includes(group) ? current.filter((item) => item !== group) : [...current, group])} className="flex w-full items-center justify-between border-b border-border/60 bg-muted/40 px-4 py-2 text-left text-sm font-semibold"><span>{group} <span className="ml-1 text-xs font-normal text-muted-foreground">({groups[group].length})</span></span><span className="text-muted-foreground">{collapsed.includes(group) ? "展开" : "收起"}</span></button>{!collapsed.includes(group) && <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{groups[group].map((voice) => <VoiceLibraryCard key={voice.id} voice={voice} selected={selected.includes(voice.id)} onToggle={() => toggle(voice.id)} onEdit={() => setEditing(voice)} onEmotions={() => setEmotionVoice(voice)} onDuplicate={async () => { await voiceForgeApi.duplicateVoice(voice.id); await load(); }} onDelete={async () => { if (confirm(`删除音色“${voice.display_name}”？`)) { await voiceForgeApi.deleteVoice(voice.id); await load(); } }} />)}</div>}</section>)}
-    <VoiceEditorDialog open={editing !== undefined} voice={editing || null} initialMode={editingMode} capabilities={caps} onOpenChange={(open) => !open && setEditing(undefined)} onSaved={load} /><EmotionTagDialog open={tagsOpen} onOpenChange={setTagsOpen} /><EmotionPreviewDialog voice={emotionVoice} onOpenChange={(open) => !open && setEmotionVoice(null)} onDesign={() => { setEmotionDesignVoice(emotionVoice); setEmotionVoice(null); }} /><EmotionDesignDialog voice={emotionDesignVoice} open={Boolean(emotionDesignVoice)} onOpenChange={(open) => !open && setEmotionDesignVoice(null)} onSaved={load} /><BatchEmotionDesignDialog voices={selected.length ? voices.filter((voice) => selected.includes(voice.id)) : voices} open={batchEmotionOpen} onOpenChange={setBatchEmotionOpen} onSaved={load} />
-  </div>;
+  return (
+    <PageBackground tone="voiceforge" className="voice-library-page mx-auto max-w-[1600px] space-y-4 p-1">
+      <PageHeader
+        icon={UserRound}
+        title="音色库"
+        detail="管理预置音色、声音设计和情绪片段"
+        hideTitle
+        breadcrumbs={[{ label: "晴沐配音谷", to: "/voiceforge" }, { label: "音色库" }]}
+        actions={
+          <>
+            <Button variant="outline" asChild>
+              <Link to="/voiceforge"><ChevronLeft className="mr-1.5 h-4 w-4" />返回</Link>
+            </Button>
+            <Button variant="outline" onClick={() => setTagsOpen(true)}>情绪标签管理</Button>
+            <Button variant="ai-soft" onClick={() => setBatchEmotionOpen(true)}>批量生成情绪</Button>
+            <Button variant="outline" onClick={() => setGroupOpen(true)} disabled={!selected.length}>添加到分组</Button>
+            <Button variant="destructive" onClick={batchDelete} disabled={!selected.length}>
+              <Trash2 className="mr-1.5 h-4 w-4" />删除选中{selected.length ? ` (${selected.length})` : ""}
+            </Button>
+            <Button variant="outline" onClick={toggleAll}>{selected.length === voices.length && voices.length ? "取消全选" : "全选"}</Button>
+            <Button onClick={() => { setEditingMode("voice_design"); setEditing(null); }}>
+              <Plus className="mr-1.5 h-4 w-4" />声音设计
+            </Button>
+          </>
+        }
+      />
+      <div className="flex flex-wrap gap-2"><Link to="/voiceforge"><Button variant="outline"><ChevronLeft className="h-4 w-4" />返回</Button></Link><Button variant="outline" onClick={() => setTagsOpen(true)}>情绪标签管理</Button><Button variant="outline" onClick={() => setBatchEmotionOpen(true)}>批量生成情绪</Button><Button variant="outline" onClick={() => setGroupOpen(true)} disabled={!selected.length}>添加到分组</Button><Button variant="destructive" onClick={batchDelete} disabled={!selected.length}><Trash2 className="h-4 w-4" />删除选中{selected.length ? ` (${selected.length})` : ""}</Button><Button variant="outline" onClick={toggleAll}>{selected.length === voices.length && voices.length ? "取消全选" : "全选"}</Button><Button onClick={() => { setEditingMode("voice_design"); setEditing(null); }}><Plus className="h-4 w-4" />声音设计</Button></div>
+    <div className="flex flex-wrap gap-2 border border-border/60 bg-card/70 p-3"><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索名称、标签或说明" className="h-9 min-w-48 flex-1 border border-border bg-background px-3 text-sm" /><FilterSelect value={filters.interface_id} onChange={(value) => setFilters({ ...filters, interface_id: value })} placeholder="全部引擎" options={caps.map((item) => ({ value: item.id, label: item.name }))} /><FilterSelect value={filters.gender} onChange={(value) => setFilters({ ...filters, gender: value })} placeholder="全部性别" options={["male", "female", "儿童", "老年", "中性"].map((value) => ({ value, label: value }))} /><FilterSelect value={filters.age} onChange={(value) => setFilters({ ...filters, age: value })} placeholder="全部年龄" options={["儿童", "少年", "青年", "中年", "老年"].map((value) => ({ value, label: value }))} /><FilterSelect value={filters.pitch} onChange={(value) => setFilters({ ...filters, pitch: value })} placeholder="全部音高" options={["极低", "低", "中", "高", "极高"].map((value) => ({ value, label: value }))} /><input value={filters.dialect} onChange={(event) => setFilters({ ...filters, dialect: event.target.value })} placeholder="方言" className="h-9 w-24 border border-border bg-background px-3 text-sm" /><Button variant="outline" onClick={load}>筛选</Button></div>
+    {groupOpen && <section className="flex flex-wrap items-center gap-2 border border-primary/30 bg-primary/5 p-3 text-sm"><span>已选 {selected.length} 个音色，移动到：</span><input autoFocus value={groupName} onChange={(event) => setGroupName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && moveToGroup()} placeholder="输入分组名称，留空表示未分组" className="h-9 min-w-48 flex-1 border border-border bg-background px-3" /><Button onClick={moveToGroup}>确认分组</Button><Button variant="outline" onClick={() => setGroupOpen(false)}>取消</Button></section>}
+    {!voices.length ? <EmptyState icon={UserRound} title="暂无音色" detail="通过声音设计创建音色档案后，音色会按分组显示在这里。" /> : groupKeys.map((group) => <section key={group} className="overflow-hidden border border-border/60 bg-card/70"><button type="button" onClick={() => setCollapsed((current) => current.includes(group) ? current.filter((item) => item !== group) : [...current, group])} className="flex w-full items-center justify-between border-b border-border/60 bg-muted/40 px-4 py-2 text-left text-sm font-semibold"><span>{group} <span className="ml-1 text-xs font-normal text-muted-foreground">({groups[group].length})</span></span><span className="text-muted-foreground">{collapsed.includes(group) ? "展开" : "收起"}</span></button>{!collapsed.includes(group) && <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{groups[group].map((voice) => <VoiceLibraryCard key={voice.id} voice={voice} selected={selected.includes(voice.id)} onToggle={() => toggle(voice.id)} onEdit={() => setEditing(voice)} onEmotions={() => setEmotionVoice(voice)} onDuplicate={async () => { await voiceForgeApi.duplicateVoice(voice.id); await load(); }} onDelete={async () => { if (confirm(`删除音色“${voice.display_name}”？`)) { await voiceForgeApi.deleteVoice(voice.id); await load(); } }} />)}</div>}</section>)}
+    <VoiceEditorDialog open={editing !== undefined} voice={editing || null} initialMode={editingMode} capabilities={caps} onOpenChange={(open) => !open && setEditing(undefined)} onSaved={load} />
+      <EmotionTagDialog open={tagsOpen} onOpenChange={setTagsOpen} />
+      <EmotionPreviewDialog voice={emotionVoice} onOpenChange={(open) => !open && setEmotionVoice(null)} onDesign={() => { setEmotionDesignVoice(emotionVoice); setEmotionVoice(null); }} />
+      <EmotionDesignDialog voice={emotionDesignVoice} open={Boolean(emotionDesignVoice)} onOpenChange={(open) => !open && setEmotionDesignVoice(null)} onSaved={load} />
+      <BatchEmotionDesignDialog voices={selected.length ? voices.filter((voice) => selected.includes(voice.id)) : voices} open={batchEmotionOpen} onOpenChange={setBatchEmotionOpen} onSaved={load} />
+    </PageBackground>
+  );
 }
 
 function FilterSelect({ value, onChange, placeholder, options }: { value: string; onChange: (value: string) => void; placeholder: string; options: Array<{ value: string; label: string }> }) { return <select value={value} onChange={(event) => onChange(event.target.value)} className="h-9 max-w-40 border border-border bg-background px-2 text-sm"><option value="">{placeholder}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>; }
@@ -180,7 +375,7 @@ function VoiceLibraryCard({ voice, selected, onToggle, onEdit, onEmotions, onDup
   const initials = (voice.display_name || voice.name).slice(0, 1);
   const mode = ({ preset_voice: "预置", clone: "克隆", controllable_clone: "可控克隆", voice_design: "设计" } as Record<string, string>)[voice.mode] || voice.mode;
   const [tagsExpanded, setTagsExpanded] = useState(false);
-  const genderTone = voice.gender === "男" ? "border-sky-300 bg-[#e8f5ff] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_0_0_1px_rgba(186,230,253,0.75)] dark:border-sky-800 dark:bg-sky-950/70" : voice.gender === "女" ? "border-rose-300 bg-[#fff0f4] shadow-[inset_0_1px_0_rgba(255,255,255,0.95),0_0_0_1px_rgba(253,205,211,0.8)] dark:border-rose-800 dark:bg-rose-950/70" : "border-border bg-card shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]";
+  const genderTone = voice.gender === "男" ? "gender-male" : voice.gender === "女" ? "gender-female" : "gender-neutral border-border shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]";
   const avatarTone: Record<string, string> = { 儿童: "bg-emerald-500", 少年: "bg-cyan-500", 青年: "bg-violet-500", 中年: "bg-amber-500", 老年: "bg-rose-500" };
   const audioUrl = voice.preview_storage_key ? voiceForgeApi.voicePreviewUrl(voice.preview_storage_key) : voice.sample_storage_key ? voiceForgeApi.voiceFileUrl(voice.id, voice.sample_storage_key) : "";
   const tags = voice.tags || [];
@@ -208,7 +403,22 @@ export function VoiceForgeAssets() {
 
 export function VoiceForgeSettings() {
   const [health, setHealth] = useState<any>(null); const load = async () => setHealth((await voiceForgeApi.health()).data); useEffect(() => { load(); }, []);
-  return <div className="mx-auto max-w-4xl space-y-6"><PageTitle icon={Sparkles} title="配音谷设置" detail="TTS 与 LLM 配置由全局设置统一管理，此处只展示可用状态。" actions={<ActionButton onClick={load}><RefreshCw className="h-4 w-4" />刷新</ActionButton>} /><section className="grid gap-4 md:grid-cols-2">{[{ label: "数据库", value: health?.database ? "已连接" : "检查中" }, { label: "任务队列", value: health?.queue_mode === "celery" ? "Celery 已启用" : "本地回退模式" }, { label: "可用 TTS 接口", value: `${health?.tts_interfaces ?? 0} 个` }, { label: "LLM 服务", value: health?.llm_configured ? "已配置" : "未配置" }].map((item) => <div key={item.label} className="rounded-xl border border-border/60 bg-card p-5"><div className="text-sm text-muted-foreground">{item.label}</div><div className="mt-2 font-semibold">{item.value}</div></div>)}</section><p className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 text-sm text-muted-foreground">要配置模型、密钥、TTS 接口或音色，请使用主应用的全局设置。这些配置不会在晴沐配音谷中复制或显示。</p></div>;
+  return (
+    <PageBackground tone="voiceforge" className="mx-auto max-w-4xl space-y-6 p-1">
+      <PageHeader
+        icon={Sparkles}
+        title="配音谷设置"
+        detail="TTS 与 LLM 配置由全局设置统一管理，此处只展示可用状态。"
+        hideTitle
+        breadcrumbs={[{ label: "晴沐配音谷", to: "/voiceforge" }, { label: "配音谷设置" }]}
+        actions={
+          <Button onClick={load}><RefreshCw className="mr-1.5 h-4 w-4" />刷新</Button>
+        }
+      />
+      <section className="grid gap-4 md:grid-cols-2">{[{ label: "数据库", value: health?.database ? "已连接" : "检查中" }, { label: "任务队列", value: health?.queue_mode === "celery" ? "Celery 已启用" : "本地回退模式" }, { label: "可用 TTS 接口", value: `${health?.tts_interfaces ?? 0} 个` }, { label: "LLM 服务", value: health?.llm_configured ? "已配置" : "未配置" }].map((item) => <div key={item.label} className="rounded-xl border border-border/60 bg-card p-5"><div className="text-sm text-muted-foreground">{item.label}</div><div className="mt-2 font-semibold">{item.value}</div></div>)}</section>
+        <p className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-muted-foreground">要配置模型、密钥、TTS 接口或音色，请使用主应用的全局设置。这些配置不会在晴沐配音谷中复制或显示。</p>
+    </PageBackground>
+  );
 }
 
 function OverviewItem({ icon: Icon, label, value, detail, tone = "default" }: { icon: any; label: string; value: string | number; detail: string; tone?: "default" | "error" }) { return <section className="border border-border/60 bg-card p-4"><div className="flex items-start justify-between"><span className="text-sm text-muted-foreground">{label}</span><Icon className={`h-4 w-4 ${tone === "error" ? "text-destructive" : "text-primary"}`} /></div><div className="mt-3 text-2xl font-semibold tabular-nums">{value}</div><p className="mt-1 text-xs text-muted-foreground">{detail}</p></section>; }
@@ -216,10 +426,9 @@ function ProjectStatus({ status }: { status: string }) { const values: Record<st
 function progressPercent(project: VoiceForgeProject) { return project.sentence_count ? Math.round(((project.done_count || 0) / project.sentence_count) * 100) : 0; }
 function formatDuration(seconds: number) { if (!seconds) return "0 秒"; const minutes = Math.floor(seconds / 60); const remainder = Math.round(seconds % 60); return minutes ? `${minutes} 分 ${remainder} 秒` : `${remainder} 秒`; }
 function formatDate(value: string) { const date = new Date(value.replace(" ", "T")); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(date); }
-function Loading() { return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>; }
-function Empty({ title, detail }: { title: string; detail: string }) { return <div className="flex flex-col items-center justify-center px-6 py-16 text-center"><FileAudio className="h-9 w-9 text-muted-foreground/40" /><p className="mt-3 font-medium text-muted-foreground">{title}</p><p className="mt-1 max-w-sm text-sm text-muted-foreground/70">{detail}</p></div>; }
+
 
 function AnalysisPanel({ analysis, selected, onToggle, onApply, onClose, applying }: { analysis: VoiceForgeAnalysis; selected: string[]; onToggle: (name: string) => void; onApply: () => void; onClose: () => void; applying: boolean }) {
   const characters = analysis.characters || [];
-  return <section className="border border-primary/20 bg-primary/5 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">剧本分析结果</h3><p className="mt-1 text-sm text-muted-foreground">{analysis.summary || "未返回摘要"}</p></div><button type="button" onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground" aria-label="关闭分析结果"><X className="h-4 w-4" /></button></div>{characters.length ? <><div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">{characters.map((character) => <label key={character.name} className="flex cursor-pointer gap-3 border border-border/60 bg-background p-3 text-sm"><input type="checkbox" checked={selected.includes(character.name)} onChange={() => onToggle(character.name)} /><span><span className="block font-medium">{character.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{character.character_type || "角色"}{character.note ? ` · ${character.note}` : ""}</span></span></label>)}</div><div className="mt-4 flex justify-end gap-2"><ActionButton variant="secondary" onClick={onClose}>暂不应用</ActionButton><ActionButton onClick={onApply} disabled={!selected.length || applying}>{applying ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserRound className="h-4 w-4" />}添加所选角色</ActionButton></div></> : <p className="mt-4 text-sm text-muted-foreground">本次分析未识别出可添加的角色。</p>}</section>;
+  return <section className="border border-primary/20 bg-primary/5 p-4"><div className="flex items-start justify-between gap-3"><div><h3 className="font-semibold">剧本分析结果</h3><p className="mt-1 text-sm text-muted-foreground">{analysis.summary || "未返回摘要"}</p></div><button type="button" onClick={onClose} className="p-1 text-muted-foreground hover:text-foreground" aria-label="关闭分析结果"><X className="h-4 w-4" /></button></div>{characters.length ? <><div className="mt-4 grid gap-2 md:grid-cols-2 xl:grid-cols-3">{characters.map((character) => <label key={character.name} className="flex cursor-pointer gap-3 border border-border/60 bg-background p-3 text-sm"><input type="checkbox" checked={selected.includes(character.name)} onChange={() => onToggle(character.name)} /><span><span className="block font-medium">{character.name}</span><span className="mt-0.5 block text-xs text-muted-foreground">{character.character_type || "角色"}{character.note ? ` · ${character.note}` : ""}</span></span></label>)}</div><div className="mt-4 flex justify-end gap-2"><Button variant="outline" onClick={onClose}>暂不应用</Button><Button variant="ai-soft" onClick={onApply} disabled={!selected.length || applying}>{applying ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <UserRound className="mr-1.5 h-4 w-4" />}添加所选角色</Button></div></> : <p className="mt-4 text-sm text-muted-foreground">本次分析未识别出可添加的角色。</p>}</section>;
 }

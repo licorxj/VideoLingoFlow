@@ -75,7 +75,10 @@ class S_SentencePreprocess(BaseStep):
     # ── 语言与标点 ────────────────────────────────────────────────
 
     def _resolve_language(self, task_dir: str, asr_data: Optional[dict]) -> str:
-        """语言解析：workflow.json 输入节点 source_language → ASR json language → auto。"""
+        """解析节点处理语言，from_input 时回退到输入节点和 ASR 结果。"""
+        node_language = str((getattr(self, "_node_config", {}) or {}).get("processing_language") or "from_input").strip()
+        if node_language not in ("", "from_input", "auto"):
+            return node_language
         wf_path = os.path.join(task_dir, "workflow.json")
         if os.path.exists(wf_path):
             try:

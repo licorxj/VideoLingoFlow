@@ -232,6 +232,12 @@ class Qwen3ASRLocal(ASRBase):
         # Parse results
         output = self._build_output(results, input_path)
 
+        # 启用 ForcedAligner 且实际产出词级时间戳时，标记对齐已在内部完成，
+        # 供下游后处理节点跳过重复对齐（Qwen3 无内置 VAD，不设 VAD 标志）。
+        output["_alignment_internally_executed"] = bool(use_aligner) and any(
+            seg.get("words") for seg in output.get("segments", [])
+        )
+
         # Save
         if callback:
             callback(90, "Saving results...")

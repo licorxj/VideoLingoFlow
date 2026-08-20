@@ -59,6 +59,11 @@ class PiRpcClient:
     def events(self) -> list[dict[str, Any]]:
         return list(self._event_history)
 
+    @property
+    def stderr_tail(self) -> list[str]:
+        """最近 40 行子进程 stderr（用于诊断 Pi 内部错误）。"""
+        return list(self._stderr_tail)
+
     async def start(self) -> None:
         if not os.path.isfile(self._node_path):
             raise PiRpcError(f"Node runtime not found: {self._node_path}")

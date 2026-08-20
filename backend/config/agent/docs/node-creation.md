@@ -12,7 +12,7 @@
 
 本助手负责在 VideoLingoFlow 中**新建节点、注册节点、规范存放节点文件**，并处理节点与「能力接口」（ASR/TTS/生图/人声分离/AIGC）的对接。具体职责：
 
-- 新建一个可运行的节点（节点类型定义 + 步骤执行类 + 注册 + 前端兜底副本）。
+- 根据需求选择源码内置节点开发，或创建节点管理器自定义节点。
 - 设计节点的输入/输出端口、配置字段（configFields），端口 type 必须与前端 `PortType` 对齐。
 - 让节点消费已配置的能力接口（引擎/模型下拉 + 步骤内参数合并）。
 - 排查「未知工作流节点」「下游找不到产物」「节点无进度」等执行期问题。
@@ -23,7 +23,7 @@
 
 ## 2. 核心概念
 
-### 2.1 一个可用节点 = 4 个部分，缺一不可
+### 2.1 源码内置节点 = 4 个部分，缺一不可
 
 | 部分 | 文件位置 | 作用 | 是否必须 |
 |---|---|---|---|
@@ -32,7 +32,23 @@
 | ③ 步骤注册 | `backend/steps/step_registry.py` | 节点类型 id → 步骤实例的映射 | 必须 |
 | ④ 前端兜底副本 | `frontend/src/lib/fallbackNodeTypes.ts` | 后端 API 不可用时的前端注册表副本 | 建议同步 |
 
-> 前端正常运行时会通过 `GET /api/node-types` 从后端拉取节点类型（`NodePalette.tsx` → `listNodeTypes()`），所以 ①②③ 是硬性要求；④ 是后端暂不可用时的兜底副本，新增节点时建议同步追加，保持两端一致。
+> 上述四件式只适用于随源码发布的内置节点。前端正常运行时会通过 `GET /api/node-types` 从后端拉取节点类型（`NodePalette.tsx` → `listNodeTypes()`）；④ 是后端暂不可用时的兜底副本，新增内置节点时建议同步追加。
+
+### 2.2 节点管理器自定义节点
+
+- 定义位置：`backend/config/node_types/{id}.json`；通过 `POST/PUT /api/node-types` 创建或更新，不修改 `builtin_node_types.py`、`backend/steps/` 或 `step_registry.py`。
+- 必填核心字段：`id`、`name`、`category`、`inputs`、`outputs`、`configFields`、`defaultConfig`、`execType`、`execTimeout`。端口 id 在同一方向必须唯一。
+- `execType=""`：透传连线输入；`python`：内联 `execCode` 或已有 `execFile`；`shell`：`execCode` 命令；`llm`：`execCode` 提示词模板。
+- 运行时先查询内置 `get_step_instance(node_type)`；未命中时由 `backend/control_plane/custom_node_runtime.py` 加载自定义定义并执行。自定义节点不继承 `BaseStep`，不支持 `execution_domain` 作为执行分派依据。
+- 内联 Python 可使用 `task_dir`、`cache_dir`、`node_id`、`node_config`/`config`、`step_inputs`/`inputs` 和 `produced`。向 `produced` 写入 `{端口id: 值}` 作为节点输出。
+- `execTimeout` 单位为秒。Python/Shell 通过 `TASK_DIR`、`CACHE_DIR`、`NODE_ID`、`INPUT_*`、`CONFIG_*`、`OUTPUTS_JSON_PATH` 获得环境变量契约。
+- `kind: "group"` 的组合节点保存 `groupDefinition` 子图，执行前展开，不使用上述执行类型。
+
+### 2.3 删除与恢复边界
+
+- `DELETE /api/node-types/{id}` 删除自定义定义 JSON，不会清理 `backend/nodes/{id}/`、工作流快照或任务产物；删除前先检查引用。
+- 内置节点删除写入 `backend/config/deleted_builtin_node_ids.json`，不会改写源码定义；该 id 会从注册表隐藏，并使历史引用在保存/执行时失败。
+- 自定义节点覆盖导入前可使用现有备份接口恢复。内置节点没有同类恢复 API，不要擅自编辑删除清单。
 
 ### 2.2 执行架构（控制平面 + Celery）
 
@@ -124,7 +140,7 @@ _STEPS = {
 }
 ```
 
-- **每个新节点必须注册**，否则执行时报 `ValueError: 未知工作流节点: <id>`（`workflow_runtime._run_node` / `step_worker` 中 `get_step_instance` 返回 None）。
+- **每个源码内置节点必须注册**，否则执行时报 `ValueError: 未知工作流节点: <id>`（`workflow_runtime._run_node` / `step_worker` 中 `get_step_instance` 返回 None）。节点管理器自定义节点由 `custom_node_runtime.py` 处理，不适用本节。
 - 建议同时注册**节点类型 id** 和**步骤 id** 两个 key（与现有节点保持一致），保证新旧引用都能解析。
 - 完成后验证：`get_step_instance("<id>")` 不返回 None。
 

@@ -60,12 +60,23 @@ def _derive_task_name(input_config: dict) -> str:
     return ""
 
 
+def _trace(message: str) -> None:
+    print(f"[TaskTrace][Batch] {message}", flush=True)
+
+
 def _batch_meta(task: Task) -> dict:
     return (task.payload or {}).get("batch", {})
 
 
 def _workbench_task_status(status: str) -> str:
     return WORKBENCH_TASK_STATUS.get(status, status)
+
+
+def _task_ui_status(task: Task) -> str:
+    payload = task.payload or {}
+    if task.status == "paused" and payload.get("await_manual_resume"):
+        return "interrupted"
+    return _workbench_task_status(task.status)
 
 
 def _workbench_node_status(status: str) -> str:
@@ -78,7 +89,7 @@ def _task_payload(task: Task) -> dict:
     return {
         "task_id": task.id,
         "task_name": meta.get("task_name", task.id),
-        "status": _workbench_task_status(task.status),
+        "status": _task_ui_status(task),
         "index": meta.get("index", 0),
         "input": payload.get("input", {}),
         "nodes": {
@@ -86,9 +97,9 @@ def _task_payload(task: Task) -> dict:
                 "nodeType": (node.payload or {}).get("data", {}).get("nodeType", ""),
                 "label": (node.payload or {}).get("data", {}).get("label", ""),
                 "status": _workbench_node_status(node.status),
-                "progress": 100 if node.status == "succeeded" else 0,
-                # 失败节点优先返回真实错误信息（payload.message），回退错误分类
-                "message": (node.payload or {}).get("message", "") if node.status == "failed" else "",
+                "progress": 100 if node.status == "succeeded" else int((node.payload or {}).get("progress", 0) or 0),
+                # 运行中节点返回当前 message；若后续进度覆盖了等待提示，则回退到 wait_message，避免前端一闪而过
+                "message": (node.payload or {}).get("message", "") or (node.payload or {}).get("wait_message", ""),
                 "error": ((node.payload or {}).get("message") or node.error_class or "") if node.status == "failed" else (node.error_class or ""),
                 "error_class": node.error_class or "",
             }
@@ -101,7 +112,7 @@ def _task_payload(task: Task) -> dict:
 
 
 def _batch_status(tasks: list[Task]) -> str:
-    statuses = [task.status for task in tasks]
+    statuses = [_task_ui_status(task) for task in tasks]
     if not statuses:
         return "created"
     if all(status == "succeeded" for status in statuses):
@@ -110,6 +121,8 @@ def _batch_status(tasks: list[Task]) -> str:
         return "partial" if "succeeded" in statuses else "failed"
     if any(status == "running" for status in statuses):
         return "running"
+    if any(status == "interrupted" for status in statuses):
+        return "interrupted"
     if any(status == "paused" for status in statuses):
         return "paused"
     if any(status in {"queued", "stopping"} for status in statuses):
@@ -147,12 +160,14 @@ class BatchExecutor:
     def _start_delivery(self, batch_id: str, mode: str) -> None:
         """启动后台投递线程（幂等：同 batch 已有活跃线程则不重复启动）。"""
         if batch_id in self._delivery_threads and self._delivery_threads[batch_id].is_alive():
+            _trace(f"批次 {batch_id[:8]} 已有投递线程在运行，忽略重复启动（mode={mode}）")
             return
         # 新投递轮次：清掉旧停止信号，重新计数
         self._stop_events.pop(batch_id, None)
         thread = threading.Thread(target=self._deliver_loop, args=(batch_id, mode), daemon=True, name=f"batch-deliver-{batch_id[:8]}")
         self._delivery_threads[batch_id] = thread
         thread.start()
+        _trace(f"启动批次投递线程 batch={batch_id[:8]} mode={mode} thread={thread.name}")
 
     def _deliver_loop(self, batch_id: str, mode: str) -> None:
         """后台投递循环：按 max_concurrent_tasks 限流 + task_start_interval 间隔，可被停止信号中止。"""
@@ -162,23 +177,39 @@ class BatchExecutor:
         # 统计当前批次所有任务的投递顺序（按创建时间）
         with session_scope() as session:
             order = [task.id for task in session.scalars(select(Task).where(Task.legacy_key.like(f"batch:{batch_id}:%")).order_by(Task.created_at)).all()]
+        _trace(
+            f"开始批次投递 batch={batch_id[:8]} mode={mode} tasks={len(order)} "
+            f"max_inflight={max_concurrent} start_interval={interval:.1f}s"
+        )
         try:
             for task_id in order:
                 if evt.is_set():
+                    _trace(f"批次 {batch_id[:8]} 收到停止信号，终止后续投递")
                     break
                 # 并行数量限流：该批次活跃（queued/running/stopping）任务数 >= max_concurrent 时等待
+                waiting_logged = False
                 while not evt.is_set() and self._active_count(batch_id) >= max_concurrent:
+                    if not waiting_logged:
+                        _trace(
+                            f"批次 {batch_id[:8]} 等待在途任务释放 "
+                            f"(active={self._active_count(batch_id)}/{max_concurrent})"
+                        )
+                        waiting_logged = True
                     time.sleep(0.5)
                 if evt.is_set():
+                    _trace(f"批次 {batch_id[:8]} 在等待阶段收到停止信号，终止投递")
                     break
                 # 跳过已在队列/运行/成功/已删除的任务
                 with session_scope() as session:
                     task = session.get(Task, task_id)
                     if task is None or task.status in {"queued", "running", "succeeded", "deleted"}:
+                        if task is not None:
+                            _trace(f"跳过任务 {task_id[:8]} status={task.status}")
                         continue
                 try:
                     self._enqueue(task_id, mode)
                 except RuntimeError:
+                    _trace(f"任务 {task_id[:8]} 投递失败，停止当前批次投递")
                     break  # Celery 不可用等，停止投递
                 # 启动间隔（分段 sleep，期间响应停止信号）
                 slept = 0.0
@@ -188,6 +219,7 @@ class BatchExecutor:
                     slept += step
         finally:
             self._delivery_threads.pop(batch_id, None)
+            _trace(f"批次投递线程结束 batch={batch_id[:8]} mode={mode}")
 
     def _active_count(self, batch_id: str) -> int:
         with session_scope() as session:
@@ -228,6 +260,7 @@ class BatchExecutor:
         batch_id = uuid.uuid4().hex[:12]
         name = batch_name or f"batch_{batch_id[:8]}"
         common = common_config or {}
+        _trace(f"创建批次 batch={batch_id[:8]} workflow={workflow_id} name={name} tasks={len(tasks_input)}")
         for index, raw_input in enumerate(tasks_input):
             input_config = {**common, **raw_input}
             task_name = _derive_task_name(input_config) or f"task_{index + 1}"
@@ -254,6 +287,7 @@ class BatchExecutor:
                 json.dumps((task.payload or {}).get("workflow", workflow), ensure_ascii=False),
                 encoding="utf-8",
             )
+            _trace(f"批次 {batch_id[:8]} 注册任务 #{index + 1} task={task.id[:8]} name={task_name}")
         return {"batch_id": batch_id, "batch_name": name, "task_count": len(tasks_input), "status": "created"}
 
     def list_batches(self) -> list:
@@ -294,15 +328,24 @@ class BatchExecutor:
                 return
             workflow = (task.payload or {}).get("workflow", {})
             input_config = (task.payload or {}).get("input", {})
+            batch_meta = _batch_meta(task)
+            task_name = batch_meta.get("task_name", task.id[:8])
+            batch_id = batch_meta.get("batch_id", "")
+        _trace(
+            f"投递任务 task={task_id[:8]} name={task_name} batch={batch_id[:8] if batch_id else '-'} "
+            f"mode={mode} workflow={workflow.get('id', '') or workflow.get('name', '')}"
+        )
         submit_workflow(workflow, input_config, mode=mode, task_id=task_id, enqueue=True, idempotency_scope=task_id)
 
     def start_batch(self, batch_id: str) -> dict:
         tasks = self._tasks_for_batch(batch_id)
+        _trace(f"启动批次 batch={batch_id[:8]} tasks={len(tasks)}")
         self._start_delivery(batch_id, "batch")
         return {"batch_id": batch_id, "status": "running", "task_count": len(tasks), "submitted": len(tasks)}
 
     def stop_batch(self, batch_id: str) -> dict:
         self._signal_stop(batch_id)
+        _trace(f"停止批次 batch={batch_id[:8]}")
         for task in self._tasks_for_batch(batch_id):
             request_cancel(task.id, "batch_stopped")
         return {"batch_id": batch_id, "status": "stopped"}
@@ -371,6 +414,7 @@ class BatchExecutor:
             raise ValueError(f"Task {task_id} is not in a retriable state (status={task.status})")
         # 从头执行：清空 cache 中间产物，全新开始
         _clear_workspace_cache(_workspace(task_id))
+        _trace(f"重跑任务 batch={batch_id[:8]} task={task_id[:8]}")
         self._enqueue(task_id, "retry")
         return {"task_id": task_id, "status": "queued"}
 
@@ -378,6 +422,7 @@ class BatchExecutor:
         task = self._ensure_member(batch_id, task_id)
         if task.status not in {"created", "failed", "cancelled", "paused"}:
             raise ValueError(f"Task {task_id} is not in a resumable state (status={task.status})")
+        _trace(f"继续单任务 batch={batch_id[:8]} task={task_id[:8]}")
         self._enqueue(task_id, "resume")
         return {"task_id": task_id, "status": "queued"}
 
@@ -417,6 +462,7 @@ class BatchExecutor:
         meta = _batch_meta(tasks[0])
         workflow = (tasks[0].payload or {}).get("workflow", {})
         common = common_config or {}
+        _trace(f"追加任务到批次 batch={batch_id[:8]} count={len(tasks_input)}")
         for offset, raw_input in enumerate(tasks_input):
             input_config = {**common, **raw_input}
             index = len(tasks) + offset
@@ -430,10 +476,12 @@ class BatchExecutor:
             workspace = _workspace(task.id)
             workspace.mkdir(parents=True, exist_ok=True)
             (workspace / "workflow.json").write_text(json.dumps(workflow, ensure_ascii=False), encoding="utf-8")
+            _trace(f"批次 {batch_id[:8]} 追加任务 #{index + 1} task={task.id[:8]} name={task_name}")
         return {"batch_id": batch_id, "added": len(tasks_input), "total": len(tasks) + len(tasks_input)}
 
     def resume_unfinished(self, batch_id: str) -> dict:
         tasks = self._tasks_for_batch(batch_id)
+        _trace(f"继续未完成任务 batch={batch_id[:8]} tasks={len(tasks)}")
         self._start_delivery(batch_id, "resume")
         return {**self.get_batch_detail(batch_id), "submitted": len(tasks)}
 

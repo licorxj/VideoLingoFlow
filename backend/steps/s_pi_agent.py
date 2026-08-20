@@ -143,6 +143,11 @@ class S_PiAgent(BaseStep):
                         message = event.get("message") or {}
                         if isinstance(message, dict) and message.get("role") == "assistant":
                             last_msg = message
+                    elif etype == "agent_end":
+                        # agent_end 携带完整消息列表，可拿到最终 assistant 完整回复
+                        for message in event.get("messages") or []:
+                            if isinstance(message, dict) and message.get("role") == "assistant":
+                                last_msg = message
                     elif etype == "tool_execution_end":
                         progress(50, f"调用工具: {event.get('toolName', '')}")
 
@@ -151,9 +156,23 @@ class S_PiAgent(BaseStep):
                     raise RuntimeError("任务已取消")
                 progress(20, "发送任务指令")
                 task_instruction = self._build_task_instruction(input_ports, output_items)
-                await client.prompt(task_instruction, "steer", 30)
+                # Pi 的 prompt 命令在“preflight 通过”时即返回响应，LLM 生成是异步的。
+                # 必须等待 Pi 发出终止事件（agent_settled/agent_end/pi_closed）后才可验收，
+                # 否则 final_text 尚未收集完成，会误报“未返回 [PI_TASK_DONE]”。
+                settled = asyncio.Event()
+
+                async def _on_terminal(event: dict[str, Any]) -> None:
+                    if event.get("type") in ("agent_settled", "agent_end", "pi_closed"):
+                        settled.set()
+
+                client.subscribe(_on_terminal)
+                await client.prompt(task_instruction, "steer", 300)
                 if cancel_callback and cancel_callback():
                     raise RuntimeError("任务已取消")
+                try:
+                    await asyncio.wait_for(settled.wait(), timeout=300)
+                except asyncio.TimeoutError:
+                    pass
 
                 # 汇总最终助手回复（text 部分）
                 full_text = "".join(final_text)
@@ -166,7 +185,13 @@ class S_PiAgent(BaseStep):
                     )
                 result = self._parse_done_payload(full_text)
                 if result is None:
-                    raise RuntimeError("智能体未返回约定的任务结束标识 [PI_TASK_DONE]，请检查其输出")
+                    snippet = (full_text.strip() or "(empty)")[-600:]
+                    stderr_tail = " | ".join(getattr(client, "stderr_tail", []) or [])[-500:]
+                    raise RuntimeError(
+                        f"智能体未返回约定的任务结束标识 [PI_TASK_DONE]，请检查其输出。"
+                        f"Pi 实际输出尾部：{snippet}"
+                        + (f"；Pi stderr：{stderr_tail}" if stderr_tail else "")
+                    )
 
                 progress(90, "正在收拢产物")
                 outputs = self._collect_outputs(task_dir_path, cache_dir, node_id, result, output_items)

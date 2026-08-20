@@ -429,6 +429,16 @@ class FunASRNanoLocal(ASRBase):
         # Mark that VAD was executed internally (integrated in FunASR model)
         # This prevents redundant VAD in post-processing
         output["_vad_internally_executed"] = True
+        # FunASR Nano 转录自带字符级时间戳：有 words 即视为对齐已在内部完成；
+        # 启用 diarize 且返回了说话人时，说话人识别也已在内部完成。
+        # 这两个标志供下游后处理节点跳过重复阶段，避免浪费与错误叠加。
+        output["_alignment_internally_executed"] = any(
+            seg.get("words") for seg in output.get("segments", [])
+        )
+        output["_diarization_internally_executed"] = bool(output.get("speakers")) or any(
+            seg.get("speaker_id") or seg.get("speaker")
+            for seg in output.get("segments", [])
+        )
 
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:

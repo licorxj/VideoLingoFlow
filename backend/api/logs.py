@@ -94,6 +94,10 @@ class _StreamRedirector(io.TextIOBase):
         if self._buf.strip():
             self._safe_broadcast(self._buf.strip())
             self._buf = ""
+        try:
+            self._original.flush()
+        except Exception:
+            pass
 
     def fileno(self):
         return self._original.fileno()

@@ -1,0 +1,591 @@
+{
+  "id": "8ed5bc8b526f",
+  "name": "OCR识别字幕",
+  "description": "OCR技术快速识别视频画面上的硬字幕",
+  "nodes": [
+    {
+      "id": "node_1_1787018588772",
+      "type": "workflow",
+      "position": {
+        "x": -2640,
+        "y": -2895
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "X:/PCTMoveData/Videos/f60e116738d5826a24ab10711461c2f7.mp4",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "source_language": "en",
+          "target_language": "zh",
+          "copyInputs": false,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\09c5f2544c15477b9feb3bf051ff1c79\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          }
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 500
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1787018613496",
+      "type": "workflow",
+      "position": {
+        "x": -2070,
+        "y": -2895
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "note": "输入视频预览",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 441
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1787018665742",
+      "type": "workflow",
+      "position": {
+        "x": -2070,
+        "y": -2340
+      },
+      "data": {
+        "nodeType": "subtitle_position_search",
+        "label": "视频字幕位置查找",
+        "config": {
+          "model": "rapidocr",
+          "direction": "horizontal",
+          "position": "ratio",
+          "position_ratio": "0.6-0.8",
+          "frame_interval": 20,
+          "clean_cache": true,
+          "ocr_version": "PP-OCRv6",
+          "model_type": "tiny"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "image": "cache/subtitle_frame_node_3_1787018665742.png",
+          "json": "cache/subtitle_box_node_3_1787018665742.json"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 504
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_4_1787018735302",
+      "type": "workflow",
+      "position": {
+        "x": -1530,
+        "y": -2880
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "note": "字幕位置识别",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 393
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787026263575",
+      "type": "workflow",
+      "position": {
+        "x": -1380,
+        "y": -2340
+      },
+      "data": {
+        "nodeType": "subtitle_recognition",
+        "label": "OCR字幕识别",
+        "config": {
+          "model": "rapidocr",
+          "initial_interval": 20,
+          "boundary_precision_ms": 100,
+          "tilt_threshold_deg": 3,
+          "ocr_version": "PP-OCRv6",
+          "model_type": "small"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/subtitle_ocr_node_1_1787026263575.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 384
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1787026400765",
+      "type": "workflow",
+      "position": {
+        "x": -870,
+        "y": -2250
+      },
+      "data": {
+        "nodeType": "subtitle_gen",
+        "label": "字幕生成",
+        "config": {
+          "file_prefix": "",
+          "filter_punctuation": false,
+          "punctuation_replace_mode": "space"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "original": "output/subtitles_node_2_1787026400765.srt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 291
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "n_msy5eaeziq0a",
+      "type": "workflow",
+      "position": {
+        "x": -30,
+        "y": -2865
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "note": "生成字幕预览",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 441
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787029311104",
+      "type": "workflow",
+      "position": {
+        "x": -1110,
+        "y": -3810
+      },
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "mimo_asr",
+          "language": "auto",
+          "model": "",
+          "compute_type": "",
+          "batch_size": 0,
+          "word_timestamps": false,
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_1_1787029311104.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 663
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1787029315709",
+      "type": "workflow",
+      "position": {
+        "x": -2145,
+        "y": -3675
+      },
+      "data": {
+        "nodeType": "extract_audio",
+        "label": "音频分离",
+        "config": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/extracted_audio_node_2_1787029315709.m4a"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 195
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1787029321437",
+      "type": "workflow",
+      "position": {
+        "x": -1650,
+        "y": -3735
+      },
+      "data": {
+        "nodeType": "audio_transcode",
+        "label": "音频质量转码",
+        "config": {
+          "format": "wav",
+          "sample_rate": "16000",
+          "bit_depth": "16",
+          "channels": "1",
+          "bitrate": "192"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/transcoded_audio_node_3_1787029321437.wav"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 493
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_4_1787029608807",
+      "type": "workflow",
+      "position": {
+        "x": 315,
+        "y": -3630
+      },
+      "data": {
+        "nodeType": "subtitle_gen",
+        "label": "字幕生成",
+        "config": {
+          "file_prefix": "",
+          "filter_punctuation": false,
+          "punctuation_replace_mode": "space"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "original": "output/subtitles_node_4_1787029608807.srt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 291
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_5_1787029642257",
+      "type": "workflow",
+      "position": {
+        "x": -450,
+        "y": -3810
+      },
+      "data": {
+        "nodeType": "sentence_split",
+        "label": "句子分割",
+        "config": {
+          "max_sentence_length": "18",
+          "use_llm_split": false,
+          "split_sentence_ends": true,
+          "split_clause_breaks": true,
+          "merge_min_duration": 0.5,
+          "merge_max_gap": "0.2",
+          "pause_split_threshold": "1.5",
+          "split_on_speaker": false,
+          "merge_short_enabled": false,
+          "merge_gap_enabled": false,
+          "pause_split_enabled": true,
+          "processing_language": "from_input"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/sentences_node_5_1787029642257.json",
+          "text": "cache/sentences_text_node_5_1787029642257.txt"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 545
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787018588772",
+      "sourceHandle": "out-video",
+      "target": "node_2_1787018613496",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787018588772out-video-node_2_1787018613496in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787018588772",
+      "sourceHandle": "out-video",
+      "target": "node_3_1787018665742",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787018588772out-video-node_3_1787018665742in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1787018665742",
+      "sourceHandle": "out-image",
+      "target": "node_4_1787018735302",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_3_1787018665742out-image-node_4_1787018735302in-image"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787018588772",
+      "sourceHandle": "out-video",
+      "target": "node_1_1787026263575",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787018588772out-video-node_1_1787026263575in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1787018665742",
+      "sourceHandle": "out-json",
+      "target": "node_1_1787026263575",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_3_1787018665742out-json-node_1_1787026263575in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787026263575",
+      "sourceHandle": "out-subtitle",
+      "target": "node_2_1787026400765",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1787026263575out-subtitle-node_2_1787026400765in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787018588772",
+      "sourceHandle": "out-video",
+      "target": "n_msy5eaeziq0a",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787018588772out-video-n_msy5eaeziq0ain-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787018588772",
+      "sourceHandle": "out-video",
+      "target": "node_2_1787029315709",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787018588772out-video-node_2_1787029315709in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1787029321437",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1787029311104",
+      "targetHandle": "in-asr_audio",
+      "id": "xy-edge__node_3_1787029321437out-audio-node_1_1787029311104in-asr_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787029315709",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1787029321437",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_2_1787029315709out-audio-node_3_1787029321437in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787029311104",
+      "sourceHandle": "out-subtitle",
+      "target": "node_5_1787029642257",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1787029311104out-subtitle-node_5_1787029642257in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_5_1787029642257",
+      "sourceHandle": "out-subtitle",
+      "target": "node_4_1787029608807",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_5_1787029642257out-subtitle-node_4_1787029608807in-subtitle"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-08-18T10:03:44",
+  "updatedAt": "2026-08-18T22:41:56",
+  "revision": 14
+}

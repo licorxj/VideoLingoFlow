@@ -125,11 +125,11 @@ class ExecuteTaskRequest(BaseModel):
 @router.get("/meta/types")
 async def task_meta_types():
     """可用节点类型元数据（id/label/分类），必须定义在 /{task_id} 之前。"""
-    from backend.config.builtin_node_types import BUILTIN_NODE_TYPES
+    from backend.config.builtin_node_types import get_builtin_node_types
 
     types = [
         {"id": node["id"], "label": node.get("name", node["id"]), "category": node.get("category", "")}
-        for node in BUILTIN_NODE_TYPES
+        for node in get_builtin_node_types()
     ]
     return _deprecated({"types": types})
 
@@ -321,13 +321,21 @@ async def rollback_task(task_id: str, step_id: str):
 
 class OpenFileRequest(BaseModel):
     file_path: str
+    task_id: str | None = None
 
 
-def _open_candidates(file_path: str, root: Path, legacy_root: Path):
-    """生成候选路径：绝对路径原样；相对路径在各任务工作区与根下查找。"""
+def _open_candidates(file_path: str, root: Path, legacy_root: Path, task_id: str | None = None):
+    """生成候选路径：带任务 ID 时只在对应工作区解析相对路径。"""
     p = Path(file_path)
     if p.is_absolute():
         yield p
+        return
+    if task_id:
+        task_path = Path(task_id)
+        if task_path.is_absolute() or task_path.name != task_id or task_id in {".", ".."}:
+            return
+        for base in (root / task_id, legacy_root / task_id):
+            yield base / p
         return
     for base in (root, legacy_root):
         if not base.exists():
@@ -343,7 +351,9 @@ async def open_file(req: OpenFileRequest):
     root = Path(os.getenv("CONTROL_PLANE_WORKSPACE_ROOT", Path.cwd() / "control_plane_workspaces"))
     legacy_root = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) / "tasks"
     allowed_bases = [b.resolve() for b in (root, legacy_root)]
-    for cand in _open_candidates(req.file_path, root, legacy_root):
+    if req.task_id:
+        allowed_bases = [(base / req.task_id).resolve() for base in (root, legacy_root)]
+    for cand in _open_candidates(req.file_path, root, legacy_root, req.task_id):
         try:
             resolved = cand.resolve()
         except OSError:

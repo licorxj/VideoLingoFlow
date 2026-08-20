@@ -50,6 +50,8 @@ _voiceforge_worker_process: subprocess.Popen | None = None
 _voiceforge_worker_start_time: float = 0
 _control_plane_worker_process: subprocess.Popen | None = None
 _control_plane_worker_start_time: float = 0
+_gpu_service_process: subprocess.Popen | None = None
+_gpu_service_start_time: float = 0
 _redis_process: subprocess.Popen | None = None
 _lock = threading.Lock()
 # 操作级互斥：串行化所有 start/stop/restart 的实际执行（RLock 可重入，restart→stop→start 同线程复用）
@@ -58,6 +60,7 @@ _op_lock = threading.RLock()
 _desired: dict[str, bool] = {}
 _last_auto_restart: dict[str, float] = {}
 _shutting_down = threading.Event()
+_manager_shutdown_callback = None
 _AUTO_RESTART_COOLDOWN = 30.0
 _WATCHDOG_INTERVAL = 10.0
 # Windows Job Object 句柄：manager 退出时由 OS 级联终止全部子进程（孤儿兜底）
@@ -169,6 +172,7 @@ def _watchdog_tick():
         ("cutia", _cutia_process, start_cutia, CUTIA_PORT),
         ("voiceforge_worker", _voiceforge_worker_process, start_voiceforge_worker, None),
         ("control_plane_worker", _control_plane_worker_process, start_control_plane_worker, None),
+        ("gpu_service", _gpu_service_process, start_gpu_service, None),
     ]
     for name, proc, starter, port in checks:
         if _shutting_down.is_set():
@@ -254,7 +258,7 @@ def _setup_env() -> dict[str, str]:
         env[key] = value
     sysroot = os.environ.get("SystemRoot", "C:\\Windows")
 
-    venv_root = os.path.join(project_root, "backend", "venv312")
+    venv_root = os.path.join(project_root, "venv312")
     torch_lib = os.path.join(venv_root, "Lib", "site-packages", "torch", "lib")
     bundled_cuda = _venv_has_bundled_cuda(venv_root)
 
@@ -313,7 +317,7 @@ def _setup_env() -> dict[str, str]:
     env["PATH"] = f"{os.path.join(venv_root, 'Scripts')};{env['PATH']}"
     if os.path.isfile(os.path.join(REDIS_BIN_DIR, "redis-server.exe")):
         env["PATH"] = f"{REDIS_BIN_DIR};{env['PATH']}"
-    # -- Node.js runtime (Pi agent depends on it; the startup wrapper already detected it) --
+    # -- Node.js runtime (小π Agent depends on it; the startup wrapper already detected it) --
     node_exe = shutil.which("node") or ""
     if not node_exe and os.name == "nt":
         for candidate in (
@@ -347,7 +351,7 @@ def _setup_env() -> dict[str, str]:
 def _get_python() -> str:
     """Get the venv python executable."""
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    venv_python = os.path.join(project_root, "backend", "venv312", "Scripts", "python.exe")
+    venv_python = os.path.join(project_root, "venv312", "Scripts", "python.exe")
     if os.path.exists(venv_python):
         return venv_python
     return sys.executable
@@ -529,6 +533,11 @@ def start_backend():
             print("[Manager] Backend already running, skipping start")
             return
         if _check_port(BACKEND_PORT):
+            detached_pid = next((pid for pid in _get_listener_pids(BACKEND_PORT) if _is_main_backend_process(pid)), None)
+            if detached_pid is not None:
+                print(f"[Manager] Backend already running outside manager handle, PID={detached_pid}, skipping start")
+                _desired["main_backend"] = True
+                return
             print(f"[Manager] Backend port {BACKEND_PORT} is already in use, skipping start")
             return
 
@@ -586,6 +595,14 @@ def stop_backend():
         _backend_start_time = 0
 
     if proc is None:
+        if _check_port(BACKEND_PORT) and _stop_external_backend():
+            for _ in range(20):
+                if _check_port(BACKEND_PORT):
+                    time.sleep(0.5)
+                else:
+                    break
+            print("[Manager] Detached backend stopped")
+            return
         print("[Manager] No backend process to stop")
         return
 
@@ -881,6 +898,109 @@ def _kill_port_process(port: int):
         print(f"[Manager] Failed to kill process listening on port {port}: {e}")
 
 
+def _get_listener_pids(port: int) -> list[int]:
+    """返回监听指定 TCP 端口的 PID 列表。"""
+    pids: set[int] = set()
+    try:
+        if os.name == "nt":
+            output = subprocess.run(
+                ["netstat", "-ano", "-p", "tcp"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            ).stdout
+            for line in output.splitlines():
+                parts = line.split()
+                if len(parts) >= 5 and parts[0].endswith("TCP") and parts[1].rsplit(":", 1)[-1] == str(port) and parts[3] == "LISTENING":
+                    try:
+                        pids.add(int(parts[-1]))
+                    except ValueError:
+                        pass
+        else:
+            for cmd in (
+                ["lsof", "-iTCP", f":{port}", "-sTCP:LISTEN", "-t"],
+                ["ss", "-ltnp", f"sport = :{port}"],
+            ):
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                if result.returncode != 0:
+                    continue
+                for token in result.stdout.replace(",", " ").split():
+                    if token.isdigit():
+                        pids.add(int(token))
+    except Exception:
+        return []
+    return sorted(pids)
+
+
+def _get_process_command_line(pid: int | None) -> str:
+    """返回指定 PID 的命令行，小写；失败返回空串。"""
+    if pid is None:
+        return ""
+    try:
+        if os.name == "nt":
+            result = subprocess.run(
+                [
+                    "powershell",
+                    "-NoProfile",
+                    "-Command",
+                    f"(Get-CimInstance Win32_Process -Filter 'ProcessId = {pid}').CommandLine",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            return result.stdout.strip().lower().replace("/", "\\")
+        result = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "args="],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        return result.stdout.strip().lower()
+    except Exception:
+        return ""
+
+
+def _is_main_backend_process(pid: int | None) -> bool:
+    """判断 PID 是否为当前项目的主后端进程。"""
+    if pid is None:
+        return False
+    command_line = _get_process_command_line(pid)
+    if not command_line:
+        return False
+    project_root = _project_root().lower().replace("/", "\\")
+    markers = (
+        "backend.main:app",
+        "backend\\main.py",
+        "backend/main.py",
+    )
+    return project_root in command_line and any(marker in command_line for marker in markers)
+
+
+def _stop_external_backend() -> bool:
+    """尝试停止监听 11001 但未被当前 manager 句柄记录的本项目主后端。"""
+    stopped = False
+    for pid in _get_listener_pids(BACKEND_PORT):
+        if pid == os.getpid():
+            continue
+        if not _is_main_backend_process(pid):
+            continue
+        try:
+            print(f"[Manager] Reclaiming detached backend PID={pid} on port {BACKEND_PORT}...")
+            if os.name == "nt":
+                subprocess.run(
+                    ["taskkill", "/F", "/T", "/PID", str(pid)],
+                    capture_output=True,
+                    timeout=10,
+                )
+            else:
+                os.kill(pid, signal.SIGTERM)
+            stopped = True
+        except Exception as exc:
+            print(f"[Manager] Failed to stop detached backend PID={pid}: {exc}")
+    return stopped
+
+
 @_serialized
 def stop_social_frontend():
     """Stop the social frontend process."""
@@ -1169,7 +1289,7 @@ def start_voiceforge_worker():
             return
         cmd = [
             python_exe, "-m", "celery", "-A", "backend.voiceforge.tasks.celery_app.celery_app",
-            "worker", "--loglevel=INFO", "--pool=threads", "--concurrency=5", "--queues=voiceforge_synthesis,voiceforge_voice,voiceforge_export",
+            "worker", "--loglevel=INFO", "--hostname=voiceforge@%h", "--pool=threads", "--concurrency=5", "--queues=voiceforge_synthesis,voiceforge_voice,voiceforge_export",
         ]
         proc = subprocess.Popen(cmd, cwd=project_root, env=env, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
         _assign_to_job(proc)
@@ -1204,7 +1324,7 @@ def start_control_plane_worker():
         print("[Manager] Control-plane worker queues already have a consumer, skipping start")
         return
     concurrency = env.get("CELERY_CONTROL_PLANE_CONCURRENCY", "4")
-    cmd = [python_exe, "-m", "celery", "-A", "backend.control_plane.celery_runtime:celery_app", "worker", "--loglevel=INFO", "--pool=threads", f"--concurrency={concurrency}", "--queues=videolingo_cpu,videolingo_gpu,videolingo_llm,videolingo_tts,videolingo_io"]
+    cmd = [python_exe, "-m", "celery", "-A", "backend.control_plane.celery_runtime:celery_app", "worker", "--loglevel=INFO", "--hostname=control-plane@%h", "--pool=threads", f"--concurrency={concurrency}", "--queues=videolingo_cpu,videolingo_gpu,videolingo_llm,videolingo_tts,videolingo_io"]
     try:
         proc = subprocess.Popen(cmd, cwd=project_root, env=env, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
         _assign_to_job(proc)
@@ -1235,6 +1355,59 @@ def restart_control_plane_worker():
     stop_control_plane_worker()
     time.sleep(1)
     start_control_plane_worker()
+
+
+def _gpu_service_enabled_in(env: dict[str, str]) -> bool:
+    return env.get("GPU_SERVICE_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
+@_serialized
+def start_gpu_service():
+    """启动 GPU 服务层（显存监测 + lane 调度）。未启用 GPU_SERVICE_ENABLED 时跳过。"""
+    global _gpu_service_process, _gpu_service_start_time
+    with _lock:
+        if _gpu_service_process is not None and _gpu_service_process.poll() is None:
+            print("[Manager] GPU service already running, skipping start")
+            return
+    prepared = _prepare_local_runtime()
+    if prepared is None:
+        return
+    python_exe, env = prepared
+    project_root = _project_root()
+    if not _gpu_service_enabled_in(env):
+        print("[Manager] GPU service disabled (GPU_SERVICE_ENABLED not set), skipping start")
+        return
+    cmd = [python_exe, "-m", "backend.gpu_service.manager"]
+    try:
+        proc = subprocess.Popen(cmd, cwd=project_root, env=env, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
+        _assign_to_job(proc)
+        with _lock:
+            _gpu_service_process = proc
+            _gpu_service_start_time = time.time()
+        _desired["gpu_service"] = True
+        print(f"[Manager] GPU service started PID={proc.pid}")
+    except Exception as exc:
+        print(f"[Manager] Failed to start GPU service: {exc}")
+
+
+@_serialized
+def stop_gpu_service():
+    global _gpu_service_process, _gpu_service_start_time
+    _desired["gpu_service"] = False
+    with _lock:
+        proc = _gpu_service_process
+        _gpu_service_process = None
+        _gpu_service_start_time = 0
+    if proc is not None:
+        _kill_existing_process(proc)
+        print("[Manager] GPU service stopped")
+
+
+@_serialized
+def restart_gpu_service():
+    stop_gpu_service()
+    time.sleep(1)
+    start_gpu_service()
 
 
 @_serialized
@@ -1286,6 +1459,7 @@ def stop_all():
     stop_cutia()
     stop_voiceforge_worker()
     stop_control_plane_worker()
+    stop_gpu_service()
     global _redis_process
     if _redis_process is not None:
         _kill_existing_process(_redis_process)
@@ -1305,6 +1479,17 @@ def restart_backend():
     start_cutia()
     start_voiceforge_worker()
     start_control_plane_worker()
+
+
+def request_manager_shutdown(source: str = "api"):
+    """停止所有托管进程并退出 manager 自身。"""
+    callback = _manager_shutdown_callback
+    if callback is not None:
+        callback(source)
+        return
+    print(f"[Manager] Shutdown callback unavailable, stop_all only (source={source})")
+    _shutting_down.set()
+    stop_all()
 
 
 @_serialized
@@ -1354,6 +1539,7 @@ def get_status() -> dict:
         cutia_proc = _cutia_process
         voiceforge_worker_proc = _voiceforge_worker_process
         control_plane_worker_proc = _control_plane_worker_process
+        gpu_service_proc = _gpu_service_process
 
     def _proc_status(proc, start_time, port=None):
         if proc is None:
@@ -1401,6 +1587,7 @@ def get_status() -> dict:
         },
         "voiceforge_worker": {**_proc_status(voiceforge_worker_proc, _voiceforge_worker_start_time), "port": None},
         "control_plane_worker": {**_proc_status(control_plane_worker_proc, _control_plane_worker_start_time), "port": None},
+        "gpu_service": {**_proc_status(gpu_service_proc, _gpu_service_start_time), "port": None},
         "pi_agent": pi_status,
     }
 
@@ -1502,6 +1689,15 @@ class ManagerHandler(BaseHTTPRequestHandler):
         elif self.path == "/manager/start-control-plane-worker":
             self._send_json({"status": "starting"})
             threading.Thread(target=start_control_plane_worker, daemon=True).start()
+        elif self.path == "/manager/restart-gpu-service":
+            self._send_json({"status": "restarting"})
+            threading.Thread(target=restart_gpu_service, daemon=True).start()
+        elif self.path == "/manager/start-gpu-service":
+            self._send_json({"status": "starting"})
+            threading.Thread(target=start_gpu_service, daemon=True).start()
+        elif self.path == "/manager/stop-gpu-service":
+            self._send_json({"status": "stopping"})
+            threading.Thread(target=stop_gpu_service, daemon=True).start()
         elif self.path == "/manager/stop" or self.path == "/api/manager/stop":
             self._send_json({"status": "stopping"})
             threading.Thread(target=stop_backend, daemon=True).start()
@@ -1529,6 +1725,9 @@ class ManagerHandler(BaseHTTPRequestHandler):
         elif self.path == "/manager/stop-control-plane-worker":
             self._send_json({"status": "stopping"})
             threading.Thread(target=stop_control_plane_worker, daemon=True).start()
+        elif self.path == "/manager/shutdown-all" or self.path == "/api/manager/shutdown-all":
+            self._send_json({"status": "shutting_down"})
+            threading.Thread(target=request_manager_shutdown, args=("api",), daemon=True).start()
         else:
             self._send_json({"error": "Not found"}, 404)
 
@@ -1537,7 +1736,7 @@ class ManagerHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    global _job_handle
+    global _job_handle, _manager_shutdown_callback
     if _check_port(MANAGER_PORT):
         print(f"[Manager] Port {MANAGER_PORT} is already in use; another Manager may be running")
         return 1
@@ -1580,6 +1779,7 @@ def main():
     start_cutia()
     start_voiceforge_worker()
     start_control_plane_worker()
+    start_gpu_service()
 
     # 健康监督：期望运行却崩溃的服务自动拉起（每 10s 探测，30s 冷却防重启风暴）
     threading.Thread(target=_watchdog_loop, name="manager-watchdog", daemon=True).start()
@@ -1595,6 +1795,8 @@ def main():
         stop_all()
         server.shutdown()
 
+    _manager_shutdown_callback = _shutdown
+
     def _handle_signal(signum, _frame):
         source = signal.Signals(signum).name
         threading.Thread(target=_shutdown, args=(source,), daemon=True).start()
@@ -1606,6 +1808,8 @@ def main():
         server.serve_forever()
     except KeyboardInterrupt:
         _shutdown("KeyboardInterrupt")
+    finally:
+        _manager_shutdown_callback = None
 
 
 if __name__ == "__main__":

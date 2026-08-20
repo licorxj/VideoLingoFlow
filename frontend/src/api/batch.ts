@@ -8,7 +8,7 @@ export interface BatchSummary {
   created_at: string;
   task_count: number;
   task_ids: string[];
-  status: string;  // created | running | paused | completed | partial | failed
+  status: string;  // created | running | paused | interrupted | completed | partial | failed
 }
 
 export interface BatchTaskDetail {
@@ -58,6 +58,60 @@ export interface BatchCreateRequest {
   batch_name?: string;
   tasks: Record<string, string>[];
   common_config: Record<string, any>;
+}
+
+export interface RuntimeStatus {
+  batch: {
+    inflight_tasks: number;
+    running_batches: number;
+    paused_batches: number;
+  };
+  control_plane: {
+    tasks: Record<string, number>;
+    queues: Record<string, { name: string; depth: number }>;
+    workers: {
+      available: boolean;
+      stats?: Record<string, any>;
+      active?: Record<string, any>;
+      reserved?: Record<string, any>;
+    };
+    resources: {
+      capacity: Record<string, number>;
+      gpu_service_enabled: boolean;
+      batch_max_inflight_tasks: number;
+      batch_task_start_interval: number;
+    };
+    error?: string;
+  };
+  gpu_service: {
+    enabled: boolean;
+    available: boolean;
+    active_lanes?: number;
+    busy_lanes?: number;
+    queue_depth?: number;
+    idle_timeout?: number;
+    vram_pressure?: boolean;
+    vram?: {
+      available?: boolean;
+      total_gb?: number;
+      used_gb?: number;
+      free_gb?: number;
+      utilization_percent?: number;
+      name?: string;
+    };
+    configured?: {
+      max_lanes: number;
+      idle_timeout: number;
+      vram_headroom_gb: number;
+    };
+  };
+  system: {
+    available: boolean;
+    cpu_percent: number | null;
+    ram_percent: number | null;
+    gpu_percent: number | null;
+    vram_percent: number | null;
+  };
 }
 
 export const batchApi = {
@@ -111,6 +165,9 @@ export const batchApi = {
 
   getConfig: () =>
     client.get("/api/batch/config").then((r) => r.data),
+
+  getRuntimeStatus: () =>
+    client.get("/api/control/runtime/status").then((r) => r.data as RuntimeStatus),
 
   updateConfig: (maxConcurrent: number, taskStartInterval?: number) =>
     client.put("/api/batch/config", {

@@ -15,10 +15,13 @@ import { CATEGORIES } from "@/lib/workflowTypes";
 import { packNode, publishPackage, type PublishResult } from "@/api/community";
 import SharePackDialog, { type SharePackFields } from "@/components/community/SharePackDialog";
 import { captureNodeCard } from "@/lib/snapshot";
+import { useAlert } from "@/components/ui/AlertProvider";
 import {
   X, Plus, Trash2, Share2, Upload, Download, Settings2,
   Search, Package, AlertCircle, CheckCircle2, FileArchive,
-  Code, Terminal, Brain, History, RotateCcw,
+  Code, Terminal, Brain, History, RotateCcw, Film, Music, Subtitles, Mic, Mic2, Scissors,
+  Languages, FileText, Volume2, Merge, Clapperboard, Image, Stamp, Wrench, Eye, Sparkles,
+  FolderOpen, Download as DownloadIcon, Globe, Bot, Boxes, XCircle,
 } from "lucide-react";
 
 interface NodeManagerProps {
@@ -35,7 +38,18 @@ type ImportResultState = {
   versionComparison?: NodePackageValidationResult["versionComparison"];
 };
 
+const NODE_ICON_OPTIONS = [
+  { name: "Wrench", icon: Wrench }, { name: "Film", icon: Film }, { name: "Music", icon: Music },
+  { name: "Subtitles", icon: Subtitles }, { name: "Mic", icon: Mic }, { name: "Mic2", icon: Mic2 },
+  { name: "Scissors", icon: Scissors }, { name: "Languages", icon: Languages }, { name: "FileText", icon: FileText },
+  { name: "Volume2", icon: Volume2 }, { name: "Merge", icon: Merge }, { name: "Clapperboard", icon: Clapperboard },
+  { name: "Image", icon: Image }, { name: "Stamp", icon: Stamp }, { name: "Upload", icon: Upload },
+  { name: "Download", icon: DownloadIcon }, { name: "Eye", icon: Eye }, { name: "Sparkles", icon: Sparkles },
+  { name: "FolderOpen", icon: FolderOpen }, { name: "Globe", icon: Globe }, { name: "Bot", icon: Bot }, { name: "Boxes", icon: Boxes },
+];
+
 export default function NodeManager({ open, onClose }: NodeManagerProps) {
+  const { confirm: confirmAction } = useAlert();
   const defaultSchema: NodeTypesSchema = {
     categories: Object.entries(CATEGORIES).map(([value, meta]) => ({ value, label: meta.label, color: meta.color, icon: meta.icon })),
     portTypes: [
@@ -91,12 +105,13 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
   const [restoringBackupId, setRestoringBackupId] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [packOpen, setPackOpen] = useState(false);
+  const [iconPickerOpen, setIconPickerOpen] = useState(false);
 
   const emptyForm: Partial<NodeTypeConfig> = {
     id: "", name: "", category: "process", description: "",
     icon: "Wrench", color: "#6b7280",
     inputs: [], outputs: [], defaultConfig: {}, configFields: [],
-    execType: "", execCode: "", execFile: "run.py", execTimeout: 300,
+    execType: "", execCode: "", execFile: "", execTimeout: 300,
   };
   const [form, setForm] = useState<Partial<NodeTypeConfig>>(emptyForm);
 
@@ -194,6 +209,19 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
 
   const handleCreate = async () => {
     if (!form.id || !form.name) { showToast("ID 和名称不能为空", "err"); return; }
+    if (!/^[A-Za-z0-9_-]{1,80}$/.test(form.id)) { showToast("节点 ID 仅支持字母、数字、_ 和 -", "err"); return; }
+    const duplicatePortId = ["inputs", "outputs"].some((kind) => {
+      const ids = (form[kind as "inputs"] || []).map((port) => port.id?.trim());
+      return ids.some((id) => !id) || new Set(ids).size !== ids.length;
+    });
+    if (duplicatePortId) { showToast("端口 ID 不能为空且同一方向不能重复", "err"); return; }
+    const execType = form.execType || "";
+    if (execType === "python" && !String(form.execCode || "").trim() && !String(form.execFile || "").trim()) {
+      showToast("Python 节点需要内联代码或入口文件", "err"); return;
+    }
+    if (["shell", "llm"].includes(execType) && !String(form.execCode || "").trim()) {
+      showToast(`${execType === "shell" ? "Shell 命令" : "LLM 提示词模板"}不能为空`, "err"); return;
+    }
     const payload = { ...form };
     // 执行层优先 execFile；内联代码非空时清空 execFile，确保内联代码生效
     if (payload.execType === "python" && String(payload.execCode || "").trim()) {
@@ -207,7 +235,12 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
   };
 
   const handleDelete = async (nodeId: string) => {
-    if (!confirm("确定要删除吗？")) return;
+    const node = nodeRegistry.find((item) => item.id === nodeId);
+    const confirmed = await confirmAction(
+      `确定彻底删除节点“${node?.name || nodeId}”吗？此操作不可撤销；引用该节点的工作流将无法继续执行。`,
+      { type: "warning", title: "删除节点", confirmLabel: "删除", cancelLabel: "取消" }
+    );
+    if (!confirmed) return;
     try {
       await deleteNodeType(nodeId);
       showToast("已删除", "ok");
@@ -385,8 +418,8 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
     }
   };
 
-  const addInputPort = () => setForm(f => ({ ...f, inputs: [...(f.inputs || []), { id: "in_" + Date.now(), label: "输入端口", type: "any" }] }));
-  const addOutputPort = () => setForm(f => ({ ...f, outputs: [...(f.outputs || []), { id: "out_" + Date.now(), label: "输出端口", type: "any" }] }));
+  const addInputPort = () => setForm(f => ({ ...f, inputs: [...(f.inputs || []), { id: "input_" + ((f.inputs || []).length + 1), label: "输入端口", type: "any", required: false }] }));
+  const addOutputPort = () => setForm(f => ({ ...f, outputs: [...(f.outputs || []), { id: "output_" + ((f.outputs || []).length + 1), label: "输出端口", type: "any" }] }));
   const removePort = (which: "inputs" | "outputs", idx: number) => setForm(f => ({ ...f, [which]: (f[which] || []).filter((_: any, i: number) => i !== idx) }));
   const addConfigField = () => setForm(f => ({ ...f, configFields: [...(f.configFields || []), { key: "field_" + Date.now(), label: "新字段", type: "text" }] }));
   const removeConfigField = (idx: number) => setForm(f => ({ ...f, configFields: (f.configFields || []).filter((_: any, i: number) => i !== idx) }));
@@ -488,8 +521,12 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                     <h3 className="text-base font-bold">{selectedNode.name}</h3>
                     <p className="text-xs text-muted-foreground">{selectedNode.id} / {selectedNode.category}</p>
                   </div>
+                  <button onClick={() => handleDelete(selectedNode.id)} title="彻底删除节点"
+                    className="ml-auto flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
+                    <Trash2 className="w-3 h-3" /> 删除节点
+                  </button>
                   <button onClick={handleExport} title="导出到根目录 share/ 文件夹"
-                    className="ml-auto flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors">
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors">
                     <Download className="w-3 h-3" /> 导出 ZIP
                   </button>
                   <button onClick={() => setPackOpen(true)} title="打包并发布到共享社区"
@@ -547,10 +584,6 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                     <button onClick={() => loadNodeBackups(selectedNode.id)}
                       className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors">
                       <History className="w-3 h-3" /> 刷新备份
-                    </button>
-                    <button onClick={() => handleDelete(selectedNode.id)}
-                      className="flex items-center gap-1 px-3 py-1.5 text-xs rounded-lg bg-red-500/10 text-red-500 hover:bg-red-500/20 transition-colors">
-                      <Trash2 className="w-3 h-3" /> 删除
                     </button>
                   </div>
                 )}
@@ -635,8 +668,13 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                   </div>
                   <div>
                     <label className={labelCls}>图标</label>
-                    <input value={form.icon || ""} onChange={e => setForm(f => ({ ...f, icon: e.target.value }))}
-                      className={inputCls} placeholder="Wrench" />
+                    <button type="button" onClick={() => setIconPickerOpen(true)} className={inputCls + " flex items-center gap-2 text-left hover:border-primary/50"}>
+                      {(() => {
+                        const option = NODE_ICON_OPTIONS.find((item) => item.name === form.icon) || NODE_ICON_OPTIONS[0];
+                        const Icon = option.icon;
+                        return <><Icon className="w-4 h-4" style={{ color: form.color || "#6b7280" }} /><span>{option.name}</span></>;
+                      })()}
+                    </button>
                   </div>
                   <div>
                     <label className={labelCls}>颜色</label>
@@ -663,13 +701,18 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                       <button onClick={addInputPort} className="text-[10px] text-primary hover:underline">+ 添加</button>
                     </div>
                     {(form.inputs || []).map((p, i) => (
-                      <div key={i} className="flex items-center gap-1.5 mb-1.5">
+                      <div key={p.id || i} className="flex items-center gap-1.5 mb-1.5">
+                        <input value={p.id} onChange={e => { const inp = [...(form.inputs || [])]; inp[i] = { ...inp[i], id: e.target.value }; setForm(f => ({ ...f, inputs: inp })); }}
+                          className="w-24 px-2 py-1 text-xs font-mono rounded border border-border/50 bg-background" placeholder="input_id" />
                         <input value={p.label} onChange={e => { const inp = [...(form.inputs || [])]; inp[i] = { ...inp[i], label: e.target.value }; setForm(f => ({ ...f, inputs: inp })); }}
                           className="flex-1 px-2 py-1 text-xs rounded border border-border/50 bg-background" placeholder="标签" />
                         <select value={p.type} onChange={e => { const inp = [...(form.inputs || [])]; inp[i] = { ...inp[i], type: e.target.value }; setForm(f => ({ ...f, inputs: inp })); }}
                           className="px-2 py-1 text-xs rounded border border-border/50 bg-background">
                           {nodeSchema.portTypes.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                         </select>
+                        <label title="必需输入" className="flex items-center gap-1 text-[10px] text-muted-foreground whitespace-nowrap">
+                          <input type="checkbox" checked={!!p.required} onChange={e => { const inp = [...(form.inputs || [])]; inp[i] = { ...inp[i], required: e.target.checked }; setForm(f => ({ ...f, inputs: inp })); }} /> 必需
+                        </label>
                         <button onClick={() => removePort("inputs", i)} className="text-red-400 hover:text-red-600"><Trash2 className="w-3 h-3" /></button>
                       </div>
                     ))}
@@ -680,7 +723,9 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                       <button onClick={addOutputPort} className="text-[10px] text-primary hover:underline">+ 添加</button>
                     </div>
                     {(form.outputs || []).map((p, i) => (
-                      <div key={i} className="flex items-center gap-1.5 mb-1.5">
+                      <div key={p.id || i} className="flex items-center gap-1.5 mb-1.5">
+                        <input value={p.id} onChange={e => { const out = [...(form.outputs || [])]; out[i] = { ...out[i], id: e.target.value }; setForm(f => ({ ...f, outputs: out })); }}
+                          className="w-24 px-2 py-1 text-xs font-mono rounded border border-border/50 bg-background" placeholder="output_id" />
                         <input value={p.label} onChange={e => { const out = [...(form.outputs || [])]; out[i] = { ...out[i], label: e.target.value }; setForm(f => ({ ...f, outputs: out })); }}
                           className="flex-1 px-2 py-1 text-xs rounded border border-border/50 bg-background" placeholder="标签" />
                         <select value={p.type} onChange={e => { const out = [...(form.outputs || [])]; out[i] = { ...out[i], type: e.target.value }; setForm(f => ({ ...f, outputs: out })); }}
@@ -706,11 +751,12 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                         {nodeSchema.execTypes.map((item) => <option key={item.value || "__empty"} value={item.value}>{item.label}</option>)}
                       </select>
                     </div>
+                    {form.execType === "python" && (
                     <div>
                       <label className={labelCls}>入口文件</label>
                       <input value={form.execFile || ""} onChange={e => setForm(f => ({ ...f, execFile: e.target.value }))}
                         className={inputCls} placeholder="run.py" />
-                    </div>
+                    </div>)}
                     <div>
                       <label className={labelCls}>超时 (秒)</label>
                       <input type="number" value={form.execTimeout || 300} onChange={e => setForm(f => ({ ...f, execTimeout: parseInt(e.target.value) || 300 }))}
@@ -784,6 +830,15 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                         </div>
 
                         <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className={labelCls}>默认值</label>
+                            <input
+                              value={(form.defaultConfig || {})[field.key] ?? ""}
+                              onChange={(e) => setForm((current) => ({ ...current, defaultConfig: { ...(current.defaultConfig || {}), [field.key]: e.target.value } }))}
+                              className={inputCls}
+                              placeholder="节点初始值"
+                            />
+                          </div>
                           {supported.has("placeholder") && (
                             <div>
                               <label className={labelCls}>占位提示</label>
@@ -930,6 +985,23 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                   <button onClick={() => setTab("list")} className="px-4 py-2 text-sm rounded-lg border border-border/50 hover:bg-muted">取消</button>
                   <button onClick={handleCreate} className="px-4 py-2 text-sm rounded-lg bg-primary text-primary-foreground hover:bg-primary/90">创建</button>
                 </div>
+                {iconPickerOpen && (
+                  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onMouseDown={() => setIconPickerOpen(false)}>
+                    <div className="w-full max-w-md rounded-lg border border-border bg-card p-4 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+                      <div className="mb-3 flex items-center justify-between">
+                        <h4 className="text-sm font-semibold">选择节点图标</h4>
+                        <button type="button" onClick={() => setIconPickerOpen(false)} className="p-1 text-muted-foreground hover:text-foreground" title="关闭"><XCircle className="w-4 h-4" /></button>
+                      </div>
+                      <div className="grid grid-cols-6 gap-2">
+                        {NODE_ICON_OPTIONS.map((option) => {
+                          const Icon = option.icon;
+                          const active = form.icon === option.name;
+                          return <button key={option.name} type="button" title={option.name} onClick={() => { setForm((current) => ({ ...current, icon: option.name })); setIconPickerOpen(false); }} className={`flex aspect-square items-center justify-center rounded-md border transition-colors ${active ? "border-primary bg-primary/10 text-primary" : "border-border/60 text-muted-foreground hover:border-primary/50 hover:text-foreground"}`}><Icon className="w-4 h-4" /></button>;
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

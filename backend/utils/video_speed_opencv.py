@@ -1,18 +1,24 @@
-"""基于 OpenCV 的视频局部变速工具（纯 OpenCV，无 ffmpeg 回退）。
+"""基于 OpenCV 的视频局部变速工具。
 
 处理流程（异步流水线，低内存占用）：
 1. 异步预读取下一段帧（后台线程），同时处理写入当前段
 2. 对当前段执行变速处理（跳帧/光流插针），逐帧写入输出视频
 3. 写入完成立即释放当前段内存，然后处理下一段
 4. 光流法插针使用多线程加速
+5. 帧写入优先用 ffmpeg(libx264) 管道编码，OpenCV mp4v 仅作兜底
+   （mp4v 编码质量低，变速跳帧后帧间预测失败会导致花屏）
 """
 import os
 import gc
+import shutil
+import subprocess
 import threading
 import cv2
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple, Optional, Callable
+
+from backend.utils.video_speed_manifest import VideoSpeedManifest, VideoSpeedSegmentManifest
 
 
 # ───────────────── 光流插针 ─────────────────
@@ -46,6 +52,87 @@ def interpolate_frame(prev_frame: np.ndarray, next_frame: np.ndarray, alpha: flo
     warped_next = cv2.remap(next_frame, flow_bwd, None, cv2.INTER_LINEAR)
 
     return cv2.addWeighted(warped_prev, 1.0 - alpha, warped_next, alpha, 0)
+
+
+# ───────────────── 帧写入器（ffmpeg libx264 优先，cv2 mp4v 兜底） ─────────────────
+
+class _FFmpegPipeWriter:
+    """通过管道把原始帧交给 ffmpeg 编码为 H.264。
+
+    接口与 cv2.VideoWriter 对齐（isOpened / write / release），
+    每次 write 严格对应一帧输入，保证帧数/时间戳与上游逻辑一致。
+    """
+
+    def __init__(self, output_path: str, fps: float, width: int, height: int):
+        self._proc: Optional[subprocess.Popen] = None
+        ffmpeg = shutil.which("ffmpeg")
+        if not ffmpeg:
+            return
+        cmd = [
+            ffmpeg, "-y", "-loglevel", "error",
+            "-f", "rawvideo", "-vcodec", "rawvideo",
+            "-s", f"{int(width)}x{int(height)}",
+            "-pix_fmt", "bgr24",
+            "-r", f"{fps:.6f}",
+            "-i", "pipe:0",
+            "-an",
+            "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+            output_path,
+        ]
+        try:
+            self._proc = subprocess.Popen(
+                cmd,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except OSError:
+            self._proc = None
+
+    def isOpened(self) -> bool:
+        return self._proc is not None and self._proc.poll() is None and self._proc.stdin is not None
+
+    def write(self, frame: np.ndarray) -> None:
+        if not self.isOpened():
+            raise RuntimeError("ffmpeg 帧写入器已关闭，视频编码失败")
+        self._proc.stdin.write(np.ascontiguousarray(frame, dtype=np.uint8).tobytes())
+
+    def release(self) -> None:
+        if self._proc is None:
+            return
+        try:
+            if self._proc.stdin:
+                self._proc.stdin.close()
+        except OSError:
+            pass
+        try:
+            ret = self._proc.wait(timeout=600)
+            if ret != 0:
+                print(f"  ⚠ ffmpeg 视频编码退出码: {ret}")
+        except subprocess.TimeoutExpired:
+            self._proc.kill()
+        finally:
+            self._proc = None
+
+
+def _create_frame_writer(output_path: str, fps: float, width: int, height: int):
+    """创建帧写入器：优先 ffmpeg(libx264)，失败回退 cv2 VideoWriter(mp4v)。
+
+    cv2.VideoWriter 的 mp4v(MPEG-4 Part 2) 编码质量低，且变速跳帧后
+    帧间预测误差会在变速片段内产生马赛克/花屏；改用 libx264 可消除。
+    """
+    if width % 2 == 0 and height % 2 == 0:
+        writer = _FFmpegPipeWriter(output_path, fps, width, height)
+        if writer.isOpened():
+            print("  - 帧写入器: ffmpeg(libx264)")
+            return writer
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(output_path, fourcc, fps, (int(width), int(height)))
+    if writer.isOpened():
+        print("  - 帧写入器: OpenCV(mp4v) 兜底（画质较低）")
+    return writer
 
 
 # ───────────────── 逐段变速处理（写入器直接写入，不缓存） ─────────────────
@@ -153,12 +240,13 @@ def _process_and_write_segment(
 def adjust_video_speed_segments(
     input_path: str,
     output_path: str,
-    speed_segments: List[Tuple[float, float, float]],
+    speed_segments: List[Tuple],
     progress_callback: Optional[Callable[[int, str], None]] = None,
     batch_size: int = 64,
     num_workers: int = 0,
+    return_manifest: bool = False,
 ) -> Optional[str]:
-    """纯 OpenCV 视频局部变速（无 ffmpeg 回退）。
+    """OpenCV 读取 + 局部变速，ffmpeg(libx264) 编码输出（无 ffmpeg 时回退 OpenCV mp4v）。
 
     异步流水线：预读取下一段帧（后台线程）同时处理写入当前段，写完立即释放内存。
 
@@ -196,7 +284,9 @@ def adjust_video_speed_segments(
     tasks = []  # [{type, start_frame, end_frame, output_count, ratio}, ...]
     cur_time = 0.0
 
-    for start, end, ratio in speed_segments:
+    for item_idx, item in enumerate(speed_segments):
+        start, end, ratio = item[:3]
+        seg_index = item[3] if len(item) > 3 else item_idx
         if start > cur_time + 0.0001:
             sf = round(cur_time * fps)
             ef = round(start * fps)
@@ -205,6 +295,8 @@ def adjust_video_speed_segments(
                     "type": "normal",
                     "start_frame": sf, "end_frame": ef,
                     "output_count": ef - sf, "ratio": 1.0,
+                    "source_start": cur_time, "source_end": start,
+                    "segment_index": None,
                 })
         sf = round(start * fps)
         ef = round(end * fps)
@@ -214,6 +306,8 @@ def adjust_video_speed_segments(
                 "type": "speed",
                 "start_frame": sf, "end_frame": ef,
                 "output_count": out_count, "ratio": ratio,
+                "source_start": start, "source_end": end,
+                "segment_index": int(seg_index),
             })
         cur_time = end
 
@@ -225,12 +319,24 @@ def adjust_video_speed_segments(
                 "type": "normal",
                 "start_frame": sf, "end_frame": ef,
                 "output_count": ef - sf, "ratio": 1.0,
+                "source_start": cur_time, "source_end": video_duration,
+                "segment_index": None,
             })
 
     if not tasks:
         cap.release()
         import shutil
         shutil.copy2(input_path, output_path)
+        if return_manifest:
+            return VideoSpeedManifest(
+                output_path=output_path,
+                fps=fps,
+                total_input_frames=total_input_frames,
+                total_output_frames=total_input_frames,
+                input_duration=video_duration,
+                output_duration=video_duration,
+                segments=[],
+            ).to_dict()
         return output_path
 
     total_input_to_read = sum(t["end_frame"] - t["start_frame"] for t in tasks)
@@ -255,8 +361,7 @@ def adjust_video_speed_segments(
         cap.release()
         raise Exception(f"无法打开预读取视频: {input_path}")
 
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+    writer = _create_frame_writer(output_path, fps, width, height)
     if not writer.isOpened():
         cap.release()
         cap_ahead.release()
@@ -264,6 +369,7 @@ def adjust_video_speed_segments(
 
     written_total = 0
     read_total = 0
+    speed_manifests = []
 
     # 预读取结果容器（线程安全通过事件同步）
     _ahead_lock = threading.Lock()
@@ -327,7 +433,23 @@ def adjust_video_speed_segments(
             writer, frames, task["type"], task["ratio"],
             task["output_count"], num_workers,
         )
+        output_start = written_total / fps if fps > 0 else 0.0
         written_total += n_written
+        output_end = written_total / fps if fps > 0 else output_start
+        if task["type"] == "speed":
+            speed_manifests.append(VideoSpeedSegmentManifest(
+                index=int(task.get("segment_index") or 0),
+                start=float(task.get("source_start") or 0),
+                end=float(task.get("source_end") or 0),
+                speed_ratio=float(task["ratio"]),
+                start_frame=int(task["start_frame"]),
+                end_frame=int(task["end_frame"]),
+                input_frames=int(task["end_frame"] - task["start_frame"]),
+                output_frames=int(n_written),
+                actual_duration=float(n_written / fps if fps > 0 else 0.0),
+                output_start=float(output_start),
+                output_end=float(output_end),
+            ))
         pct = 60 + int(written_total / max(total_output_frames, 1) * 35)
         _report(pct, f"  写入 {seg_label}: {n_written} 帧 (累计 {written_total}/{total_output_frames})")
 
@@ -346,6 +468,16 @@ def adjust_video_speed_segments(
     if not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
         raise Exception(f"输出视频文件无效: {output_path}")
 
+    if return_manifest:
+        return VideoSpeedManifest(
+            output_path=output_path,
+            fps=fps,
+            total_input_frames=total_input_frames,
+            total_output_frames=written_total,
+            input_duration=video_duration,
+            output_duration=output_duration,
+            segments=speed_manifests,
+        ).to_dict()
     return output_path
 
 

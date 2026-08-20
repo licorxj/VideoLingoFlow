@@ -4,12 +4,13 @@ import uuid
 import time
 import shutil
 from typing import Optional, List, Any
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from backend.workflow_validation import normalize_workflow
+from backend.control_plane.security import current_user, require_permission
 TASKS_ROOT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "tasks")
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(current_user)])
 
 WORKFLOWS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -62,8 +63,24 @@ def _load_groups_data() -> dict:
 
 def _save_groups_data(data: dict) -> None:
     os.makedirs(os.path.dirname(WORKFLOW_GROUPS_FILE), exist_ok=True)
-    with open(WORKFLOW_GROUPS_FILE, "w", encoding="utf-8") as fh:
-        json.dump(data, fh, ensure_ascii=False, indent=2)
+    _atomic_json_write(WORKFLOW_GROUPS_FILE, data)
+
+
+def _atomic_json_write(path: str, data: dict) -> None:
+    temp_path = f"{path}.{uuid.uuid4().hex}.tmp"
+    try:
+        with open(temp_path, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=2)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(temp_path, path)
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+
+def _write_workflow(path: str, data: dict) -> None:
+    _atomic_json_write(path, data)
 
 
 def _group_id_of(wf_id: str) -> str | None:
@@ -121,7 +138,7 @@ def _build_workflow(wf_id: str, nodes: list, edges: list, req_name: str = "", re
         "createdAt": meta["createdAt"],
         "nodes": nodes,
         "edges": edges,
-    })
+    }, expand_groups=True)
     return workflow
 
 
@@ -207,6 +224,7 @@ class WorkflowSave(BaseModel):
     nodes: List[dict] = Field(default_factory=list)
     edges: List[dict] = Field(default_factory=list)
     type: str = "user"  # "user" or "task"
+    expected_revision: Optional[int] = Field(default=None, ge=0)
 
 
 class WorkflowExecute(BaseModel):
@@ -226,7 +244,6 @@ class NodeExecuteRequest(BaseModel):
     input: dict = Field(default_factory=dict)
     node_id: str = ""  # specific node to execute
     task_id: str = ""  # direct task id（必须传，节点执行不跨任务边界新建）
-    # node=仅本节点; downstream=本节点及其连线下游
     scope: str = Field(default="node")
     run_downstream: bool = False  # 兼容旧字段，True 等价于 scope="downstream"
 
@@ -313,7 +330,7 @@ async def list_groups():
     return {"groups": groups, "membership": data.get("membership", {})}
 
 
-@router.post("/groups")
+@router.post("/groups", dependencies=[Depends(require_permission("workflow:write"))])
 async def create_group(req: GroupCreate):
     """新建分组。"""
     name = (req.name or "").strip()
@@ -329,7 +346,7 @@ async def create_group(req: GroupCreate):
     return {"success": True, "group": groups[-1]}
 
 
-@router.delete("/groups/{group_id}")
+@router.delete("/groups/{group_id}", dependencies=[Depends(require_permission("workflow:write"))])
 async def delete_group(group_id: str, action: str = "dissolve"):
     """删除分组。
 
@@ -379,7 +396,7 @@ async def delete_group(group_id: str, action: str = "dissolve"):
     return {"success": True, "action": action, "deleted_workflows": len(member_wf_ids) if action == "delete" else 0}
 
 
-@router.put("/groups/membership")
+@router.put("/groups/membership", dependencies=[Depends(require_permission("workflow:write"))])
 async def update_membership(req: MembershipUpdate):
     """调整单个工作流的分组归属（移动到指定分组 / 移回未分组）。"""
     wid = (req.workflow_id or "").strip()
@@ -408,14 +425,16 @@ async def get_workflow(wf_id: str):
         data = json.load(f)
     data, migrated, removed = normalize_workflow(data)
     if migrated or removed:
-        with open(fp, "w", encoding="utf-8") as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
+        _write_workflow(fp, data)
     return {"workflow": data, "removed_edges": removed}
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_permission("workflow:write"))])
 async def save_workflow(req: WorkflowSave):
     wf_id = req.id or uuid.uuid4().hex[:12]
+    fp = os.path.join(WORKFLOWS_DIR, f"{wf_id}.json")
+    if req.id and os.path.exists(fp):
+        raise HTTPException(status_code=409, detail="Workflow already exists")
     data, _, _ = normalize_workflow({
         "id": wf_id,
         "name": req.name,
@@ -426,19 +445,22 @@ async def save_workflow(req: WorkflowSave):
         "createdAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
         "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
     })
-    fp = os.path.join(WORKFLOWS_DIR, f"{wf_id}.json")
-    with open(fp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    _write_workflow(fp, data)
     return {"success": True, "id": wf_id}
 
 
-@router.put("/{wf_id}")
+@router.put("/{wf_id}", dependencies=[Depends(require_permission("workflow:write"))])
 async def update_workflow(wf_id: str, req: WorkflowSave):
     fp = os.path.join(WORKFLOWS_DIR, f"{wf_id}.json")
     old = {}
     if os.path.exists(fp):
         with open(fp, "r", encoding="utf-8") as f:
             old = json.load(f)
+    elif req.expected_revision not in (None, 0):
+        raise HTTPException(status_code=404, detail="Workflow not found")
+    actual_revision = int(old.get("revision", 0) or 0)
+    if req.expected_revision is not None and req.expected_revision != actual_revision:
+        raise HTTPException(status_code=409, detail={"code": "revision_conflict", "expected_revision": req.expected_revision, "actual_revision": actual_revision})
     data, _, _ = normalize_workflow({
         "id": wf_id,
         "name": req.name,
@@ -448,13 +470,13 @@ async def update_workflow(wf_id: str, req: WorkflowSave):
         "type": req.type or old.get("type", ""),
         "createdAt": old.get("createdAt", time.strftime("%Y-%m-%dT%H:%M:%S")),
         "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "revision": actual_revision + 1,
     })
-    with open(fp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    return {"success": True}
+    _write_workflow(fp, data)
+    return {"success": True, "revision": data["revision"]}
 
 
-@router.delete("/{wf_id}")
+@router.delete("/{wf_id}", dependencies=[Depends(require_permission("workflow:write"))])
 async def delete_workflow(wf_id: str):
     fp = os.path.join(WORKFLOWS_DIR, f"{wf_id}.json")
     if os.path.exists(fp):
@@ -480,7 +502,7 @@ async def delete_workflow(wf_id: str):
     return {"success": True, "deleted_tasks": len(bound_ids)}
 
 
-@router.post("/{wf_id}/execute")
+@router.post("/{wf_id}/execute", dependencies=[Depends(require_permission("task:execute"))])
 async def execute_workflow(wf_id: str, req: WorkflowExecute):
     from backend.control_plane.workflow_runtime import (
         submit_workflow, _find_workflow_task, _find_debug_task,
@@ -559,7 +581,7 @@ async def execute_workflow(wf_id: str, req: WorkflowExecute):
         raise HTTPException(503, str(exc)) from exc
     return {"success": True, "task_id": task.id, "created": created, "status": task.status}
 
-@router.post("/{wf_id}/execute-node")
+@router.post("/{wf_id}/execute-node", dependencies=[Depends(require_permission("task:execute"))])
 async def execute_single_node_api(wf_id: str, req: NodeExecuteRequest):
     from backend.control_plane.workflow_runtime import (
         submit_workflow, _resume_reset_set,
@@ -588,6 +610,33 @@ async def execute_single_node_api(wf_id: str, req: NodeExecuteRequest):
         clear_set = _resume_reset_set(node_ids, edges, req.node_id) or {req.node_id}
         clear_ids = list(clear_set)
         exec_kwargs = {"resume_from": req.node_id}
+    elif scope == "group_downstream":
+        prefix = f"{req.node_id}__"
+        clear_set = {
+            str(node.get("id", ""))
+            for node in nodes
+            if str(node.get("id", "")).startswith(prefix)
+        }
+        if not clear_set:
+            raise HTTPException(400, "组合节点不存在或没有可执行成员")
+        pending_ids = list(clear_set)
+        while pending_ids:
+            current_id = pending_ids.pop()
+            for edge in edges:
+                if edge.get("source") != current_id:
+                    continue
+                target_id = str(edge.get("target", ""))
+                if target_id and target_id not in clear_set:
+                    clear_set.add(target_id)
+                    pending_ids.append(target_id)
+        clear_ids = list(clear_set)
+        exec_kwargs = {"exec_only": clear_ids}
+    elif scope == "group":
+        prefix = f"{req.node_id}__"
+        clear_ids = [node.get("id", "") for node in nodes if str(node.get("id", "")).startswith(prefix)]
+        if not clear_ids:
+            raise HTTPException(400, "组合节点不存在或没有可执行成员")
+        exec_kwargs = {"exec_only": clear_ids}
     else:
         # 单节点执行：仅清空/执行该节点。始终提交完整工作流，用 exec_only 收窄执行范围，
         # 不裁剪节点，避免覆盖任务私有 workflow 导致历史加载画布只剩该节点。
@@ -633,7 +682,7 @@ async def get_debug_task(wf_id: str, nodes: str = "", edges: str = ""):
     return {"task_id": task.id, "created": created}
 
 
-@router.post("/{wf_id}/debug-task")
+@router.post("/{wf_id}/debug-task", dependencies=[Depends(require_permission("task:execute"))])
 async def create_debug_task(wf_id: str, req: DebugTaskRequest):
     """返回（无则创建）全局工作流 wf_id 绑定的固定调试任务 id（POST 版）。
 
@@ -650,7 +699,7 @@ async def create_debug_task(wf_id: str, req: DebugTaskRequest):
     return {"task_id": task.id, "created": created}
 
 
-@router.post("/{wf_id}/spawn-task")
+@router.post("/{wf_id}/spawn-task", dependencies=[Depends(require_permission("task:execute"))])
 async def spawn_task(wf_id: str, req: SpawnTaskRequest):
     """新建一般任务：把当前画布快照复制为任务私有 workflow（detached），不投递执行。
 
@@ -662,7 +711,7 @@ async def spawn_task(wf_id: str, req: SpawnTaskRequest):
     return {"success": True, "task_id": task.id, "created": created, "status": task.status}
 
 
-@router.post("/{wf_id}/save-as-global")
+@router.post("/{wf_id}/save-as-global", dependencies=[Depends(require_permission("workflow:write"))])
 async def save_as_global(wf_id: str, req: WorkflowSave):
     """一般任务「另存为全局」：把画布快照写入一个新的全局工作流定义文件。"""
     new_id = uuid.uuid4().hex[:12]
@@ -677,8 +726,7 @@ async def save_as_global(wf_id: str, req: WorkflowSave):
         "updatedAt": time.strftime("%Y-%m-%dT%H:%M:%S"),
     })
     fp = os.path.join(WORKFLOWS_DIR, f"{new_id}.json")
-    with open(fp, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    _write_workflow(fp, data)
     return {"success": True, "id": new_id}
 
 @router.get("/{wf_id}/status")
@@ -697,5 +745,3 @@ async def workflow_status(wf_id: str):
             "retry_count": task.retry_count,
             "nodes": {node.node_key: _legacy_node_state(node) for node in task.nodes},
         }}
-
-

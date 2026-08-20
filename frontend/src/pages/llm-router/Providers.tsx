@@ -25,10 +25,10 @@ import {
 } from 'lucide-react';
 
 const protocolColors: Record<string, string> = {
-  openai: 'bg-green-500/10 text-green-400 border-green-500/20',
-  claude: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
-  gemini: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
-  custom: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+  openai: 'bg-success/10 text-success border-success/25',
+  claude: 'bg-warning/10 text-warning border-warning/25',
+  gemini: 'bg-info/10 text-info border-info/25',
+  custom: 'bg-ai/10 text-ai border-ai/25',
 };
 
 const knownPaths: Record<string, string> = {
@@ -108,11 +108,11 @@ export default function Providers() {
   ];
 
   const modelTypeOpts = [
-    { value: 'text', label: t('providers.textModel'), icon: Layers, color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
-    { value: 'image', label: t('providers.imageModel'), icon: ImageIcon, color: 'bg-pink-500/10 text-pink-400 border-pink-500/20' },
-    { value: 'video', label: t('providers.videoModel'), icon: Video, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
-    { value: 'tts', label: t('providers.ttsModel'), icon: Mic, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
-    { value: 'embedding', label: t('providers.embeddingModel'), icon: Box, color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
+    { value: 'text', label: t('providers.textModel'), icon: Layers, color: 'bg-info/10 text-info border-info/25' },
+    { value: 'image', label: t('providers.imageModel'), icon: ImageIcon, color: 'bg-ai/10 text-ai border-ai/25' },
+    { value: 'video', label: t('providers.videoModel'), icon: Video, color: 'bg-warning/10 text-warning border-warning/25' },
+    { value: 'tts', label: t('providers.ttsModel'), icon: Mic, color: 'bg-success/10 text-success border-success/25' },
+    { value: 'embedding', label: t('providers.embeddingModel'), icon: Box, color: 'bg-ai/10 text-ai border-ai/25' },
   ];
 
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
@@ -617,9 +617,9 @@ const createModelMut = useMutation({
   });
 
   function getKeyStatusBadge(status: string) {
-    if (status === 'active') return <Badge className='bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs'>{t('providers.keyStatusActive')}</Badge>;
-    if (status === 'inactive' || status === 'expired' || status === 'rate_limited') return <Badge className='bg-red-500/10 text-red-400 border border-red-500/20 text-xs'>{t('providers.keyStatusInactive')}</Badge>;
-    return <Badge className='bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-xs'>{t('providers.keyStatusUntested')}</Badge>;
+    if (status === 'active') return <Badge className='bg-success/10 text-success border border-success/25 text-xs'>{t('providers.keyStatusActive')}</Badge>;
+    if (status === 'inactive' || status === 'expired' || status === 'rate_limited') return <Badge className='bg-destructive/10 text-destructive border border-destructive/25 text-xs'>{t('providers.keyStatusInactive')}</Badge>;
+    return <Badge className='bg-warning/10 text-warning border border-warning/25 text-xs'>{t('providers.keyStatusUntested')}</Badge>;
   }
 
   function getModelTypeBadge(type: string) {
@@ -630,9 +630,9 @@ const createModelMut = useMutation({
   }
 
   function getModelTestStatusBadge(status: string) {
-    if (status === 'active') return <Badge className='bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs'>{t('common.active')}</Badge>;
-    if (status === 'inactive') return <Badge className='bg-red-500/10 text-red-400 border border-red-500/20 text-xs'>{t('common.inactive')}</Badge>;
-    return <Badge className='bg-gray-500/10 text-gray-400 border border-gray-500/20 text-xs'>{t('providers.keyStatusUntested')}</Badge>;
+    if (status === 'active') return <Badge className='bg-success/10 text-success border border-success/25 text-xs'>{t('common.active')}</Badge>;
+    if (status === 'inactive') return <Badge className='bg-destructive/10 text-destructive border border-destructive/25 text-xs'>{t('common.inactive')}</Badge>;
+    return <Badge className='bg-muted text-muted-foreground border border-border/40 text-xs'>{t('providers.keyStatusUntested')}</Badge>;
   }
 
   const activeProviders = providers.filter((p: any) => p.is_active);
@@ -689,7 +689,11 @@ const createModelMut = useMutation({
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-3'>
                 {selectedProvider.icon ? <img src={iconUrl(selectedProvider.icon)} alt='' className='w-10 h-10 rounded-lg' /> : <Server className='w-8 h-8 text-muted-foreground' />}
-                <div><h3 className='text-lg font-semibold'>{selectedProvider.name}</h3><p className='text-sm text-muted-foreground'>{selectedProvider.base_url}</p></div>
+                <div>
+                  <h3 className='text-lg font-semibold'>{selectedProvider.name}</h3>
+                  <p className='text-sm text-muted-foreground'>{selectedProvider.base_url}</p>
+                  {selectedProvider.description && <p className='text-sm text-muted-foreground mt-0.5 max-w-2xl'>{selectedProvider.description}</p>}
+                </div>
               </div>
               <Button
                 variant='outline'

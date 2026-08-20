@@ -50,6 +50,10 @@ class InstallRequest(BaseModel):
     source_dir: str
 
 
+class CacheClearRequest(BaseModel):
+    category: str = Field(default="all", pattern=r"^(sessions|models|staging|all)$")
+
+
 def _error(exc: Exception) -> HTTPException:
     message = str(exc)
     status = 503 if "runtime" in message.lower() or "process" in message.lower() else 400
@@ -115,6 +119,14 @@ async def agent_docs_options() -> list[dict[str, Any]]:
 async def install_agent_resource(request: InstallRequest) -> dict[str, Any]:
     try:
         return get_pi_manager().install(request.kind, request.name, request.level, request.source_dir)
+    except Exception as exc:
+        raise _error(exc) from exc
+
+
+@router.post("/cache/clear")
+async def clear_agent_cache(request: CacheClearRequest) -> dict[str, Any]:
+    try:
+        return get_pi_manager().clear_cache(request.category)
     except Exception as exc:
         raise _error(exc) from exc
 

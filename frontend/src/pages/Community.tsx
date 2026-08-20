@@ -18,6 +18,7 @@ import { validateNodeTypePackage, importNodeType, type NodePackageValidationResu
 import MyResourcesDialog from "@/components/community/MyResourcesDialog";
 import WorkflowImportPanel from "@/components/community/WorkflowImportPanel";
 import IdentityDialog from "@/components/community/IdentityDialog";
+import { PageBackground } from "@/components/shared/PageBackground";
 import {
   Store, Search, Heart, Download, Loader2, Box, Workflow as WorkflowIcon,
   User, Tag, Clock, CheckCircle2, XCircle, AlertCircle, Package, AlertTriangle, ShieldAlert,
@@ -322,10 +323,10 @@ export default function Community() {
 
   /* ---------- 渲染 ---------- */
   return (
-    <div className="h-full flex flex-col min-h-0">
+    <PageBackground tone="collab" className="h-full flex flex-col min-h-0">
       {/* 顶部 */}
       <div className="flex items-center gap-3 px-5 py-3 border-b border-border/60 flex-shrink-0">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center shadow-lg shadow-violet-500/20">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-ai to-primary flex items-center justify-center shadow-lg shadow-ai/20">
           <Store className="w-5 h-5 text-white" />
         </div>
         <div>
@@ -337,7 +338,7 @@ export default function Community() {
             <UserRound className="w-3.5 h-3.5 mr-1.5" /> {user ? user.name : "设置身份"}
           </Button>
           {adminToken && (
-            <span className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-indigo-500/30 text-indigo-600 bg-indigo-500/10">
+            <span className="flex items-center gap-1 text-[11px] px-2 py-1 rounded-md border border-ai/30 text-ai bg-ai/10">
               <ShieldCheck className="w-3 h-3" /> 管理员
             </span>
           )}
@@ -346,7 +347,7 @@ export default function Community() {
           </Button>
           <span className={cn(
             "text-[11px] px-2 py-1 rounded-md border",
-            baseUrl ? "text-emerald-600 bg-emerald-500/10 border-emerald-500/20" : "text-amber-600 bg-amber-500/10 border-amber-500/20"
+            baseUrl ? "text-success bg-success/10 border-success/25" : "text-warning bg-warning/10 border-warning/25"
           )}>
             {baseUrl ? "已连接" : "未配置"}
           </span>
@@ -356,7 +357,7 @@ export default function Community() {
       {!baseUrl ? (
         <div className="flex-1 flex items-center justify-center p-8">
           <div className="max-w-md w-full text-center space-y-4">
-            <AlertCircle className="w-12 h-12 text-amber-500 mx-auto" />
+            <AlertCircle className="w-12 h-12 text-warning mx-auto" />
             <div className="text-sm font-semibold">共享社区尚未启用</div>
             <p className="text-xs text-muted-foreground leading-relaxed">
               本构建未包含社区服务地址。部署时在
@@ -507,7 +508,7 @@ export default function Community() {
 
       {/* 我的资源（打包入口） */}
       <MyResourcesDialog open={myResOpen} onClose={() => setMyResOpen(false)} user={user} />
-    </div>
+    </PageBackground>
   );
 }
 
@@ -544,7 +545,7 @@ function ResourceCard({ res, baseUrl, liking, onLike, onOpen }: {
         </span>
         {res.scanWarnings && res.scanWarnings.length > 0 && (
           <span
-            className="absolute top-2 right-2 flex items-center gap-1 text-[10px] font-semibold text-white px-2 py-0.5 rounded-md bg-amber-500"
+            className="absolute top-2 right-2 flex items-center gap-1 text-[10px] font-semibold text-white px-2 py-0.5 rounded-md bg-warning"
             title={"云端安全扫描提醒：" + res.scanWarnings.join("、")}
           >
             <AlertTriangle className="w-3 h-3" /> 待确认
@@ -571,7 +572,7 @@ function ResourceCard({ res, baseUrl, liking, onLike, onOpen }: {
             disabled={liking}
             className={cn(
               "flex items-center gap-1 text-xs font-medium rounded-md px-2 py-1 transition-colors",
-              res.liked ? "text-red-500 bg-red-500/10" : "text-muted-foreground hover:text-red-500 hover:bg-red-500/5"
+              res.liked ? "text-destructive bg-destructive/10" : "text-muted-foreground hover:text-destructive hover:bg-destructive/5"
             )}
           >
             <Heart className={cn("w-3.5 h-3.5", res.liked && "fill-current")} />
@@ -667,7 +668,7 @@ function DetailDialog(props: {
 
             {/* 云端安全扫描告警 */}
             {detail.scanWarnings && detail.scanWarnings.length > 0 && (
-              <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
+              <div className="flex items-start gap-2 text-xs text-warning bg-warning/10 border border-warning/25 rounded-lg px-3 py-2">
                 <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">云端安全扫描提醒</div>
@@ -679,7 +680,7 @@ function DetailDialog(props: {
             {/* 导入区 */}
             <div className="border-t border-border/50 pt-3 space-y-2.5">
               {/* 安全免责声明 */}
-              <div className="flex items-start gap-2 text-xs text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 rounded-lg px-3 py-2">
+              <div className="flex items-start gap-2 text-xs text-warning bg-warning/10 border border-warning/25 rounded-lg px-3 py-2">
                 <ShieldAlert className="w-4 h-4 flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold">安全提示</div>
@@ -690,7 +691,7 @@ function DetailDialog(props: {
               </div>
 
               {props.importState.phase === "done" ? (
-                <div className="flex items-center gap-2 text-xs text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-success bg-success/10 border border-success/25 rounded-lg px-3 py-2">
                   <CheckCircle2 className="w-4 h-4" /> 已成功导入
                 </div>
               ) : isNode ? (
@@ -700,14 +701,14 @@ function DetailDialog(props: {
                       <div>名称：<span className="font-semibold">{props.importState.validation?.node?.name || detail.name}</span>（v{props.importState.validation?.node?.version || detail.version}）</div>
                       {vc && <div className="mt-1 text-[11px] text-muted-foreground">{vc.message}</div>}
                       {props.importState.validation?.warnings?.map((w, i) => (
-                        <div key={i} className="text-[11px] text-amber-600 flex items-center gap-1 mt-0.5"><AlertCircle className="w-3 h-3" />{w}</div>
+                        <div key={i} className="text-[11px] text-warning flex items-center gap-1 mt-0.5"><AlertCircle className="w-3 h-3" />{w}</div>
                       ))}
                       {props.importState.validation?.shareMeta?.shareName && (
                         <div className="text-[11px] text-muted-foreground mt-1">来源分享名：{props.importState.validation.shareMeta.shareName}</div>
                       )}
                     </div>
                     {props.importState.error && (
-                      <div className="text-[11px] text-red-500 flex items-center gap-1"><XCircle className="w-3 h-3" />{props.importState.error}</div>
+                      <div className="text-[11px] text-destructive flex items-center gap-1"><XCircle className="w-3 h-3" />{props.importState.error}</div>
                     )}
                     {/* 改名导入兜底：以新 id 安装，避免覆盖本地节点 */}
                     <div className="flex items-center gap-1.5 pt-0.5">
@@ -762,9 +763,8 @@ function DetailDialog(props: {
             <div className="flex justify-end gap-2 pt-1">
               {props.adminToken && (
                 <Button
-                  variant="outline"
+                  variant="danger-soft"
                   size="sm"
-                  className="text-red-600 border-red-500/30 hover:bg-red-500/10 hover:text-red-600"
                   onClick={() => props.onAdminDelete(detail)}
                   disabled={props.deleting}
                   title="管理员删除该资源"
@@ -784,11 +784,10 @@ function DetailDialog(props: {
                 仅下载
               </Button>
               <Button
-                variant={detail.liked ? "default" : "outline"}
+                variant={detail.liked ? "destructive" : "outline"}
                 size="sm"
                 onClick={() => props.onLike(detail)}
                 disabled={props.liking}
-                className={detail.liked ? "bg-red-500 hover:bg-red-600 border-red-500" : ""}
               >
                 <Heart className={cn("w-3.5 h-3.5 mr-1", detail.liked && "fill-current")} />
                 {detail.liked ? "已赞" : "点赞"} · {detail.likeCount}

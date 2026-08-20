@@ -27,7 +27,8 @@
           "var1": "",
           "var1Required": false,
           "var2": "",
-          "var2Required": false
+          "var2Required": false,
+          "filePath": ""
         },
         "status": "succeeded",
         "disableExecute": false,

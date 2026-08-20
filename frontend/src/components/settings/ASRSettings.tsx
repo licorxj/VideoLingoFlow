@@ -233,6 +233,7 @@ export default function ASRSettings() {
             >
               <option value="whisperx">WhisperX Alignment</option>
               <option value="qwen3">Qwen3 ForcedAligner</option>
+              <option value="funasr">FunASR CT-Aligner</option>
             </select>
             <label className="relative cursor-pointer flex items-center">
               <input

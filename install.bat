@@ -8,7 +8,7 @@ rem  Options: --skip-backend / --skip-thirdparty / --force-thirdparty
 rem ============================================================
 cd /d "%~dp0"
 
-set "VENV_PY=backend\venv312\Scripts\python.exe"
+set "VENV_PY=venv312\Scripts\python.exe"
 set "PY="
 if exist "%VENV_PY%" (
     set "PY=%VENV_PY%"

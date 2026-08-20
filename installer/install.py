@@ -5,7 +5,7 @@ VideoLingoFlow 跨平台安装主程序（Windows / Linux / macOS）
 由根目录 install.bat（Windows）/ install.sh（Linux/macOS）调用。
 
 流程:
-  1. Python 环境:   复用 backend/venv312 → 系统 Python(>=3.10) 创建 venv →
+  1. Python 环境:   复用 venv312 → 系统 Python(>=3.10) 创建 venv →
                     Windows 自动下载 Python 3.12 静默安装；Linux/macOS 输出包管理器指引
   2. git 检查:      缺失时尝试 winget/apt/brew 自动安装；失败打印官方下载地址
   3. FFmpeg 检查:   缺失时尝试自动安装（视频/音频处理必需）；失败打印下载地址
@@ -40,7 +40,7 @@ except Exception:
     pass
 
 ROOT = Path(__file__).resolve().parent.parent
-VENV = ROOT / "backend" / "venv312"
+VENV = ROOT / "venv312"
 TEMP_DIR = ROOT / "temp"
 
 # 国内镜像（与项目既有约定一致；可被环境变量覆盖）
@@ -141,7 +141,7 @@ def ensure_python() -> Path:
     vp = venv_python()
     if vp.exists():
         ver = python_version(vp)
-        ok(f"复用虚拟环境 backend/venv312（Python {'.'.join(map(str, ver)) if ver else '?'}）")
+        ok(f"复用虚拟环境 venv312（Python {'.'.join(map(str, ver)) if ver else '?'}）")
         return vp
 
     # 系统 Python
@@ -163,7 +163,7 @@ def ensure_python() -> Path:
             if not vp.exists():
                 fail("虚拟环境创建失败")
             ver = python_version(vp)
-            ok(f"虚拟环境创建完成 backend/venv312（Python {'.'.join(map(str, ver))}）")
+            ok(f"虚拟环境创建完成 venv312（Python {'.'.join(map(str, ver))}）")
             return vp
 
     # 无可用 Python
@@ -369,6 +369,90 @@ def check_cuda() -> None:
         warn(f"继续使用 CUDA {ver[0]}.{ver[1]} 安装（PyTorch 将选择兼容版本）")
 
 
+def detect_nvidia_gpu() -> tuple[str, float] | None:
+    try:
+        result = subprocess.run(
+            ["nvidia-smi", "--query-gpu=name,memory.total", "--format=csv,noheader,nounits"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        name, memory_mib = [part.strip() for part in result.stdout.splitlines()[0].split(",", 1)]
+        return name, round(float(memory_mib) / 1024, 1)
+    except Exception:
+        return None
+
+
+def gpu_service_defaults() -> dict[str, str]:
+    detected = detect_nvidia_gpu()
+    if detected is None:
+        return {
+            "GPU_SERVICE_ENABLED": "0",
+            "GPU_SERVICE_MAX_LANES": "1",
+            "GPU_SERVICE_VRAM_HEADROOM_GB": "3.0",
+            "GPU_SERVICE_LANE_IDLE_TIMEOUT": "600",
+            "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "60",
+            "GPU_SERVICE_JOB_TIMEOUT": "3600",
+        }
+    name, total_gb = detected
+    if total_gb < 8:
+        lanes, headroom = 1, 2.0
+    elif total_gb < 16:
+        lanes, headroom = 1, 3.0
+    elif total_gb < 24:
+        lanes, headroom = 2, 4.0
+    elif total_gb < 48:
+        lanes, headroom = 3, 6.0
+    else:
+        lanes, headroom = 4, 8.0
+    ok(f"检测到 NVIDIA GPU: {name}（{total_gb:.1f} GB），GPU 服务将使用 {lanes} 条 lane")
+    return {
+        "GPU_SERVICE_ENABLED": "1",
+        "GPU_SERVICE_MAX_LANES": str(lanes),
+        "GPU_SERVICE_VRAM_HEADROOM_GB": f"{headroom:.1f}",
+        "GPU_SERVICE_LANE_IDLE_TIMEOUT": "600",
+        "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "60",
+        "GPU_SERVICE_JOB_TIMEOUT": "3600",
+    }
+
+
+def write_runtime_value(path: Path, key: str, value: str) -> None:
+    pattern = re.compile(rf'^\s*set\s+"?{re.escape(key)}=.*$', re.IGNORECASE)
+    lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    assignment = f'set "{key}={value}"'
+    replaced = False
+    output: list[str] = []
+    for line in lines:
+        if pattern.match(line):
+            if not replaced:
+                output.append(assignment)
+                replaced = True
+            continue
+        output.append(line)
+    if not replaced:
+        output.append(assignment)
+    path.write_text("\n".join(output).rstrip() + "\n", encoding="utf-8")
+
+
+def configure_gpu_service(local_env: Path) -> None:
+    values = {}
+    for line in local_env.read_text(encoding="utf-8", errors="replace").splitlines():
+        match = re.match(r'^\s*set\s+"?GPU_SERVICE_AUTO_CONFIG=(.*?)"?\s*$', line, re.IGNORECASE)
+        if match:
+            values["GPU_SERVICE_AUTO_CONFIG"] = match.group(1).strip()
+    auto_config = values.get("GPU_SERVICE_AUTO_CONFIG", "1").lower() in {"1", "true", "yes", "on"}
+    if not auto_config:
+        log("GPU 服务配置已设为手动模式，保留 .runtime/local_env.bat 中的现有值")
+        return
+    for key, value in gpu_service_defaults().items():
+        write_runtime_value(local_env, key, value)
+    write_runtime_value(local_env, "GPU_SERVICE_AUTO_CONFIG", "1")
+    if detect_nvidia_gpu() is None:
+        log("未检测到可供 GPU 服务使用的 NVIDIA CUDA GPU，已关闭 GPU 服务；macOS MPS 和 CPU 模式仍由 PyTorch 正常使用")
+
+
 # ---------------------------------------------------------------------------
 # 步骤 3: 后端依赖（PyTorch 三件套 + 其余）
 # ---------------------------------------------------------------------------
@@ -463,6 +547,8 @@ def bootstrap_config() -> None:
             ok("已从模板生成 .runtime/local_env.bat")
         else:
             warn(".runtime/local_env.bat 缺失且无模板（管理器会自动使用内置默认值）")
+            return
+    configure_gpu_service(local_env)
 
 
 # ---------------------------------------------------------------------------

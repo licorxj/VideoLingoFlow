@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿{
+﻿{
   "version": 1,
   "interfaces": [
     {
@@ -28,7 +28,10 @@
           "qwen-image-max",
           "qwen-image-plus",
           "qwen-image-edit-max",
-          "qwen-image-edit-plus"
+          "qwen-image-edit-plus",
+          "qwen-image-3.0",
+          "qwen-image-3.0-pro",
+          "z-image-turbo"
         ],
         "model_metadata": {
           "wan2.7-image-pro": {
@@ -74,13 +77,12 @@
           },
           "z-image-turbo": {
             "modes": [
-              "t2i",
-              "i2i"
+              "t2i"
             ],
             "price": "",
             "resolutions": [
-              "1K",
-              "2K"
+              "2K",
+              "1K"
             ],
             "aspect_ratios": [
               "1:1",
@@ -190,6 +192,48 @@
               "9:16",
               "4:3",
               "3:4"
+            ]
+          },
+          "qwen-image-3.0": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "qwen-image-3.0-pro": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
             ]
           }
         },

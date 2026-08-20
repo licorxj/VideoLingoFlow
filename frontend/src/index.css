@@ -35,6 +35,36 @@
     --warning-foreground: 0 0% 100%;
     --info: 214 95% 50%;
     --info-foreground: 0 0% 100%;
+    --ai: 270 80% 58%;
+    --ai-foreground: 0 0% 100%;
+    /* 页面个性化背景渐变（H、Saturation、L） */
+    --page-bg-workbench: 200 36% 92%;
+    --page-bg-workbench-2: 185 30% 94%;
+    --page-bg-batch: 232 36% 93%;
+    --page-bg-batch-2: 215 28% 95%;
+    --page-bg-history: 28 40% 94%;
+    --page-bg-history-2: 18 32% 96%;
+    --page-bg-editing: 332 40% 94%;
+    --page-bg-editing-2: 312 28% 96%;
+    --page-bg-voiceforge: 270 36% 94%;
+    --page-bg-voiceforge-2: 248 28% 96%;
+    --page-bg-collab: 152 30% 93%;
+    --page-bg-collab-2: 168 24% 95%;
+    --page-bg-llm: 188 36% 93%;
+    --page-bg-llm-2: 205 28% 95%;
+    --page-bg-settings: 220 14% 96%;
+    --page-bg-settings-2: 220 10% 98%;
+    /* 资源库分类色（按素材类型） */
+    --asset-type-bgm: 200 80% 60%;
+    --asset-type-sfx: 280 70% 60%;
+    --asset-type-amb: 150 60% 50%;
+    --asset-type-voice: 25 90% 55%;
+    --asset-type-fx: 340 80% 60%;
+    --asset-type-music: 260 70% 65%;
+    --asset-type-other: 220 14% 55%;
+    /* 侧栏装饰 */
+    --sidebar-divider: 200 30% 80%;
+    --sidebar-divider-strong: 200 40% 65%;
     --shadow-sm: 0 1px 3px hsl(222 22% 12% / 0.08);
     --shadow-md: 0 4px 12px hsl(222 22% 12% / 0.10), 0 2px 4px hsl(222 22% 12% / 0.06);
     --shadow-lg: 0 8px 25px hsl(222 22% 12% / 0.14), 0 4px 10px hsl(222 22% 12% / 0.08);
@@ -72,6 +102,36 @@
     --warning-foreground: 0 0% 100%;
     --info: 214 95% 62%;
     --info-foreground: 0 0% 100%;
+    --ai: 270 80% 70%;
+    --ai-foreground: 220 14% 7%;
+    /* 页面个性化背景渐变（暗色版） */
+    --page-bg-workbench: 200 25% 11%;
+    --page-bg-workbench-2: 185 20% 9%;
+    --page-bg-batch: 232 25% 11%;
+    --page-bg-batch-2: 215 20% 9%;
+    --page-bg-history: 28 22% 11%;
+    --page-bg-history-2: 18 20% 9%;
+    --page-bg-editing: 332 25% 12%;
+    --page-bg-editing-2: 312 20% 9%;
+    --page-bg-voiceforge: 270 25% 12%;
+    --page-bg-voiceforge-2: 248 20% 9%;
+    --page-bg-collab: 152 22% 11%;
+    --page-bg-collab-2: 168 18% 9%;
+    --page-bg-llm: 188 25% 11%;
+    --page-bg-llm-2: 205 20% 9%;
+    --page-bg-settings: 220 14% 8%;
+    --page-bg-settings-2: 220 10% 10%;
+    /* 资源库分类色（暗色版） */
+    --asset-type-bgm: 200 80% 65%;
+    --asset-type-sfx: 280 70% 70%;
+    --asset-type-amb: 150 60% 60%;
+    --asset-type-voice: 25 90% 60%;
+    --asset-type-fx: 340 80% 68%;
+    --asset-type-music: 260 70% 70%;
+    --asset-type-other: 220 14% 65%;
+    /* 侧栏装饰（暗色版） */
+    --sidebar-divider: 200 18% 24%;
+    --sidebar-divider-strong: 200 25% 38%;
     --shadow-sm: 0 1px 3px hsl(0 0% 0% / 0.30);
     --shadow-md: 0 4px 12px hsl(0 0% 0% / 0.35), 0 2px 4px hsl(0 0% 0% / 0.22);
     --shadow-lg: 0 8px 25px hsl(0 0% 0% / 0.45), 0 4px 10px hsl(0 0% 0% / 0.28);
@@ -88,6 +148,96 @@
   .voice-input { height: 2.5rem; width: 100%; border: 1px solid hsl(var(--input)); border-radius: 0.375rem; background: hsl(var(--background)); padding: 0.5rem 0.75rem; color: hsl(var(--foreground)); outline: none; font-size: 0.875rem; }
   .voice-input:focus { border-color: hsl(var(--ring)); box-shadow: 0 0 0 2px hsl(var(--ring) / 0.15); }
   .voice-section { border-top: 1px solid hsl(var(--border)); padding-top: 1rem; margin-top: 1rem; }
+
+  /* 表面玻璃化（半透明 + 模糊） */
+  .surface-elevated {
+    background: hsl(var(--card) / 0.78);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+    border: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  /* 固定顶栏（sticky + 玻璃） */
+  .topbar-sticky {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background: hsl(var(--background) / 0.78);
+    backdrop-filter: saturate(180%) blur(12px);
+    -webkit-backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid hsl(var(--border) / 0.6);
+  }
+
+  /* 页面个性化背景 —— 在容器内提供低饱和的角落装饰渐变 */
+  .page-bg {
+    position: relative;
+    isolation: isolate;
+  }
+  .page-bg::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 50% at 8% 0%, var(--page-tint, hsl(var(--page-bg-1, var(--gradient-mesh-1)) / 0.10)) 0%, transparent 60%),
+      radial-gradient(50% 60% at 100% 0%, var(--page-tint-2, hsl(var(--page-bg-2, var(--gradient-mesh-2)) / 0.08)) 0%, transparent 60%),
+      radial-gradient(40% 40% at 50% 100%, hsl(var(--page-bg-3, var(--gradient-mesh-3)) / 0.05) 0%, transparent 60%);
+  }
+  .no-page-bg::before { display: none; }
+
+  /* 8 种页面 tone 的具体调色 */
+  .page-tone-workbench { --page-bg-1: var(--page-bg-workbench); --page-bg-2: var(--page-bg-workbench-2); --page-tint: hsl(var(--page-bg-workbench) / 0.16); --page-tint-2: hsl(var(--page-bg-workbench-2) / 0.14); }
+  .page-tone-batch { --page-bg-1: var(--page-bg-batch); --page-bg-2: var(--page-bg-batch-2); --page-tint: hsl(var(--page-bg-batch) / 0.18); --page-tint-2: hsl(var(--page-bg-batch-2) / 0.14); }
+  .page-tone-history { --page-bg-1: var(--page-bg-history); --page-bg-2: var(--page-bg-history-2); --page-tint: hsl(var(--page-bg-history) / 0.18); --page-tint-2: hsl(var(--page-bg-history-2) / 0.14); }
+  .page-tone-editing { --page-bg-1: var(--page-bg-editing); --page-bg-2: var(--page-bg-editing-2); --page-tint: hsl(var(--page-bg-editing) / 0.18); --page-tint-2: hsl(var(--page-bg-editing-2) / 0.14); }
+  .page-tone-voiceforge { --page-bg-1: var(--page-bg-voiceforge); --page-bg-2: var(--page-bg-voiceforge-2); --page-tint: hsl(var(--page-bg-voiceforge) / 0.20); --page-tint-2: hsl(var(--page-bg-voiceforge-2) / 0.16); }
+  .page-tone-collab { --page-bg-1: var(--page-bg-collab); --page-bg-2: var(--page-bg-collab-2); --page-tint: hsl(var(--page-bg-collab) / 0.16); --page-tint-2: hsl(var(--page-bg-collab-2) / 0.14); }
+  .page-tone-llm { --page-bg-1: var(--page-bg-llm); --page-bg-2: var(--page-bg-llm-2); --page-tint: hsl(var(--page-bg-llm) / 0.18); --page-tint-2: hsl(var(--page-bg-llm-2) / 0.14); }
+  .page-tone-settings { --page-bg-1: var(--page-bg-settings); --page-bg-2: var(--page-bg-settings-2); --page-tint: hsl(var(--page-bg-settings) / 0.10); --page-tint-2: hsl(var(--page-bg-settings-2) / 0.10); }
+
+  /* 顶部分隔线（替换硬编码 cyan 虚线） */
+  .sidebar-divider {
+    background-image: linear-gradient(90deg, transparent, hsl(var(--sidebar-divider)) 18%, hsl(var(--sidebar-divider-strong)) 50%, hsl(var(--sidebar-divider)) 82%, transparent);
+    background-size: 100% 1.5px;
+    background-repeat: no-repeat;
+    background-position: 0 50%;
+    opacity: 0.85;
+  }
+
+  /* 侧栏导航激活态（统一取代 hardcoded slate 灰） */
+  .bg-sidebar-active { background: hsl(var(--accent)); color: hsl(var(--accent-foreground)); }
+
+  /* 资源库分类色工具类（供 meta.ts 之外的标签使用） */
+  .asset-tone-bgm { color: hsl(var(--asset-type-bgm)); }
+  .asset-tone-sfx { color: hsl(var(--asset-type-sfx)); }
+  .asset-tone-amb { color: hsl(var(--asset-type-amb)); }
+  .asset-tone-voice { color: hsl(var(--asset-type-voice)); }
+  .asset-tone-fx { color: hsl(var(--asset-type-fx)); }
+  .asset-tone-music { color: hsl(var(--asset-type-music)); }
+  .asset-tone-other { color: hsl(var(--asset-type-other)); }
+  .asset-bg-bgm { background: hsl(var(--asset-type-bgm) / 0.12); }
+  .asset-bg-sfx { background: hsl(var(--asset-type-sfx) / 0.12); }
+  .asset-bg-amb { background: hsl(var(--asset-type-amb) / 0.12); }
+  .asset-bg-voice { background: hsl(var(--asset-type-voice) / 0.12); }
+  .asset-bg-fx { background: hsl(var(--asset-type-fx) / 0.12); }
+  .asset-bg-music { background: hsl(var(--asset-type-music) / 0.12); }
+  .asset-bg-other { background: hsl(var(--asset-type-other) / 0.12); }
+
+  /* 角色性别色（柔和） */
+  .gender-female { background: hsl(340 80% 96%); color: hsl(340 60% 35%); border-color: hsl(340 70% 85%); }
+  .dark .gender-female { background: hsl(340 40% 18%); color: hsl(340 80% 86%); border-color: hsl(340 35% 28%); }
+  .gender-male { background: hsl(205 80% 95%); color: hsl(205 65% 32%); border-color: hsl(205 70% 80%); }
+  .dark .gender-male { background: hsl(205 35% 16%); color: hsl(205 80% 84%); border-color: hsl(205 30% 26%); }
+  .gender-neutral { background: hsl(var(--card)); color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
+
+  /* AI 紫色语义强调 */
+  .tone-ai { color: hsl(var(--ai)); }
+  .tone-ai-soft { background: hsl(var(--ai) / 0.10); color: hsl(var(--ai)); }
+  .tone-success-soft { background: hsl(var(--success) / 0.10); color: hsl(var(--success)); }
+  .tone-warning-soft { background: hsl(var(--warning) / 0.12); color: hsl(var(--warning)); }
+  .tone-info-soft { background: hsl(var(--info) / 0.10); color: hsl(var(--info)); }
+  .tone-danger-soft { background: hsl(var(--destructive) / 0.10); color: hsl(var(--destructive)); }
 }
 
 @layer base {
@@ -230,7 +380,7 @@
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
-/* Pi Agent 图标点击跳跃效果 */
+/* 小π Agent 图标点击跳跃效果 */
 @keyframes pi-jump {
   0% { transform: scale(1); }
   30% { transform: translateY(-6px) scale(1.15); }
@@ -241,7 +391,7 @@
   animation: pi-jump 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Pi Agent 启动气泡弹出 */
+/* 小π Agent 启动气泡弹出 */
 @keyframes pi-pop {
   0% { opacity: 0; transform: scale(0.5); }
   100% { opacity: 1; transform: scale(1); }

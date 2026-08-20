@@ -170,8 +170,8 @@ export function ChapterPanel({
             导入文本
           </Button>
           <Button
-            variant="outline"
-            className="flex-1 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+            variant="ai-soft"
+            className="flex-1"
             onClick={onEditOriginal}
           >
             <FileEdit className="mr-1.5 h-4 w-4" />
@@ -180,16 +180,16 @@ export function ChapterPanel({
         </div>
         <div className="flex gap-2">
           <Button
-            variant="outline"
-            className="flex-1 border-green-500/30 text-green-400 hover:bg-green-500/20"
+            variant="success-soft"
+            className="flex-1"
             onClick={onRuleSplitChapters}
           >
             <SplitSquareVertical className="mr-1.5 h-4 w-4" />
             规则拆分章
           </Button>
           <Button
-            variant="outline"
-            className="flex-1 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+            variant="ai-soft"
+            className="flex-1"
             onClick={onAISplitChapters}
           >
             <Bot className="mr-1.5 h-4 w-4" />

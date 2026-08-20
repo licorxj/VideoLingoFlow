@@ -9,6 +9,7 @@ import { useAlert } from "@/components/ui/AlertProvider";
 import { getSubscriptionError, type Entitlement, type UserInfo } from "@/api/subscription";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { cn } from "@/lib/utils";
+import { PageBackground } from "@/components/shared/PageBackground";
 
 const TYPE_LABEL = {
   guest: "游客",
@@ -380,7 +381,7 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
   const openLink = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
 
   return (
-    <div className={cn("space-y-5", !embedded && "max-w-7xl mx-auto")}>
+    <PageBackground tone="settings" className={cn("space-y-5", !embedded && "max-w-7xl mx-auto")}>
       {!embedded && (
         <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card shadow-sm">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.14),transparent_30%)]" />
@@ -415,7 +416,7 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
         </div>
       )}
 
-      {error && <div className="rounded-xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-500">{error}</div>}
+      {error && <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <Card>
@@ -470,7 +471,7 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
             <CardDescription>账号状态与额度概览</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <div className={cn("rounded-2xl border p-4", userType === "subscribed" ? "border-emerald-500/40 bg-emerald-500/5" : "border-border/50 bg-background/60")}>
+            <div className={cn("rounded-2xl border p-4", userType === "subscribed" ? "border-success/40 bg-success/5" : "border-border/50 bg-background/60")}>
               <div className="text-xs text-muted-foreground">当前用户类型</div>
               <div className="mt-1 flex items-center gap-2">
                 <div className="text-lg font-bold">{TYPE_LABEL[userType]}</div>
@@ -588,9 +589,9 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
                   value={registerForm.username}
                   onChange={(e) => setRegisterForm((v) => ({ ...v, username: e.target.value }))}
                   placeholder="用户名（需含字母和数字，至少 6 位）"
-                  className={usernameValidation.touched && !usernameValidation.valid ? "border-red-500/60 focus-visible:ring-red-500/30" : ""}
+                  className={usernameValidation.touched && !usernameValidation.valid ? "border-destructive/60 focus-visible:ring-destructive/30" : ""}
                 />
-                <div className={cn("text-xs", usernameValidation.touched ? (usernameValidation.valid ? "text-emerald-600" : "text-red-500") : "text-muted-foreground")}>
+                <div className={cn("text-xs", usernameValidation.touched ? (usernameValidation.valid ? "text-success" : "text-destructive") : "text-muted-foreground")}>
                   {usernameValidation.message}
                 </div>
               </div>
@@ -600,9 +601,9 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
                   value={registerForm.password}
                   onChange={(e) => setRegisterForm((v) => ({ ...v, password: e.target.value }))}
                   placeholder="密码（需含字母和数字，至少 8 位）"
-                  className={passwordValidation.touched && !passwordValidation.valid ? "border-red-500/60 focus-visible:ring-red-500/30" : ""}
+                  className={passwordValidation.touched && !passwordValidation.valid ? "border-destructive/60 focus-visible:ring-destructive/30" : ""}
                 />
-                <div className={cn("text-xs", passwordValidation.touched ? (passwordValidation.valid ? "text-emerald-600" : "text-red-500") : "text-muted-foreground")}>
+                <div className={cn("text-xs", passwordValidation.touched ? (passwordValidation.valid ? "text-success" : "text-destructive") : "text-muted-foreground")}>
                   {passwordValidation.message}
                 </div>
               </div>
@@ -641,6 +642,6 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
           </div>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageBackground>
   );
 }

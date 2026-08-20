@@ -4,6 +4,11 @@ import { historyApi } from "@/api/history";
 import { tasksApi } from "@/api/tasks";
 import TaskCard from "@/components/task/TaskCard";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageBackground } from "@/components/shared/PageBackground";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingState } from "@/components/shared/LoadingState";
 import {
   Select,
   SelectContent,
@@ -21,23 +26,24 @@ import {
   ListChecks,
 } from "lucide-react";
 
-const actionBtnCls =
-  "flex items-center gap-1.5 px-3.5 py-2 border border-border rounded-xl text-sm font-semibold text-foreground hover:bg-accent/60 transition-all duration-200 active:scale-95 disabled:opacity-40 disabled:pointer-events-none";
-
 export default function History() {
   const [tasks, setTasks] = useState<any[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [keyword, setKeyword] = useState("");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
   const load = async () => {
+    setLoading(true);
     try {
       const res = await historyApi.list();
       setTasks(res.data.tasks || []);
     } catch (err) {
       console.error("Failed to load history tasks:", err);
       setTasks([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -142,60 +148,39 @@ export default function History() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 stagger-children">
-      {/* Row 1: title + select/batch/refresh controls */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-extrabold tracking-tight flex items-center gap-2.5">
-            <HistoryIcon className="w-6 h-6 text-primary" />
-            历史项目
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">
-            查看已完成的任务记录，可回溯执行
-          </p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button
-            onClick={handleSelectAll}
-            disabled={visibleTasks.length === 0}
-            className={actionBtnCls}
-            title="全选/取消全选当前列表"
-          >
-            <CheckSquare className="w-3.5 h-3.5" />
-            {allVisibleSelected ? "取消全选" : "全选"}
-          </button>
-          <button
-            onClick={handleInvert}
-            disabled={visibleTasks.length === 0}
-            className={actionBtnCls}
-            title="反选当前列表"
-          >
-            <ListChecks className="w-3.5 h-3.5" />
-            反选
-          </button>
-          <button
-            onClick={handleBatchDelete}
-            disabled={selected.size === 0}
-            className={`${actionBtnCls} hover:bg-red-500/10 hover:text-red-600 hover:border-red-400`}
-            title="删除选中的项目"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            批量删除
-            {selected.size > 0 && (
-              <span className="text-[11px] font-semibold px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
-                {selected.size}
-              </span>
-            )}
-          </button>
-          <button onClick={load} className={actionBtnCls}>
-            <RefreshCw className="w-3.5 h-3.5" />
-            刷新
-          </button>
-        </div>
-      </div>
+    <PageBackground tone="history" className="max-w-7xl mx-auto space-y-5 p-1">
+      <PageHeader
+        icon={HistoryIcon}
+        title="历史项目"
+        detail="查看已完成的任务记录，可回溯执行"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={visibleTasks.length === 0}>
+              <CheckSquare className="mr-1.5 h-4 w-4" />
+              {allVisibleSelected ? "取消全选" : "全选"}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleInvert} disabled={visibleTasks.length === 0}>
+              <ListChecks className="mr-1.5 h-4 w-4" />
+              反选
+            </Button>
+            <Button variant="destructive" size="sm" onClick={handleBatchDelete} disabled={selected.size === 0}>
+              <Trash2 className="mr-1.5 h-4 w-4" />
+              批量删除
+              {selected.size > 0 && (
+                <span className="ml-1 rounded-md bg-destructive-foreground/20 px-1.5 py-0.5 text-[11px] font-semibold">
+                  {selected.size}
+                </span>
+              )}
+            </Button>
+            <Button variant="outline" size="sm" onClick={load}>
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+              刷新
+            </Button>
+          </>
+        }
+      />
 
-      {/* Row 2: search box + sort control */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 rounded-xl border border-border/60 bg-card p-3">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground/50" />
           <Input
@@ -219,7 +204,9 @@ export default function History() {
         </Select>
       </div>
 
-      {visibleTasks.length > 0 ? (
+      {loading ? (
+        <LoadingState label="正在加载历史记录…" />
+      ) : visibleTasks.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-4">
           {visibleTasks.map((t) => (
             <TaskCard
@@ -233,20 +220,16 @@ export default function History() {
           ))}
         </div>
       ) : (
-        <div className="flex flex-col items-center justify-center py-20 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mb-4">
-            <Inbox className="w-8 h-8 text-muted-foreground/40" />
-          </div>
-          <p className="text-sm font-medium text-muted-foreground">
-            {keyword.trim() ? "未找到匹配的项目" : "暂无历史记录"}
-          </p>
-          <p className="text-xs text-muted-foreground/60 mt-1">
-            {keyword.trim()
+        <EmptyState
+          icon={Inbox}
+          title={keyword.trim() ? "未找到匹配的项目" : "暂无历史记录"}
+          detail={
+            keyword.trim()
               ? "请尝试更换关键词，或清除搜索条件"
-              : "完成的任务将自动出现在这里"}
-          </p>
-        </div>
+              : "完成的任务将自动出现在这里"
+          }
+        />
       )}
-    </div>
+    </PageBackground>
   );
 }
