@@ -261,7 +261,132 @@ def _merge_results(results: List[dict]) -> dict:
     if all_speakers:
         output["speakers"] = sorted(all_speakers)
 
+    # 保留引擎内部执行标志（各分段由同一引擎转录，全部分段都带标志时才保留，
+    # 避免长音频合并后丢失标志导致下游重复执行 VAD/对齐/说话人识别）
+    for flag in ("_vad_internally_executed", "_alignment_internally_executed",
+                 "_diarization_internally_executed"):
+        if all(r.get(flag) for r in results):
+            output[flag] = True
+
     return output
+
+
+def _clamp_result_to_duration(result: dict, duration: float) -> dict:
+    """将 ASR 结果中所有时间戳钳制到 [0, duration]，并修复退化段。
+
+    后处理（VAD 文本按比例分配 + 对齐引擎）在尾部语音上可能产生退化时间戳：
+    超出音源时长、零时长、对齐失败后的均匀间隔伪造链等。若不钳制，这些时间戳
+    会流入断句与配音阶段，导致视频变速目标超出媒体末尾（actual_visual_duration=0）
+    与时间轴漂移爆炸。
+
+    处理步骤：
+    1. 所有 segment/word 时间戳钳制到 [0, duration]，保证 end >= start；
+    2. 词链溢出钳制后窗口时（伪造均匀间隔），在窗口内重新均匀分布；
+    3. 连续的零时长退化段，在前后有效段之间的空窗内按词数/文本长度加权铺开。
+    """
+    if not result or not isinstance(duration, (int, float)) or duration <= 0:
+        return result
+
+    duration = float(duration)
+    segments = result.get("segments", []) or []
+
+    def _fit(v, lo=0.0, hi=None):
+        hi = duration if hi is None else hi
+        try:
+            return min(max(float(v), lo), hi)
+        except (TypeError, ValueError):
+            return lo
+
+    # Pass 1: 钳制到媒体范围
+    for seg in segments:
+        words = seg.get("words") or []
+        for w in words:
+            w["start"] = round(_fit(w.get("start", 0)), 4)
+            w["end"] = round(max(_fit(w.get("end", 0)), w["start"]), 4)
+        seg_start = _fit(seg.get("start", 0))
+        seg_end = max(_fit(seg.get("end", 0)), seg_start)
+
+        # 词链超出钳制后窗口（如伪造的均匀间隔链）：在窗口内重新均匀分布
+        if words and seg_end - seg_start > 1e-3:
+            overflow = words[-1]["end"] > seg_end + 1e-3
+            collapsed = all(w["end"] - w["start"] < 1e-3 for w in words)
+            if overflow or collapsed:
+                slot = (seg_end - seg_start) / len(words)
+                t = seg_start
+                for w in words:
+                    w["start"] = round(t, 4)
+                    w["end"] = round(min(t + slot, seg_end), 4)
+                    t += slot
+
+        seg["start"] = round(seg_start, 4)
+        seg["end"] = round(seg_end, 4)
+
+    # Pass 2: 零时长退化段在相邻有效段之间的空窗内加权铺开
+    _EPS = 0.05
+    i = 0
+    n = len(segments)
+    while i < n:
+        seg = segments[i]
+        if seg["end"] - seg["start"] >= _EPS:
+            i += 1
+            continue
+        # 收集连续退化段
+        j = i
+        while j < n and segments[j]["end"] - segments[j]["start"] < _EPS:
+            j += 1
+        next_start = segments[j]["start"] if j < n else duration
+        # 可铺开区间：向前回溯到最后一个有效段的末尾（退化段常被钉死在
+        # 末尾或 0，只有前向空窗可铺时无法展开），向后到下一个有效段的起点
+        k = i - 1
+        while k >= 0 and segments[k]["end"] - segments[k]["start"] < _EPS:
+            k -= 1
+        back_end = segments[k]["end"] if k >= 0 else 0.0
+        win_start = min(max(back_end, min(segments[i]["start"], next_start)), next_start)
+        win_end = min(max(next_start, win_start), duration)
+        window = max(0.0, win_end - win_start)
+
+        def _weight(s):
+            wc = len(s.get("words") or [])
+            if wc > 0:
+                return float(wc)
+            return float(max(1, len(str(s.get("text", "") or ""))))
+
+        group = segments[i:j]
+        # 空窗不足时，把退化组与紧邻的上一个有效段合并，在二者并集区间内
+        # 按权重重新铺开（典型场景：尾部段被钉死在媒体末尾，无空窗可用）
+        if window < 0.3 and k >= 0:
+            win_start = min(segments[k]["start"], win_start)
+            win_end = min(max(next_start, win_start), duration)
+            window = max(0.0, win_end - win_start)
+            group = segments[k:j]
+
+        total_w = sum(_weight(s) for s in group) or 1.0
+        t = win_start
+        for s in group:
+            span = window * _weight(s) / total_w if window > 0 else 0.0
+            s["start"] = round(min(t, duration), 4)
+            s["end"] = round(min(t + span, duration), 4)
+            words = s.get("words") or []
+            if words and s["end"] > s["start"]:
+                slot = (s["end"] - s["start"]) / len(words)
+                wt = s["start"]
+                for w in words:
+                    w["start"] = round(wt, 4)
+                    w["end"] = round(min(wt + slot, s["end"]), 4)
+                    wt += slot
+            t += span
+        i = j
+
+    # Pass 3: 单调性兜底（不缩短有效段，只把后段起点推到前段末尾并再次钳制）
+    prev_end = 0.0
+    for seg in segments:
+        if seg["start"] < prev_end:
+            seg["start"] = round(min(prev_end, duration), 4)
+            if seg["end"] < seg["start"]:
+                seg["end"] = seg["start"]
+        prev_end = max(prev_end, seg["end"])
+
+    return result
 
 
 def _normalize_segment_words(words: List[dict], seg_start: float, seg_end: float) -> List[dict]:
@@ -359,7 +484,27 @@ def _normalize_asr_result(result: dict) -> dict:
 # Config loaders
 # ---------------------------------------------------------------------------
 
-def _load_task_node_config(task_dir: str) -> Dict[str, Any]:
+def _resolve_input_language(task_dir: str) -> str:
+    """从任务 workflow.json 的 input 节点解析源语言；未设置时返回 auto。"""
+    wf_path = os.path.join(task_dir, "workflow.json")
+    if not os.path.exists(wf_path):
+        return "auto"
+    try:
+        with open(wf_path, "r", encoding="utf-8") as f:
+            wf = json.load(f)
+    except Exception:
+        return "auto"
+    for node in wf.get("nodes", []):
+        if node.get("data", {}).get("nodeType") == "input":
+            src_lang = node.get("data", {}).get("config", {}).get("source_language", "auto")
+            if src_lang and src_lang != "auto":
+                print(f"[ASR] Resolved language from input node: {src_lang}")
+                return src_lang
+            return "auto"
+    return "auto"
+
+
+def _load_task_node_config(task_dir: str, node_type: str = "asr") -> Dict[str, Any]:
     """Load the ASR node's config from the task's workflow.json."""
     wf_path = os.path.join(task_dir, "workflow.json")
     if not os.path.exists(wf_path):
@@ -371,23 +516,13 @@ def _load_task_node_config(task_dir: str) -> Dict[str, Any]:
         return {}
     asr_cfg = {}
     for node in wf.get("nodes", []):
-        if node.get("data", {}).get("nodeType") == "asr":
-            asr_cfg = node.get("data", {}).get("config", {})
+        if node.get("data", {}).get("nodeType") == node_type:
+            asr_cfg = node.get("data", {}).get("config", {}) or {}
             break
     # Resolve language: if "from_input" or not set, read from input node
     lang = asr_cfg.get("language")
     if lang == "from_input" or not lang:
-        for node in wf.get("nodes", []):
-            if node.get("data", {}).get("nodeType") == "input":
-                src_lang = node.get("data", {}).get("config", {}).get("source_language", "auto")
-                if src_lang and src_lang != "auto":
-                    asr_cfg["language"] = src_lang
-                    print(f"[ASR] Resolved language from input node: {src_lang}")
-                else:
-                    asr_cfg["language"] = "auto"
-                break
-        else:
-            asr_cfg["language"] = "auto"
+        asr_cfg["language"] = _resolve_input_language(task_dir)
     return asr_cfg
 
 
@@ -493,14 +628,126 @@ def _merge_asr_params(task_cfg: Dict[str, Any], default_cfg: Dict[str, Any]) -> 
 
 
 # ---------------------------------------------------------------------------
+# Audio input resolution (shared by ASR / ASR-recognize / ASR-postprocess)
+# ---------------------------------------------------------------------------
+
+def resolve_asr_audio_inputs(task_dir: str, step_inputs: Dict[str, Any]) -> Dict[str, Any]:
+    """解析 ASR / 后处理节点的音频输入。
+
+    识别优先级：ASR音源 → 人声音源 → 视频 → 缓存回退。
+    返回 dict：
+      input_path         识别用音频/视频（无有效输入时抛 FileNotFoundError）
+      asr_audio/vocal_audio  存在的原始输入路径（可能为 None）
+      alignment_audio    显式指定的对齐音源（可能为 None）
+      post_process_audio 后处理用音源（人声 > ASR > 识别音源）
+    """
+    asr_audio = step_inputs.get("asr_audio", "")
+    vocal_audio = step_inputs.get("vocal_audio", "")
+    input_video = step_inputs.get("video", "")
+
+    # 对齐音频输入（可选，用于词级时间戳对齐）
+    alignment_audio = step_inputs.get("alignment_audio", "")
+    if alignment_audio and not os.path.isabs(alignment_audio):
+        alignment_audio = os.path.join(task_dir, alignment_audio)
+    alignment_audio = alignment_audio if alignment_audio and os.path.exists(alignment_audio) else None
+    if alignment_audio:
+        print(f"[ASR] Alignment audio provided: {alignment_audio}")
+
+    # 解析为绝对路径
+    if asr_audio and not os.path.isabs(asr_audio):
+        asr_audio = os.path.join(task_dir, asr_audio)
+    if vocal_audio and not os.path.isabs(vocal_audio):
+        vocal_audio = os.path.join(task_dir, vocal_audio)
+    if input_video and not os.path.isabs(input_video):
+        input_video = os.path.join(task_dir, input_video)
+
+    # 缓存路径（用于回退）
+    cache_video = os.path.join(task_dir, "cache", "input_video.mp4")
+    cache_audio = os.path.join(task_dir, "cache", "audio.wav")
+    # 兼容 input 节点复制命名（input_audio.{ext}）与音频分离产物：扫描 cache 目录找音频文件
+    if not os.path.exists(cache_audio) and os.path.isdir(os.path.join(task_dir, "cache")):
+        for name in sorted(os.listdir(os.path.join(task_dir, "cache"))):
+            if name.startswith("input_audio") or name.endswith((".wav", ".mp3", ".flac", ".m4a")):
+                cache_audio = os.path.join(task_dir, "cache", name)
+                break
+
+    vocal_path = vocal_audio if vocal_audio and os.path.exists(vocal_audio) else None
+    asr_path = asr_audio if asr_audio and os.path.exists(asr_audio) else None
+
+    # ASR识别优先级：ASR音源 → 人声音源 → 视频 → 缓存
+    input_path = None
+    if asr_path:
+        input_path = asr_path
+        print(f"[ASR] Using ASR audio: {input_path}")
+    elif vocal_path:
+        input_path = vocal_path
+        print(f"[ASR] Using vocal audio (fallback): {input_path}")
+    elif input_video and os.path.exists(input_video):
+        input_path = input_video
+        print(f"[ASR] Using upstream video: {input_path}")
+    else:
+        # 回退：检查 cache 默认路径（ASR 直接从 input 节点接收视频的场景）
+        if os.path.exists(cache_audio):
+            input_path = cache_audio
+            print(f"[ASR] Fallback to cache audio: {input_path}")
+        elif os.path.exists(cache_video):
+            input_path = cache_video
+            print(f"[ASR] Fallback to cache video: {input_path}")
+
+    if not input_path:
+        raise FileNotFoundError(
+            f"ASR 输入文件不存在。"
+            f"上游连线: asr_audio='{asr_audio}', vocal_audio='{vocal_audio}', video='{input_video}'。"
+            f"请检查上游连线是否正确连接，或确认缓存目录中有输入文件。"
+        )
+
+    # 确定后处理使用的音频路径（优先人声音源，其次ASR音源）
+    # VAD、词级对齐、说话人识别使用更纯净的人声音源
+    if vocal_path:
+        post_process_audio = vocal_path
+        print(f"[ASR] Post-processing will use vocal audio: {vocal_path}")
+    elif asr_path:
+        post_process_audio = asr_path
+        print(f"[ASR] Post-processing will use ASR audio: {asr_path}")
+    else:
+        post_process_audio = input_path
+        print(f"[ASR] Post-processing will use input audio: {input_path}")
+
+    return {
+        "input_path": input_path,
+        "asr_audio": asr_path,
+        "vocal_audio": vocal_path,
+        "alignment_audio": alignment_audio,
+        "post_process_audio": post_process_audio,
+    }
+
+
+# ---------------------------------------------------------------------------
 # ASR Step
 # ---------------------------------------------------------------------------
 
 class S02ASR(BaseStep):
     """ASR step with automatic audio splitting for long files."""
 
+    # 对应 builtin_node_types 中的节点类型（子类可覆写）
+    _node_type = "asr"
+
     def __init__(self):
         pass
+
+    def _load_node_config(self, task_dir: str) -> Dict[str, Any]:
+        """加载本节点配置：优先运行时注入的 _node_config，回退扫描 workflow.json。
+
+        语言解析规则与 _load_task_node_config 保持一致（from_input → 输入节点语言）。
+        """
+        injected = getattr(self, "_node_config", None)
+        if injected:
+            cfg = dict(injected)
+            lang = cfg.get("language")
+            if lang == "from_input" or not lang:
+                cfg["language"] = _resolve_input_language(task_dir)
+            return cfg
+        return _load_task_node_config(task_dir, getattr(self, "_node_type", "asr"))
 
     def check_artifact(self, task_dir: str) -> bool:
         return find_artifact(os.path.join(task_dir, "cache"), "asr_result.json") is not None
@@ -562,8 +809,8 @@ class S02ASR(BaseStep):
 
         task_dir = getattr(self, "_task_dir", "") or os.path.dirname(output_path)
 
-        # 1) Load task-specific node config from workflow.json
-        task_cfg = _load_task_node_config(task_dir)
+        # 1) Load task-specific node config (injected _node_config > workflow.json)
+        task_cfg = self._load_node_config(task_dir)
 
         # 2) Determine which engine to use (task > default)
         engine_id = _resolve_engine_id(task_cfg)
@@ -655,100 +902,6 @@ class S02ASR(BaseStep):
             print(f"[ASR] Raw output saved: {raw_path}")
         except Exception as e:
             print(f"[ASR] Warning: failed to save raw output: {e}")
-
-    def _apply_post_processing(self, result: dict, input_path: str, 
-                               engine_id: str, callback: Optional[Callable] = None) -> dict:
-        """Apply post-processing based on global settings and interface capabilities.
-        
-        Checks if the interface natively supports VAD, alignment, and diarization.
-        If not, and the user has enabled fallback engines, apply them.
-        """
-        from backend.asr.asr_factory import get_asr_engine
-        
-        # 1. Load interface capabilities
-        iface_caps = self._get_interface_capabilities(engine_id)
-        
-        # 2. Load global post-processing config
-        post_config = self._load_post_process_config()
-        
-        # 3. Determine which post-processing to apply
-        vad_engine = None
-        if post_config.get("vad", {}).get("enabled") and not iface_caps.get("vad"):
-            vad_engine = post_config["vad"].get("engine")
-        
-        alignment_engine = None
-        if post_config.get("alignment", {}).get("enabled") and not iface_caps.get("word_timestamps"):
-            alignment_engine = post_config["alignment"].get("engine")
-        
-        diarize_engine = None
-        if post_config.get("diarization", {}).get("enabled") and not iface_caps.get("speaker_diarization"):
-            diarize_engine = post_config["diarization"].get("engine")
-        
-        # 4. Apply post-processing if needed
-        if vad_engine or alignment_engine or diarize_engine:
-            if callback:
-                callback(85, f"Post-processing: VAD={vad_engine}, Align={alignment_engine}, Diarize={diarize_engine}")
-            
-            # Get engine instance for post-processing
-            engine = get_asr_engine(engine_id)
-            
-            result = engine.post_process(
-                asr_result=result,
-                audio_path=input_path,
-                vad_engine=vad_engine,
-                alignment_engine=alignment_engine,
-                diarize_engine=diarize_engine,
-                callback=callback,
-            )
-            
-            print(f"[ASR] Post-processing applied: vad={vad_engine}, alignment={alignment_engine}, diarize={diarize_engine}")
-        
-        return result
-    
-    @staticmethod
-    def _get_interface_capabilities(engine_id: str) -> dict:
-        """Load interface capabilities from asr_interfaces.json."""
-        iface_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "config", "asr_interfaces.json",
-        )
-        if not os.path.exists(iface_path):
-            return {}
-        try:
-            with open(iface_path, "r", encoding="utf-8-sig") as f:
-                data = json.load(f)
-        except Exception:
-            return {}
-        for iface in data.get("interfaces", []):
-            if iface.get("id") == engine_id:
-                return iface.get("capabilities", {})
-        return {}
-    
-    @staticmethod
-    def _load_post_process_config() -> dict:
-        """Load post-processing configuration from settings."""
-        try:
-            from backend.models.settings import Settings
-            settings = Settings()
-            
-            config = {
-                "vad": {
-                    "enabled": settings.get("asr.post_process.vad.enabled", False),
-                    "engine": settings.get("asr.post_process.vad.engine", "silero"),
-                },
-                "alignment": {
-                    "enabled": settings.get("asr.post_process.alignment.enabled", False),
-                    "engine": settings.get("asr.post_process.alignment.engine", "whisperx"),
-                },
-                "diarization": {
-                    "enabled": settings.get("asr.post_process.diarization.enabled", False),
-                    "engine": settings.get("asr.post_process.diarization.engine", "pyannote"),
-                },
-            }
-            return config
-        except Exception as e:
-            print(f"[ASR] Warning: Failed to load post-process config: {e}")
-            return {}
 
     def _transcribe_split(self, input_path, output_path, audio_duration,
                           max_duration, engine_id, params, callback,
@@ -869,24 +1022,46 @@ class S02ASR(BaseStep):
         diarization_enabled = diarization_enabled_raw is True or str(diarization_enabled_raw).lower() == "true"
         diarization_engine = config.get("asr.post_process.diarization.engine", "pyannote")
 
+        # 2.1 节点级后处理勾选：复选框直接决定执行哪些阶段，不勾选的不执行；
+        # 各阶段处理引擎均读取全局设置（ASR 引擎不具备该能力时由全局引擎补执行）。
+        # 旧配置兼容：post_process_mode="global" 的历史节点仍完全沿用全局开关；
+        # 复选框键缺失时也回退到对应的全局启用开关。
+        node_cfg = self._load_node_config(getattr(self, "_task_dir", "") or "")
+        pp_mode = str(node_cfg.get("post_process_mode", "") or "")
+        if pp_mode != "global":
+            def _flag(key, fallback):
+                v = node_cfg.get(key)
+                if v is None:
+                    return fallback
+                return v is True or str(v).lower() == "true"
+            vad_enabled = _flag("post_vad", vad_enabled)
+            alignment_enabled = _flag("post_alignment", alignment_enabled)
+            diarization_enabled = _flag("post_diarization", diarization_enabled)
+            print(f"[ASR PostProcess] node checkboxes: vad={vad_enabled}, alignment={alignment_enabled}, diarization={diarization_enabled}")
+        else:
+            print("[ASR PostProcess] legacy global mode: following global post-process switches")
+
         print(f"[ASR PostProcess] vad_enabled={vad_enabled}, vad_engine={vad_engine}")
         print(f"[ASR PostProcess] alignment_enabled={alignment_enabled}, alignment_engine={alignment_engine}")
         print(f"[ASR PostProcess] diarization_enabled={diarization_enabled}, diarization_engine={diarization_engine}")
 
         # 3. Determine which post-processing to apply
         # Check both interface capabilities AND internal execution flags
-        # Some engines (Whisper, FunASR) execute VAD/alignment internally
+        # Some engines (Whisper, FunASR) execute VAD/alignment/diarization internally
         vad_internally_executed = result.get("_vad_internally_executed", False)
         alignment_internally_executed = result.get("_alignment_internally_executed", False)
+        diarization_internally_executed = result.get("_diarization_internally_executed", False)
 
         apply_vad = vad_enabled and not capabilities.get("vad", False) and not vad_internally_executed
         apply_alignment = alignment_enabled and not capabilities.get("word_timestamps", False) and not alignment_internally_executed
-        apply_diarization = diarization_enabled and not capabilities.get("speaker_diarization", False)
+        apply_diarization = diarization_enabled and not capabilities.get("speaker_diarization", False) and not diarization_internally_executed
 
         if vad_internally_executed:
             print("[ASR PostProcess] VAD was executed internally by ASR engine, skipping")
         if alignment_internally_executed:
             print("[ASR PostProcess] Alignment was executed internally by ASR engine, skipping")
+        if diarization_internally_executed:
+            print("[ASR PostProcess] Diarization was executed internally by ASR engine, skipping")
 
         print(f"[ASR PostProcess] apply_vad={apply_vad}, apply_alignment={apply_alignment}, apply_diarization={apply_diarization}")
 
@@ -913,7 +1088,7 @@ class S02ASR(BaseStep):
             # Try to get language from task config (input node)
             task_dir = getattr(self, "_task_dir", "")
             if task_dir:
-                task_cfg = _load_task_node_config(task_dir)
+                task_cfg = self._load_node_config(task_dir)
                 input_lang = task_cfg.get("language", "")
                 if input_lang and input_lang != "auto":
                     language = input_lang
@@ -953,6 +1128,19 @@ class S02ASR(BaseStep):
 
         return result
 
+    def _finalize_recognition(self, result: dict, input_path: str) -> dict:
+        """识别结果收尾：规范化时间戳并钳制到音源实际时长（子类可覆写）。
+
+        将时间戳钳制到音源实际时长：后处理（VAD/对齐）可能产出越界、零时长或
+        对齐失败后的伪造均匀间隔时间戳，若不钳制会流入断句与配音阶段，
+        导致视频变速目标超出媒体末尾与时间轴漂移累积。
+        """
+        result = _normalize_asr_result(result)
+        audio_duration = _get_audio_duration(input_path)
+        if audio_duration > 0:
+            result = _clamp_result_to_duration(result, audio_duration)
+        return result
+
     # ── main entry ────────────────────────────────────────────────────
 
     def run(self, task_dir: str, callback: Optional[Callable] = None,
@@ -964,84 +1152,20 @@ class S02ASR(BaseStep):
         step_inputs = getattr(self, "_step_inputs", {}) or {}
         print(f"[ASR] step_inputs keys: {list(step_inputs.keys())}, values: {step_inputs}")
 
-        # 获取两个音频输入源
-        asr_audio = step_inputs.get("asr_audio", "")
-        vocal_audio = step_inputs.get("vocal_audio", "")
-        input_video = step_inputs.get("video", "")
-
-        # 获取对齐音频输入（可选，用于词级时间戳对齐）
-        alignment_audio_input = step_inputs.get("alignment_audio", "")
-        if alignment_audio_input and not os.path.isabs(alignment_audio_input):
-            alignment_audio_input = os.path.join(task_dir, alignment_audio_input)
-        self._alignment_audio_path = alignment_audio_input if alignment_audio_input and os.path.exists(alignment_audio_input) else None
-        if self._alignment_audio_path:
-            print(f"[ASR] Alignment audio provided: {self._alignment_audio_path}")
-
-        # 解析为绝对路径
-        if asr_audio and not os.path.isabs(asr_audio):
-            asr_audio = os.path.join(task_dir, asr_audio)
-        if vocal_audio and not os.path.isabs(vocal_audio):
-            vocal_audio = os.path.join(task_dir, vocal_audio)
-        if input_video and not os.path.isabs(input_video):
-            input_video = os.path.join(task_dir, input_video)
-
-        # 缓存路径（用于回退）
-        cache_video = os.path.join(task_dir, "cache", "input_video.mp4")
-        cache_audio = os.path.join(task_dir, "cache", "audio.wav")
-        # 兼容 input 节点复制命名（input_audio.{ext}）与音频分离产物：扫描 cache 目录找音频文件
-        if not os.path.exists(cache_audio) and os.path.isdir(os.path.join(task_dir, "cache")):
-            for name in sorted(os.listdir(os.path.join(task_dir, "cache"))):
-                if name.startswith("input_audio") or name.endswith((".wav", ".mp3", ".flac", ".m4a")):
-                    cache_audio = os.path.join(task_dir, "cache", name)
-                    break
-
-        # 保存人声音源路径（后处理优先使用）
-        self._vocal_audio_path = vocal_audio if vocal_audio and os.path.exists(vocal_audio) else None
-        self._asr_audio_path = asr_audio if asr_audio and os.path.exists(asr_audio) else None
-
-        # ASR识别优先级：ASR音源 → 人声音源 → 视频 → 缓存
-        input_path = None
-        if asr_audio and os.path.exists(asr_audio):
-            input_path = asr_audio
-            print(f"[ASR] Using ASR audio: {input_path}")
-        elif vocal_audio and os.path.exists(vocal_audio):
-            input_path = vocal_audio
-            print(f"[ASR] Using vocal audio (fallback): {input_path}")
-        elif input_video and os.path.exists(input_video):
-            input_path = input_video
-            print(f"[ASR] Using upstream video: {input_path}")
-        else:
-            # 回退：检查 cache 默认路径（ASR 直接从 input 节点接收视频的场景）
-            if os.path.exists(cache_audio):
-                input_path = cache_audio
-                print(f"[ASR] Fallback to cache audio: {input_path}")
-            elif os.path.exists(cache_video):
-                input_path = cache_video
-                print(f"[ASR] Fallback to cache video: {input_path}")
-
-        if not input_path:
-            raise FileNotFoundError(
-                f"ASR 输入文件不存在。"
-                f"上游连线: asr_audio='{asr_audio}', vocal_audio='{vocal_audio}', video='{input_video}'。"
-                f"请检查上游连线是否正确连接，或确认缓存目录中有输入文件。"
-            )
-
-        # 确定后处理使用的音频路径（优先人声音源，其次ASR音源）
-        # VAD、词级对齐、说话人识别使用更纯净的人声音源
-        if self._vocal_audio_path:
-            self._post_process_audio_path = self._vocal_audio_path
-            print(f"[ASR] Post-processing will use vocal audio: {self._vocal_audio_path}")
-        elif self._asr_audio_path:
-            self._post_process_audio_path = self._asr_audio_path
-            print(f"[ASR] Post-processing will use ASR audio: {self._asr_audio_path}")
-        else:
-            self._post_process_audio_path = input_path
-            print(f"[ASR] Post-processing will use input audio: {input_path}")
+        audio_io = resolve_asr_audio_inputs(task_dir, step_inputs)
+        input_path = audio_io["input_path"]
+        self._asr_audio_path = audio_io["asr_audio"]
+        self._vocal_audio_path = audio_io["vocal_audio"]
+        self._alignment_audio_path = audio_io["alignment_audio"]
+        self._post_process_audio_path = audio_io["post_process_audio"]
 
         node_suffix = f"_{self._node_id}" if self._node_id else ""
         output_path = os.path.join(task_dir, "cache", f"asr_result{node_suffix}.json")
 
-        result = _normalize_asr_result(self._run_real_asr(input_path, output_path, callback, cancel_callback))
+        result = self._finalize_recognition(
+            self._run_real_asr(input_path, output_path, callback, cancel_callback),
+            input_path,
+        )
 
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:

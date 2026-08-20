@@ -40,6 +40,12 @@ export const STATUS_META: Record<
     bg: "bg-amber-500/10",
     label: "已暂停",
   },
+  interrupted: {
+    icon: PauseCircle,
+    color: "text-orange-500",
+    bg: "bg-orange-500/10",
+    label: "等待继续",
+  },
   stopping: {
     icon: Loader2,
     color: "text-orange-500",

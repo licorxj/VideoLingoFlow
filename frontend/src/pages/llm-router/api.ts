@@ -65,6 +65,9 @@ export const restoreLocalBackup = (filename: string) => api.post('/api/backup/re
 export const deleteBackup = (filename: string) => api.delete('/api/backup/' + encodeURIComponent(filename));
 export const downloadBackupUrl = (filename: string) => '/llm-router/api/backup/download/' + encodeURIComponent(filename);
 
+export const getLlmRouterUpdateStatus = () => axios.get('/api/llm-router-update/status');
+export const runLlmRouterUpdate = () => axios.post('/api/llm-router-update/run');
+
 // App Settings
 export const getSettings = () => api.get("/api/settings");
 export const updateSettings = (data: any) => api.put("/api/settings", data);

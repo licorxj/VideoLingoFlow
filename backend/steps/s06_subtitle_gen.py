@@ -52,7 +52,14 @@ class S06SubtitleGen(BaseStep):
 
     @classmethod
     def _normalize_entries(cls, data: Any) -> List[Dict]:
-        """Normalize multiple upstream JSON shapes into subtitle entries."""
+        """Normalize multiple upstream JSON shapes into subtitle entries.
+
+        支持：
+        - list：[{start, end, text, translated?}, ...]（sentences / translation / aligned 产物）
+        - dict：ASR 结果格式 {"segments": [{id, start, end, text}], ...}（如 OCR字幕识别输出）
+        """
+        if isinstance(data, dict):
+            data = data.get("segments") or []
         if not isinstance(data, list):
             return []
 

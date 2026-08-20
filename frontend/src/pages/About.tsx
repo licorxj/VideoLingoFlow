@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PageBackground } from "@/components/shared/PageBackground";
 
 const GITHUB_URL = "https://github.com/licorxj/VideoLingoFlow.git";
 
@@ -257,7 +258,7 @@ export default function About() {
   };
 
   return (
-    <div className="mx-auto max-w-[77.76rem] space-y-5 stagger-children">
+    <PageBackground tone="history" className="mx-auto max-w-[77.76rem] space-y-5 stagger-children">
       {/* ===== 页头 ===== */}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -370,7 +371,7 @@ export default function About() {
                   <p className="text-sm font-semibold">{pickValue(item, ["title", "name"]) || "项目公告"}</p>
                   {formatLocalTime(pickValue(item, ["created_at", "publish_at"])) && <span className="shrink-0 text-[10px] text-muted-foreground">{formatLocalTime(pickValue(item, ["created_at", "publish_at"]))}</span>}
                 </div>
-                <p className="mt-1 line-clamp-2 text-xs leading-5 text-blue-600 dark:text-blue-400">{pickValue(item, ["content", "description", "body"])}</p>
+                <p className="mt-1 line-clamp-2 text-xs leading-5 text-info">{pickValue(item, ["content", "description", "body"])}</p>
               </div>
             )) : announcementError ? <p className="text-sm text-destructive">公告获取失败：{announcementError}</p> : <p className="text-sm leading-6 text-muted-foreground">暂无公告。</p>}
           </div>
@@ -439,11 +440,11 @@ export default function About() {
             {updateStatus.status === "updating" || updateStatus.status === "starting"
               ? <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" />
               : updateStatus.status === "success"
-                ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
+                ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
                 : updateStatus.status === "error"
-                  ? <span className="mt-0.5 text-red-600">✕</span>
+                  ? <span className="mt-0.5 text-destructive">✕</span>
                   : <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />}
-            <span className={updateStatus.status === "error" ? "text-red-600" : ""}>{updateStatus.message || "正在准备..."}</span>
+            <span className={updateStatus.status === "error" ? "text-destructive" : ""}>{updateStatus.message || "正在准备..."}</span>
           </div>
           <pre className="max-h-[50vh] overflow-y-auto rounded-lg border border-border bg-accent/40 p-3 text-xs leading-5">
             {updateStatus.log.length ? updateStatus.log.join("\n") : "暂无输出..."}
@@ -461,6 +462,6 @@ export default function About() {
           <img src={qrPreview || ""} alt="二维码" className="mx-auto w-full max-w-[240px] rounded-lg border border-border object-contain" />
         </DialogContent>
       </Dialog>
-    </div>
+    </PageBackground>
   );
 }

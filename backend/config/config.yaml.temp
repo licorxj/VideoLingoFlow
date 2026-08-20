@@ -1,5 +1,5 @@
 # 版本号
-version: "0.2.0"
+version: "2.0.0"
 
 # ============ General ============
 general:
@@ -30,6 +30,7 @@ llm:
   timeout: 120
   retry_enabled: true
   retry_count: 1
+  enable_step_models: true
   # Per-step model name overrides (step name is used as model name by default)
   step_models:
     default_model: "vlf-01"
@@ -54,7 +55,7 @@ pi:
   prompt_timeout: 30
   idle_timeout: 1800
   max_output_chars: 12000
-  allow_tools: ["read", "grep", "find", "ls", "write", "edit"]
+  allow_tools: ["read", "grep", "find", "ls", "write", "edit", "bash"]
   model: ""
 
 # ============ TTS ============
@@ -70,14 +71,17 @@ asr:
 
   post_process:
     diarization:
-      engine: pyannote
+      engine: diarize
       enabled: true
     vad:
-      engine: silero
+      engine: webrtc
       enabled: true
     alignment:
       enabled: true
-      engine: qwen3
+      engine: whisperx
+    punctuation:
+      engine: ct_punc
+      enabled: true
 
 # ============ Subtitle Style ============
 subtitle:
@@ -125,19 +129,26 @@ advanced:
 # ============ Batch ============
 batch:
   max_concurrent_tasks: 3
-  task_start_interval: 2.0
+  task_start_interval: 5.0
 audio:
   cut_extend_time: 0.05
   denoise_enabled: false
   peak_cut_window: 0.1
   peak_cut_enabled: true
+  sample_rate: 16000
+  bitrate: 320
+  bit_depth: 32
 imagegen:
   method: bailian
   default_t2i_model: "z-image-turbo"
-  default_i2i_model: "wan2.7-image-pro"
+  default_i2i_model: "wan2.7-image"
 separation:
   method: demucs
   model: htdemucs
+
+# ============ OCR ============
+ocr:
+  method: rapidocr
 
 # ============ Social 更新 ============
 social_update:

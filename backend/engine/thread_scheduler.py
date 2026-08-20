@@ -13,7 +13,7 @@ import sys
 from concurrent.futures import ThreadPoolExecutor, Future
 from typing import Callable, Optional
 
-from backend.config.builtin_node_types import BUILTIN_NODE_TYPES
+from backend.config.builtin_node_types import get_builtin_node_types, is_builtin_node_type_deleted
 
 
 TASKS_ROOT = os.path.join(
@@ -46,6 +46,7 @@ BUILTIN_STEP_REGISTRY = {
     "watermark": ("backend.steps.s13_watermark", "S13Watermark"),
     "output": ("backend.steps.s14_output", "StepOutput"),
     "extract_audio": ("backend.steps.s15_extract_audio", "StepExtractAudio"),
+    "audio_transcode": ("backend.steps.s18_audio_transcode", "StepAudioTranscode"),
     "vocal_separation": ("backend.steps.s16_vocal_separation", "StepVocalSeparation"),
     "subtitle_align": ("backend.steps.s07_subtitle_align", "S07SubtitleAlign"),
     "llm_request": ("backend.steps.s_llm_request", "S_LLMRequest"),
@@ -53,6 +54,8 @@ BUILTIN_STEP_REGISTRY = {
     "pi_agent": ("backend.steps.s_pi_agent", "S_PiAgent"),
     "image_gen": ("backend.steps.s_imagegen", "S_ImageGen"),
     "video_frame_extract": ("backend.steps.s_video_frame_extract", "S_VideoFrameExtract"),
+    "subtitle_position_search": ("backend.steps.s_subtitle_position_search", "S_SubtitlePositionSearch"),
+    "subtitle_recognition": ("backend.steps.s_subtitle_recognition", "S_SubtitleRecognition"),
     "video_publish": ("backend.steps.s_video_publish", "S_VideoPublish"),
     "resolve_path": ("backend.steps.s_resolve_path", "S_ResolvePath"),
     "translate_task_name": ("backend.steps.s_translate_task_name", "S_TranslateTaskName"),
@@ -83,7 +86,7 @@ FRONTEND_ONLY_NODE_TYPES = {"video_preview", "image_preview"}
 PROCESS_ISOLATED_NODE_TYPES = {"asr", "vocal_separation", "track_separation", "http_request"}
 BUILTIN_NODE_OUTPUT_IDS = {
     node["id"]: [output.get("id") for output in node.get("outputs", []) if output.get("id")]
-    for node in BUILTIN_NODE_TYPES
+    for node in get_builtin_node_types()
 }
 
 
@@ -909,6 +912,7 @@ class ThreadScheduler:
                         "audio": "audioPath",
                         "subtitle": "subtitlePath",
                         "url": "url",
+                        "filepath": "filePath",
                     }
                     config_key = input_key_map.get(source_port, source_port)
                     if config_key and config_key in input_config:
@@ -1384,6 +1388,11 @@ class ThreadScheduler:
                 port = key.replace("Path", "")
                 outputs[port] = fp
 
+        # 文件路径：无需任何路径处理，有输入直接作为输出项透传
+        fp = ic.get("filePath", "") or node_config.get("filePath", "")
+        if fp:
+            outputs["filepath"] = fp
+
         # copyInputs and source/target language: from node_config (workflow definition)
         copy_inputs = node_config.get("copyInputs", False)
         if copy_inputs:
@@ -1540,6 +1549,10 @@ class ThreadScheduler:
         task_json = os.path.join(task_dir, "task.json")
         try:
             self._raise_if_cancelled(task_id)
+            if is_builtin_node_type_deleted(node_type):
+                msg = f"Deleted built-in node type: {node_type}"
+                self._update_node_error(task_json, nid, msg)
+                return False, msg
             if node_type == "input":
                 return self._exec_input_node(nid, node_config, task_dir, cache_dir, input_config)
             if node_type in FRONTEND_ONLY_NODE_TYPES:

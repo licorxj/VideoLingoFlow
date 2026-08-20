@@ -12,19 +12,23 @@ class PiSessionStore:
         with self._connect() as db:
             db.execute("PRAGMA journal_mode=WAL")
             db.execute("PRAGMA busy_timeout=5000")
-            db.execute("CREATE TABLE IF NOT EXISTS pi_sessions (project_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, cwd TEXT NOT NULL, session_dir TEXT NOT NULL, created_at REAL NOT NULL, last_activity REAL NOT NULL, message_count INTEGER NOT NULL DEFAULT 0, closed INTEGER NOT NULL DEFAULT 0, messages_json TEXT NOT NULL DEFAULT '[]')")
-            db.execute("CREATE TABLE IF NOT EXISTS pi_session_history (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, session_id TEXT NOT NULL, cwd TEXT NOT NULL DEFAULT '', session_dir TEXT NOT NULL DEFAULT '', created_at REAL NOT NULL, closed_at REAL NOT NULL, message_count INTEGER NOT NULL DEFAULT 0, messages_json TEXT NOT NULL DEFAULT '[]')")
-            db.execute("CREATE TABLE IF NOT EXISTS pi_settings (key TEXT PRIMARY KEY, value_json TEXT NOT NULL)")
-            db.execute("CREATE TABLE IF NOT EXISTS pi_assistants (assistant_id TEXT PRIMARY KEY, config_json TEXT NOT NULL)")
-            db.execute("CREATE TABLE IF NOT EXISTS pi_integrations (kind TEXT NOT NULL, item_id TEXT NOT NULL, name TEXT NOT NULL, path TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(kind, item_id))")
-            columns = {row[1] for row in db.execute("PRAGMA table_info(pi_session_history)")}
-            if "cwd" not in columns:
-                db.execute("ALTER TABLE pi_session_history ADD COLUMN cwd TEXT NOT NULL DEFAULT ''")
-            if "session_dir" not in columns:
-                db.execute("ALTER TABLE pi_session_history ADD COLUMN session_dir TEXT NOT NULL DEFAULT ''")
+            self._init_schema(db)
 
     def _connect(self) -> sqlite3.Connection:
         return sqlite3.connect(self.path, timeout=5)
+
+    def _init_schema(self, db: sqlite3.Connection) -> None:
+        """确保数据表存在（幂等，可在清库等场景下重建）。"""
+        db.execute("CREATE TABLE IF NOT EXISTS pi_sessions (project_id TEXT PRIMARY KEY, session_id TEXT NOT NULL, cwd TEXT NOT NULL, session_dir TEXT NOT NULL, created_at REAL NOT NULL, last_activity REAL NOT NULL, message_count INTEGER NOT NULL DEFAULT 0, closed INTEGER NOT NULL DEFAULT 0, messages_json TEXT NOT NULL DEFAULT '[]')")
+        db.execute("CREATE TABLE IF NOT EXISTS pi_session_history (id INTEGER PRIMARY KEY AUTOINCREMENT, project_id TEXT NOT NULL, session_id TEXT NOT NULL, cwd TEXT NOT NULL DEFAULT '', session_dir TEXT NOT NULL DEFAULT '', created_at REAL NOT NULL, closed_at REAL NOT NULL, message_count INTEGER NOT NULL DEFAULT 0, messages_json TEXT NOT NULL DEFAULT '[]')")
+        db.execute("CREATE TABLE IF NOT EXISTS pi_settings (key TEXT PRIMARY KEY, value_json TEXT NOT NULL)")
+        db.execute("CREATE TABLE IF NOT EXISTS pi_assistants (assistant_id TEXT PRIMARY KEY, config_json TEXT NOT NULL)")
+        db.execute("CREATE TABLE IF NOT EXISTS pi_integrations (kind TEXT NOT NULL, item_id TEXT NOT NULL, name TEXT NOT NULL, path TEXT NOT NULL, enabled INTEGER NOT NULL DEFAULT 0, PRIMARY KEY(kind, item_id))")
+        columns = {row[1] for row in db.execute("PRAGMA table_info(pi_session_history)")}
+        if "cwd" not in columns:
+            db.execute("ALTER TABLE pi_session_history ADD COLUMN cwd TEXT NOT NULL DEFAULT ''")
+        if "session_dir" not in columns:
+            db.execute("ALTER TABLE pi_session_history ADD COLUMN session_dir TEXT NOT NULL DEFAULT ''")
 
     def get(self, project_id: str) -> dict[str, Any] | None:
         with self._connect() as db:
@@ -59,6 +63,13 @@ class PiSessionStore:
         with self._connect() as db:
             cursor = db.execute("DELETE FROM pi_session_history WHERE id = ? AND project_id = ?", (history_id, project_id))
         return cursor.rowcount > 0
+
+    def clear_sessions(self) -> None:
+        """清空会话记录与历史（设置/授权等配置保留）。"""
+        with self._connect() as db:
+            self._init_schema(db)
+            db.execute("DELETE FROM pi_sessions")
+            db.execute("DELETE FROM pi_session_history")
 
     def get_settings(self) -> dict[str, Any]:
         with self._connect() as db:

@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link } from "react-router-dom";
-import { ChevronLeft, ChevronRight, FolderOpen, FolderPlus, Loader2, Music2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderOpen, FolderPlus, Music2, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { AssetListResult, VoiceForgeAsset, VoiceForgeAssetTag, voiceForgeApi } from "@/api/voiceforge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PageHeader } from "@/components/shared/PageHeader";
+import { PageBackground } from "@/components/shared/PageBackground";
+import { EmptyState } from "@/components/shared/EmptyState";
+import { LoadingState } from "@/components/shared/LoadingState";
 import { AssetCard } from "./AssetCard";
 import { AssetFilter, AssetFilters } from "./AssetFilter";
 import { AssetAddDialog } from "./AssetAddDialog";
 import { AssetCategoryManager } from "./AssetCategoryManager";
-import { ASSET_TYPE_COLORS, ASSET_TYPE_LABELS, ASSET_TYPE_ORDER } from "./meta";
+import { ASSET_TYPE_LABELS, ASSET_TYPE_ORDER } from "./meta";
 
 const PAGE_SIZE = 12;
 
@@ -88,7 +91,6 @@ export function AssetLibrary() {
   };
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(result.total / PAGE_SIZE)), [result.total]);
-  const color = ASSET_TYPE_COLORS[activeType] || "#a29bfe";
   const allSelected = result.assets.length > 0 && result.assets.every((asset) => selected.includes(asset.id));
 
   const toggleSelect = (id: string) => {
@@ -148,41 +150,50 @@ export function AssetLibrary() {
   };
 
   return (
-    <div className="mx-auto max-w-7xl space-y-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <Link to="/voiceforge"><Button variant="outline" size="icon" title="返回"><ChevronLeft className="h-4 w-4" /></Button></Link>
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${color}1a` }}>
-              <Music2 className="h-5 w-5" style={{ color }} />
-            </div>
-            <div>
-              <h2 className="text-xl font-bold">素材库</h2>
-              <p className="text-xs text-muted-foreground">仅记录本地路径，不复制文件 · 不含视频时间线</p>
-            </div>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => setCatOpen(true)}><FolderPlus className="mr-1.5 h-4 w-4" />分类管理</Button>
-          <Button variant="outline" onClick={() => void load(page, filters, activeType)}><RefreshCw className="mr-1.5 h-4 w-4" />刷新</Button>
-          <Button onClick={() => setAddOpen(true)}><Plus className="mr-1.5 h-4 w-4" />添加素材</Button>
-        </div>
-      </div>
+    <PageBackground tone="voiceforge" className="mx-auto max-w-7xl space-y-5 p-1">
+      <PageHeader
+        icon={Music2}
+        title="素材库"
+        detail="仅记录本地路径，不复制文件 · 不含视频时间线"
+        hideTitle
+        back={{ to: "/voiceforge", label: "配音谷" }}
+        breadcrumbs={[
+          { label: "晴沐配音谷", to: "/voiceforge" },
+          { label: "素材库" },
+        ]}
+        actions={
+          <>
+            <Button variant="outline" onClick={() => setCatOpen(true)}>
+              <FolderPlus className="mr-1.5 h-4 w-4" />
+              分类管理
+            </Button>
+            <Button variant="outline" onClick={() => void load(page, filters, activeType)}>
+              <RefreshCw className="mr-1.5 h-4 w-4" />
+              刷新
+            </Button>
+            <Button onClick={() => setAddOpen(true)}>
+              <Plus className="mr-1.5 h-4 w-4" />
+              添加素材
+            </Button>
+          </>
+        }
+      />
 
       <div className="flex gap-1 border-b border-border/60">
         {ASSET_TYPE_ORDER.map((type) => {
-          const typeColor = ASSET_TYPE_COLORS[type];
           const isActive = type === activeType;
+          const toneClass = isActive ? `asset-tone-${type} asset-bg-${type}` : "text-muted-foreground hover:text-foreground";
           return (
             <button
               key={type}
               type="button"
               onClick={() => setActiveType(type)}
-              className={`flex items-center gap-1.5 rounded-t-lg border-b-2 px-4 py-2.5 text-sm ${isActive ? "font-semibold" : "text-muted-foreground hover:text-foreground"}`}
-              style={{ borderColor: isActive ? typeColor : "transparent", color: isActive ? typeColor : undefined }}
+              className={`flex items-center gap-1.5 rounded-t-lg border-b-2 px-4 py-2.5 text-sm ${toneClass} ${
+                isActive ? "border-current font-semibold" : "border-transparent"
+              }`}
             >
-              <span style={{ color: isActive ? typeColor : undefined }}>{ASSET_TYPE_LABELS[type]}</span>
-              <span className="rounded-full px-1.5 text-[11px]" style={{ background: `${typeColor}22`, color: isActive ? typeColor : "#9496ab" }}>
+              <span>{ASSET_TYPE_LABELS[type]}</span>
+              <span className="rounded-full bg-current/10 px-1.5 text-[11px]">
                 {result.type_counts[type] || 0}
               </span>
             </button>
@@ -206,7 +217,7 @@ export function AssetLibrary() {
           {selected.length ? (
             <>
               <Button size="sm" variant="outline" onClick={toggleAll}>取消选择</Button>
-              <Button size="sm" variant="outline" className="text-destructive" onClick={() => void removeSelected()}>
+              <Button size="sm" variant="destructive" onClick={() => void removeSelected()}>
                 <Trash2 className="mr-1 h-3.5 w-3.5" />批量删除
               </Button>
             </>
@@ -232,13 +243,18 @@ export function AssetLibrary() {
             ))}
           </div>
         ) : loading ? (
-          <div className="flex justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-primary" /></div>
+          <LoadingState label="正在加载素材…" />
         ) : (
-          <div className="flex flex-col items-center justify-center px-6 py-20 text-center">
-            <FolderOpen className="h-9 w-9 text-muted-foreground/40" />
-            <p className="mt-3 font-medium text-muted-foreground">素材库为空</p>
-            <p className="mt-1 max-w-sm text-sm text-muted-foreground/70">点击右上角“添加素材”选择本地音频文件，仅记录路径、不复制文件。</p>
-          </div>
+          <EmptyState
+            icon={FolderOpen}
+            title="素材库为空"
+            detail='点击右上角"添加素材"选择本地音频文件，仅记录路径、不复制文件。'
+            action={
+              <Button onClick={() => setAddOpen(true)}>
+                <Plus className="mr-1.5 h-4 w-4" />添加第一个素材
+              </Button>
+            }
+          />
         )}
       </div>
 
@@ -296,6 +312,6 @@ export function AssetLibrary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageBackground>
   );
 }

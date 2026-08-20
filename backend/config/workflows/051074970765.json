@@ -23,7 +23,8 @@
           "copyInputs": true,
           "audioPath": "",
           "subtitlePath": "",
-          "url": ""
+          "url": "",
+          "filePath": ""
         },
         "status": "completed",
         "progress": 100,
@@ -122,12 +123,14 @@
           "max_sentence_length": "18",
           "merge_max_gap": "0.2",
           "split_on_speaker": false,
-          "split_by_punct": false,
           "pause_split_threshold": "2",
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
-          "url": ""
+          "url": "",
+          "split_sentence_ends": false,
+          "split_clause_breaks": false,
+          "processing_language": "from_input"
         },
         "status": "completed",
         "progress": 100,
@@ -192,7 +195,8 @@
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
-          "url": ""
+          "url": "",
+          "processing_language": "from_input"
         },
         "status": "completed",
         "progress": 100,
@@ -320,7 +324,7 @@
         "nodeType": "video_preview",
         "label": "视频预览器",
         "config": {
-          "fontSize": 24,
+          "fontSize": 12,
           "fontFamily": "sans-serif",
           "fontColor": "#ffffff",
           "backgroundColor": "rgba(0,0,0,0.6)",
@@ -541,7 +545,7 @@
         "label": "视频预览器",
         "config": {
           "title": "配音后视频",
-          "fontSize": 24,
+          "fontSize": 12,
           "fontFamily": "sans-serif",
           "fontColor": "#ffffff",
           "backgroundColor": "rgba(0,0,0,0.6)",
@@ -1062,7 +1066,7 @@
         "strokeWidth": 2
       },
       "source": "node_1_1780709567651",
-      "sourceHandle": "out-asr_result",
+      "sourceHandle": "out-subtitle",
       "target": "node_2_1780807148463",
       "targetHandle": "in-subtitle",
       "id": "xy-edge__node_1_1780709567651out-asr_result-node_2_1780807148463in-subtitle"
@@ -1207,19 +1211,6 @@
         "stroke": "#6b7280",
         "strokeWidth": 2
       },
-      "source": "node_1_1781645240103",
-      "sourceHandle": "out-audio_manifest",
-      "target": "node_1_1781810867151",
-      "targetHandle": "in-audio_manifest",
-      "id": "xy-edge__node_1_1781645240103out-audio_manifest-node_1_1781810867151in-audio_manifest"
-    },
-    {
-      "type": "smoothstep",
-      "animated": true,
-      "style": {
-        "stroke": "#6b7280",
-        "strokeWidth": 2
-      },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-audio",
       "target": "node_1_1781939413425",
@@ -1290,7 +1281,7 @@
       "source": "node_2_1781973904798",
       "sourceHandle": "out-audio",
       "target": "node_1_1780709567651",
-      "targetHandle": "in-audio",
+      "targetHandle": "in-asr_audio",
       "id": "xy-edge__node_2_1781973904798out-audio-node_1_1780709567651in-audio",
       "selected": false
     },
@@ -1425,19 +1416,6 @@
       "target": "node_1_1782672877872",
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1781939413425out-video-node_1_1782672877872in-video"
-    },
-    {
-      "type": "smoothstep",
-      "animated": true,
-      "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1782507205161",
-      "sourceHandle": "out-text",
-      "target": "node_1_1782672877872",
-      "targetHandle": "in-cover",
-      "id": "xy-edge__node_1_1782507205161out-text-node_1_1782672877872in-cover"
     },
     {
       "type": "smoothstep",

@@ -31,8 +31,9 @@
 - 一个节点 = 一个处理步骤，如「音频分离」「语音识别」「逐句翻译」「字幕烧录」。
 - 节点定义含 **inputs（输入端口）/ outputs（输出端口）** 列表，每个端口有 `id`、`label`、`type`（端口类型）与 `required`（输入是否必填）。
 - 节点分两类：
-  - **内置节点**：定义在 `backend/config/builtin_node_types.py`（只读，当前 41 个，见第 5 节）。
-  - **自定义节点**：由前端「节点管理器」创建/导入，定义在 `backend/config/node_types/{node_id}.json`，执行类型 `python` / `shell` / `llm`。
+  - **内置节点**：定义在 `backend/config/builtin_node_types.py`；可用项会受 `backend/config/deleted_builtin_node_ids.json` 过滤。
+  - **自定义节点**：由前端「节点管理器」创建/导入，定义在 `backend/config/node_types/{node_id}.json`，执行类型可为 `python` / `shell` / `llm` / 透传。
+  - **组合节点**：`kind: "group"`、`category: "group_node"` 的自定义子图定义；编辑期保留内部工作流，运行期展开为普通节点和连线。
 - 每个节点有 **执行域**：
   - `thread`：线程内执行，轻量，适用于文件操作、字幕处理等；
   - `process`：子进程隔离执行，适用于重型/网络/音视频任务（如 ASR、TTS、下载、发布），可硬停止。
@@ -169,13 +170,21 @@
 
 > 注意 `asr` 的输出端口类型是 `json`（ASR 结果 JSON），不要误以为 `subtitle` 端口是字幕文件。
 
+### 4.5 组合节点
+
+- 组合仅允许封装连通的普通节点，内部禁止嵌套组合。
+- 实例数据在 `data.groupMeta`，含 `internalWorkflow`、`inputMappings`、`outputMappings`；节点类型库中的可复用定义使用 `groupDefinition`。
+- 外部输入映射到内部目标端口；输出由映射中 `enabled !== false` 的内部输出显式暴露。
+- 编排时可保持组合结构；提交执行时必须经过 `expandGroupNodesForExecution` 或后端 `normalize_workflow(..., expand_groups=True)` 展平。不要为组合节点创建 `BaseStep` 或 `step_registry` 注册。
+- 组合成员配置位于 `internalWorkflow.nodes[].data.config`，可在前端组合卡片内直接编辑；修改时必须保留内部 edges 和映射。
+
 ---
 
 ## 五、可用节点清单获取方式
 
 任何时候需要**完整、最新**的节点清单，按以下顺序获取（不要凭记忆）：
 
-1. 直接读取 `backend/config/builtin_node_types.py`（唯一权威来源，当前 41 个内置节点）；
+1. 直接读取 `backend/config/builtin_node_types.py` 并通过 `get_builtin_node_types()` 获取有效内置节点；
 2. 调用 `GET /api/node-types`（返回内置 + 自定义全部节点，自定义带 `isBuiltIn: false`）；
 3. 自定义节点也可读 `backend/config/node_types/*.json`。
 
@@ -235,7 +244,7 @@
 |---|---|---|---|---|
 | `asr` | 语音识别 (ASR) | process | `asr_audio`(必填)/`vocal_audio` → `subtitle`(ASR结果JSON) | `engine`(api-select)、`language`(from_input/auto/zh/en/ja/ko/fr/de/es/pt/ru)、`model`、`word_timestamps`、`hotwords_enabled`/`hotwords`、`vad_onset`/`vad_offset` |
 | `sentence_preprocess` | 断句预处理 | thread | `json`/`text` → `subtitle`/`word_index` | `method`(asr/punct/ai)、`split_on_speaker`、`llm_max_chars` |
-| `sentence_split` | 句子分割 | thread | `subtitle`(ASR JSON) → `subtitle`/`text` | `max_sentence_length`、`use_llm_split`、`split_by_punct`、`split_on_speaker`、`merge_min_duration`/`merge_short_enabled`、`merge_max_gap`/`merge_gap_enabled`、`pause_split_threshold`/`pause_split_enabled` |
+| `sentence_split` | 句子分割 | thread | `subtitle`(ASR JSON) → `subtitle`/`text` | `max_sentence_length`、`use_llm_split`、`split_sentence_ends`、`split_clause_breaks`、`split_on_speaker`、`merge_min_duration`/`merge_short_enabled`、`merge_max_gap`/`merge_gap_enabled`、`pause_split_threshold`/`pause_split_enabled` |
 | `summarize` | 内容总结 | process | `text` → `subtitle`(总结JSON) | `summary_length`、`use_custom_terminology`、`custom_terminology_file` |
 | `translate` | 逐句翻译 | process | `subtitle`(必填)/`summary` → `subtitle`(直译)/`reflect`(反思) | `reflect_translate`(follow_global/yes/no)、`translation_style`、`batch_char_limit` |
 | `subtitle_align` | 译文断句和双语对齐 | thread | `subtitle` → `subtitle` | `max_subtitle_length` |

@@ -3,11 +3,13 @@
 支持多种对齐后端：
 - WhisperX phoneme alignment (wav2vec2)
 - Qwen3 ForcedAligner
+- FunASR CT-Aligner (iic/speech_ct-aligner_modelscope)
 
 可以独立于ASR引擎运行，用于后处理任何ASR结果，为其添加词级时间戳。
 """
 
 import os
+import tempfile
 import numpy as np
 from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
@@ -535,6 +537,165 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
         return AlignmentResult(words=all_words, language=language)
 
 
+class FunASRAlignmentProcessor(AlignmentProcessor):
+    """FunASR对齐处理器
+
+    使用 FunASR 的 CT-Aligner（iic/speech_ct-aligner_modelscope）做字符级强制对齐。
+    与 FunASR Nano 转录自带的字符时间戳同源，适合中日等 CJK 语言。
+
+    对齐策略：
+    - segments 已有有效时间戳（来自 VAD/转录）时，逐段截取音频片段后对齐，
+      时间戳按片段起点偏移还原到全音频坐标；
+    - 没有时间戳时，直接对完整音频 + 全文做一次对齐。
+    """
+
+    DEFAULT_ALIGN_MODEL = "iic/speech_ct-aligner_modelscope"
+
+    def __init__(self,
+                 model_name: Optional[str] = None,
+                 model_dir: Optional[str] = None,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.model_name = model_name or self.DEFAULT_ALIGN_MODEL
+        self.model_dir = model_dir
+
+    def _resolve_model(self) -> str:
+        """返回本地已缓存的对齐模型路径；找不到时返回模型 ID（由 funasr 自行下载）。"""
+        candidates = []
+        if self.model_dir:
+            candidates.append(self.model_dir)
+        cache_env = os.environ.get("MODELSCOPE_CACHE", "")
+        if cache_env:
+            candidates.append(os.path.join(cache_env, "models", "iic", "speech_ct-aligner_modelscope"))
+        project_cache = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "_model_cache", "models", "iic", "speech_ct-aligner_modelscope",
+        )
+        candidates.append(project_cache)
+        for c in candidates:
+            if c and os.path.isdir(c):
+                return c
+        return self.model_name
+
+    @staticmethod
+    def _get_audio_duration(audio_path: str) -> float:
+        try:
+            import librosa
+            return librosa.get_duration(path=audio_path)
+        except Exception:
+            try:
+                import soundfile as sf
+                data, sr = sf.read(audio_path)
+                return len(data) / sr
+            except Exception:
+                return 0.0
+
+    @staticmethod
+    def _extract_segment_audio(audio_path: str, start: float, end: float, output_path: str) -> Optional[str]:
+        """从音频中提取指定时间段的片段（16kHz 单声道 wav）。"""
+        try:
+            import librosa
+            import soundfile as sf
+            audio, sr = librosa.load(audio_path, sr=16000, offset=start, duration=end - start)
+            if len(audio) == 0:
+                return None
+            sf.write(output_path, audio, sr)
+            return output_path
+        except Exception as e:
+            print(f"[FunASRAlignment] Failed to extract segment audio: {e}")
+            return None
+
+    @staticmethod
+    def _align_text(model, audio_path: str, text: str, offset: float = 0.0) -> List[WordTimestamp]:
+        """对一段音频+文本执行 CT-Aligner 对齐，返回字符级时间戳（按 offset 平移）。"""
+        words: List[WordTimestamp] = []
+        try:
+            res = model.generate(input=audio_path, text=text)
+        except Exception as e:
+            print(f"[FunASRAlignment] Alignment failed: {e}")
+            return words
+        if not res:
+            return words
+        r = res[0] if isinstance(res, (list, tuple)) else res
+        timestamps = r.get("timestamp", []) if isinstance(r, dict) else []
+        for i, ts in enumerate(timestamps):
+            if not isinstance(ts, (list, tuple)) or len(ts) < 2:
+                continue
+            ch = text[i] if i < len(text) else ""
+            if not ch or ch.isspace():
+                continue
+            words.append(WordTimestamp(
+                word=ch,
+                start=round(ts[0] / 1000.0 + offset, 3),
+                end=round(ts[1] / 1000.0 + offset, 3),
+            ))
+        return words
+
+    def align(self, audio_path: str, segments: List[dict], language: str = "") -> AlignmentResult:
+        """使用 FunASR CT-Aligner 进行字符级对齐"""
+        try:
+            from funasr import AutoModel
+        except ImportError:
+            raise ImportError("funasr package required for FunASR alignment")
+
+        # Windows 下 funasr 加载模型可能触发 pip 子进程问题（与 FunASR Nano 同源补丁）
+        try:
+            from backend.asr.asr_funasr_nano import _patch_funasr_pip_install
+            _patch_funasr_pip_install()
+        except Exception:
+            pass
+
+        resolved = self._resolve_model()
+        print(f"[FunASRAlignment] Loading CT-Aligner ({resolved})...")
+        model = AutoModel(model=resolved, disable_update=True)
+
+        has_valid_timestamps = any(
+            seg.get("start", 0) > 0 or seg.get("end", 0) > 0
+            for seg in segments
+        )
+
+        all_words: List[WordTimestamp] = []
+        temp_files: List[str] = []
+        try:
+            if has_valid_timestamps:
+                # 逐段对齐：截取片段音频后对齐，时间戳按片段起点偏移还原
+                for i, seg in enumerate(segments):
+                    seg_text = (seg.get("text") or "").strip()
+                    seg_start = float(seg.get("start", 0.0))
+                    seg_end = float(seg.get("end", 0.0))
+                    if not seg_text or seg_end <= seg_start:
+                        continue
+                    temp_audio = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                    temp_audio.close()
+                    extracted = self._extract_segment_audio(audio_path, seg_start, seg_end, temp_audio.name)
+                    if extracted:
+                        temp_files.append(temp_audio.name)
+                        print(f"[FunASRAlignment] Aligning segment {i}: {seg_start:.1f}s-{seg_end:.1f}s")
+                        all_words.extend(self._align_text(model, extracted, seg_text, seg_start))
+            else:
+                # 无时间戳：对完整音频 + 全文一次性对齐
+                full_text = "".join(seg.get("text", "") for seg in segments if seg.get("text"))
+                if full_text.strip():
+                    print(f"[FunASRAlignment] No segment timestamps, aligning full text ({len(full_text)} chars)")
+                    all_words = self._align_text(model, audio_path, full_text, 0.0)
+        finally:
+            for temp_file in temp_files:
+                try:
+                    os.unlink(temp_file)
+                except Exception:
+                    pass
+            del model
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:
+                pass
+
+        print(f"[FunASRAlignment] Extracted {len(all_words)} chars total")
+        return AlignmentResult(words=all_words, language=language)
+
+
 def apply_alignment_to_segments(segments: List[dict], alignment_result: AlignmentResult) -> List[dict]:
     """将对齐结果应用到ASR segments
     
@@ -584,13 +745,16 @@ def apply_alignment_to_segments(segments: List[dict], alignment_result: Alignmen
         # 如果找到了词，更新segment
         if seg_words:
             seg["words"] = seg_words
-            # 更新segment的时间戳为词的范围
-            seg["start"] = seg_words[0]["start"]
-            seg["end"] = seg_words[-1]["end"]
+            # 仅当对齐词能张出正区间时才用词边界更新segment时间戳；
+            # 对齐失败的退化词（start==end）会把segment塌缩成一个点，
+            # 此时保留原有（VAD）边界，避免零时长段流入下游
+            if seg_words[-1]["end"] > seg_words[0]["start"]:
+                seg["start"] = seg_words[0]["start"]
+                seg["end"] = seg_words[-1]["end"]
     
     return segments
 
 
 def list_alignment_engines() -> List[str]:
     """列出可用的对齐引擎"""
-    return ["whisperx", "qwen3"]
+    return ["whisperx", "qwen3", "funasr"]

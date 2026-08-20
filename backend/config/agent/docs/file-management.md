@@ -40,7 +40,7 @@ PROJECT_ROOT 是 VideoLingoFlow 的安装根目录（本机示例：`Y:\VideoLin
 | `backend/api/` | 全部 REST / WebSocket 路由（`tasks.py`、`workflows.py`、`batch.py`、`history.py`、`file_browser.py`、`ws.py` 等） | 代码，只读 |
 | `backend/control_plane/` | 控制平面：任务/节点 ORM 模型、任务运行时、安全、资产/检查点、备份恢复 | 代码，只读 |
 | `backend/engine/` | 执行引擎：批量执行器、步骤流水线、任务管理、产物检测 | 代码，只读 |
-| `backend/steps/` | 40+ 节点执行步骤（`s00_platform_download.py`、`s01_download.py`、`s02_asr.py`、`s06_subtitle_gen.py`、`s09_tts.py`、`s14_output.py` 等） | 代码，只读 |
+| `backend/steps/` | 内置节点执行步骤（`s00_platform_download.py`、`s01_download.py`、`s02_asr.py`、`s06_subtitle_gen.py`、`s09_tts.py`、`s14_output.py` 等） | 代码，只读 |
 | `backend/config/` | 配置与定义：`config.yaml`、`builtin_node_types.py`、`workflows/*.json`（全局工作流）、`node_types/{id}.json`（自定义节点）、`subtitle_presets/`、`*_interfaces.json`、`workflow_groups.json` 等 | 配置文件，一般只读；其中 `agent/` 为智能体知识目录 |
 | `backend/llm/` `backend/asr/` `backend/tts/` `backend/imagegen/` `backend/separation/` | 各能力域引擎族 | 代码，只读 |
 | `backend/voiceforge/` | 晴沐配音谷：独立 DB + 资产/音色/文本处理 + Celery 任务 | 代码，只读；其资产数据见 `data/` 与 `data/assets/` |
@@ -228,9 +228,10 @@ VideoLingoFlow 的产物由任务驱动产生，**默认落位在任务工作区
 ### 6.3 释放磁盘空间
 
 1. 找出可清理项：`_model_cache/`（模型缓存）、`control_plane_workspaces/` 中已结束任务的 `cache/`、`data/redis/` 旧数据、`frontend/dist/`（可重建）；
-2. 逐项列出大小与清理后果，请用户确认后再操作；
-3. 任务相关清理优先走 API 删除任务，避免孤儿目录；
-4. 确认磁盘空间与保留内容后再执行删除。
+2. 小 π 自身缓存（`data/workspace/pi-sessions/` 会话文件、`pi-agent-config/models-store.json` 模型清单缓存、`pi-install-staging/` 暂存包）建议引导用户在「小 π Agent 设置 → 通用 → 缓存管理」中按分类清除，不直接删除数据库文件；
+3. 逐项列出大小与清理后果，请用户确认后再操作；
+4. 任务相关清理优先走 API 删除任务，避免孤儿目录；
+5. 确认磁盘空间与保留内容后再执行删除。
 
 ### 6.4 备份关键数据
 

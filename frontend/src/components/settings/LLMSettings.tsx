@@ -29,6 +29,7 @@ export default function LLMSettings() {
   const [timeout, setTimeoutVal] = useState("120");
   const [retryEnabled, setRetryEnabled] = useState(true);
   const [retryCount, setRetryCount] = useState("3");
+  const [enableStepModels, setEnableStepModels] = useState(true);
   const [models, setModels] = useState<Record<string, string>>({});
   const [testing, setTesting] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<Record<string, { ok: boolean; msg: string }>>({});
@@ -47,6 +48,7 @@ export default function LLMSettings() {
       setTimeoutVal(String(cfg.timeout || 120));
       setRetryEnabled(cfg.retry_enabled ?? true);
       setRetryCount(String(cfg.retry_count ?? 3));
+      setEnableStepModels(cfg.enable_step_models ?? true);
       setModels(cfg.step_models || {});
     });
   }, []);
@@ -125,7 +127,7 @@ export default function LLMSettings() {
             </div>
             <button
               onClick={() => navigate("/llm-router")}
-              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-border/60 bg-background/50 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-all duration-200"
+              className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-border/60 bg-cyan-500 text-white hover:bg-cyan-600 hover:border-primary/50 hover:text-primary transition-all duration-200"
             >
               <ExternalLink className="w-4 h-4" />
               前往大模型路由器
@@ -281,7 +283,7 @@ export default function LLMSettings() {
         <div className="pt-2">
           <button
             onClick={() => setPromptEditorOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-border/60 bg-background/50 hover:bg-primary/10 hover:border-primary/50 hover:text-primary transition-all duration-200"
+            className="flex items-center gap-2 px-4 py-2.5 text-sm font-medium rounded-xl border border-border/60 bg-cyan-500 text-white hover:bg-cyan-600 hover:border-primary/50 hover:text-primary transition-all duration-200"
           >
             <Wrench className="w-4 h-4" />
             Prompt 工程
@@ -293,7 +295,8 @@ export default function LLMSettings() {
       </div>
 
       <div className="rounded-2xl border border-border/50 bg-card/70 p-5 space-y-4">
-        <div>
+        <div className="flex items-start justify-between gap-4">
+          <div>
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Layers className="w-4 h-4 text-primary" />
             "各阶段模型覆盖"
@@ -301,9 +304,28 @@ export default function LLMSettings() {
           <p className="text-xs text-muted-foreground">
             默认模型为兜底模型，必须设置，其他模型可选设置，不设置时将调用默认模型
           </p>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer group flex-shrink-0">
+            <span className="text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+              开启分阶段模型
+            </span>
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={enableStepModels}
+                onChange={(e) => {
+                  setEnableStepModels(e.target.checked);
+                  settingsApi.update("llm.enable_step_models", e.target.checked);
+                }}
+                className="peer sr-only"
+              />
+              <div className="w-9 h-5 bg-muted rounded-full peer-checked:bg-primary transition-colors duration-200" />
+              <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-background rounded-full shadow-sm peer-checked:translate-x-4 transition-transform duration-200" />
+            </div>
+          </label>
         </div>
         <div className="space-y-3">
-          {STEPS.map((s) => (
+          {STEPS.filter((s) => enableStepModels || s.id === "default_model").map((s) => (
             <div
               key={s.id}
               className="flex items-center gap-3 p-3 rounded-xl border border-border/40 hover:border-border/60 transition-colors duration-200"

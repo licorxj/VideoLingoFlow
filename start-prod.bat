@@ -33,7 +33,7 @@ set HTTPS_PROXY=
 set ALL_PROXY=
 
 :: --- venv（仅激活，不隔离 CUDA）---
-set "VENV_ROOT=%cd%\backend\venv312"
+set "VENV_ROOT=%cd%\venv312"
 if not exist "%VENV_ROOT%\Scripts\python.exe" (
     echo [ERROR] 未找到 Python 虚拟环境: %VENV_ROOT%
     echo         请先运行 install.bat 完成安装

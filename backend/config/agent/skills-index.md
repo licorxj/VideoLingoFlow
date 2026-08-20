@@ -19,17 +19,19 @@ All paths are relative to `PROJECT_ROOT`.
 
 - Built-in agent knowledge documents: `backend/config/agent/*.md`.
 - Project-specific installed skills: `backend/config/agent/skills/`.
-- User-installed TRAE skills: `%USERPROFILE%/.trae/skills/`.
+- User-installed skills are scanned from: `%USERPROFILE%/.claude/skills`, `%USERPROFILE%/.codex/skills`, `%USERPROFILE%/.trae/skills`, `%USERPROFILE%/.agents/skills`, `%USERPROFILE%/.agent/skills`.
 - Project-specific MCP definitions: `backend/config/agent/mcp/`.
-- User-installed MCP definitions: `%USERPROFILE%/.trae/mcps/`.
+- User-installed MCP definitions are scanned from: `%USERPROFILE%/.claude/mcps`, `%USERPROFILE%/.trae/mcps`, `%USERPROFILE%/.agents/mcps`, `%USERPROFILE%/.agent/mcps`.
 
-Only Skill and MCP items explicitly enabled in Pi Agent settings are eligible for authorization. Availability in a directory does not itself grant execution permission.
+In the workflow node configuration, Skill/MCP are picked through a picker dialog (searchable, checkbox selection, description preview, manual rescan button); only items explicitly enabled in 小π Agent settings are eligible for authorization. Availability in a directory does not itself grant execution permission.
 
 ## Primary Configuration Sources
 
 - Main backend configuration: `backend/config/config.yaml`.
 - Local runtime environment: `.runtime/local_env.bat`.
 - Node definitions and schema helpers: `backend/config/builtin_node_types.py`, `backend/config/node_schema.py`.
+- Custom node runtime: `backend/control_plane/custom_node_runtime.py`; workflow normalization and group expansion: `backend/workflow_validation.py`.
+- Optional GPU scheduling: `backend/gpu_service/`.
 - Workflow definitions: `backend/config/workflows/`.
 - Subtitle presets: `backend/config/subtitle_presets/`.
 - Pi runtime model configuration: `data/workspace/pi-agent-config/models.json`.

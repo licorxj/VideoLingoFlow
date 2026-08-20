@@ -62,6 +62,7 @@ export interface PiAgentSettings {
   base_docs_paths: string[];
   read_blacklist: string[];
   write_blacklist: string[];
+  tools_enabled: string[];
   skills: PiIntegration[];
   mcps: PiIntegration[];
   assistants: Record<
@@ -140,6 +141,11 @@ export const piRpcApi = {
     }),
   staging: () =>
     client.get<{ name: string; path: string }[]>("/api/pi/settings/staging"),
+  clearCache: (category: "sessions" | "models" | "staging" | "all") =>
+    client.post<{ sessions: number; models: number; staging: number }>(
+      "/api/pi/cache/clear",
+      { category },
+    ),
   models: () =>
     client.get<
       {

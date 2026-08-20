@@ -42,11 +42,13 @@ class LLMClient:
             retry_enabled = True
         retry_count = config.get("llm.retry_count") or 1
 
-        # Check for step-specific model override
-        # Priority: exact step override > default_model > step_name
-        step_override = config.get(f"llm.step_models.{step_name}")
         default_model = config.get("llm.step_models.default_model") or ""
-        model = step_override or default_model or step_name
+        enable_step_models = config.get("llm.enable_step_models")
+        if enable_step_models is False:
+            model = default_model or step_name
+        else:
+            step_override = config.get(f"llm.step_models.{step_name}")
+            model = step_override or default_model or step_name
 
         return {
             "base_url": base_url,

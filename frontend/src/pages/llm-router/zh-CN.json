@@ -76,7 +76,13 @@
         "lanAccess": "开启局域网访问",
         "lanAccessDesc": "允许同一局域网内的其他设备访问 LocalRouter",
         "lanAddress": "局域网地址",
-        "lanAddressDesc": "局域网内其他设备使用时填写的地址"
+        "lanAddressDesc": "局域网内其他设备使用时填写的地址",
+        "projectUpdate": "项目更新",
+        "projectUpdateDesc": "从官方 GitHub 仓库更新路由器代码和依赖",
+        "openRepository": "访问仓库",
+        "updateCode": "更新代码",
+        "updateConfirm": "将从官方仓库拉取最新代码并更新依赖。更新完成后需要重启路由器服务，是否继续？",
+        "updateFailed": "更新任务启动失败"
     },
     "common": {
         "save": "保存",

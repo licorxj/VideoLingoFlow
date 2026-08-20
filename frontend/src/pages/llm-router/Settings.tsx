@@ -4,6 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getSettings, updateSettings, getProviders, getModels, getBackupConfig, updateBackupConfig, createBackup,
   listBackups, restoreLocalBackup, deleteBackup, downloadBackupUrl, getLanIp,
+  getLlmRouterUpdateStatus, runLlmRouterUpdate,
 } from "./api";
 import { toast } from "./toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,7 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Palette, Globe, Copy, Check, Database, Download, Upload, Trash2, Loader2, HardDrive, Clock, FolderOpen, RefreshCw, ShieldCheck, Sun, Moon, Box, Save } from "lucide-react";
+import { Palette, Globe, Copy, Check, Database, Download, Upload, Trash2, Loader2, HardDrive, Clock, FolderOpen, RefreshCw, ShieldCheck, Sun, Moon, Box, Save, Github, GitPullRequest } from "lucide-react";
 export default function SettingsPage() {
   const { t, locale, setLocale } = useI18n();
   const [dark, setDark] = useState(document.documentElement.classList.contains("dark"));
@@ -24,6 +25,22 @@ export default function SettingsPage() {
   const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
   const [appSettings, setAppSettings] = useState({ output_protocol: "openai", default_model: "", default_provider_id: 0, lan_access: false });
   const [lanIp, setLanIp] = useState("");
+
+  const { data: updateStatus } = useQuery({
+    queryKey: ["llmRouterUpdateStatus"],
+    queryFn: () => getLlmRouterUpdateStatus().then((r) => r.data),
+    refetchInterval: (query) => query.state.data?.status === "updating" ? 2000 : false,
+  });
+
+  const updateRouterMut = useMutation({
+    mutationFn: runLlmRouterUpdate,
+    onSuccess: (res) => toast({ title: res.data.message, variant: res.data.ok ? "success" : "destructive" }),
+    onError: () => toast({ title: t("settings.updateFailed"), variant: "destructive" }),
+  });
+
+  const startRouterUpdate = () => {
+    if (window.confirm(t("settings.updateConfirm"))) updateRouterMut.mutate();
+  };
 
   useEffect(() => {
     getLanIp().then(r => setLanIp(r.data.ip)).catch(() => {});
@@ -142,7 +159,7 @@ export default function SettingsPage() {
       {/* Appearance */}
       <Card className="card-hover">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2"><Palette className="h-4 w-4 text-cyan-400" /><CardTitle className="text-base">{t("settings.appearance")}</CardTitle></div>
+          <div className="flex items-center gap-2"><Palette className="h-4 w-4 text-info" /><CardTitle className="text-base">{t("settings.appearance")}</CardTitle></div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
@@ -152,7 +169,7 @@ export default function SettingsPage() {
             </div>
             <button onClick={toggleTheme} className="relative inline-flex h-8 w-14 items-center rounded-full transition-colors" style={{ background: dark ? "#0ea5e9" : "#e2e8f0" }}>
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-white transition-transform" style={{ transform: dark ? "translateX(30px)" : "translateX(2px)" }}>
-                {dark ? <Moon className="h-3.5 w-3.5 text-sky-600" /> : <Sun className="h-3.5 w-3.5 text-amber-500" />}
+                {dark ? <Moon className="h-3.5 w-3.5 text-info" /> : <Sun className="h-3.5 w-3.5 text-warning" />}
               </span>
             </button>
           </div>
@@ -163,7 +180,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex gap-2">
               {LOCALES.map((l) => (
-                <Button key={l.value} variant={locale === l.value ? "default" : "outline"} size="sm" className={locale === l.value ? "bg-cyan-600 hover:bg-cyan-700" : ""} onClick={() => setLocale(l.value)}>
+                <Button key={l.value} variant={locale === l.value ? "default" : "outline"} size="sm" className={locale === l.value ? "bg-info hover:bg-info/90" : ""} onClick={() => setLocale(l.value)}>
                   {l.label}
                 </Button>
               ))}
@@ -172,10 +189,33 @@ export default function SettingsPage() {
 
         </CardContent>
       </Card>
+      <Card className="card-hover">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2"><Github className="h-4 w-4 text-foreground" /><CardTitle className="text-base">{t("settings.projectUpdate")}</CardTitle></div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <Label className="text-sm font-medium">QM-LocalRouter</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.projectUpdateDesc")}</p>
+              {updateStatus?.message && <p className={`text-xs mt-2 ${updateStatus.status === "error" ? "text-destructive" : "text-muted-foreground"}`}>{updateStatus.message}</p>}
+            </div>
+            <div className="flex shrink-0 gap-2">
+              <Button variant="outline" size="sm" asChild>
+                <a href="https://github.com/licorxj/QM-LocalRouter" target="_blank" rel="noreferrer"><Github className="h-3.5 w-3.5" />{t("settings.openRepository")}</a>
+              </Button>
+              <Button size="sm" onClick={startRouterUpdate} disabled={updateRouterMut.isPending || updateStatus?.status === "updating"}>
+                {updateRouterMut.isPending || updateStatus?.status === "updating" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="h-3.5 w-3.5" />}
+                {t("settings.updateCode")}
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
       {/* Route Management Model */}
       <Card className="card-hover">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2"><Box className="h-4 w-4 text-amber-400" /><CardTitle className="text-base">{t("settings.routeModel")}</CardTitle></div>
+          <div className="flex items-center gap-2"><Box className="h-4 w-4 text-warning" /><CardTitle className="text-base">{t("settings.routeModel")}</CardTitle></div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
@@ -222,7 +262,7 @@ export default function SettingsPage() {
       {/* Output Protocol */}
       <Card className="card-hover">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-purple-400" /><CardTitle className="text-base">{t("settings.outputProtocol")}</CardTitle></div>
+          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-ai" /><CardTitle className="text-base">{t("settings.outputProtocol")}</CardTitle></div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
@@ -232,7 +272,7 @@ export default function SettingsPage() {
             </div>
             <div className="flex gap-2">
               {["openai", "claude", "gemini"].map((p) => (
-                <Button key={p} variant={appSettings.output_protocol === p ? "default" : "outline"} size="sm" className={appSettings.output_protocol === p ? "bg-cyan-600 hover:bg-cyan-700" : ""} onClick={() => { setAppSettings({ ...appSettings, output_protocol: p }); }}>
+                <Button key={p} variant={appSettings.output_protocol === p ? "default" : "outline"} size="sm" className={appSettings.output_protocol === p ? "bg-info hover:bg-info/90" : ""} onClick={() => { setAppSettings({ ...appSettings, output_protocol: p }); }}>
                   {p === "openai" ? "OpenAI" : p === "claude" ? "Claude" : "Gemini"}
                 </Button>
               ))}
@@ -255,7 +295,7 @@ export default function SettingsPage() {
       {/* Network Access */}
       <Card className="card-hover">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-blue-400" /><CardTitle className="text-base">{t("settings.networkAccess")}</CardTitle></div>
+          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-info" /><CardTitle className="text-base">{t("settings.networkAccess")}</CardTitle></div>
         </CardHeader>
         <CardContent>
           <div className="flex items-center justify-between">
@@ -272,7 +312,7 @@ export default function SettingsPage() {
               <div className="flex items-center gap-2">
                 <code className="flex-1 font-mono text-sm bg-muted p-3 rounded-lg text-foreground">{proxyUrl}</code>
                 <Button variant="outline" size="icon" className="shrink-0" onClick={() => copyCode(proxyUrl)}>
-                  {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                  {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
                 </Button>
               </div>
             </div>
@@ -289,7 +329,7 @@ export default function SettingsPage() {
       {/* Proxy Configuration */}
       <Card className="card-hover">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-green-400" /><CardTitle className="text-base">{t("settings.proxyConfig")}</CardTitle></div>
+          <div className="flex items-center gap-2"><Globe className="h-4 w-4 text-success" /><CardTitle className="text-base">{t("settings.proxyConfig")}</CardTitle></div>
         </CardHeader>
         <CardContent className="space-y-5">
           <div>
@@ -298,13 +338,13 @@ export default function SettingsPage() {
             <div className="flex items-center gap-2">
               <code className="flex-1 font-mono text-sm bg-muted p-3 rounded-lg text-foreground">{proxyUrl}</code>
               <Button variant="outline" size="icon" className="shrink-0" onClick={() => copyCode(proxyUrl)}>
-                {copied ? <Check className="h-4 w-4 text-green-400" /> : <Copy className="h-4 w-4" />}
+                {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
             <p className="text-xs text-muted-foreground mt-2">{t("settings.proxyUsageDesc")}</p>
             {appSettings.lan_access && lanIp && (
               <p className="text-xs text-muted-foreground mt-2">
-                <span className="text-green-400 font-medium">LAN:</span> {t("settings.lanAddressDesc")}: <code className="bg-muted px-1 rounded">{proxyUrl}</code>
+                <span className="text-success font-medium">LAN:</span> {t("settings.lanAddressDesc")}: <code className="bg-muted px-1 rounded">{proxyUrl}</code>
               </p>
             )}
           </div>
@@ -327,7 +367,7 @@ export default function SettingsPage() {
       {/* Backup and Restore */}
       <Card className="card-hover">
         <CardHeader className="pb-3">
-          <div className="flex items-center gap-2"><Database className="h-4 w-4 text-blue-400" /><CardTitle className="text-base">{t("settings.backupRestore")}</CardTitle></div>
+          <div className="flex items-center gap-2"><Database className="h-4 w-4 text-info" /><CardTitle className="text-base">{t("settings.backupRestore")}</CardTitle></div>
         </CardHeader>
         <CardContent className="space-y-5">
 

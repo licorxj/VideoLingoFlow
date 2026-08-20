@@ -10,6 +10,7 @@ import shutil
 import logging
 from functools import lru_cache
 from pathlib import Path
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -42,17 +43,33 @@ try:
 except ImportError:
     pass
 
+@lru_cache(maxsize=1)
+def _ffmpeg_path() -> Optional[str]:
+    """惰性解析 ffmpeg 可执行文件路径；找不到返回 None。
+
+    模块导入时 PATH 可能尚未就绪（如子进程/工作线程场景），
+    因此在首次调用时才探测，而不是导入时一次性判定。
+    """
+    return shutil.which("ffmpeg")
+
+
+def _ffmpeg_available() -> bool:
+    return _ffmpeg_path() is not None
+
+
+# 兼容旧引用：仅作为模块级快照，运行时判断请用 _ffmpeg_available()
 _HAS_FFMPEG = shutil.which("ffmpeg") is not None
 
 
 @lru_cache(maxsize=8)
 def _ffmpeg_has_filter(filter_name: str) -> bool:
     """检测当前 ffmpeg 是否内置指定滤镜。"""
-    if not _HAS_FFMPEG:
+    ffmpeg = _ffmpeg_path()
+    if not ffmpeg:
         return False
     try:
         result = subprocess.run(
-            ["ffmpeg", "-hide_banner", "-filters"],
+            [ffmpeg, "-hide_banner", "-filters"],
             capture_output=True,
             text=True,
             timeout=15,
@@ -108,7 +125,7 @@ def adjust_audio_speed(input_path: str, output_path: str, speed_factor: float) -
         logger.debug(f"adjust_audio_speed_precise 失败，回退: {e}")
 
     # 回退: ffmpeg atempo（也是变速不变音高）
-    if _HAS_FFMPEG:
+    if _ffmpeg_available():
         try:
             success = _adjust_with_ffmpeg(input_path, output_path, speed_factor)
             if success:
@@ -144,6 +161,9 @@ def _adjust_with_rubberband(input_path: str, output_path: str, speed_factor: flo
 
 
 def _adjust_with_ffmpeg(input_path: str, output_path: str, speed_factor: float) -> bool:
+    ffmpeg = _ffmpeg_path()
+    if not ffmpeg:
+        return False
     output_ext = Path(output_path).suffix.lower()
     preferred_backend = _select_ffmpeg_speed_backend(speed_factor)
     backends = [preferred_backend]
@@ -152,7 +172,7 @@ def _adjust_with_ffmpeg(input_path: str, output_path: str, speed_factor: float) 
 
     for backend in backends:
         filter_str = _build_ffmpeg_speed_filter(speed_factor, backend=backend)
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-vn", "-sn", "-dn", "-filter:a", filter_str]
+        cmd = [ffmpeg, "-y", "-i", input_path, "-vn", "-sn", "-dn", "-filter:a", filter_str]
 
         # 中间 WAV 文件优先使用 24-bit PCM，减少多次处理时的量化损失。
         if output_ext == ".wav":
@@ -227,7 +247,7 @@ def _select_ffmpeg_speed_backend(speed_factor: float) -> str:
     if forced == "rubberband" and _ffmpeg_has_filter("rubberband"):
         return "rubberband"
 
-    if _ffmpeg_has_filter("rubberband") and (speed_factor < 0.9 or speed_factor > 1.25):
+    if _ffmpeg_has_filter("rubberband"):
         return "rubberband"
     return "atempo"
 
@@ -325,17 +345,44 @@ def _time_stretch_pitch_preserve(
     speed_factor: float,
     input_path: str = None,
 ) -> "np.ndarray":
-    """变速不变音高，优先语音质量：ffmpeg(auto) → librosa → rubberband CLI。"""
+    """变速不变音高，优先语音质量：rubberband → ffmpeg → librosa。"""
     import numpy as np
 
     if abs(speed_factor - 1.0) < 0.001:
         return data
 
-    # 策略1: ffmpeg 自动后端选择
+    # 策略1: Python rubberband 包装
+    try:
+        import soundfile as sf
+        import tempfile
+        if _HAS_RUBBERBAND:
+            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_out:
+                tmp_out_path = tmp_out.name
+            try:
+                source_path = input_path
+                tmp_in_path = None
+                if not source_path:
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_in:
+                        tmp_in_path = tmp_in.name
+                    sf.write(tmp_in_path, data, sr, subtype='PCM_24')
+                    source_path = tmp_in_path
+                if _adjust_with_rubberband(source_path, tmp_out_path, speed_factor):
+                    stretched, _ = sf.read(tmp_out_path, dtype='float32')
+                    _log_stretch_backend("python rubberband", speed_factor)
+                    return stretched.astype(np.float32)
+            finally:
+                if tmp_in_path and os.path.exists(tmp_in_path):
+                    os.unlink(tmp_in_path)
+                if os.path.exists(tmp_out_path):
+                    os.unlink(tmp_out_path)
+    except Exception as e:
+        logger.debug(f"python rubberband 变速失败，回退: {e}")
+
+    # 策略2: ffmpeg rubberband/atempo
     try:
         import tempfile
         import soundfile as sf
-        if _HAS_FFMPEG:
+        if _ffmpeg_available():
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_out:
                 tmp_out_path = tmp_out.name
             try:
@@ -349,6 +396,7 @@ def _time_stretch_pitch_preserve(
                 success = _adjust_with_ffmpeg(ffmpeg_input, tmp_out_path, speed_factor)
                 if success and os.path.exists(tmp_out_path):
                     stretched, _ = sf.read(tmp_out_path, dtype='float32')
+                    _log_stretch_backend("ffmpeg", speed_factor)
                     return stretched.astype(np.float32)
             finally:
                 if tmp_in_path and os.path.exists(tmp_in_path):
@@ -357,16 +405,6 @@ def _time_stretch_pitch_preserve(
                     os.unlink(tmp_out_path)
     except Exception as e:
         logger.debug(f"ffmpeg 变速失败，回退: {e}")
-
-    # 策略2: librosa phase vocoder（变速不变音高）
-    try:
-        import librosa
-        # librosa.effects.time_stretch 的 rate 参数：
-        # rate > 1.0 加速，rate < 1.0 减速（与 speed_factor 含义一致）
-        stretched = librosa.effects.time_stretch(data.astype(np.float64), rate=speed_factor)
-        return stretched.astype(np.float32)
-    except Exception as e:
-        logger.debug(f"librosa time_stretch 失败，回退: {e}")
 
     # 策略3: rubberband CLI（变速不变音高）
     try:
@@ -378,7 +416,7 @@ def _time_stretch_pitch_preserve(
             with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_out:
                 tmp_out_path = tmp_out.name
             import soundfile as sf
-            sf.write(tmp_in_path, data, sr, subtype='PCM_16')
+            sf.write(tmp_in_path, data, sr, subtype='PCM_24')
             cmd = [
                 "rubberband", "--tempo", str(speed_factor),
                 tmp_in_path, tmp_out_path
@@ -388,23 +426,72 @@ def _time_stretch_pitch_preserve(
                 stretched, _ = sf.read(tmp_out_path, dtype='float32')
                 os.unlink(tmp_in_path)
                 os.unlink(tmp_out_path)
-                return stretched
+                return stretched.astype(np.float32)
             os.unlink(tmp_in_path)
             if os.path.exists(tmp_out_path):
                 os.unlink(tmp_out_path)
     except Exception as e:
-        logger.debug(f"rubberband 变速失败，回退: {e}")
+        logger.debug(f"rubberband CLI 变速失败，回退: {e}")
+
+    # 策略4: librosa phase vocoder（变速不变音高）
+    try:
+        import librosa
+        # librosa.effects.time_stretch 的 rate 参数：
+        # rate > 1.0 加速，rate < 1.0 减速（与 speed_factor 含义一致）
+        stretched = librosa.effects.time_stretch(data.astype(np.float64), rate=speed_factor)
+        _log_stretch_backend("librosa phase vocoder（音质较低，可能出现沙沙声）", speed_factor)
+        return stretched.astype(np.float32)
+    except Exception as e:
+        logger.debug(f"librosa time_stretch 失败，回退: {e}")
 
     raise RuntimeError(
         f"没有可用的不变调音频变速后端，speed_factor={speed_factor:.3f}"
     )
 
 
+_STRETCH_BACKEND_LOGGED = set()
+
+
+def _log_stretch_backend(backend: str, speed_factor: float) -> None:
+    """首次使用某变速后端时打印一次诊断信息，便于排查音质问题。"""
+    if backend in _STRETCH_BACKEND_LOGGED:
+        return
+    _STRETCH_BACKEND_LOGGED.add(backend)
+    print(f"[audio_speed] 音频变速后端: {backend} (示例倍率 {speed_factor:.3f}x)")
+
+
 def resample_audio(data: "np.ndarray", orig_sr: int, target_sr: int) -> "np.ndarray":
-    """将音频数据从 orig_sr 重采样到 target_sr（线性插值）。"""
+    """将音频数据从 orig_sr 重采样到 target_sr（带抗混叠滤波）。
+
+    早期实现用 np.interp 线性插值，降采样时没有低通滤波，
+    会把高频能量混叠回可听频段，产生“沙沙”的噪声底。
+    现在优先使用 soxr，其次 scipy 多相滤波，均内置抗混叠滤波。
+    """
     import numpy as np
+    orig_sr = int(orig_sr)
+    target_sr = int(target_sr)
     if orig_sr == target_sr:
         return data
+
+    # 首选 soxr（高质量重采样，项目依赖中已包含）
+    try:
+        import soxr
+        resampled = soxr.resample(data, orig_sr, target_sr, quality="HQ")
+        return resampled.astype(np.float32, copy=False)
+    except Exception as e:
+        logger.debug(f"soxr 重采样失败，回退 scipy: {e}")
+
+    # 其次 scipy 多相滤波重采样（自带抗混叠 FIR 滤波）
+    try:
+        from math import gcd
+        from scipy.signal import resample_poly
+        divisor = gcd(target_sr, orig_sr)
+        resampled = resample_poly(data, target_sr // divisor, orig_sr // divisor)
+        return resampled.astype(np.float32, copy=False)
+    except Exception as e:
+        logger.debug(f"scipy 重采样失败，回退线性插值: {e}")
+
+    # 最后兜底：线性插值（无抗混叠，仅在依赖均不可用时使用）
     duration = len(data) / orig_sr
     target_len = int(round(duration * target_sr))
     old_indices = np.arange(len(data))

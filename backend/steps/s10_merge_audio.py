@@ -23,6 +23,14 @@ from typing import Callable, Optional, List, Dict
 from backend.steps.base_step import BaseStep, find_artifact
 from backend.config.config_manager import config
 from backend.utils.audio_segmenter import get_audio_output_settings
+from backend.utils.audio_timeline import (
+    build_initial_timeline_plan,
+    calculate_target_timestamps,
+    clear_timeline_fields,
+    reconcile_video_manifest,
+    video_speed_segments_from_plan,
+)
+from backend.utils.audio_alignment import merge_segments_sample_aligned
 
 try:
     from pydub import AudioSegment
@@ -121,68 +129,79 @@ class S10MergeAudio(BaseStep):
             print(f"[S10] 音频输出: 格式={audio_format_override}, 码率={audio_bitrate_override or '全局'}")
 
         # ═══════════ Step 0: 清除旧变速信息 ═══════════
-        self._clear_old_speed_info(segments, task_dir)
+        cleared = clear_timeline_fields(segments)
+        if cleared > 0:
+            print(f"[S10] Step 0: 已清除 {cleared} 个旧变速字段")
 
         # ═══════════ Step 0.5: 回填真实音频时长 ═══════════
         self._ensure_real_durations(segments, task_dir)
 
-        # ═══════════ Step 1: 分析变速倍数 ═══════════
+        align_policy = str(node_config.get("align_policy") or "tolerant").strip().lower()
+
+        # ═══════════ Step 1: 生成初始时间轴计划 ═══════════
         if callback:
-            callback(10, "分析变速倍数...")
-        self._analyze_speed_factors(segments, speed_min, speed_max, gap_threshold)
+            callback(10, "生成时间轴计划...")
+        build_initial_timeline_plan(
+            segments,
+            speed_min=speed_min,
+            speed_max=speed_max,
+            gap_threshold=gap_threshold,
+            fast_limit=fast_limit,
+            video_speed_adjust=video_speed_adjust,
+            align_policy=align_policy,
+        )
 
         # ═══════════ Step 2: 计算视频变速片段 ═══════════
-        video_speed_segments = []
-        if video_speed_adjust:
-            if callback:
-                callback(15, "计算视频变速片段...")
-            video_speed_segments = self._calculate_video_speed_segments(
-                segments, speed_max, gap_threshold, fast_limit
-            )
-
-        # ═══════════ Step 3: 执行视频变速（在音频变速之前） ═══════════
+        video_speed_segments = video_speed_segments_from_plan(
+            segments,
+            speed_max=speed_max,
+            gap_threshold=gap_threshold,
+        )
+        print(f"[S10] 需要局部视频变速: {len(video_speed_segments)} 段")
         adjusted_video_path = None
+        video_manifest = None
         if video_speed_adjust and video_speed_segments:
             if callback:
                 callback(20, f"视频变速处理 ({len(video_speed_segments)} 段)...")
-            adjusted_video_path = self._adjust_video_speed_opencv(
-                task_dir, video_speed_segments, input_video_path=input_video_path
+            from backend.utils.video_speed_opencv import adjust_video_speed_segments
+            adjusted_video = os.path.join(task_dir, "output", "video_adjusted.mp4")
+            video_manifest = adjust_video_speed_segments(
+                input_video_path,
+                adjusted_video,
+                [(start, end, ratio, idx) for start, end, ratio, idx in video_speed_segments],
+                progress_callback=lambda pct, msg: print(f"    [{pct}%] {msg}"),
+                return_manifest=True,
             )
+            adjusted_video_path = video_manifest.get("output_path") if isinstance(video_manifest, dict) else adjusted_video
 
-        # ═══════════ Step 3.5: 视频变速后时长核验 ═══════════
         video_timeline_adjusted = bool(adjusted_video_path and os.path.exists(adjusted_video_path))
-        if video_speed_segments and not video_timeline_adjusted:
-            self._disable_video_speed_assumptions(segments)
-            video_speed_segments = []
-
-        if video_timeline_adjusted and video_speed_segments:
+        if video_timeline_adjusted and video_manifest:
             if callback:
-                callback(30, "核验视频变速时长...")
-            self._verify_video_speed_durations(
-                segments, video_speed_segments, adjusted_video_path, task_dir
-            )
+                callback(30, "回写视频实测时长...")
+            reconcile_video_manifest(segments, video_manifest)
+        elif video_speed_segments and not video_timeline_adjusted:
+            self._disable_video_speed_assumptions(segments)
 
-        # ═══════════ Step 3.6: 标记需要截断的段（视频变速后仍超出上限） ═══════════
-        self._mark_truncate_segments(segments, speed_max, gap_threshold, fast_limit)
-
-        # ═══════════ Step 4: 精确音频变速 ═══════════
+        # ═══════════ Step 3: 精确音频变速 ═══════════
         if callback:
             callback(45, "精确音频变速处理...")
         self._adjust_audio_speed_all(segments, task_dir)
 
-        # ═══════════ Step 5: 计算理论时间戳 ═══════════
+        # ═══════════ Step 4: 计算目标时间戳 ═══════════
         if callback:
-            callback(55, "计算理论时间戳...")
-        self._calculate_theoretical_timestamps(
-            segments, video_timeline_adjusted=video_timeline_adjusted
-        )
+            callback(55, "计算目标时间戳...")
+        calculate_target_timestamps(segments, video_timeline_adjusted=video_timeline_adjusted)
 
-        # ═══════════ Step 6: 逐段拼接合并音频（含漂移补偿） ═══════════
+        # ═══════════ Step 5: 逐段拼接合并音频（样本级对齐） ═══════════
         if callback:
             callback(60, "逐段拼接合并音频...")
-        self._merge_audio_consecutive(segments, task_dir, callback,
-                                      audio_format_override=audio_format_override,
-                                      audio_bitrate_override=audio_bitrate_override)
+        self._merge_audio_consecutive(
+            segments,
+            task_dir,
+            callback,
+            audio_format_override=audio_format_override,
+            audio_bitrate_override=audio_bitrate_override,
+        )
 
         # ═══════════ Step 7: 生成配音字幕 ═══════════
         if callback:
@@ -475,9 +494,11 @@ class S10MergeAudio(BaseStep):
 
             # 如果仍然超出可用时间，需要截断
             if video_after_speed > available + 0.01:
-                # 截断目标时长 = 可用时间（音频变速后填满可用空间）
+                # 截断目标时长 = 变速后可达时长与可用时间的较小值：
+                # 若倍速不足以填满槽位，保留可达时长（尾部补静音），
+                # 避免截断目标 > 可达时长时填充超长音频溢出槽位
                 seg["need_truncate"] = True
-                seg["truncate_target_dur"] = round(available / speed_max, 3)
+                seg["truncate_target_dur"] = round(min(available, audio_after_speed), 3)
                 truncate_count += 1
                 print(f"  - 片段 {seg.get('index')}: 需截断 "
                       f"(音频变速后={audio_after_speed:.3f}s, "
@@ -718,16 +739,17 @@ class S10MergeAudio(BaseStep):
             real_dur = seg.get("real_duration", 0)
             duration = seg.get("duration", 0)
 
-            if video_speed > 1.01 and duration > 0 and real_dur > 0:
-                # 有视频变速时：目标时长 = 原始时间槽 / 视频变速比
-                target_dur = duration / video_speed
-                speed_factor = real_dur / target_dur
+            planned_target = seg.get("target_audio_duration") or seg.get("planned_audio_duration") or duration
+            if planned_target and real_dur > 0:
+                speed_factor = min(max(real_dur / max(planned_target, 0.001), 1.0), base_speed)
+                target_dur = real_dur / speed_factor if speed_factor > 0 else None
             else:
                 speed_factor = base_speed
                 target_dur = None
 
             if not need_speed:
                 speed_factor = 1.0
+                target_dur = None
 
             # 如果需要截断，将截断时长作为精确目标
             if need_truncate:
@@ -745,8 +767,8 @@ class S10MergeAudio(BaseStep):
                     seg["adjusted_duration"] = round(actual_dur, 4)
                     adjusted_count += 1
                     label = f"{speed_factor:.3f}x"
-                    if video_speed > 1.01:
-                        label += f" (audio={base_speed:.3f} * video={video_speed:.3f})"
+                    if abs(video_speed - 1.0) > 0.01:
+                        label += f" (audio<= {base_speed:.3f}, video={video_speed:.3f})"
                     if target_dur is not None:
                         label += f" → 精确{target_dur:.3f}s"
                     if need_truncate:
@@ -837,196 +859,51 @@ class S10MergeAudio(BaseStep):
                                  callback: Optional[Callable] = None,
                                  audio_format_override: str = "",
                                  audio_bitrate_override=None) -> None:
-        """逐段拼接合并音频，每段之间进行理论时间点检测和静音补偿。
+        """逐段拼接合并音频，样本级对齐并回写实际时间戳。"""
 
-        核心机制：
-        - 累积实际时长，每段拼接前计算与理论位置的漂移
-        - 在静音间隙中补偿漂移，确保后续片段位置正确
-        - new_start/new_end 从实测值写回 segments
-        """
-        import numpy as np
-        import soundfile as sf
-        from backend.utils.audio_speed import resample_audio
-
-        print("\n[S10] Step 6: 逐段拼接合并音频（含漂移补偿）")
+        print("\n[S10] Step 6: 逐段拼接合并音频（样本级对齐）")
         output_dir = os.path.join(task_dir, "output")
         os.makedirs(output_dir, exist_ok=True)
         node_suffix = f"_{getattr(self, '_node_id', '')}" if getattr(self, "_node_id", "") else ""
-        total = len(segments)
-
         output_settings = get_audio_output_settings()
         target_sr = int(output_settings.get("sample_rate", 48000))
-        target_bit_depth = int(output_settings.get("bit_depth", 16) or 16)
+        total = len(segments)
+        target_loudness_dbfs = None
 
-        def _active_rms_dbfs(audio: np.ndarray) -> Optional[float]:
-            if audio.size == 0:
-                return None
-            active = audio[np.abs(audio) > 1e-4]
-            if active.size < max(128, audio.size // 100):
-                active = audio
-            if active.size == 0:
-                return None
-            rms = float(np.sqrt(np.mean(np.square(active, dtype=np.float64))))
-            if rms <= 1e-8:
-                return None
-            return float(20.0 * np.log10(rms))
+        merged_data, stats = merge_segments_sample_aligned(
+            segments,
+            task_dir,
+            target_sr=target_sr,
+            tolerance_ms=5.0,
+            target_loudness_dbfs=target_loudness_dbfs,
+            progress_callback=lambda idx, total_count: callback(65 + int(idx / max(total_count, 1) * 18), f"合并 {idx}/{total_count}") if callback else None,
+        )
 
-        def _normalize_segment_loudness(
-            audio: np.ndarray,
-            target_dbfs: float,
-            max_boost_db: float = 8.0,
-            max_cut_db: float = 8.0,
-            peak_ceiling_dbfs: float = -1.0,
-        ) -> tuple[np.ndarray, float, Optional[float]]:
-            current_dbfs = _active_rms_dbfs(audio)
-            if current_dbfs is None:
-                return audio, 0.0, None
-
-            gain_db = max(-max_cut_db, min(target_dbfs - current_dbfs, max_boost_db))
-            peak = float(np.max(np.abs(audio))) if audio.size else 0.0
-            if peak > 1e-8:
-                peak_dbfs = 20.0 * np.log10(peak)
-                gain_db = min(gain_db, peak_ceiling_dbfs - peak_dbfs)
-
-            if abs(gain_db) < 0.05:
-                return audio, gain_db, current_dbfs
-
-            gain = float(10.0 ** (gain_db / 20.0))
-            normalized = audio * gain
-            peak_ceiling = float(10.0 ** (peak_ceiling_dbfs / 20.0))
-            normalized_peak = float(np.max(np.abs(normalized))) if normalized.size else 0.0
-            if normalized_peak > peak_ceiling and normalized_peak > 1e-8:
-                normalized = normalized * (peak_ceiling / normalized_peak)
-            return normalized.astype(np.float32, copy=False), gain_db, current_dbfs
-
-        # 先扫一遍片段响度，使用中位数作为目标响度，避免逐段忽大忽小。
-        segment_loudness = []
-        for i, seg in enumerate(segments):
-            audio_rel = seg.get("audio_file_adjusted") or seg.get("audio_file", "")
-            audio_path = os.path.join(task_dir, audio_rel)
-            if not os.path.exists(audio_path):
-                continue
-            try:
-                probe_data, probe_sr = sf.read(audio_path, dtype='float32')
-                if probe_data.ndim > 1:
-                    probe_data = np.mean(probe_data, axis=1).astype(np.float32)
-                if probe_sr != target_sr:
-                    probe_data = resample_audio(probe_data, probe_sr, target_sr)
-                loudness_dbfs = _active_rms_dbfs(probe_data)
-                if loudness_dbfs is not None:
-                    segment_loudness.append(loudness_dbfs)
-            except Exception as e:
-                print(f"  [{seg.get('index', i)}] ⚠ 响度分析失败: {e}")
-
-        if segment_loudness:
-            target_loudness_dbfs = float(np.median(segment_loudness))
-            target_loudness_dbfs = max(-24.0, min(target_loudness_dbfs, -16.0))
+        if stats:
             print(
-                f"  - 响度对齐目标: {target_loudness_dbfs:.1f} dBFS "
-                f"(样本中位数, 共{len(segment_loudness)}段)"
+                f"\n  - 漂移统计: 最大={stats.get('max_drift_ms', 0.0):.1f}ms, "
+                f"平均={stats.get('avg_drift_ms', 0.0):.1f}ms"
             )
-        else:
-            target_loudness_dbfs = -20.0
-            print("  - 响度对齐目标: -20.0 dBFS (默认值)")
-
-        # 累积的音频数据
-        merged_data = np.array([], dtype=np.float32)
-        accumulated_duration = 0.0  # 实际累积时长（秒）
-
-        drift_log = []  # 记录每段漂移用于最终报告
-
-        for i, seg in enumerate(segments):
-            # 优先使用变速后的音频
-            audio_rel = seg.get("audio_file_adjusted") or seg.get("audio_file", "")
-            audio_path = os.path.join(task_dir, audio_rel)
-
-            if not os.path.exists(audio_path):
-                print(f"  [{seg.get('index', i)}] ⚠ 音频文件不存在: {audio_path}")
-                continue
-
-            # 读取音频
-            try:
-                seg_data, seg_sr = sf.read(audio_path, dtype='float32')
-            except Exception as e:
-                print(f"  [{seg.get('index', i)}] ⚠ 读取失败: {e}")
-                continue
-
-            # 转单声道
-            if seg_data.ndim > 1:
-                seg_data = np.mean(seg_data, axis=1).astype(np.float32)
-
-            # 采样率对齐
-            if seg_sr != target_sr:
-                seg_data = resample_audio(seg_data, seg_sr, target_sr)
-
-            seg_data, gain_db, loudness_dbfs = _normalize_segment_loudness(
-                seg_data, target_loudness_dbfs
-            )
-            seg_actual_dur = len(seg_data) / target_sr
-
-            # === 理论时间点检测与漂移补偿 ===
-            # target_start 已包含 theory_gap（在 _calculate_theoretical_timestamps 中计算），
-            # 所以只需确保 accumulated_duration 达到 target_start 即可，
-            # 静音 = target_start - accumulated_duration（正值补静音，负值/零则直接拼接）。
-            target_start = seg.get("target_start", 0)
-            target_end = seg.get("target_end", target_start + seg_actual_dur)
-            drift = accumulated_duration - target_start  # 正值=超前，负值=滞后
-
-            # 实际需要填充的静音 = 使当前位置到达 target_start 的时间差
-            actual_silence = max(0.0, target_start - accumulated_duration)
-            silence_samples = int(round(actual_silence * target_sr))
-
-            # 记录实际时间戳：segment 在合并音频中的起始位置
-            actual_start = accumulated_duration + actual_silence
-
-            # 追加静音 + 当前段音频
-            if silence_samples > 0:
-                merged_data = np.concatenate([
-                    merged_data, np.zeros(silence_samples, dtype=np.float32)
-                ])
-            merged_data = np.concatenate([merged_data, seg_data])
-
-            accumulated_duration = len(merged_data) / target_sr
-            seg["new_start"] = round(actual_start, 4)
-            seg["new_end"] = round(accumulated_duration, 4)
-
-            drift_ms = drift * 1000
-            drift_log.append(abs(drift_ms))
-            loudness_label = ""
-            if loudness_dbfs is not None:
-                loudness_label = f", 响度: {loudness_dbfs:.1f}→{target_loudness_dbfs:.1f} dBFS, 增益: {gain_db:+.1f}dB"
-            print(f"  [{seg.get('index', i)}] 实际: {seg['new_start']:.3f}-{seg['new_end']:.3f}s "
-                  f"(漂移: {drift_ms:+.1f}ms, 补偿静音: {actual_silence*1000:.1f}ms, "
-                  f"音频时长: {seg_actual_dur:.3f}s{loudness_label})")
-
-            pct = 65 + int((i + 1) / max(total, 1) * 18)
-            if callback:
-                callback(pct, f"合并 {i + 1}/{total}")
-
-        # 漂移统计
-        if drift_log:
-            max_drift = max(drift_log)
-            avg_drift = sum(drift_log) / len(drift_log)
-            print(f"\n  - 漂移统计: 最大={max_drift:.1f}ms, 平均={avg_drift:.1f}ms")
-            print(f"  - 累积实际时长: {accumulated_duration:.3f}s")
-
-        # 最终输出前做一次峰值保护，避免拼接后边界峰值接近削波。
-        if merged_data.size:
-            peak = float(np.max(np.abs(merged_data)))
-            peak_ceiling = float(10.0 ** (-1.0 / 20.0))
-            if peak > peak_ceiling and peak > 1e-8:
-                merged_data = merged_data * (peak_ceiling / peak)
-                print(f"  - 峰值保护: {20.0 * np.log10(peak):.1f} dBFS → -1.0 dBFS")
+            if stats.get("trim_corrections"):
+                print(
+                    f"  - 游标超前截尾修正: {stats['trim_corrections']} 次, "
+                    f"最大截除={stats.get('max_trim_ms', 0.0):.1f}ms"
+                )
+            print(f"  - 累积实际时长: {stats.get('duration', 0.0):.3f}s")
+            if stats.get("clipped_peak_dbfs") is not None:
+                print(f"  - 峰值保护: {stats['clipped_peak_dbfs']:.1f} dBFS → -1.0 dBFS")
 
         # 导出音频
         audio_format = audio_format_override or output_settings["format"]
 
         if audio_format == "wav":
             output_path = os.path.join(output_dir, f"dub{node_suffix}.wav")
-            wav_subtype = 'PCM_24' if target_bit_depth >= 24 else 'PCM_16'
+            wav_subtype = 'PCM_24' if int(output_settings.get("bit_depth", 16) or 16) >= 24 else 'PCM_16'
+            import soundfile as sf
             sf.write(output_path, merged_data, target_sr, subtype=wav_subtype)
         elif audio_format == "flac":
             output_path = os.path.join(output_dir, f"dub{node_suffix}.flac")
+            import soundfile as sf
             sf.write(output_path, merged_data, target_sr, format='FLAC')
         else:
             # mp3: 先用 soundfile 写 wav，再用 pydub 转 mp3
@@ -1034,6 +911,7 @@ class S10MergeAudio(BaseStep):
             if HAS_PYDUB:
                 import tempfile
                 wav_tmp = os.path.join(output_dir, "_dub_tmp.wav")
+                import soundfile as sf
                 sf.write(wav_tmp, merged_data, target_sr, subtype='PCM_16')
                 bitrate = int(audio_bitrate_override) if audio_bitrate_override else output_settings["bitrate"]
                 audio_seg = AudioSegment.from_wav(wav_tmp)
@@ -1045,6 +923,7 @@ class S10MergeAudio(BaseStep):
             else:
                 # 无 pydub 时写 wav
                 output_path = os.path.join(output_dir, f"dub{node_suffix}.wav")
+                import soundfile as sf
                 sf.write(output_path, merged_data, target_sr, subtype='PCM_16')
 
         print(f"  - 已导出: {output_path}")

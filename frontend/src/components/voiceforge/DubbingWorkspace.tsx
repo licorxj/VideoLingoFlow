@@ -1,8 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ChevronLeft, Loader2, Music2, RefreshCw } from "lucide-react";
+import { useParams } from "react-router-dom";
+import { Loader2, Music2, AlertTriangle } from "lucide-react";
 import { voiceForgeApi } from "@/api/voiceforge";
 import { Button } from "@/components/ui/button";
+import { PageHeader } from "@/components/shared/PageHeader";
 import { DubbingProvider, useDubbingContext } from "./dubbing/DubbingContext";
 import { DubbingLayout } from "./dubbing/DubbingLayout";
 import { ChapterPanel } from "./dubbing/ChapterPanel";
@@ -750,42 +751,36 @@ function DubbingWorkspaceInner() {
      ════════════════════════════════════════════════════════════════════ */
 
   return (
-    <div className="mx-auto flex h-screen max-w-[1800px] flex-col">
-      {/* ── Header ─────────────────────────────────────────────────── */}
-      <header className="flex flex-wrap items-center gap-3 border-b border-border/60 px-4 py-3">
-        <Link to="/voiceforge">
-          <Button variant="outline" size="icon" title="返回项目列表">
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-        </Link>
-        <div className="mr-auto">
-          <h2 className="flex items-center gap-2 text-xl font-bold">
-            <Music2 className="h-5 w-5 text-primary" />
-            {project?.name || "配音台"}
-          </h2>
-          <p className="text-xs text-muted-foreground">
-            文本配音制作台
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => void load()}
-          title="刷新"
-          disabled={busy === "load"}
-        >
-          {busy === "load" ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <RefreshCw className="h-4 w-4" />
-          )}
-        </Button>
-        {error && (
-          <div className="max-w-sm truncate rounded border border-destructive/30 bg-destructive/10 px-3 py-1.5 text-xs text-destructive">
-            {error}
-          </div>
-        )}
-      </header>
+    <div className="flex h-full w-full flex-col">
+      {/* ── 固定顶栏（sticky + 玻璃） ──────────────────────────────── */}
+      <PageHeader
+        sticky
+        compact
+        tone="ai"
+        icon={Music2}
+        title={project?.name || "配音台"}
+        detail="文本配音制作台 · 章节、角色、句子、批量合成与导出"
+        hideTitle
+        back={{ to: "/voiceforge", label: "项目列表" }}
+        breadcrumbs={[
+          { label: "晴沐配音谷", to: "/voiceforge" },
+          { label: project?.name || "配音台" },
+        ]}
+        actions={
+          <>
+            {error && (
+              <div
+                role="alert"
+                className="flex max-w-xs items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive"
+                title={error}
+              >
+                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{error}</span>
+              </div>
+            )}
+          </>
+        }
+      />
 
       {/* ── Main workspace (3-panel layout) ────────────────────────── */}
       <div className="flex-1 min-h-0">

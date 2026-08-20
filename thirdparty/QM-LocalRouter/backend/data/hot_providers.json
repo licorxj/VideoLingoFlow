@@ -179,7 +179,7 @@
     "name": "小米 MiMo",
     "protocol": "openai",
     "base_url": "https://api.xiaomimimo.com/v1",
-    "description": ".邀请码HKEQ8J,输入得10元.小米 MiMo 万亿参数 Agent 大模型,性价比很高，1M 上下文.邀请码HKEQ8J,输入得10元",
+    "description": "邀请码HKEQ8J,输入得10元.小米 MiMo 万亿参数 Agent 大模型,性价比很高，1M 上下文",
     "icon_keyword": "xiaomi mimo",
     "homepage": "https://account.xiaomi.com/fe/service/login/password?_group=DEFAULT&sid=api-platform&qs=%253Fcallback%253Dhttps%25253A%25252F%25252Fplatform.xiaomimimo.com%25252Fsts%25253Fsign%25253DM7gfywevl3CG5YTTcZDifhK6IK8%2525253D%252526followup%25253Dhttps%2525253A%2525252F%2525252Fplatform.xiaomimimo.com%2525252Fconsole%2525252Fbalance%2526sid%253Dapi-platform%2526_group%253DDEFAULT&callback=https%3A%2F%2Fplatform.xiaomimimo.com%2Fsts%3Fsign%3DM7gfywevl3CG5YTTcZDifhK6IK8%253D%26followup%3Dhttps%253A%252F%252Fplatform.xiaomimimo.com%252Fconsole%252Fbalance&_sign=iV9Q5kxBqXGdbkb6kmapXvJrkZM%3D&serviceParam=%7B%22checkSafePhone%22%3Afalse%2C%22checkSafeAddress%22%3Afalse%2C%22lsrp_score%22%3A0.0%7D&showActiveX=false&theme=&needTheme=false&bizDeviceType=&_locale=zh_CN"
   },

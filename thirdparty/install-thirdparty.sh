@@ -13,8 +13,8 @@ set -u
 cd "$(dirname "$0")/.."
 
 PY=""
-if [ -x "backend/venv312/bin/python" ]; then
-    PY="backend/venv312/bin/python"
+if [ -x "venv312/bin/python" ]; then
+    PY="venv312/bin/python"
 elif command -v python3 >/dev/null 2>&1; then
     PY="python3"
 elif command -v python >/dev/null 2>&1; then
@@ -22,7 +22,7 @@ elif command -v python >/dev/null 2>&1; then
 fi
 
 if [ -z "$PY" ]; then
-    echo "[错误] 未找到 Python。请先安装 Python 3.12 或创建 backend/venv312 虚拟环境。"
+    echo "[错误] 未找到 Python。请先安装 Python 3.12 或创建 venv312 虚拟环境。"
     exit 1
 fi
 

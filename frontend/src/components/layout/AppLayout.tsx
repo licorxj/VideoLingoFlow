@@ -3,6 +3,7 @@ import { Outlet, useLocation } from "react-router-dom";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import PiAssistantWindow from "@/components/agent/PiAssistantWindow";
+import { useHeaderInbox } from "@/hooks/useHeaderInbox";
 
 function readSidebarCollapsed(): boolean {
   try {
@@ -17,6 +18,7 @@ export default function AppLayout() {
   const [agentState, setAgentState] = useState<"closed" | "booting" | "open" | "minimized">("closed");
   const agentWakeAtRef = useRef(0);
   const readyTimerRef = useRef<number | null>(null);
+  const headerInbox = useHeaderInbox();
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((collapsed) => {
       const next = !collapsed;
@@ -71,7 +73,7 @@ export default function AppLayout() {
 
   return (
     <div className="h-screen flex flex-col gradient-mesh noise-overlay">
-      <Header collapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} />
+      <Header collapsed={sidebarCollapsed} onToggleSidebar={toggleSidebar} inbox={headerInbox} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar collapsed={sidebarCollapsed} agentState={agentState} />
         <main className={isEditor ? "flex-1 min-h-0 overflow-hidden" : "flex-1 min-h-0 overflow-auto px-2 py-2"}>
@@ -80,7 +82,7 @@ export default function AppLayout() {
           </div>
         </main>
       </div>
-      {agentState !== "closed" && <div className={agentState === "booting" || agentState === "minimized" ? "invisible pointer-events-none" : undefined}><PiAssistantWindow visible={agentState === "open"} onClose={() => setAgentState("closed")} onMinimize={() => setAgentState("minimized")} onReady={handleAgentReady} /></div>}
+      {agentState !== "closed" && <div className={agentState === "booting" || agentState === "minimized" ? "hidden" : undefined}><PiAssistantWindow visible={agentState === "open"} onClose={() => setAgentState("closed")} onMinimize={() => setAgentState("minimized")} onReady={handleAgentReady} /></div>}
     </div>
   );
 }

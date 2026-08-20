@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import json
+import os
+from pathlib import Path
 
 
 BUILTIN_NODE_TYPES = [
@@ -19,6 +22,7 @@ BUILTIN_NODE_TYPES = [
             {"id": "audio", "label": "音频", "type": "audio"},
             {"id": "subtitle", "label": "字幕", "type": "subtitle"},
             {"id": "url", "label": "URL", "type": "url"},
+            {"id": "filepath", "label": "文件路径", "type": "filepath"},
         ],
         "defaultConfig": {
             "selectedTypes": ["video"],
@@ -26,9 +30,10 @@ BUILTIN_NODE_TYPES = [
             "audioPath": "",
             "subtitlePath": "",
             "url": "",
+            "filePath": "",
             "source_language": "auto",
             "target_language": "zh",
-            "copyInputs": False,
+            "copyInputs": True,
             "var1": "",
             "var1Required": False,
             "var2": "",
@@ -40,11 +45,13 @@ BUILTIN_NODE_TYPES = [
                 {"value": "audio", "label": "音频"},
                 {"value": "subtitle", "label": "字幕"},
                 {"value": "url", "label": "URL"},
+                {"value": "filepath", "label": "文件路径"},
             ]},
             {"key": "videoPath", "label": "视频文件", "type": "file", "placeholder": "选择或输入视频文件路径", "dependsOn": "selectedTypes", "dependsAnyValues": ["video"], "fileFilter": ["mp4", "avi", "mkv", "mov", "wmv", "flv", "webm"]},
             {"key": "audioPath", "label": "音频文件", "type": "audio-selector", "placeholder": "选择或输入音频文件路径", "dependsOn": "selectedTypes", "dependsAnyValues": ["audio"], "fileFilter": ["mp3", "wav", "flac", "aac", "ogg", "m4a"]},
             {"key": "subtitlePath", "label": "字幕文件", "type": "file", "placeholder": "选择或输入字幕文件路径", "dependsOn": "selectedTypes", "dependsAnyValues": ["subtitle"], "fileFilter": ["srt", "ass", "ssa", "sub", "txt"]},
             {"key": "url", "label": "URL", "type": "text", "placeholder": "输入视频/音频URL地址", "dependsOn": "selectedTypes", "dependsAnyValues": ["url"]},
+            {"key": "filePath", "label": "文件路径", "type": "file", "placeholder": "选择或输入文件路径", "dependsOn": "selectedTypes", "dependsAnyValues": ["filepath"]},
             {"key": "source_language", "label": "输入语言", "type": "language-select", "colSpan": "half"},
             {"key": "target_language", "label": "输出语言", "type": "language-select", "colSpan": "half"},
             {"key": "copyInputs", "label": "复制输入文件到任务缓存", "type": "checkbox"},
@@ -108,35 +115,15 @@ BUILTIN_NODE_TYPES = [
         "color": "#10b981",
         "inputs": [{"id": "video", "label": "视频", "type": "video", "required": True}],
         "outputs": [{"id": "audio", "label": "音频", "type": "audio"}],
-        "defaultConfig": {"format": "wav", "sample_rate": "44100", "bit_depth": "", "channels": "", "bitrate": ""},
+        "defaultConfig": {"format": "auto"},
         "configFields": [
-            {"key": "format", "label": "输出格式", "type": "select", "options": [
+            {"key": "format", "label": "保存格式", "type": "select", "colSpan": "half", "options": [
+                {"value": "auto", "label": "源质量 (流复制)"},
                 {"value": "wav", "label": "WAV (无损)"},
                 {"value": "mp3", "label": "MP3"},
+                {"value": "m4a", "label": "M4A (AAC)"},
                 {"value": "flac", "label": "FLAC (无损)"},
-                {"value": "m4a", "label": "M4A"},
-            ]},
-            {"key": "sample_rate", "label": "采样率", "type": "select", "options": [
-                {"value": "16000", "label": "16000 Hz ★推荐（语音识别/ASR）"},
-                {"value": "44100", "label": "44100 Hz ★推荐（标准/人声分离）"},
-                {"value": "48000", "label": "48000 Hz"},
-            ]},
-            {"key": "bit_depth", "label": "位深", "type": "select", "options": [
-                {"value": "", "label": "跟随全局设置"},
-                {"value": "16", "label": "16 bit ★推荐"},
-                {"value": "24", "label": "24 bit"},
-            ]},
-            {"key": "channels", "label": "声道", "type": "select", "options": [
-                {"value": "", "label": "跟随全局设置"},
-                {"value": "1", "label": "单声道 ★推荐（语音）"},
-                {"value": "2", "label": "立体声"},
-            ]},
-            {"key": "bitrate", "label": "码率 (kbps)", "type": "select", "options": [
-                {"value": "", "label": "跟随全局设置"},
-                {"value": "128", "label": "128 kbps"},
-                {"value": "192", "label": "192 kbps ★推荐"},
-                {"value": "256", "label": "256 kbps"},
-                {"value": "320", "label": "320 kbps"},
+                {"value": "ogg", "label": "OGG"},
             ]},
         ],
     },
@@ -153,37 +140,14 @@ BUILTIN_NODE_TYPES = [
             {"id": "audio", "label": "人声", "type": "audio", "color": "#10b981"},
             {"id": "background", "label": "背景音乐", "type": "audio", "color": "#f59e0b"},
         ],
-        "defaultConfig": {"method": "spleeter", "model": "", "format": "wav", "sample_rate": "", "bit_depth": "", "channels": "", "bitrate": ""},
+        "defaultConfig": {"method": "spleeter", "model": "", "format": "wav"},
         "configFields": [
             {"key": "method", "label": "分离接口", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/enabled", "optionLabel": "name", "optionValue": "id", "colSpan": "full"},
             {"key": "model", "label": "分离模型", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/config-fields", "dependsOn": "method", "optionLabel": "label", "optionValue": "value", "placeholder": "留空则使用接口默认模型", "colSpan": "full"},
-            {"key": "format", "label": "输出格式", "type": "select", "options": [
+            {"key": "format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
                 {"value": "", "label": "跟随全局设置"},
                 {"value": "wav", "label": "WAV (无损)"},
                 {"value": "mp3", "label": "MP3"},
-            ]},
-            {"key": "sample_rate", "label": "采样率", "type": "select", "options": [
-                {"value": "", "label": "跟随全局设置"},
-                {"value": "16000", "label": "16000 Hz ★推荐（语音识别/ASR）"},
-                {"value": "44100", "label": "44100 Hz ★推荐（标准/人声分离）"},
-                {"value": "48000", "label": "48000 Hz"},
-            ]},
-            {"key": "bit_depth", "label": "位深", "type": "select", "options": [
-                {"value": "", "label": "跟随全局设置"},
-                {"value": "16", "label": "16 bit ★推荐"},
-                {"value": "24", "label": "24 bit"},
-            ]},
-            {"key": "channels", "label": "声道", "type": "select", "options": [
-                {"value": "", "label": "跟随全局设置"},
-                {"value": "1", "label": "单声道 ★推荐（语音）"},
-                {"value": "2", "label": "立体声"},
-            ]},
-            {"key": "bitrate", "label": "码率 (kbps)", "type": "select", "options": [
-                {"value": "", "label": "跟随全局设置"},
-                {"value": "128", "label": "128 kbps"},
-                {"value": "192", "label": "192 kbps ★推荐"},
-                {"value": "256", "label": "256 kbps"},
-                {"value": "320", "label": "320 kbps"},
             ]},
         ],
     },
@@ -208,9 +172,52 @@ BUILTIN_NODE_TYPES = [
         "configFields": [
             {"key": "method", "label": "分离接口", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/enabled", "optionLabel": "name", "optionValue": "id", "colSpan": "full"},
             {"key": "model", "label": "分离模型", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/config-fields", "dependsOn": "method", "optionLabel": "label", "optionValue": "value", "placeholder": "留空则使用接口默认模型", "colSpan": "full"},
+            {"key": "format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
+                {"value": "wav", "label": "WAV (无损)"},
+                {"value": "mp3", "label": "MP3"},
+            ]},
+        ],
+    },
+    {
+        "id": "audio_transcode",
+        "name": "音频质量转码",
+        "execution_domain": "thread",
+        "category": "process",
+        "description": "转换音频格式、采样率、位深、声道和码率",
+        "icon": "AudioLines",
+        "color": "#0ea5e9",
+        "inputs": [{"id": "audio", "label": "音频", "type": "audio", "required": True}],
+        "outputs": [{"id": "audio", "label": "转码音频", "type": "audio"}],
+        "defaultConfig": {"format": "wav", "sample_rate": "", "bit_depth": "", "channels": "", "bitrate": ""},
+        "configFields": [
             {"key": "format", "label": "输出格式", "type": "select", "options": [
                 {"value": "wav", "label": "WAV (无损)"},
                 {"value": "mp3", "label": "MP3"},
+                {"value": "flac", "label": "FLAC (无损)"},
+                {"value": "m4a", "label": "M4A"},
+            ]},
+            {"key": "sample_rate", "label": "采样率", "type": "select", "colSpan": "half", "options": [
+                {"value": "", "label": "跟随全局设置"},
+                {"value": "16000", "label": "16000 Hz ★推荐（语音识别/ASR）"},
+                {"value": "44100", "label": "44100 Hz ★推荐（标准/人声分离）"},
+                {"value": "48000", "label": "48000 Hz"},
+            ]},
+            {"key": "bit_depth", "label": "位深", "type": "select", "colSpan": "half", "options": [
+                {"value": "", "label": "跟随全局设置"},
+                {"value": "16", "label": "16 bit ★推荐"},
+                {"value": "24", "label": "24 bit"},
+            ]},
+            {"key": "channels", "label": "声道", "type": "select", "colSpan": "half", "options": [
+                {"value": "", "label": "跟随全局设置"},
+                {"value": "1", "label": "单声道 ★推荐（语音）"},
+                {"value": "2", "label": "立体声"},
+            ]},
+            {"key": "bitrate", "label": "码率 (kbps)", "type": "select", "colSpan": "half", "options": [
+                {"value": "", "label": "跟随全局设置"},
+                {"value": "128", "label": "128 kbps"},
+                {"value": "192", "label": "192 kbps ★推荐"},
+                {"value": "256", "label": "256 kbps"},
+                {"value": "320", "label": "320 kbps"},
             ]},
         ],
     },
@@ -238,10 +245,13 @@ BUILTIN_NODE_TYPES = [
             "vad_offset": 0.363,
             "hotwords_enabled": False,
             "hotwords": "",
+            "post_vad": True,
+            "post_alignment": True,
+            "post_diarization": False,
         },
         "configFields": [
-            {"key": "engine", "label": "ASR 引擎", "type": "api-select", "apiEndpoint": "/api/asr-interfaces/enabled", "placeholder": "跟随全局配置"},
-            {"key": "language", "label": "识别语言", "type": "select", "placeholder": "跟随输入节点", "options": [
+            {"key": "engine", "label": "ASR 引擎", "type": "api-select", "colSpan": "half", "apiEndpoint": "/api/asr-interfaces/enabled", "placeholder": "跟随全局配置"},
+            {"key": "language", "label": "识别语言", "type": "select", "colSpan": "half", "placeholder": "跟随输入节点", "options": [
                 {"value": "from_input", "label": "来自输入节点"},
                 {"value": "auto", "label": "自动检测 (auto)"},
                 {"value": "zh", "label": "中文 (zh)"},
@@ -254,14 +264,140 @@ BUILTIN_NODE_TYPES = [
                 {"value": "pt", "label": "葡萄牙语 (pt)"},
                 {"value": "ru", "label": "俄语 (ru)"},
             ]},
-            {"key": "model", "label": "模型", "type": "api-select", "apiEndpoint": "/api/asr-interfaces/models", "dependsOn": "engine", "placeholder": "默认"},
-            {"key": "compute_type", "label": "计算精度", "type": "api-select", "apiEndpoint": "/api/asr-interfaces/config-fields", "dependsOn": "engine", "placeholder": "跟随全局配置"},
-            {"key": "batch_size", "label": "批处理大小", "type": "text", "placeholder": "0=自动检测GPU显存"},
-            {"key": "word_timestamps", "label": "启用词级时间戳对齐", "type": "checkbox"},
-            {"key": "vad_onset", "label": "VAD 起始阈值", "type": "text", "placeholder": "0.500"},
-            {"key": "vad_offset", "label": "VAD 结束阈值", "type": "text", "placeholder": "0.363"},
+            {"key": "model", "label": "模型", "type": "api-select", "colSpan": "half", "apiEndpoint": "/api/asr-interfaces/models", "dependsOn": "engine", "placeholder": "默认"},
+            {"key": "compute_type", "label": "计算精度", "type": "api-select", "colSpan": "half", "apiEndpoint": "/api/asr-interfaces/config-fields", "dependsOn": "engine", "placeholder": "跟随全局配置"},
+            {"key": "batch_size", "label": "批处理大小", "type": "text", "colSpan": "half", "placeholder": "0=自动检测GPU显存"},
+            {"key": "word_timestamps", "label": "启用词级时间戳对齐", "type": "checkbox", "colSpan": "half"},
+            {"key": "vad_onset", "label": "VAD 起始阈值", "type": "text", "colSpan": "half", "placeholder": "0.500"},
+            {"key": "vad_offset", "label": "VAD 结束阈值", "type": "text", "colSpan": "half", "placeholder": "0.363"},
             {"key": "hotwords_enabled", "label": "附加热词", "type": "checkbox", "colSpan": "half"},
-            {"key": "hotwords", "label": "热词", "type": "hotwords", "dependsOn": "hotwords_enabled", "placeholder": "多个热词用;分隔，或点击右侧按钮加载txt文件"},
+            {"key": "hotwords", "label": "热词", "type": "hotwords", "colSpan": "half", "dependsOn": "hotwords_enabled", "placeholder": "多个热词用;分隔，或点击右侧按钮加载txt文件"},
+            {"key": "post_vad", "label": "执行 VAD 断句", "type": "checkbox", "colSpan": "half", "hint": "引擎不内置时按全局设置的 VAD 引擎补执行；不勾选则跳过"},
+            {"key": "post_alignment", "label": "执行时间戳对齐", "type": "checkbox", "colSpan": "half", "hint": "引擎不内置时按全局设置的对齐引擎补执行；不勾选则跳过"},
+            {"key": "post_diarization", "label": "执行说话人识别", "type": "checkbox", "colSpan": "half", "hint": "引擎不内置时按全局设置的说话人引擎补执行；不勾选则跳过"},
+        ],
+    },
+    {
+        "id": "asr_recognize",
+        "name": "ASR识别",
+        "execution_domain": "process",
+        "category": "ai",
+        "description": "仅执行语音识别（不执行后处理），输出原始识别结果供下游 ASR后处理 节点继续处理",
+        "icon": "Mic",
+        "color": "#8b5cf6",
+        "inputs": [
+            {"id": "asr_audio", "label": "ASR音源", "type": "audio", "required": True},
+            {"id": "vocal_audio", "label": "人声音源", "type": "audio"},
+        ],
+        "outputs": [{"id": "subtitle", "label": "ASR识别结果JSON", "type": "json"}],
+        "defaultConfig": {
+            "engine": "",
+            "language": "auto",
+            "model": "",
+            "compute_type": "",
+            "batch_size": 0,
+            "word_timestamps": True,
+            "hotwords_enabled": False,
+            "hotwords": "",
+        },
+        "configFields": [
+            {"key": "engine", "label": "ASR 引擎", "type": "api-select", "colSpan": "half", "apiEndpoint": "/api/asr-interfaces/enabled", "placeholder": "跟随全局配置"},
+            {"key": "language", "label": "识别语言", "type": "select", "colSpan": "half", "placeholder": "跟随输入节点", "options": [
+                {"value": "from_input", "label": "来自输入节点"},
+                {"value": "auto", "label": "自动检测 (auto)"},
+                {"value": "zh", "label": "中文 (zh)"},
+                {"value": "en", "label": "英语 (en)"},
+                {"value": "ja", "label": "日语 (ja)"},
+                {"value": "ko", "label": "韩语 (ko)"},
+                {"value": "fr", "label": "法语 (fr)"},
+                {"value": "de", "label": "德语 (de)"},
+                {"value": "es", "label": "西班牙语 (es)"},
+                {"value": "pt", "label": "葡萄牙语 (pt)"},
+                {"value": "ru", "label": "俄语 (ru)"},
+            ]},
+            {"key": "model", "label": "模型", "type": "api-select", "colSpan": "half", "apiEndpoint": "/api/asr-interfaces/models", "dependsOn": "engine", "placeholder": "默认"},
+            {"key": "compute_type", "label": "计算精度", "type": "api-select", "colSpan": "half", "apiEndpoint": "/api/asr-interfaces/config-fields", "dependsOn": "engine", "placeholder": "跟随全局配置"},
+            {"key": "batch_size", "label": "批处理大小", "type": "text", "colSpan": "half", "placeholder": "0=自动检测GPU显存"},
+            {"key": "word_timestamps", "label": "启用词级时间戳对齐", "type": "checkbox", "colSpan": "half"},
+            {"key": "hotwords_enabled", "label": "附加热词", "type": "checkbox", "colSpan": "half"},
+            {"key": "hotwords", "label": "热词", "type": "hotwords", "colSpan": "half", "dependsOn": "hotwords_enabled", "placeholder": "多个热词用;分隔，或点击右侧按钮加载txt文件"},
+        ],
+    },
+    {
+        "id": "asr_postprocess",
+        "name": "ASR后处理",
+        "execution_domain": "process",
+        "category": "ai",
+        "description": "对上游 ASR 结果执行 VAD断句 / 时间戳对齐 / 说话人识别 / 标点恢复，可逐阶段勾选并单独选择模型",
+        "icon": "SlidersHorizontal",
+        "color": "#8b5cf6",
+        "inputs": [
+            {"id": "subtitle", "label": "ASR结果JSON", "type": "json", "required": True, "color": "#6366f1"},
+            {"id": "asr_audio", "label": "ASR音源", "type": "audio"},
+            {"id": "vocal_audio", "label": "人声音源", "type": "audio"},
+            {"id": "alignment_audio", "label": "对齐音源", "type": "audio"},
+        ],
+        "outputs": [{"id": "subtitle", "label": "后处理结果JSON", "type": "json", "color": "#6366f1"}],
+        "defaultConfig": {
+            "run_vad": True,
+            "run_alignment": True,
+            "run_diarization": False,
+            "force_rerun": False,
+            "vad_engine": "",
+            "vad_onset": 0.500,
+            "vad_offset": 0.363,
+            "alignment_engine": "",
+            "alignment_model": "",
+            "dtype": "",
+            "diarize_engine": "",
+            "diarize_model": "",
+            "num_speakers": "",
+            "min_speakers": "",
+            "max_speakers": "",
+            "run_punctuation": True,
+            "punc_engine": "",
+        },
+        "configFields": [
+            {"key": "run_vad", "label": "执行 VAD 断句", "type": "checkbox", "colSpan": "half"},
+            {"key": "vad_engine", "label": "VAD 引擎", "type": "select", "colSpan": "half", "dependsOn": "run_vad", "placeholder": "跟随全局设置", "options": [
+                {"value": "", "label": "跟随全局设置"},
+                {"value": "silero", "label": "Silero"},
+                {"value": "fsmn", "label": "FSMN (FunASR)"},
+                {"value": "webrtc", "label": "WebRTC"},
+            ]},
+            {"key": "vad_onset", "label": "VAD 起始阈值", "type": "text", "colSpan": "half", "dependsOn": "run_vad", "placeholder": "0.500"},
+            {"key": "vad_offset", "label": "VAD 结束阈值", "type": "text", "colSpan": "half", "dependsOn": "run_vad", "placeholder": "0.363"},
+            {"key": "run_alignment", "label": "执行时间戳对齐", "type": "checkbox", "colSpan": "half"},
+            {"key": "alignment_engine", "label": "对齐引擎", "type": "select", "colSpan": "half", "dependsOn": "run_alignment", "placeholder": "跟随全局设置", "options": [
+                {"value": "", "label": "跟随全局设置"},
+                {"value": "whisperx", "label": "WhisperX"},
+                {"value": "qwen3", "label": "Qwen3 ForcedAligner"},
+                {"value": "funasr", "label": "FunASR CT-Aligner"},
+            ]},
+            {"key": "alignment_model", "label": "对齐模型", "type": "text", "colSpan": "half", "dependsOn": "run_alignment", "placeholder": "默认模型"},
+            {"key": "dtype", "label": "计算精度 (Qwen3)", "type": "select", "colSpan": "half", "dependsOn": "run_alignment", "placeholder": "默认", "options": [
+                {"value": "", "label": "默认"},
+                {"value": "bfloat16", "label": "bfloat16"},
+                {"value": "float16", "label": "float16"},
+                {"value": "float32", "label": "float32"},
+            ]},
+            {"key": "run_diarization", "label": "执行说话人识别", "type": "checkbox", "colSpan": "half"},
+            {"key": "diarize_engine", "label": "说话人引擎", "type": "select", "colSpan": "half", "dependsOn": "run_diarization", "placeholder": "跟随全局设置", "options": [
+                {"value": "", "label": "跟随全局设置"},
+                {"value": "diarize", "label": "Diarize (纯本地/无需Key)"},
+                {"value": "pyannote", "label": "Pyannote"},
+                {"value": "cam++", "label": "CAM++ (FunASR)"},
+            ]},
+            {"key": "diarize_model", "label": "说话人模型", "type": "text", "colSpan": "half", "dependsOn": "run_diarization", "placeholder": "默认模型"},
+            {"key": "num_speakers", "label": "说话人数(精确)", "type": "text", "colSpan": "half", "dependsOn": "run_diarization", "placeholder": "留空自动"},
+            {"key": "min_speakers", "label": "最少说话人数", "type": "text", "colSpan": "half", "dependsOn": "run_diarization", "placeholder": "留空自动"},
+            {"key": "max_speakers", "label": "最多说话人数", "type": "text", "colSpan": "half", "dependsOn": "run_diarization", "placeholder": "留空自动"},
+            {"key": "run_punctuation", "label": "执行标点恢复", "type": "checkbox", "colSpan": "half", "hint": "智能兜底：文本已有标点或非中英语言时自动跳过"},
+            {"key": "punc_engine", "label": "标点恢复引擎", "type": "select", "colSpan": "half", "dependsOn": "run_punctuation", "placeholder": "跟随全局设置", "options": [
+                {"value": "", "label": "跟随全局设置"},
+                {"value": "ct_punc", "label": "CT-Punc (FunASR)"},
+            ]},
+            {"key": "force_rerun", "label": "强制重新执行（忽略已有后处理结果）", "type": "checkbox", "hint": "默认关闭：上游结果已含有效 VAD/词级时间戳/说话人标注时自动跳过对应阶段"},
         ],
     },
     {
@@ -278,9 +414,11 @@ BUILTIN_NODE_TYPES = [
             {"id": "text", "label": "句子文本", "type": "text", "color": "#8b5cf6"},
         ],
         "defaultConfig": {
+            "processing_language": "from_input",
             "max_sentence_length": 30,
             "use_llm_split": True,
-            "split_by_punct": True,
+            "split_sentence_ends": True,
+            "split_clause_breaks": True,
             "merge_min_duration": 0.5,
             "merge_max_gap": 0.5,
             "pause_split_threshold": 1.0,
@@ -290,14 +428,28 @@ BUILTIN_NODE_TYPES = [
             "pause_split_enabled": True,
         },
         "configFields": [
+            {"key": "processing_language", "label": "处理语言", "type": "select", "options": [
+                {"value": "from_input", "label": "来自输入节点"},
+                {"value": "auto", "label": "自动检测 (auto)"},
+                {"value": "zh", "label": "中文 (zh)"},
+                {"value": "en", "label": "英语 (en)"},
+                {"value": "ja", "label": "日语 (ja)"},
+                {"value": "ko", "label": "韩语 (ko)"},
+                {"value": "fr", "label": "法语 (fr)"},
+                {"value": "de", "label": "德语 (de)"},
+                {"value": "es", "label": "西班牙语 (es)"},
+                {"value": "pt", "label": "葡萄牙语 (pt)"},
+                {"value": "ru", "label": "俄语 (ru)"},
+            ]},
             {"key": "max_sentence_length", "label": "最大句子长度（以中文长度基准设置，其他语言自动按照权重调整）", "type": "text", "placeholder": "默认 30"},
-            {"key": "split_by_punct", "label": "按标点切割所有句子", "type": "checkbox", "hint": "勾选后无论句子长短都按标点切分；取消勾选则仅对超长句子执行标点切割"},
+            {"key": "split_sentence_ends", "label": "句末类标点切割", "type": "checkbox", "colSpan": "half", "hint": "按句末标点切割所有句子"},
+            {"key": "split_clause_breaks", "label": "句中类标点切割", "type": "checkbox", "colSpan": "half", "hint": "按句中标点继续切割过长句子"},
             {"key": "split_on_speaker", "label": "说话人切换时切割", "type": "checkbox", "hint": "仅当 ASR 含多说话人时生效；单人视频无副作用"},
             {"key": "use_llm_split", "label": "AI兜底切割长句", "type": "checkbox"},
-            {"key": "merge_min_duration", "label": "合并过短词句阈值(秒)", "type": "text", "placeholder": "默认 1.0", "colSpan": "half"},
-            {"key": "merge_short_enabled", "label": "执行", "type": "checkbox", "colSpan": "half"},
+            {"key": "merge_min_duration", "label": "最短句段合并阈值(秒)", "type": "text", "placeholder": "默认 1.0", "colSpan": "half"},
+            {"key": "merge_short_enabled", "label": "启用最短句段合并", "type": "checkbox", "colSpan": "half"},
             {"key": "merge_max_gap", "label": "句子间隔小于*秒合并(秒)", "type": "text", "placeholder": "默认 0.5", "colSpan": "half"},
-            {"key": "merge_gap_enabled", "label": "执行", "type": "checkbox", "colSpan": "half"},
+            {"key": "merge_gap_enabled", "label": "启用相邻间隙合并", "type": "checkbox", "colSpan": "half"},
             {"key": "pause_split_threshold", "label": "停顿大于*秒断句(秒)", "type": "text", "placeholder": "默认 2.0", "colSpan": "half"},
             {"key": "pause_split_enabled", "label": "执行", "type": "checkbox", "colSpan": "half"},
         ],
@@ -319,11 +471,25 @@ BUILTIN_NODE_TYPES = [
             {"id": "word_index", "label": "词级时间戳表", "type": "json", "color": "#10b981"},
         ],
         "defaultConfig": {
+            "processing_language": "from_input",
             "method": "ai",
             "split_on_speaker": True,
             "llm_max_chars": 5000,
         },
         "configFields": [
+            {"key": "processing_language", "label": "处理语言", "type": "select", "options": [
+                {"value": "from_input", "label": "来自输入节点"},
+                {"value": "auto", "label": "自动检测 (auto)"},
+                {"value": "zh", "label": "中文 (zh)"},
+                {"value": "en", "label": "英语 (en)"},
+                {"value": "ja", "label": "日语 (ja)"},
+                {"value": "ko", "label": "韩语 (ko)"},
+                {"value": "fr", "label": "法语 (fr)"},
+                {"value": "de", "label": "德语 (de)"},
+                {"value": "es", "label": "西班牙语 (es)"},
+                {"value": "pt", "label": "葡萄牙语 (pt)"},
+                {"value": "ru", "label": "俄语 (ru)"},
+            ]},
             {"key": "method", "label": "断句预处理方法", "type": "select", "options": [
                 {"value": "asr", "label": "ASR分段"},
                 {"value": "punct", "label": "标点符号断句"},
@@ -368,8 +534,33 @@ BUILTIN_NODE_TYPES = [
             {"id": "subtitle", "label": "直译结果JSON", "type": "json", "color": "#3b82f6"},
             {"id": "reflect", "label": "反思翻译JSON", "type": "json", "color": "#10b981"},
         ],
-        "defaultConfig": {"batch_char_limit": "", "reflect_translate": "follow_global", "translation_style": ""},
+        "defaultConfig": {"processing_language": "from_input", "target_language": "from_input", "batch_char_limit": "", "reflect_translate": "follow_global", "translation_style": ""},
         "configFields": [
+            {"key": "processing_language", "label": "处理语言", "type": "select", "colSpan": "half", "options": [
+                {"value": "from_input", "label": "来自输入节点"},
+                {"value": "auto", "label": "自动检测 (auto)"},
+                {"value": "zh", "label": "中文 (zh)"},
+                {"value": "en", "label": "英语 (en)"},
+                {"value": "ja", "label": "日语 (ja)"},
+                {"value": "ko", "label": "韩语 (ko)"},
+                {"value": "fr", "label": "法语 (fr)"},
+                {"value": "de", "label": "德语 (de)"},
+                {"value": "es", "label": "西班牙语 (es)"},
+                {"value": "pt", "label": "葡萄牙语 (pt)"},
+                {"value": "ru", "label": "俄语 (ru)"},
+            ]},
+            {"key": "target_language", "label": "目标语言", "type": "select", "colSpan": "half", "options": [
+                {"value": "from_input", "label": "来自输入节点"},
+                {"value": "zh", "label": "中文 (zh)"},
+                {"value": "en", "label": "英语 (en)"},
+                {"value": "ja", "label": "日语 (ja)"},
+                {"value": "ko", "label": "韩语 (ko)"},
+                {"value": "fr", "label": "法语 (fr)"},
+                {"value": "de", "label": "德语 (de)"},
+                {"value": "es", "label": "西班牙语 (es)"},
+                {"value": "pt", "label": "葡萄牙语 (pt)"},
+                {"value": "ru", "label": "俄语 (ru)"},
+            ]},
             {"key": "batch_char_limit", "label": "单批次请求字数上限", "type": "text", "placeholder": "留空则读取全局LLM字数限制"},
             {"key": "reflect_translate", "label": "是否反思翻译", "type": "select", "options": [
                 {"value": "follow_global", "label": "跟随全局设置"},
@@ -747,7 +938,7 @@ BUILTIN_NODE_TYPES = [
         "outputs": [],
         "defaultConfig": {
             "title": "",
-            "fontSize": 24,
+            "fontSize": 12,
             "fontFamily": "sans-serif",
             "fontColor": "#ffffff",
             "backgroundColor": "rgba(0,0,0,0.6)",
@@ -990,6 +1181,120 @@ BUILTIN_NODE_TYPES = [
             {"key": "time_mode", "label": "时间模式", "type": "select", "colSpan": "half",
              "options": [{"value": "positive", "label": "正数(从头)"}, {"value": "negative", "label": "倒数(从尾)"}]},
             {"key": "avoid_subtitles", "label": "避开字幕", "type": "checkbox"},
+        ],
+    },
+    {
+        "id": "subtitle_position_search",
+        "name": "OCR字幕查找",
+        "execution_domain": "thread",
+        "category": "process",
+        "description": "定位视频字幕区域：支持 OCR 自动查找（输出标注帧与相对坐标 JSON），也可手动框选字幕位置并设置片头片尾跳过时间",
+        "icon": "Captions",
+        "color": "#f59e0b",
+        "inputs": [
+            {"id": "video", "label": "视频", "type": "video"},
+        ],
+        "outputs": [
+            {"id": "image", "label": "标注帧", "type": "image"},
+            {"id": "json", "label": "字幕坐标JSON", "type": "json"},
+        ],
+        "defaultConfig": {
+            "model": "",
+            "ocr_version": "",
+            "model_type": "",
+            "custom_model_name": "",
+            "position_mode": "ocr",
+            "manual_box": {},
+            "skip_head_sec": 0,
+            "skip_tail_sec": 0,
+            "direction": "horizontal",
+            "position": "lower",
+            "position_ratio": "0.6-0.8",
+            "frame_interval": 20,
+            "clean_cache": True,
+        },
+        "configFields": [
+            {"key": "model", "label": "OCR接口", "type": "api-select",
+             "apiEndpoint": "/api/ocr-interfaces/enabled", "optionLabel": "name", "optionValue": "id",
+             "placeholder": "跟随全局配置", "colSpan": "half"},
+            {"key": "ocr_version", "label": "模型版本", "type": "select", "colSpan": "half",
+             "options": [{"value": "", "label": "跟随接口默认"}, {"value": "PP-OCRv6", "label": "PP-OCRv6"},
+                         {"value": "PP-OCRv5", "label": "PP-OCRv5"}, {"value": "PP-OCRv4", "label": "PP-OCRv4"},
+                         {"value": "custom", "label": "自定义"}]},
+            {"key": "model_type", "label": "模型尺寸", "type": "select", "colSpan": "half",
+             "options": [{"value": "", "label": "跟随接口默认"}, {"value": "small", "label": "small（均衡）"},
+                         {"value": "mobile", "label": "mobile"}, {"value": "tiny", "label": "tiny（最快）"},
+                         {"value": "server", "label": "server（更高精度）"}]},
+            {"key": "custom_model_name", "label": "自定义模型名", "type": "text", "colSpan": "half",
+             "dependsOn": "ocr_version", "dependsValue": "custom",
+             "placeholder": "输入完整模型名",
+             "description": "非空时原样覆盖版本/尺寸，需自行确保模型文件存在"},
+            {"key": "direction", "label": "字幕方向", "type": "select", "colSpan": "half",
+             "options": [{"value": "horizontal", "label": "水平"}, {"value": "vertical", "label": "竖直"}]},
+            # 字幕位置：同一 key，按方向显示不同名称（上下/左右）
+            {"key": "position", "label": "字幕位置", "type": "select", "colSpan": "half",
+             "dependsOn": "direction", "dependsValue": "horizontal",
+             "options": [{"value": "upper", "label": "上半段"}, {"value": "lower", "label": "下半段"}, {"value": "ratio", "label": "比例范围"}]},
+            {"key": "position", "label": "字幕位置", "type": "select", "colSpan": "half",
+             "dependsOn": "direction", "dependsValue": "vertical",
+             "options": [{"value": "upper", "label": "左半段"}, {"value": "lower", "label": "右半段"}, {"value": "ratio", "label": "比例范围"}]},
+            {"key": "position_ratio", "label": "位置比例", "type": "text", "colSpan": "half",
+             "dependsOn": "position", "dependsValue": "ratio",
+             "placeholder": "如 0.6-0.8",
+             "description": "水平方向为 y 坐标比例，竖直方向为 x 坐标比例"},
+            {"key": "frame_interval", "label": "抽帧步长", "type": "number", "colSpan": "half",
+             "min": 1, "placeholder": "默认 20"},
+            {"key": "clean_cache", "label": "清理缓存", "type": "checkbox", "colSpan": "half",
+             "description": "结束后删除抽帧缓存"},
+        ],
+    },
+    {
+        "id": "subtitle_recognition",
+        "name": "OCR字幕识别",
+        "execution_domain": "thread",
+        "category": "process",
+        "description": "按字幕区域坐标用 OCR 识别字幕内容与时间轴，输出 ASR 格式结果 JSON",
+        "icon": "Captions",
+        "color": "#10b981",
+        "inputs": [
+            {"id": "video", "label": "视频", "type": "video", "required": True},
+            {"id": "json", "label": "字幕区域坐标", "type": "json"},
+        ],
+        "outputs": [
+            {"id": "subtitle", "label": "识别结果JSON(ASR)", "type": "json", "color": "#6366f1"},
+        ],
+        "defaultConfig": {
+            "model": "",
+            "ocr_version": "",
+            "model_type": "",
+            "custom_model_name": "",
+            "initial_interval": 20,
+            "boundary_precision_ms": 200,
+            "tilt_threshold_deg": 8.0,
+        },
+        "configFields": [
+            {"key": "model", "label": "OCR接口", "type": "api-select",
+             "apiEndpoint": "/api/ocr-interfaces/enabled", "optionLabel": "name", "optionValue": "id",
+             "placeholder": "跟随全局配置", "colSpan": "half"},
+            {"key": "ocr_version", "label": "模型版本", "type": "select", "colSpan": "half",
+             "options": [{"value": "", "label": "跟随接口默认"}, {"value": "PP-OCRv6", "label": "PP-OCRv6"},
+                         {"value": "PP-OCRv5", "label": "PP-OCRv5"}, {"value": "PP-OCRv4", "label": "PP-OCRv4"},
+                         {"value": "custom", "label": "自定义"}]},
+            {"key": "model_type", "label": "模型尺寸", "type": "select", "colSpan": "half",
+             "options": [{"value": "", "label": "跟随接口默认"}, {"value": "small", "label": "small（均衡）"},
+                         {"value": "mobile", "label": "mobile"}, {"value": "tiny", "label": "tiny（最快）"},
+                         {"value": "server", "label": "server（更高精度）"}]},
+            {"key": "custom_model_name", "label": "自定义模型名", "type": "text", "colSpan": "half",
+             "dependsOn": "ocr_version", "dependsValue": "custom",
+             "placeholder": "输入完整模型名",
+             "description": "非空时原样覆盖版本/尺寸，需自行确保模型文件存在"},
+            {"key": "initial_interval", "label": "初次抽帧间隔", "type": "number", "colSpan": "half",
+             "min": 1, "placeholder": "默认 20", "description": "初次检查抽帧间隔（帧）"},
+            {"key": "boundary_precision_ms", "label": "边界精度(毫秒)", "type": "number", "colSpan": "half",
+             "min": 1, "placeholder": "默认 200", "description": "字幕首尾边界精细化步长"},
+            {"key": "tilt_threshold_deg", "label": "倾角过滤阈值(度)", "type": "number", "colSpan": "half",
+             "min": 0, "step": 0.5, "placeholder": "默认 8",
+             "description": "文本框长边倾角超过该值视为非字幕"},
         ],
     },
     {
@@ -1731,15 +2036,46 @@ BUILTIN_NODE_TYPES = [
 ]
 
 BUILTIN_NODE_IDS = {node["id"] for node in BUILTIN_NODE_TYPES}
+DELETED_BUILTIN_NODE_IDS_FILE = Path(__file__).parent / "deleted_builtin_node_ids.json"
+
+
+def _deleted_builtin_node_ids() -> set[str]:
+    try:
+        with open(DELETED_BUILTIN_NODE_IDS_FILE, "r", encoding="utf-8") as file:
+            data = json.load(file)
+    except (OSError, json.JSONDecodeError):
+        return set()
+    return {node_id for node_id in data.get("node_ids", []) if node_id in BUILTIN_NODE_IDS}
+
+
+def delete_builtin_node_type(node_id: str) -> bool:
+    if node_id not in BUILTIN_NODE_IDS:
+        return False
+    deleted_ids = _deleted_builtin_node_ids()
+    deleted_ids.add(node_id)
+    temporary_path = DELETED_BUILTIN_NODE_IDS_FILE.with_suffix(".tmp")
+    with open(temporary_path, "w", encoding="utf-8") as file:
+        json.dump({"node_ids": sorted(deleted_ids)}, file, ensure_ascii=False, indent=2)
+        file.flush()
+        os.fsync(file.fileno())
+    os.replace(temporary_path, DELETED_BUILTIN_NODE_IDS_FILE)
+    return True
+
+
+def is_builtin_node_type_deleted(node_id: str) -> bool:
+    return node_id in _deleted_builtin_node_ids()
 
 
 def get_builtin_node_types() -> list[dict]:
     """Return a defensive copy of built-in node definitions."""
-    return deepcopy(BUILTIN_NODE_TYPES)
+    deleted_ids = _deleted_builtin_node_ids()
+    return [deepcopy(node) for node in BUILTIN_NODE_TYPES if node["id"] not in deleted_ids]
 
 
 def get_builtin_node_type(node_id: str) -> dict | None:
     """Get a built-in node definition by id."""
+    if node_id in _deleted_builtin_node_ids():
+        return None
     for node in BUILTIN_NODE_TYPES:
         if node["id"] == node_id:
             return deepcopy(node)

@@ -53,6 +53,10 @@ function formatTime(ts: string) {
 export default function BatchTaskItem({ task, workflowNodes, selected, onSelect, onResume, onRetry, onCancel }: Props) {
   const navigate = useNavigate();
   const badge = STATUS_BADGE[task.status] || STATUS_BADGE.created;
+  const runningMessage =
+    Object.values(task.nodes || {}).find((node) => node.status === "running" && node.message)?.message ||
+    Object.values(task.nodes || {}).find((node) => node.message)?.message ||
+    "";
 
   const handleOpenFolder = async () => {
     try {
@@ -114,11 +118,11 @@ export default function BatchTaskItem({ task, workflowNodes, selected, onSelect,
           </button>
           <span className="w-px h-4 bg-border/40" />
           {/* 断点继续 (resume from checkpoint) */}
-          {(task.status === "created" || task.status === "paused" || task.status === "failed" || task.status === "cancelled") && (
+          {(task.status === "created" || task.status === "paused" || task.status === "failed" || task.status === "cancelled" || task.status === "interrupted") && (
             <button
               onClick={() => onResume(task.task_id)}
               className="p-1.5 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950 transition-colors text-muted-foreground hover:text-emerald-500"
-              title="断点继续"
+              title="仅继续当前任务"
             >
               <Play className="w-3.5 h-3.5" />
             </button>
@@ -128,7 +132,7 @@ export default function BatchTaskItem({ task, workflowNodes, selected, onSelect,
             <button
               onClick={() => onRetry(task.task_id)}
               className="p-1.5 rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-              title="从头执行"
+              title="仅重跑当前任务"
             >
               <RotateCcw className="w-3.5 h-3.5" />
             </button>
@@ -138,7 +142,7 @@ export default function BatchTaskItem({ task, workflowNodes, selected, onSelect,
             <button
               onClick={() => onCancel(task.task_id)}
               className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950 transition-colors text-muted-foreground hover:text-red-500"
-              title="停止"
+              title="仅停止当前任务"
             >
               <Square className="w-3.5 h-3.5" />
             </button>
@@ -148,6 +152,11 @@ export default function BatchTaskItem({ task, workflowNodes, selected, onSelect,
 
       {/* Bottom row: progress bar */}
       <NodeProgressBar nodes={task.nodes} workflowNodes={workflowNodes} />
+
+      {/* Running / waiting message */}
+      {task.status === "running" && runningMessage && (
+        <p className="text-[11px] text-blue-500 truncate">{runningMessage}</p>
+      )}
 
       {/* Error message if failed */}
       {task.error && (

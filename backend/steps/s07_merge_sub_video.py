@@ -57,6 +57,12 @@ class S07MergeSubVideo(BaseStep):
 
         raise FileNotFoundError("未找到字幕文件（subtitles.srt / subtitles_original.srt / subtitles_bilingual.srt）")
 
+    @staticmethod
+    def _resolve_input_path(task_dir: str, path: str) -> str:
+        if not path or os.path.isabs(path):
+            return path
+        return os.path.join(task_dir, path)
+
     # ── Main execution ──
 
     def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
@@ -69,6 +75,8 @@ class S07MergeSubVideo(BaseStep):
         video_quality = str(self._get_config("default_quality", self._get_config("video_quality", "medium")))
         bgm_path = step_inputs.get("audio") or self._get_config("bgm_path", "")
         dub_path = step_inputs.get("dub") or self._get_config("dub_path", "")
+        bgm_path = self._resolve_input_path(task_dir, bgm_path)
+        dub_path = self._resolve_input_path(task_dir, dub_path)
         dub_volume = float(self._get_config("dub_volume", 0.8))
         bgm_volume = float(self._get_config("bgm_volume", 0.3))
         fade_in = float(self._get_config("fade_in", 0.5))
@@ -82,9 +90,10 @@ class S07MergeSubVideo(BaseStep):
             callback(5, f"配置: 质量={video_quality}")
 
         # 2. Find video and subtitles
-        video_path = step_inputs.get("video") or os.path.join(task_dir, "cache", "input_video.mp4")
-        if not os.path.isabs(video_path):
-            video_path = os.path.join(task_dir, video_path)
+        video_path = self._resolve_input_path(
+            task_dir,
+            step_inputs.get("video") or os.path.join(task_dir, "cache", "input_video.mp4"),
+        )
         if not os.path.exists(video_path):
             video_path = os.path.join(task_dir, "output", "video.mp4")
         if not os.path.exists(video_path):
@@ -94,8 +103,7 @@ class S07MergeSubVideo(BaseStep):
         subtitle_input = step_inputs.get("subtitle")
         if subtitle_input:
             # 连线注入的路径可能是相对路径（相对 task_dir），需拼接到任务目录再判断
-            if not os.path.isabs(subtitle_input):
-                subtitle_input = os.path.join(task_dir, subtitle_input)
+            subtitle_input = self._resolve_input_path(task_dir, subtitle_input)
         if subtitle_input and os.path.exists(subtitle_input):
             srt_primary = subtitle_input
             srt_secondary = None
@@ -175,6 +183,12 @@ class S07MergeSubVideo(BaseStep):
             if callback:
                 callback(80, "混合音频轨道...")
 
+            if not has_bgm and not has_dub:
+                if mute_original:
+                    raise RuntimeError("配音和背景音乐均不可用，无法在静音原视频后生成有声视频")
+                if callback:
+                    callback(80, "外部音频不可用，保留原视频音轨...")
+
             audio_processor.mix_audio(
                 video_path=temp_video,
                 bgm_path=processed_bgm,
@@ -225,8 +239,17 @@ class S07MergeSubVideo(BaseStep):
     def check_artifact(self, task_dir: str) -> bool:
         output_dir = os.path.join(task_dir, "output")
         node_suffix = f"_{self._node_id}" if self._node_id else ""
-        return os.path.exists(os.path.join(output_dir, f"video_with_subs{node_suffix}.mp4")) or \
-               os.path.exists(os.path.join(output_dir, f"video_with_dub{node_suffix}.mp4"))
+        output_paths = [
+            os.path.join(output_dir, f"video_with_dub{node_suffix}.mp4"),
+            os.path.join(output_dir, f"video_with_subs{node_suffix}.mp4"),
+        ]
+        output_path = next((path for path in output_paths if os.path.exists(path)), None)
+        if not output_path:
+            return False
+        mute_original = self._get_config("mute_original", False)
+        if isinstance(mute_original, str):
+            mute_original = mute_original.lower() in ("true", "1", "yes")
+        return not mute_original or audio_processor._video_has_audio(output_path)
 
     def validate_inputs(self, task_dir: str) -> bool:
         cache = os.path.join(task_dir, "cache")

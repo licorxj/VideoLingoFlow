@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "interfaces": [
+    {
+      "id": "rapidocr",
+      "name": "RapidOCR",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "基于 rapidocr 的本地离线 OCR，支持 PP-OCRv4/v5/v6，默认 ONNX Runtime CPU 推理",
+      "config": {
+        "sdk_module": "backend.ocr.ocr_rapidocr",
+        "sdk_class": "RapidOCREngine",
+        "engine_type": "torch",
+        "ocr_version": "PP-OCRv5",
+        "model_type": "server",
+        "custom_model_name": "",
+        "lang_type": "ch",
+        "use_cuda": true,
+        "device_id": 0,
+        "use_det": true,
+        "use_cls": true,
+        "use_rec": true,
+        "text_score": 0.5,
+        "box_thresh": 0.5,
+        "unclip_ratio": 1.6,
+        "limit_side_len": 736,
+        "threads": -1,
+        "return_word_box": false,
+        "max_workers": 6,
+        "timeout": 120
+      }
+    }
+  ]
+}

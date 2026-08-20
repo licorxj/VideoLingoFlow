@@ -14,6 +14,7 @@ import EditingWorkbench from "./pages/EditingWorkbench";
 import Collaboration from "./pages/Collaboration";
 import Community from "./pages/Community";
 import { VoiceForgeAssets, VoiceForgeHome, VoiceForgeSettings, VoiceForgeVoices, VoiceForgeWorkspace } from "./pages/VoiceForge";
+import { restoreLocalControlSession } from "./api/controlPlane";
 
 function applyUISettings() {
   try {
@@ -62,7 +63,10 @@ function applyUISettings() {
 }
 
 export default function App() {
-  useEffect(() => { applyUISettings(); }, []);
+  useEffect(() => {
+    applyUISettings();
+    restoreLocalControlSession().catch(() => undefined);
+  }, []);
 
   return (
     <AlertProvider>

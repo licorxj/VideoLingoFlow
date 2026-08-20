@@ -28,7 +28,7 @@ export default function NodeProgressBar({ nodes, workflowNodes }: Props) {
   return (
     <div className="flex items-center gap-0.5 w-full" title={workflowNodes.map((n) => {
       const ns = nodes[n.id];
-      return `${n.label || n.nodeType}: ${ns?.status || "pending"}`;
+      return `${n.label || n.nodeType}: ${ns?.status || "pending"}${ns?.message ? ` · ${ns.message}` : ""}`;
     }).join("\n")}>
       {workflowNodes.map((wn) => {
         const ns = nodes[wn.id];

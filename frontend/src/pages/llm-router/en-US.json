@@ -76,7 +76,13 @@
         "lanAccess": "Enable LAN Access",
         "lanAccessDesc": "Allow other devices on the same network to access LocalRouter",
         "lanAddress": "LAN Address",
-        "lanAddressDesc": "Use this address from other devices on your network"
+        "lanAddressDesc": "Use this address from other devices on your network",
+        "projectUpdate": "Project Update",
+        "projectUpdateDesc": "Update router code and dependencies from the official GitHub repository",
+        "openRepository": "Open Repository",
+        "updateCode": "Update Code",
+        "updateConfirm": "This pulls the latest code from the official repository and updates dependencies. Restart the router service after completion. Continue?",
+        "updateFailed": "Failed to start the update task"
     },
     "common": {
         "save": "Save",

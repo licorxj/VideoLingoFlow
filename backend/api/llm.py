@@ -19,6 +19,7 @@ async def get_llm_config():
         "api_key": config.get("llm.api_key") or "",
         "max_concurrent": config.get("llm.max_concurrent") or 10,
         "timeout": config.get("llm.timeout") or 120,
+        "enable_step_models": config.get("llm.enable_step_models") is not False,
         "step_models": config.get("llm.step_models") or {},
     }
 

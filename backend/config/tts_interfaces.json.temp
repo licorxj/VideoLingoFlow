@@ -50,6 +50,47 @@
       }
     },
     {
+      "id": "mossTTS",
+      "name": "mossTTS",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "本地 MOSS-TTS-Nano ONNX CPU 语音合成，支持内置音色和参考音频克隆",
+      "config": {
+        "sdk_package": "",
+        "sdk_function": "synthesize",
+        "sdk_module": "backend.tts.sdk.moss_tts_wrapper",
+        "sdk_voice_list_function": "list_voices",
+        "text_param": "text",
+        "ref_audio_param": "ref_audio",
+        "speed_param": null,
+        "voice": "Junhao",
+        "model": "MOSS-TTS-Nano-100M-ONNX",
+        "modes": {
+          "clone": {"enabled": true, "endpoint": ""},
+          "voice_design": {"enabled": false, "endpoint": ""},
+          "controllable_clone": {"enabled": true, "endpoint": ""},
+          "preset_voice": {"enabled": true, "endpoint": ""}
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": ["MOSS-TTS-Nano-100M-ONNX"],
+        "sdk_extra_args": {
+          "cpu_threads": 4,
+          "max_new_frames": 375,
+          "voice_clone_max_text_tokens": 75,
+          "enable_wetext": false,
+          "enable_normalize_tts_text": true
+        },
+        "custom_params": [],
+        "max_concurrent": 1,
+        "timeout": 600,
+        "voice_options": ["Junhao"]
+      }
+    },
+    {
       "id": "openai_tts",
       "name": "OpenAI TTS",
       "type": "online",
@@ -656,6 +697,191 @@
         ],
         "max_concurrent": 3,
         "timeout": 120,
+        "voice_options": []
+      }
+    },
+    {
+      "id": "elevenlabs_tts",
+      "name": "ElevenLabs TTS",
+      "type": "online",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：****】ElevenLabs 云端 TTS，业界领先的语音合成服务，支持 29 种语言、音色克隆和声音设计，音质极佳",
+      "config": {
+        "api_url": "https://api.elevenlabs.io/v1",
+        "api_key": "",
+        "model": "eleven_multilingual_v2",
+        "voice": "21m00Tcm4TlvDq8ikWAM",
+        "response_format": "mp3",
+        "speed_param": null,
+        "modes": {
+          "clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": true,
+            "endpoint": "/v1/text-to-speech/{voice_id}"
+          }
+        },
+        "model_list_url": "https://api.elevenlabs.io/v1/models",
+        "voice_list_url": "https://api.elevenlabs.io/v1/voices",
+        "model_list_key": "model_id",
+        "voice_list_key": "voice_id",
+        "model_options": [
+          "eleven_multilingual_v2",
+          "eleven_turbo_v2_5",
+          "eleven_turbo_v2",
+          "eleven_monolingual_v1",
+          "eleven_flash_v2_5"
+        ],
+        "custom_params": [
+          {
+            "key": "stability",
+            "default": "0.5",
+            "description": "稳定性（0.0-1.0），值越高越稳定但越少变化，默认 0.5"
+          },
+          {
+            "key": "similarity_boost",
+            "default": "0.75",
+            "description": "相似度增强（0.0-1.0），值越高越接近原音色，默认 0.75"
+          },
+          {
+            "key": "style",
+            "default": "0",
+            "description": "风格强度（0.0-1.0），仅支持部分模型，默认 0"
+          },
+          {
+            "key": "use_speaker_boost",
+            "default": "true",
+            "description": "启用说话人增强，提升清晰度"
+          }
+        ],
+        "max_concurrent": 3,
+        "timeout": 120,
+        "voice_options": []
+      }
+    },
+    {
+      "id": "confucius4_tts",
+      "name": "Confucius4-TTS",
+      "type": "sdk",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：****】本地-网易有道开源 Confucius4-TTS（本地API端口8857），14语言零样本声音克隆，22050Hz，需先启动 confucius4_api_server",
+      "config": {
+        "sdk_package": "",
+        "sdk_module": "backend.tts.sdk.confucius4_wrapper",
+        "sdk_function": "synthesize",
+        "sdk_voice_list_function": "list_voices",
+        "text_param": "text",
+        "ref_audio_param": "ref_audio_path",
+        "speed_param": null,
+        "voice": "",
+        "model": "Confucius4-TTS",
+        "modes": {
+          "clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": false,
+            "endpoint": ""
+          }
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [
+          "Confucius4-TTS"
+        ],
+        "sdk_extra_args": {
+          "api_url": "http://localhost:8857",
+          "lang": "zh",
+          "temperature": 0.8,
+          "top_p": 0.8,
+          "top_k": 30,
+          "num_beams": 3,
+          "repetition_penalty": 10.0,
+          "n_timesteps": 25,
+          "inference_cfg_rate": 0.7
+        },
+        "custom_params": [],
+        "max_concurrent": 1,
+        "timeout": 600,
+        "voice_options": []
+      }
+    },
+    {
+      "id": "index25_tts",
+      "name": "IndexTTS-2.5",
+      "type": "sdk",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：****】本地-IndexTTS-2.5（本地API端口8858），零样本声音克隆+指令式情感控制（可控克隆），中英日西多语言，原生语速调节，需先启动 index_api_server",
+      "config": {
+        "sdk_package": "",
+        "sdk_module": "backend.tts.sdk.index25_wrapper",
+        "sdk_function": "synthesize",
+        "sdk_voice_list_function": "list_voices",
+        "text_param": "input_text",
+        "ref_audio_param": "speaker_audio_path",
+        "speed_param": "duration_factor",
+        "voice": "",
+        "model": "IndexTTS-2.5",
+        "modes": {
+          "clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": false,
+            "endpoint": ""
+          }
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [
+          "IndexTTS-2.5"
+        ],
+        "sdk_extra_args": {
+          "api_url": "http://localhost:8858",
+          "lang": "zh",
+          "emo_control_method": "reference",
+          "emo_vector": "",
+          "emotion_alpha": 1.0,
+          "text_normalization": true
+        },
+        "custom_params": [],
+        "max_concurrent": 1,
+        "timeout": 600,
         "voice_options": []
       }
     }

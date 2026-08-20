@@ -16,6 +16,7 @@ import re
 from typing import Callable, Optional, List, Dict
 from backend.steps.base_step import BaseStep, find_artifact
 from backend.config.config_manager import config
+from backend.utils import sentence_split_utils as split_utils
 
 
 class S03SentenceSplit(BaseStep):
@@ -74,6 +75,14 @@ class S03SentenceSplit(BaseStep):
         return str(val).strip().lower() in ("1", "true", "yes", "on")
 
     @staticmethod
+    def _coerce_bool(val, default: bool = False) -> bool:
+        if val is None or val == "":
+            return default
+        if isinstance(val, bool):
+            return val
+        return str(val).strip().lower() in ("1", "true", "yes", "on")
+
+    @staticmethod
     def _load_language_char_weights() -> Dict[str, float]:
         """Load language character weights from config file.
         Returns a dict mapping language code -> weight (relative to Chinese=1.0).
@@ -125,21 +134,10 @@ class S03SentenceSplit(BaseStep):
 
     @staticmethod
     def _is_compact_spacing_language(lang: str = "auto") -> bool:
-        """Languages like zh/ja/ko should not keep internal whitespace."""
-        raw = str(lang or "").strip()
-        lowered = raw.lower()
-        return (
-            lowered.startswith(("zh", "ja", "ko"))
-            or raw in {"中文", "日语", "日文", "韩语", "韩文"}
-            or lowered in {"chinese", "japanese", "korean"}
-        )
+        return split_utils.is_compact_spacing_language(lang)
 
     def _clean_sentence_text(self, text: str, lang: Optional[str] = None) -> str:
-        """Normalize sentence text so outputs are clean and stable."""
-        text = str(text or "").replace("\u3000", " ")
-        if self._is_compact_spacing_language(lang or getattr(self, "_resolved_language", "auto")):
-            return re.sub(r"\s+", "", text).strip()
-        return re.sub(r"\s+", " ", text).strip()
+        return split_utils.clean_sentence_text(text, lang or getattr(self, "_resolved_language", "auto"))
 
     def _sentence_text_from_words(
         self,
@@ -500,19 +498,11 @@ class S03SentenceSplit(BaseStep):
                                 max_length: int,
                                 lang: str = "auto",
                                 gap_threshold: Optional[float] = None) -> List[Dict]:
-        """Merge sentences that are too short into adjacent sentences.
-
-        A sentence is considered "too short" if its cleaned text length is
-        <= max_length * 0.3.  Merging prefers the shorter neighbor to keep
-        resulting lengths balanced.  Skips merging across speaker boundaries
-        when speaker info is present.
-        """
         if len(sentences) <= 1:
             return sentences
 
         compact = self._is_compact_spacing_language(lang)
         min_len = max(3, int(max_length * 0.3))
-        gap_limit = float(gap_threshold or 0)
 
         def _text_len(s: Dict) -> int:
             return len(self._clean_sentence_text(s.get("text", ""), lang=lang))
@@ -528,13 +518,6 @@ class S03SentenceSplit(BaseStep):
                 return False
             if _text_len(left) + _text_len(right) > max_length:
                 return False
-            if self._is_sentence_terminal(left.get("text", ""), lang=lang):
-                print(f"[Split] Merge blocked by terminal punctuation: {left.get('text', '')!r}")
-                return False
-            gap = self._sentence_gap(left, right)
-            if gap_limit > 0 and gap > gap_limit:
-                print(f"[Split] Merge blocked by large gap: {gap:.2f}s")
-                return False
             return True
 
         result = list(sentences)
@@ -545,41 +528,70 @@ class S03SentenceSplit(BaseStep):
                 i += 1
                 continue
 
-            # Try merging with previous neighbor first, then next
-            prev_ok = i > 0
-            next_ok = i < len(result) - 1
-
-            if prev_ok:
-                prev = result[i - 1]
-                prev_ok = _can_merge(prev, cur)
-
-            if next_ok and not prev_ok:
+            if i < len(result) - 1:
                 nxt = result[i + 1]
-                next_ok = _can_merge(cur, nxt)
+                if _can_merge(cur, nxt):
+                    sep = "" if compact else " "
+                    nxt["text"] = cur["text"].strip() + sep + nxt["text"].strip()
+                    nxt["start"] = cur.get("start", nxt.get("start", 0))
+                    nxt["words"] = (cur.get("words", []) or []) + (nxt.get("words", []) or [])
+                    result.pop(i)
+                    continue
 
-            if prev_ok:
+            if i > 0:
                 prev = result[i - 1]
-                sep = "" if compact else " "
-                prev["text"] = prev["text"].rstrip() + sep + cur["text"].strip()
-                prev["end"] = cur.get("end", prev["end"])
-                prev["words"] = (prev.get("words", []) or []) + (cur.get("words", []) or [])
-                result.pop(i)
-                # Don't advance i — recheck the merged result
-                continue
+                if _can_merge(prev, cur):
+                    sep = "" if compact else " "
+                    prev["text"] = prev["text"].rstrip() + sep + cur["text"].strip()
+                    prev["end"] = cur.get("end", prev.get("end", 0))
+                    prev["words"] = (prev.get("words", []) or []) + (cur.get("words", []) or [])
+                    result.pop(i)
+                    continue
 
-            if next_ok:
-                nxt = result[i + 1]
-                sep = "" if compact else " "
-                cur["text"] = cur["text"].rstrip() + sep + nxt["text"].strip()
-                cur["end"] = nxt.get("end", cur["end"])
-                cur["words"] = (cur.get("words", []) or []) + (nxt.get("words", []) or [])
-                result.pop(i + 1)
-                continue
-
-            # Neither neighbor can accept — keep as is
             i += 1
 
-        # Reassign ids
+        for idx, s in enumerate(result, start=1):
+            s["id"] = idx
+        return result
+
+    def _merge_close_gap_sentences(self, sentences: List[Dict],
+                                   max_length: int,
+                                   max_gap: float,
+                                   lang: str = "auto") -> List[Dict]:
+        if len(sentences) <= 1 or max_gap <= 0:
+            return sentences
+
+        compact = self._is_compact_spacing_language(lang)
+
+        def _text_len(s: Dict) -> int:
+            return len(self._clean_sentence_text(s.get("text", ""), lang=lang))
+
+        def _speaker(s: Dict) -> str:
+            ws = s.get("words", []) or []
+            if ws:
+                return str(ws[0].get("speaker", "") or "")
+            return ""
+
+        result = list(sentences)
+        i = 0
+        while i < len(result) - 1:
+            left = result[i]
+            right = result[i + 1]
+            if _speaker(left) and _speaker(right) and _speaker(left) != _speaker(right):
+                i += 1
+                continue
+            if _text_len(left) + _text_len(right) > max_length:
+                i += 1
+                continue
+            if self._sentence_gap(left, right) >= max_gap:
+                i += 1
+                continue
+            sep = "" if compact else " "
+            left["text"] = left["text"].rstrip() + sep + right["text"].strip()
+            left["end"] = right.get("end", left.get("end", 0))
+            left["words"] = (left.get("words", []) or []) + (right.get("words", []) or [])
+            result.pop(i + 1)
+
         for idx, s in enumerate(result, start=1):
             s["id"] = idx
         return result
@@ -738,38 +750,7 @@ class S03SentenceSplit(BaseStep):
 
     @classmethod
     def _load_language_puncts(cls, lang: str = "auto") -> Dict[str, set]:
-        """Load sentence-ending and clause-break punctuation for a given language.
-        Merges language-specific puncts with the _common set for broader coverage."""
-        cache_key = lang
-        if cache_key in cls._PUNCTS_CACHE:
-            return cls._PUNCTS_CACHE[cache_key]
-
-        puncts_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "config", "language_puncts.json"
-        )
-        try:
-            with open(puncts_path, "r", encoding="utf-8") as f:
-                all_puncts = json.load(f)
-        except Exception:
-            all_puncts = {}
-
-        # Load _common punctuation (full-width + half-width)
-        common = all_puncts.get("_common", {})
-        common_ends = set(common.get("sentence_ends", []))
-        common_breaks = set(common.get("clause_breaks", []))
-
-        # Resolve: try exact lang, then base lang (e.g. "zh" from "zh-yue-hk"), then default
-        lang_base = lang.split("-")[0] if "-" in lang else lang
-        entry = all_puncts.get(lang) or all_puncts.get(lang_base) or all_puncts.get("_default", {})
-
-        # Merge: language-specific + common (deduplicated via set union)
-        result = {
-            "sentence_ends": set(entry.get("sentence_ends", [".", "!", "?"])) | common_ends,
-            "clause_breaks": set(entry.get("clause_breaks", [","])) | common_breaks,
-        }
-        cls._PUNCTS_CACHE[cache_key] = result
-        return result
+        return split_utils.load_language_puncts(lang)
 
     def _align_sentence_to_words(self, text: str, words: List[Dict],
                                   start_hint: float = 0, end_hint: float = 0) -> Dict:
@@ -1102,7 +1083,10 @@ class S03SentenceSplit(BaseStep):
     # ── split by punctuation, align with word timestamps ─────────────
 
     def _resolve_language(self, task_dir: str) -> str:
-        """Resolve language from input node config, falling back to ASR output, then auto."""
+        """解析节点处理语言，from_input 时回退到输入节点和 ASR 结果。"""
+        node_language = str((getattr(self, "_node_config", {}) or {}).get("processing_language") or "from_input").strip()
+        if node_language not in ("", "from_input", "auto"):
+            return node_language
         step_inputs = getattr(self, "_step_inputs", {}) or {}
         # 1. Try input node config from workflow.json
         wf_path = os.path.join(task_dir, "workflow.json")
@@ -1137,149 +1121,26 @@ class S03SentenceSplit(BaseStep):
 
     @staticmethod
     def _is_part_of_number(text: str, pos: int) -> bool:
-        """Check if the punctuation char at pos is part of a number or math expression.
-
-        Returns True for:
-        - Decimal points: 3.14, 0.5
-        - Thousands separators: 1,000, 10,000
-        - Full-width variants: ３。１４ (unlikely but safe)
-        Also protects trailing math context: "5." at end of "x = 5." is ambiguous,
-        but "5." followed by a digit is a decimal.
-        """
-        if pos < 0 or pos >= len(text):
-            return False
-        ch = text[pos]
-        # Only check punctuation that could be part of a number
-        if ch not in ".,，":
-            return False
-
-        digits = "0123456789０１２３４５６７８９"
-        prev_ch = text[pos - 1] if pos > 0 else ""
-        next_ch = text[pos + 1] if pos + 1 < len(text) else ""
-
-        # Decimal point or thousands separator: digit PUNCT digit  (e.g. 3.14, 1,000)
-        if prev_ch in digits and next_ch in digits:
-            return True
-
-        # Trailing decimal like "3." at end of token followed by digit in next token
-        # e.g. "3. 14" — treat as decimal if next non-space char is a digit
-        if prev_ch in digits:
-            # Look ahead past whitespace
-            j = pos + 1
-            while j < len(text) and text[j] in " \t":
-                j += 1
-            if j < len(text) and text[j] in digits:
-                return True
-
-        return False
+        return split_utils.is_part_of_number(text, pos)
 
     @staticmethod
     def _split_text_by_ends(text: str, sentence_ends: set) -> List[str]:
-        """Phase 1: hard cut on sentence-ending punctuation (。！？； etc).
-
-        Each chunk keeps its trailing delimiter. A trailing segment without
-        any terminator is preserved as the final chunk.
-        Skips punctuation that is part of a number (e.g. 3.14, 1,000).
-        """
-        if not text:
-            return []
-        chunks: List[str] = []
-        current = ""
-        for i, ch in enumerate(text):
-            current += ch
-            if ch in sentence_ends:
-                # Don't split if this punctuation is part of a number
-                if S03SentenceSplit._is_part_of_number(text, i):
-                    continue
-                chunks.append(current)
-                current = ""
-        if current.strip():
-            chunks.append(current)
-        return chunks
+        return split_utils.split_text_by_ends(text, sentence_ends)
 
     @staticmethod
     def _split_text_by_clauses(text: str, clause_breaks: set,
                                 max_length: int) -> List[str]:
-        """Phase 2: cut on clause-level punctuation, but only when the
-        chunk would otherwise exceed max_length.
-
-        Tokens are accumulated greedily: a token is added to the current
-        buffer; once adding it would exceed max_length, the buffer is
-        flushed and a new one starts. Stops at the first sentence-end
-        already inside the buffer to avoid cross-sentence leakage.
-        Skips punctuation that is part of a number (e.g. 3.14, 1,000).
-        """
-        if not text:
-            return []
-
-        # Tokenize: each token ends at a clause-break char and keeps that char
-        tokens: List[str] = []
-        current = ""
-        for i, ch in enumerate(text):
-            current += ch
-            if ch in clause_breaks:
-                # Don't split if this punctuation is part of a number
-                if S03SentenceSplit._is_part_of_number(text, i):
-                    continue
-                tokens.append(current)
-                current = ""
-        if current.strip():
-            tokens.append(current)
-
-        chunks: List[str] = []
-        buf = ""
-        for tok in tokens:
-            if not buf:
-                buf = tok
-                continue
-            if len(buf) + len(tok) <= max_length:
-                buf += tok
-            else:
-                # If current token is very short, prefer merging it with the
-                # previous buf (even if slightly over max_length) instead of
-                # producing a tiny standalone chunk.
-                if len(tok) <= max_length * 0.2:
-                    buf += tok
-                    chunks.append(buf.strip())
-                    buf = ""
-                else:
-                    chunks.append(buf.strip())
-                    buf = tok
-        if buf.strip():
-            chunks.append(buf.strip())
-        return chunks
+        return split_utils.split_text_by_clauses(text, clause_breaks, max_length)
 
     def _split_by_punctuation(self, sentences: List[Dict],
                             all_words: List[Dict],
                             max_length: int,
                             lang: str = "auto",
-                            pause_threshold: float = 2.0,
-                            force_all: bool = False) -> List[Dict]:
-        """Two-phase split by language-specific punctuation.
-
-        Phase 1: hard cut on `sentence_ends` (。！？；) so every real
-        sentence boundary is preserved.
-
-        Phase 2: for chunks that still exceed `max_length`, cut on
-        `clause_breaks` (,，、) to break long sentences into smaller
-        pieces, while still respecting `max_length`.
-
-        Args:
-            force_all: If True, run Phase 1 on ALL sentences regardless
-                       of length (preserves all punctuation boundaries).
-                       If False, only process sentences longer than max_length.
-
-        Chunks still over `max_length` after phase 2 are left intact for
-        downstream LLM fallback to handle.
-
-        Punctuation loaded from backend/config/language_puncts.json
-        based on the detected language from upstream ASR.
-        """
+                            split_sentence_ends: bool = True,
+                            split_clause_breaks: bool = True) -> List[Dict]:
         puncts = self._load_language_puncts(lang)
-        sentence_ends = puncts["sentence_ends"]
-        clause_breaks = puncts["clause_breaks"]
-        if pause_threshold > 0:
-            sentences = self._split_by_pause(sentences, pause_threshold, lang=lang)
+        sentence_ends = puncts["sentence_ends"] if split_sentence_ends else set()
+        clause_breaks = puncts["clause_breaks"] if split_clause_breaks else set()
 
         result: List[Dict] = []
 
@@ -1290,8 +1151,7 @@ class S03SentenceSplit(BaseStep):
             sent_start = sent["start"]
             sent_end = sent["end"]
 
-            # When force_all=False, short sentences pass through untouched
-            if not force_all and len(text) <= max_length:
+            if not split_sentence_ends and not split_clause_breaks:
                 result.append({
                     "text": text,
                     "start": sent_start,
@@ -1300,13 +1160,13 @@ class S03SentenceSplit(BaseStep):
                 })
                 continue
 
-            # Phase 1: cut on sentence-end punctuation
-            phase1_chunks = self._split_text_by_ends(text, sentence_ends)
-            if not phase1_chunks:
+            if sentence_ends:
+                phase1_chunks = self._split_text_by_ends(text, sentence_ends)
+                if not phase1_chunks:
+                    phase1_chunks = [text]
+            else:
                 phase1_chunks = [text]
 
-            # Phase 2: for each phase-1 chunk, if still over max_length,
-            # apply clause-level splitting
             final_text_chunks: List[str] = []
             for chunk in phase1_chunks:
                 if len(chunk) > max_length and clause_breaks:
@@ -1316,8 +1176,6 @@ class S03SentenceSplit(BaseStep):
                 else:
                     final_text_chunks.append(chunk)
 
-            # If only one chunk and it equals original text (no split happened),
-            # just pass through
             if len(final_text_chunks) == 1 and final_text_chunks[0].strip() == text:
                 result.append({
                     "text": text,
@@ -1327,7 +1185,6 @@ class S03SentenceSplit(BaseStep):
                 })
                 continue
 
-            # Align each final chunk to word timestamps
             words_remaining = words_pool
             hint = sent_start
             for chunk in final_text_chunks:
@@ -1346,8 +1203,6 @@ class S03SentenceSplit(BaseStep):
                         words_remaining = words_remaining[consumed_count:]
                 result.append(aligned)
 
-        if pause_threshold > 0:
-            result = self._split_by_pause(result, pause_threshold, lang=lang)
         return result
 
     # ── LLM split helpers ────────────────────────────────────────────
@@ -2114,23 +1969,39 @@ Return ONLY the JSON array, no explanation.""".format(
 
         # Load params: node config first, then config.yaml
         max_length = int(self._get_param("max_sentence_length", 30))
-        use_llm = self._get_param("use_llm_split", True)
-        split_by_punct = bool(self._get_param("split_by_punct", True))
+        use_llm = self._get_bool_param("use_llm_split", True)
+        split_sentence_ends = self._get_param("split_sentence_ends", None)
+        split_clause_breaks = self._get_param("split_clause_breaks", None)
+        split_by_punct = self._get_param("split_by_punct", None)
+        if split_sentence_ends is None and split_clause_breaks is None:
+            if split_by_punct is None:
+                split_sentence_ends = True
+                split_clause_breaks = True
+            else:
+                split_sentence_ends = self._coerce_bool(split_by_punct, True)
+                split_clause_breaks = self._coerce_bool(split_by_punct, True)
+        else:
+            if split_sentence_ends is None:
+                split_sentence_ends = self._coerce_bool(split_by_punct, True) if split_by_punct is not None else True
+            if split_clause_breaks is None:
+                split_clause_breaks = self._coerce_bool(split_by_punct, True) if split_by_punct is not None else True
+        split_sentence_ends = self._coerce_bool(split_sentence_ends, True)
+        split_clause_breaks = self._coerce_bool(split_clause_breaks, True)
         merge_min_duration = float(self._get_param("merge_min_duration", 0.5))
         merge_max_gap = float(self._get_param("merge_max_gap", 0.5))
         pause_threshold = float(self._get_param("pause_split_threshold", 1.0))
-        split_on_speaker = bool(self._get_param("split_on_speaker", False))
+        split_on_speaker = self._get_bool_param("split_on_speaker", False)
         # 是否执行各操作的勾选开关（默认开启，兼容旧工作流缺省配置）
-        merge_short_enabled = self._get_bool_param("merge_short_enabled", True)
-        merge_gap_enabled = self._get_bool_param("merge_gap_enabled", True)
-        pause_split_enabled = self._get_bool_param("pause_split_enabled", True)
+        merge_short_enabled = self._get_bool_param("merge_short_enabled", False)
+        merge_gap_enabled = self._get_bool_param("merge_gap_enabled", False)
+        pause_split_enabled = self._get_bool_param("pause_split_enabled", False)
         if not pause_split_enabled:
             pause_threshold = 0  # 关闭停顿断句（含最终合并的间隔限制）
 
         # 诊断：打印本节点实际生效的参数（排查“改参数无效”时对照 backend 日志）
         print(
             f"[Split] effective params -> node_config={json.dumps(getattr(self, '_node_config', {}) or {}, ensure_ascii=False)} "
-            f"max_length={max_length} use_llm={use_llm} split_by_punct={split_by_punct} "
+            f"max_length={max_length} use_llm={use_llm} split_sentence_ends={split_sentence_ends} split_clause_breaks={split_clause_breaks} "
             f"merge_min_duration={merge_min_duration} merge_max_gap={merge_max_gap} "
             f"pause_threshold={pause_threshold} split_on_speaker={split_on_speaker} "
             f"merge_short_enabled={merge_short_enabled} merge_gap_enabled={merge_gap_enabled} pause_split_enabled={pause_split_enabled}"
@@ -2168,18 +2039,7 @@ Return ONLY the JSON array, no explanation.""".format(
             speaker_active = True
             print(f"[Split] Speaker-based cut active (multi-speaker ASR detected)")
 
-        # Step 1: Merge short segments（按勾选控制是否执行时长/间隔合并）
-        if merge_short_enabled or merge_gap_enabled:
-            if callback:
-                callback(20, "Merging short segments...")
-            sentences = self._merge_short_segments(
-                segments, merge_min_duration, merge_max_gap,
-                enable_duration=merge_short_enabled, enable_gap=merge_gap_enabled,
-            )
-        else:
-            sentences = segments
-
-        # Step 2: Split by punctuation, align word timestamps
+        # Step 1: Split by punctuation, align word timestamps
         # Read language from input node config (same as ASR step logic)
         detected_lang = self._resolve_language(task_dir)
         self._resolved_language = detected_lang
@@ -2191,13 +2051,36 @@ Return ONLY the JSON array, no explanation.""".format(
         if callback:
             callback(35, "Splitting by pauses and punctuation...")
         sentences = self._split_by_punctuation(
-            sentences, all_words, max_length,
-            lang=detected_lang, pause_threshold=pause_threshold,
-            force_all=split_by_punct,
+            segments, all_words, max_length,
+            lang=detected_lang,
+            split_sentence_ends=split_sentence_ends,
+            split_clause_breaks=split_clause_breaks,
         )
+
+        if pause_split_enabled and pause_threshold > 0:
+            sentences = self._split_by_pause(sentences, pause_threshold, lang=detected_lang)
+
+        if merge_short_enabled or merge_gap_enabled:
+            if callback:
+                callback(40, "Merging short sentences...")
+            if merge_short_enabled:
+                sentences = self._merge_short_sentences(
+                    sentences,
+                    max_length,
+                    lang=detected_lang,
+                    gap_threshold=pause_threshold,
+                )
+            if merge_gap_enabled:
+                sentences = self._merge_close_gap_sentences(
+                    sentences,
+                    max_length,
+                    max_gap=merge_max_gap,
+                    lang=detected_lang,
+                )
+
         sentences = self._finalize_sentences(sentences, lang=detected_lang)
 
-        # Step 3: LLM split for sentences still exceeding max_length (up to 3 rounds)
+        # Step 2: LLM split for sentences still exceeding max_length (up to 3 rounds)
         if use_llm:
             max_llm_rounds = 3
             for llm_round in range(max_llm_rounds):
@@ -2226,7 +2109,7 @@ Return ONLY the JSON array, no explanation.""".format(
                 sentences = self._validate_and_fix_alignment(sentences)
                 sentences = self._finalize_sentences(sentences, lang=detected_lang)
 
-        # Step 4: Final character-based fallback for any remaining long sentences
+        # Step 3: Final character-based fallback for any remaining long sentences
         still_long = [s for s in sentences if len(s["text"]) > max_length]
         if still_long:
             print(f"[Split] {len(still_long)} sentences still exceed {max_length} chars, splitting by word boundaries")
@@ -2235,19 +2118,6 @@ Return ONLY the JSON array, no explanation.""".format(
             sentences = self._force_split_by_chars(sentences, max_length, detected_lang)
             sentences = self._split_at_internal_terminals(sentences, lang=detected_lang)
             sentences = self._finalize_sentences(sentences, lang=detected_lang)
-
-        # Final pass: merge any sentences that ended up too short（由"合并过短句子"勾选控制）
-        if merge_short_enabled:
-            before_count = len(sentences)
-            sentences = self._merge_short_sentences(
-                sentences,
-                max_length,
-                lang=detected_lang,
-                gap_threshold=pause_threshold,
-            )
-            if len(sentences) < before_count:
-                print(f"[Split] Merged {before_count - len(sentences)} short sentences into neighbors")
-                sentences = self._finalize_sentences(sentences, lang=detected_lang)
 
         if callback:
             callback(95, f"Saving {len(sentences)} sentences...")

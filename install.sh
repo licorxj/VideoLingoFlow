@@ -9,8 +9,8 @@ set -u
 cd "$(dirname "$0")"
 
 PY=""
-if [ -x "backend/venv312/bin/python" ]; then
-    PY="backend/venv312/bin/python"
+if [ -x "venv312/bin/python" ]; then
+    PY="venv312/bin/python"
 elif command -v python3 >/dev/null 2>&1; then
     PY="python3"
 elif command -v python >/dev/null 2>&1; then

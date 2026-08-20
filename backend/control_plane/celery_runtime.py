@@ -6,8 +6,10 @@ from backend.control_plane.runtime import TaskCancelledError, TaskTimeoutError, 
 
 try:
     from celery import Celery
+    from celery.signals import worker_ready
 except ImportError:
     Celery = None
+    worker_ready = None
 
 
 def celery_config() -> dict:
@@ -41,6 +43,13 @@ def create_celery_app(name: str = "videolingo"):
 
 
 celery_app = create_celery_app()
+
+
+if celery_app is not None and worker_ready is not None:
+    @worker_ready.connect
+    def _on_worker_ready(**kwargs):
+        from backend.control_plane.workflow_runtime import interrupt_unfinished_tasks_on_startup
+        interrupt_unfinished_tasks_on_startup()
 
 
 def unified_task(app, *, resource: str = "io", timeout: int | None = None, max_retries: int = 3):

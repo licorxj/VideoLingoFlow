@@ -49,6 +49,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
   const [services, setServices] = useState<Record<string, { status: string; port?: number; managed?: boolean }>>({});
   const [restartingSvc, setRestartingSvc] = useState<string | null>(null);
   const [stoppingSvc, setStoppingSvc] = useState<string | null>(null);
+  const [shuttingDownAll, setShuttingDownAll] = useState(false);
   const [piJump, setPiJump] = useState(false);
   const [hiddenRoutes, setHiddenRoutes] = useState<Set<string>>(() => {
     const set = new Set<string>();
@@ -145,6 +146,22 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
     }, 1000);
   }, []);
 
+  const shutdownAll = useCallback(async () => {
+    if (shuttingDownAll) return;
+    const confirmed = window.confirm("确认关闭所有端口对应进程，并退出程序吗？");
+    if (!confirmed) return;
+    setShuttingDownAll(true);
+    try {
+      await fetch("http://localhost:18001/manager/shutdown-all", { method: "POST" });
+    } catch {
+      setShuttingDownAll(false);
+      return;
+    }
+    window.setTimeout(() => {
+      setShuttingDownAll(false);
+    }, 3000);
+  }, [shuttingDownAll]);
+
   useEffect(() => {
     fetchStatus();
     const interval = setInterval(fetchStatus, 8000);
@@ -158,7 +175,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
         collapsed ? "w-[60px]" : "w-[11.5rem]"
       )}
     >
-      <div className="mx-3 mb-1 border-t border-dashed border-cyan-400/50 shadow-[0_1px_2px_rgba(34,211,238,0.15)]" />
+      <div className="sidebar-divider mx-3 mb-1 h-[1.5px]" />
       <nav className="flex-1 space-y-0 px-2">
         {navItems.map((group, groupIdx) => {
           const visible = group.filter((item) => !hiddenRoutes.has(item.to.replace("/", "")));
@@ -167,7 +184,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             <div key={groupIdx}>
               {groupIdx > 0 && (
                 <div className="my-2.5 mx-3 flex items-center">
-                  <div className="flex-1 border-t-[1.5px] border-dashed border-cyan-400/50 shadow-[0_1px_2px_rgba(34,211,238,0.15)]" />
+                  <div className="sidebar-divider flex-1 h-[1.5px]" />
                 </div>
               )}
               <div className="space-y-0.5">
@@ -181,8 +198,8 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
                         "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 w-full",
                         collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
                         isActive
-                          ? "bg-slate-200 dark:bg-slate-700/80 text-foreground font-semibold scale-[1.01]"
-                            : "text-muted-foreground hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-foreground"
+                          ? "bg-sidebar-active text-foreground font-semibold scale-[1.01]"
+                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )
                     }
                   >
@@ -212,8 +229,8 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
               if (agentState !== "booting") setPiJump(true);
               window.dispatchEvent(new Event("vl-pi-wake"));
             }}
-            className="group relative flex w-full flex-col items-center gap-1.5 rounded-lg bg-primary/5 px-2.5 py-2 text-center transition-colors hover:bg-primary/10"
-            title="唤醒 Pi Agent"
+            className="relative flex w-full flex-col items-center gap-1.5 rounded-lg px-2.5 py-2 text-center"
+            title="唤醒小π Agent"
           >
             <span className="relative">
               <img
@@ -228,28 +245,17 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
                 onAnimationEnd={() => setPiJump(false)}
               />
               {agentState === "booting" && (
-                <span className="animate-pi-pop absolute -top-12 right-0 z-10 whitespace-nowrap rounded-lg border border-primary/30 bg-background/95 px-2.5 py-1.5 shadow-xl backdrop-blur">
+                <span className="animate-pi-pop absolute top-full right-0 z-10 mt-1 whitespace-nowrap rounded-lg border border-primary/30 bg-background/95 px-2.5 py-1.5 shadow-xl backdrop-blur">
                   <span className="block text-xs font-semibold">小π启动中....</span>
                   <span className="block text-[10px] text-muted-foreground">就是这么带派</span>
                 </span>
               )}
-              {agentState === "open" && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" />}
+              {(agentState === "open" || agentState === "minimized") && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" />}
             </span>
             <span className="block w-full text-[21px] font-bold bg-gradient-to-r from-purple-500 to-violet-400 bg-clip-text text-transparent">小π智助</span>
-            <span className="absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-primary/10 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
           </button>
-          {/* 横线：位于 Agent 按钮之下、刷新按钮之上 */}
+          {/* 横线：位于 Agent 按钮之下、服务列表之上 */}
           <div className="border-t border-[hsl(var(--surface-border))]" />
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={fetchStatus}
-              className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 text-[11px] font-medium border border-[hsl(var(--surface-border))] rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-all duration-200"
-              title="刷新所有状态"
-            >
-              <RefreshCw className="w-3 h-3" />
-              刷新
-            </button>
-          </div>
 
           {/* 主后端 */}
           <ServiceRow
@@ -322,8 +328,29 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             onStop={() => stopService("manager/stop-cutia", "cutia")}
           />
 
-          <div className="text-[10px] text-muted-foreground/60 text-center tracking-wider uppercase pt-1">
-            AI Video Studio
+          <div className="flex items-center gap-1.5 pt-1">
+            <button
+              type="button"
+              onClick={fetchStatus}
+              className="flex h-8 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-[hsl(var(--surface-border))] px-2 text-[11px] font-medium leading-none text-muted-foreground transition-all duration-200 hover:bg-secondary hover:text-foreground"
+              title="刷新所有状态"
+            >
+              <RefreshCw className="h-3 w-3" />
+              刷新
+            </button>
+            <button
+              type="button"
+              onClick={shutdownAll}
+              disabled={shuttingDownAll}
+              className={cn(
+                "flex h-8 flex-1 items-center justify-center whitespace-nowrap rounded-lg border px-2 text-[10px] font-medium leading-none transition-colors",
+                "border-destructive/35 bg-destructive/10 text-destructive hover:bg-destructive/15",
+                "disabled:cursor-not-allowed disabled:opacity-60"
+              )}
+              title="关闭所有端口进程并退出程序"
+            >
+              {shuttingDownAll ? "关闭中..." : "关闭所有端口"}
+            </button>
           </div>
         </div>
       )}
@@ -334,7 +361,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             window.dispatchEvent(new Event("vl-pi-wake"));
           }}
           className="relative mx-auto mb-3 grid h-[54px] w-[54px] place-items-center rounded-md bg-primary/10"
-          title="唤醒 Pi Agent"
+          title="唤醒小π Agent"
         >
           <img
             src="/imge/pi-lite.png"
@@ -348,12 +375,12 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             onAnimationEnd={() => setPiJump(false)}
           />
           {agentState === "booting" && (
-            <span className="animate-pi-pop absolute -top-12 left-1/2 z-10 -translate-x-1/2 whitespace-nowrap rounded-lg border border-primary/30 bg-background/95 px-2.5 py-1.5 shadow-xl backdrop-blur">
+            <span className="animate-pi-pop absolute top-full right-0 z-10 mt-1 whitespace-nowrap rounded-lg border border-primary/30 bg-background/95 px-2.5 py-1.5 shadow-xl backdrop-blur">
               <span className="block text-xs font-semibold">小π启动中....</span>
               <span className="block text-[10px] text-muted-foreground">就是这么带派</span>
             </span>
           )}
-          {agentState === "open" && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" />}
+          {(agentState === "open" || agentState === "minimized") && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" />}
         </button>
       )}
     </aside>
@@ -387,8 +414,8 @@ function ServiceRow({
       <span className="text-[11px] text-muted-foreground flex-shrink-0">{label}</span>
       <span className={cn(
         "w-1.5 h-1.5 rounded-full flex-shrink-0",
-        status === undefined ? "bg-yellow-500 animate-pulse" :
-        isRunning ? "bg-emerald-500" : "bg-red-500"
+        status === undefined ? "bg-warning animate-pulse" :
+        isRunning ? "bg-success" : "bg-destructive"
       )} />
       <span className="text-[10px] text-muted-foreground font-mono ml-auto">
         :{port || "?"}
@@ -396,10 +423,10 @@ function ServiceRow({
       <button
         onClick={onStop}
         disabled={stopping || !isRunning}
-        className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center hover:bg-red-500/15 text-muted-foreground hover:text-red-500 transition-colors disabled:opacity-40"
+        className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center hover:bg-destructive/15 text-muted-foreground hover:text-destructive transition-colors disabled:opacity-40"
         title={`关闭 ${label}`}
       >
-        <Power className={cn("w-2.5 h-2.5", stopping && "animate-pulse text-red-500")} />
+        <Power className={cn("w-2.5 h-2.5", stopping && "animate-pulse text-destructive")} />
       </button>
       <button
         onClick={onRestart}
@@ -407,7 +434,7 @@ function ServiceRow({
         className="flex-shrink-0 w-5 h-5 rounded flex items-center justify-center hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
         title={`重启 ${label}`}
       >
-        <RefreshCw className={cn("w-2.5 h-2.5", restarting && "animate-pulse text-amber-500")} />
+        <RefreshCw className={cn("w-2.5 h-2.5", restarting && "animate-pulse text-warning")} />
       </button>
     </div>
   );

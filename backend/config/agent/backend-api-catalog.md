@@ -10,7 +10,7 @@ Authentication, registration, subscription, licensing, account, entitlement, and
 - `/api/batch`: batch configuration, creation, execution, stop/resume, retry, task membership, cleanup, and worker-pool status.
 - `/api/workflows`: workflow and workflow-group CRUD, validation/debug work, whole-workflow execution, node execution, task spawning, global save, and status.
 - `/api/history`: completed and failed task history.
-- `/api/node-types`: node definitions, schemas, validation, CRUD, import/export, backup, and restore.
+- `/api/node-types`: node definitions, schemas, validation, CRUD, import/export, backup, and restore. Deleting a custom node removes its definition; deleting a built-in node persists a hidden-node record and can invalidate workflow references.
 
 ## AI and Media Interfaces
 
@@ -35,7 +35,8 @@ Authentication, registration, subscription, licensing, account, entitlement, and
 
 - `/api/publish`: social publishing platforms/accounts, tags, media inspection/upload, drafts, publish queues/tasks, history, service settings, and health.
 - `/api/community`: workflow/node package publishing, analysis, import, and local package listing.
-- `/api/pi`: Pi Agent runtime status, settings, extensions, sessions, history, prompt execution, session control, and SSE events.
+- `/api/pi`: 小π Agent runtime status, settings, extensions, sessions, history, prompt execution, session control, and SSE events. `POST /api/pi/settings/scan/{skill|mcp|docs}` rescans common Skill/MCP locations; `POST /api/pi/cache/clear` clears caches by category (`sessions` / `models` / `staging` / `all`).
+- `/api/gpu-service`: optional local GPU lane service status and diagnostics for ASR/separation dispatch.
 
 ## Control, Settings, and Diagnostics
 

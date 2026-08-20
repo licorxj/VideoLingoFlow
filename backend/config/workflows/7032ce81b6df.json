@@ -7,8 +7,8 @@
       "id": "node_1_1780590163157",
       "type": "workflow",
       "position": {
-        "x": -1980,
-        "y": -1185
+        "x": -2310,
+        "y": -1095
       },
       "data": {
         "nodeType": "input",
@@ -23,7 +23,8 @@
           "copyInputs": true,
           "audioPath": "",
           "subtitlePath": "",
-          "url": ""
+          "url": "",
+          "filePath": ""
         },
         "status": "completed",
         "progress": 100,
@@ -50,8 +51,8 @@
       "id": "node_1_1780650299385",
       "type": "workflow",
       "position": {
-        "x": -1305,
-        "y": -1050
+        "x": -1485,
+        "y": -1680
       },
       "data": {
         "nodeType": "extract_audio",
@@ -60,8 +61,7 @@
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
-          "url": "",
-          "sample_rate": "16000"
+          "url": ""
         },
         "status": "completed",
         "progress": 100,
@@ -75,7 +75,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 493
+        "height": 195
       },
       "selected": false,
       "dragging": false
@@ -84,8 +84,8 @@
       "id": "node_1_1780709567651",
       "type": "workflow",
       "position": {
-        "x": -240,
-        "y": -1065
+        "x": -435,
+        "y": -1725
       },
       "data": {
         "nodeType": "asr",
@@ -112,7 +112,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 663
+        "height": 466
       },
       "selected": false,
       "dragging": false
@@ -121,25 +121,28 @@
       "id": "node_2_1780807148463",
       "type": "workflow",
       "position": {
-        "x": 795,
-        "y": -1530
+        "x": 120,
+        "y": -1260
       },
       "data": {
         "nodeType": "sentence_split",
         "label": "句子分割",
         "config": {
           "use_llm_split": true,
-          "merge_min_duration": "0.1",
+          "merge_min_duration": "0.3",
           "max_sentence_length": "18",
           "merge_max_gap": "0.1",
           "split_on_speaker": false,
-          "split_by_punct": true,
           "pause_split_threshold": "1.8",
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
           "url": "",
-          "pause_split_enabled": true
+          "pause_split_enabled": true,
+          "split_sentence_ends": true,
+          "split_clause_breaks": true,
+          "merge_short_enabled": true,
+          "processing_language": "from_input"
         },
         "status": "completed",
         "progress": 100,
@@ -163,8 +166,8 @@
       "id": "node_1_1780948332813",
       "type": "workflow",
       "position": {
-        "x": 780,
-        "y": -750
+        "x": 705,
+        "y": -1680
       },
       "data": {
         "nodeType": "summarize",
@@ -196,8 +199,8 @@
       "id": "node_1_1780954897405",
       "type": "workflow",
       "position": {
-        "x": 1380,
-        "y": -1155
+        "x": 720,
+        "y": -1200
       },
       "data": {
         "nodeType": "translate",
@@ -208,7 +211,8 @@
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
-          "url": ""
+          "url": "",
+          "processing_language": "from_input"
         },
         "status": "completed",
         "progress": 100,
@@ -232,8 +236,8 @@
       "id": "node_1_1781200299298",
       "type": "workflow",
       "position": {
-        "x": 1860,
-        "y": -570
+        "x": 1320,
+        "y": -1200
       },
       "data": {
         "nodeType": "subtitle_gen",
@@ -268,8 +272,8 @@
       "id": "node_3_1781212794939",
       "type": "workflow",
       "position": {
-        "x": -1905,
-        "y": -480
+        "x": -1410,
+        "y": -795
       },
       "data": {
         "nodeType": "video_preview",
@@ -291,7 +295,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 441
+        "height": 409
       },
       "selected": false,
       "dragging": false
@@ -300,8 +304,8 @@
       "id": "node_1_1781645240103",
       "type": "workflow",
       "position": {
-        "x": 2865,
-        "y": -1260
+        "x": 2055,
+        "y": -1545
       },
       "data": {
         "nodeType": "tts",
@@ -347,8 +351,8 @@
       "id": "node_1_1781709944783",
       "type": "workflow",
       "position": {
-        "x": 2175,
-        "y": -1170
+        "x": 1320,
+        "y": -1590
       },
       "data": {
         "nodeType": "dub_task",
@@ -385,8 +389,8 @@
       "id": "node_1_1781810867151",
       "type": "workflow",
       "position": {
-        "x": 3360,
-        "y": -1290
+        "x": 1830,
+        "y": -735
       },
       "data": {
         "nodeType": "merge_audio",
@@ -402,23 +406,17 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "audio": "output/dub_node_1_1781810867151.wav",
-          "dub_srt": "output/dub_node_1_1781810867151.srt",
-          "dub_bilingual_srt": "output/dub_bilingual_node_1_1781810867151.srt",
-          "配音任务单": "cache\\dub_task_node_1_1781709944783.csv",
-          "video_adjusted": "output/video_adjusted.mp4"
-        },
+        "status": "interrupted",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 675
+        "height": 485
       },
       "selected": false,
       "dragging": false
@@ -427,8 +425,8 @@
       "id": "node_1_1781939413425",
       "type": "workflow",
       "position": {
-        "x": 3300,
-        "y": -240
+        "x": 2430,
+        "y": -720
       },
       "data": {
         "nodeType": "merge_sub_video",
@@ -446,19 +444,17 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "video": "output/video_with_subs_node_1_1781939413425.mp4"
-        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 586
+        "height": 512
       },
       "selected": false,
       "dragging": false
@@ -467,8 +463,8 @@
       "id": "node_2_1781973904798",
       "type": "workflow",
       "position": {
-        "x": -780,
-        "y": -1380
+        "x": -1485,
+        "y": -1410
       },
       "data": {
         "nodeType": "vocal_separation",
@@ -480,11 +476,7 @@
           "videoPath": "",
           "subtitlePath": "",
           "url": "",
-          "model": "htdemucs_ft",
-          "bitrate": "192",
-          "channels": "1",
-          "bit_depth": "16",
-          "sample_rate": "16000"
+          "model": "htdemucs_ft"
         },
         "status": "completed",
         "progress": 100,
@@ -499,7 +491,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 638
+        "height": 410
       },
       "selected": false,
       "dragging": false
@@ -508,15 +500,15 @@
       "id": "node_2_1781987851660",
       "type": "workflow",
       "position": {
-        "x": 4065,
-        "y": -375
+        "x": 2385,
+        "y": 105
       },
       "data": {
         "nodeType": "video_preview",
         "label": "视频预览器",
         "config": {
           "title": "配音后视频",
-          "fontSize": 24,
+          "fontSize": 12,
           "fontFamily": "sans-serif",
           "fontColor": "#ffffff",
           "backgroundColor": "rgba(0,0,0,0.6)",
@@ -526,9 +518,9 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
+        "status": "pending",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": "",
@@ -536,7 +528,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 368
+        "height": 167
       },
       "selected": false,
       "dragging": false
@@ -545,8 +537,8 @@
       "id": "node_1_1782422054967",
       "type": "workflow",
       "position": {
-        "x": -1380,
-        "y": -105
+        "x": -810,
+        "y": -540
       },
       "data": {
         "nodeType": "llm_request",
@@ -585,8 +577,8 @@
       "id": "node_1_1782507205161",
       "type": "workflow",
       "position": {
-        "x": 165,
-        "y": 375
+        "x": 630,
+        "y": 105
       },
       "data": {
         "nodeType": "image_gen",
@@ -630,8 +622,8 @@
       "id": "node_1_1782509281196",
       "type": "workflow",
       "position": {
-        "x": 870,
-        "y": 465
+        "x": 1200,
+        "y": 90
       },
       "data": {
         "nodeType": "image_preview",
@@ -646,9 +638,7 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "skipped": true
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "disableExecute": false
@@ -664,8 +654,8 @@
       "id": "node_1_1782640383627",
       "type": "workflow",
       "position": {
-        "x": -1200,
-        "y": -495
+        "x": -1335,
+        "y": 630
       },
       "data": {
         "nodeType": "video_frame_extract",
@@ -680,17 +670,19 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "running",
-        "progress": 0,
-        "message": "Starting...",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "image": "cache/key_frame_node_1_1782640383627.png"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 311
+        "height": 350
       },
       "selected": false,
       "dragging": false
@@ -699,8 +691,8 @@
       "id": "node_2_1782640528572",
       "type": "workflow",
       "position": {
-        "x": -675,
-        "y": -225
+        "x": 0,
+        "y": -165
       },
       "data": {
         "nodeType": "cover",
@@ -742,8 +734,8 @@
       "id": "node_1_1782672877872",
       "type": "workflow",
       "position": {
-        "x": 3345,
-        "y": 840
+        "x": 2940,
+        "y": 510
       },
       "data": {
         "nodeType": "video_publish",
@@ -771,20 +763,17 @@
           "url": "",
           "title_affix": "【西门子NX教程】"
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "text": "{\n  \"publish_params\": {\n    \"title\": \"01-Unigraphics NX Co-ordinate System, CSYS for Beginners ｜｜ NX 2306 Tutorials【西门子NX教程】\",\n    \"description\": \"还在为NX坐标系头疼？本视频详解基准、绝对、工作坐标系的核心区别与使用场景。从创建到编辑，动态演示多种操作方法，助你彻底厘清概念，告别建模误区，效率飙升！\",\n    \"tags\": [\n      \"NX教程\",\n      \"坐标系详解\",\n      \"CAD建模\",\n      \"工业设计\"\n    ],\n    \"publish_mode\": \"local_draft\",\n    \"schedule_time\": null,\n    \"is_original\": true,\n    \"video_orientation\": \"landscape\",\n    \"video_path\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\8176bb33db6c4a9eab970943fb0910f0\\\\output/video_with_subs_node_1_1781939413425.mp4\",\n    \"cover_landscape\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\8176bb33db6c4a9eab970943fb0910f0\\\\output/cover_gen_byfram4x3_1_gen_image_node_3_1782641542678.png\",\n    \"cover_portrait\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\8176bb33db6c4a9eab970943fb0910f0\\\\output/cover_gen_byfram9x19_1_gen_image_node_1_1782507205161.png\",\n    \"title_affix\": \"【西门子NX教程】\",\n    \"title_affix_mode\": \"suffix\",\n    \"desc_affix\": \"\",\n    \"desc_affix_mode\": \"suffix\",\n    \"platform_type\": 3,\n    \"platform_key\": \"douyin\",\n    \"account_ids\": [\n      \"2\",\n      \"3\",\n      \"4\",\n      \"5\"\n    ]\n  },\n  \"platform_type\": 3,\n  \"total_accounts\": 4,\n  \"success\": 1,\n  \"failed\": 0,\n  \"results\": [\n    {\n      \"status\": \"success\",\n      \"result\": {\n        \"code\": 200,\n        \"data\": {\n          \"id\": 49,\n          \"title\": \"01-Unigraphics NX Co-ordinate System, CSYS for Beginners ｜｜ NX 2306 Tutorials【西门子NX教程】\"\n        }\n      }\n    }\n  ],\n  \"errors\": null\n}",
-          "result_file": "Y:\\VideoLingoLc\\control_plane_workspaces\\8176bb33db6c4a9eab970943fb0910f0\\output\\publish_result_node_1_1782672877872.json"
-        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 765
+        "height": 663
       },
       "selected": false,
       "dragging": false
@@ -793,8 +782,8 @@
       "id": "node_1_1782725550457",
       "type": "workflow",
       "position": {
-        "x": -1050,
-        "y": 960
+        "x": -810,
+        "y": 135
       },
       "data": {
         "nodeType": "llm_request",
@@ -833,8 +822,8 @@
       "id": "node_1_1783320818226",
       "type": "workflow",
       "position": {
-        "x": -1365,
-        "y": -1410
+        "x": -1410,
+        "y": -330
       },
       "data": {
         "nodeType": "translate_task_name",
@@ -868,8 +857,8 @@
       "id": "node_2_1783321957415",
       "type": "workflow",
       "position": {
-        "x": -525,
-        "y": 1305
+        "x": -750,
+        "y": 1125
       },
       "data": {
         "nodeType": "resolve_path",
@@ -902,8 +891,8 @@
       "id": "node_8_1783325677193",
       "type": "workflow",
       "position": {
-        "x": 465,
-        "y": 1140
+        "x": -15,
+        "y": 1005
       },
       "data": {
         "nodeType": "json_editor",
@@ -938,8 +927,8 @@
       "id": "node_1_1786046579815",
       "type": "workflow",
       "position": {
-        "x": 240,
-        "y": -1695
+        "x": 105,
+        "y": -1710
       },
       "data": {
         "nodeType": "sentence_preprocess",
@@ -947,41 +936,88 @@
         "config": {
           "method": "punct",
           "split_on_speaker": true,
-          "llm_max_chars": 5000
+          "llm_max_chars": 5000,
+          "processing_language": "from_input"
         },
-        "status": "completed",
+        "status": "running",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/asr_result.json",
-          "word_index": "cache/word_index.json"
-        },
+        "progress": 0,
+        "message": "Starting...",
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 377
+        "height": 309
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787067672223",
+      "type": "workflow",
+      "position": {
+        "x": -975,
+        "y": -1365
+      },
+      "data": {
+        "nodeType": "audio_transcode",
+        "label": "音频质量转码",
+        "config": {
+          "format": "wav",
+          "sample_rate": "16000",
+          "bit_depth": "16",
+          "channels": "1",
+          "bitrate": "192"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 306
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "n_msyu4zm55ofz",
+      "type": "workflow",
+      "position": {
+        "x": -975,
+        "y": -1740
+      },
+      "data": {
+        "nodeType": "audio_transcode",
+        "label": "音频质量转码",
+        "config": {
+          "format": "wav",
+          "sample_rate": "16000",
+          "bit_depth": "16",
+          "channels": "1",
+          "bitrate": "192"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 306
       },
       "selected": false,
       "dragging": false
     }
   ],
   "edges": [
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780590163157",
-      "sourceHandle": "out-video",
-      "target": "node_1_1780650299385",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1780590163157out-video-node_1_1780650299385in-video"
-    },
     {
       "type": "smoothstep",
       "style": {
@@ -1026,19 +1062,6 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780590163157",
-      "sourceHandle": "out-video",
-      "target": "node_3_1781212794939",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1780590163157out-video-node_3_1781212794939in-video"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
         "stroke": "#0f766e",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -1077,19 +1100,6 @@
     },
     {
       "type": "smoothstep",
-      "style": {
-        "stroke": "#10b981",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780650299385",
-      "sourceHandle": "out-audio",
-      "target": "node_2_1781973904798",
-      "targetHandle": "in-audio",
-      "id": "xy-edge__node_1_1780650299385out-audio-node_2_1781973904798in-audio"
-    },
-    {
-      "type": "smoothstep",
       "animated": false,
       "style": {
         "stroke": "#10b981",
@@ -1116,21 +1126,6 @@
       "target": "node_2_1781987851660",
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1781939413425out-video-node_2_1781987851660in-video",
-      "selected": false
-    },
-    {
-      "type": "smoothstep",
-      "animated": false,
-      "style": {
-        "stroke": "#10b981",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_2_1781973904798",
-      "sourceHandle": "out-audio",
-      "target": "node_1_1780709567651",
-      "targetHandle": "in-asr_audio",
-      "id": "xy-edge__node_2_1781973904798out-audio-node_1_1780709567651in-audio",
       "selected": false
     },
     {
@@ -1257,19 +1252,6 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780590163157",
-      "sourceHandle": "out-video",
-      "target": "node_1_1783320818226",
-      "targetHandle": "in-input",
-      "id": "xy-edge__node_1_1780590163157out-video-node_1_1783320818226in-input"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
         "stroke": "#6366f1",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -1376,32 +1358,6 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#10b981",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780650299385",
-      "sourceHandle": "out-audio",
-      "target": "node_1_1780709567651",
-      "targetHandle": "in-asr_audio",
-      "id": "xy-edge__node_1_1780650299385out-audio-node_1_1780709567651in-asr_audio"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#10b981",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_2_1781973904798",
-      "sourceHandle": "out-audio",
-      "target": "node_1_1780709567651",
-      "targetHandle": "in-vocal_audio",
-      "id": "xy-edge__node_2_1781973904798out-audio-node_1_1780709567651in-vocal_audio"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
         "stroke": "#6366f1",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -1462,10 +1418,116 @@
       "sourceHandle": "out-image",
       "target": "node_1_1782672877872",
       "targetHandle": "in-cover_landscape",
-      "id": "xy-edge__node_1_1782640383627out-image-node_1_1782672877872in-cover_landscape"
+      "id": "xy-edge__node_1_1782640383627out-image-node_1_1782672877872in-cover_landscape",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781973904798",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1787067672223",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_2_1781973904798out-audio-node_1_1787067672223in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787067672223",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1780709567651",
+      "targetHandle": "in-vocal_audio",
+      "id": "xy-edge__node_1_1787067672223out-audio-node_1_1780709567651in-vocal_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780650299385",
+      "sourceHandle": "out-audio",
+      "target": "n_msyu4zm55ofz",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_1_1780650299385out-audio-n_msyu4zm55ofzin-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "n_msyu4zm55ofz",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1780709567651",
+      "targetHandle": "in-asr_audio",
+      "id": "xy-edge__n_msyu4zm55ofzout-audio-node_1_1780709567651in-asr_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_1_1780650299385",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_1_1780650299385in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780650299385",
+      "sourceHandle": "out-audio",
+      "target": "node_2_1781973904798",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_1_1780650299385out-audio-node_2_1781973904798in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_1_1783320818226",
+      "targetHandle": "in-input",
+      "id": "xy-edge__node_1_1780590163157out-video-node_1_1783320818226in-input"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_3_1781212794939",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_3_1781212794939in-video"
     }
   ],
   "type": "user",
   "createdAt": "2026-07-07T04:56:33",
-  "updatedAt": "2026-08-14T23:16:31"
+  "updatedAt": "2026-08-19T00:45:52",
+  "revision": 6
 }

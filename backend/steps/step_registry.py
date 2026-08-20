@@ -5,6 +5,7 @@ Import all step modules and register them here.
 from backend.steps.s00_platform_download import S00PlatformDownload
 from backend.steps.s01_download import S01Download
 from backend.steps.s02_asr import S02ASR
+from backend.steps.s_asr_stages import S_ASRRecognize, S_ASRPostProcess
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
 from backend.steps.s04_summarize import S04Summarize
@@ -23,6 +24,7 @@ from backend.steps.s14_output import StepOutput
 from backend.steps.s15_extract_audio import StepExtractAudio
 from backend.steps.s16_vocal_separation import StepVocalSeparation
 from backend.steps.s17_track_separation import S17TrackSeparation
+from backend.steps.s18_audio_transcode import StepAudioTranscode
 from backend.steps.s_path_to_title import S_PathToTitle
 from backend.steps.s_file_rename import S_FileRename
 from backend.steps.s_timed_delay import S_TimedDelay
@@ -33,6 +35,8 @@ from backend.steps.s_http_request import S_HttpRequest
 from backend.steps.s_pi_agent import S_PiAgent
 from backend.steps.s_imagegen import S_ImageGen
 from backend.steps.s_video_frame_extract import S_VideoFrameExtract
+from backend.steps.s_subtitle_position_search import S_SubtitlePositionSearch
+from backend.steps.s_subtitle_recognition import S_SubtitleRecognition
 from backend.steps.s_video_publish import S_VideoPublish
 from backend.steps.s_xiaopai_publish import S_XiaopaiPublish
 from backend.steps.s_resolve_path import S_ResolvePath
@@ -54,6 +58,10 @@ _STEPS = {
     "s01_download": S01Download(),
     "s02_asr": S02ASR(),
     "asr": S02ASR(),
+    "s_asr_recognize": S_ASRRecognize(),
+    "asr_recognize": S_ASRRecognize(),
+    "s_asr_postprocess": S_ASRPostProcess(),
+    "asr_postprocess": S_ASRPostProcess(),
     "s03_sentence_split": S03SentenceSplit(),
     "sentence_split": S03SentenceSplit(),
     "s_sentence_preprocess": S_SentencePreprocess(),
@@ -91,6 +99,8 @@ _STEPS = {
     # Legacy node type aliases
     "s15_extract_audio": StepExtractAudio(),
     "extract_audio": StepExtractAudio(),
+    "s18_audio_transcode": StepAudioTranscode(),
+    "audio_transcode": StepAudioTranscode(),
     # UI-only / preview nodes
     "video_preview": PassthroughStep(),
     "image_preview": PassthroughStep(),
@@ -108,6 +118,10 @@ _STEPS = {
     "image_gen": S_ImageGen(),
     "s_video_frame_extract": S_VideoFrameExtract(),
     "video_frame_extract": S_VideoFrameExtract(),
+    "s_subtitle_position_search": S_SubtitlePositionSearch(),
+    "subtitle_position_search": S_SubtitlePositionSearch(),
+    "s_subtitle_recognition": S_SubtitleRecognition(),
+    "subtitle_recognition": S_SubtitleRecognition(),
     "s_video_publish": S_VideoPublish(),
     "video_publish": S_VideoPublish(),
     "s_xiaopai_publish": S_XiaopaiPublish(),

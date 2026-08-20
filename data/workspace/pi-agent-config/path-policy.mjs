@@ -3,6 +3,7 @@ import path from "node:path";
 const policy = JSON.parse(process.env.VIDEOLINGO_PI_PATH_POLICY || "{}");
 const readBlacklist = Array.isArray(policy.read_blacklist) ? policy.read_blacklist : [];
 const writeBlacklist = Array.isArray(policy.write_blacklist) ? policy.write_blacklist : [];
+const bashEnabled = policy.bash_enabled === true;
 
 const overlaps = (candidate, blocked) => {
   const relative = path.relative(blocked, candidate);
@@ -19,7 +20,8 @@ const blocked = (input, blacklist, cwd) => {
 export default function (pi) {
   pi.on("tool_call", (event, ctx) => {
     if (event.toolName === "bash") {
-      return { block: true, reason: "Bash is disabled because path-level permissions cannot be enforced safely for shell commands." };
+      if (bashEnabled) return undefined; // 用户在设置中开启了 Shell 权限
+      return { block: true, reason: "Bash is disabled by the Agent permission policy. Enable the Shell permission in Agent settings." };
     }
     const isWrite = event.toolName === "write" || event.toolName === "edit";
     const isRead = event.toolName === "read" || event.toolName === "ls" || event.toolName === "grep" || event.toolName === "find";

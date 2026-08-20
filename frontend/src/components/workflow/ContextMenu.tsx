@@ -5,19 +5,20 @@ import {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages, AlignLeft,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, Share2, ChevronRight, Search,
+  SlidersHorizontal,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages, AlignLeft,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
-  Upload, Wrench, Play, Eye, Sparkles, Share2,
+  Upload, Wrench, Play, Eye, Sparkles, Share2, SlidersHorizontal,
 };
 
 interface ContextMenuProps {
   visible: boolean;
   position: { x: number; y: number };
   onClose: () => void;
-  onSelectNode: (nodeType: NodeTypeDef) => void;
+  onSelectNode: (nodeType: NodeTypeDef, screenPos?: { x: number; y: number }) => void;
 }
 
 export default function ContextMenu({ visible, position, onClose, onSelectNode }: ContextMenuProps) {
@@ -71,9 +72,15 @@ export default function ContextMenu({ visible, position, onClose, onSelectNode }
     ? allNodes.filter((n) => n.name.toLowerCase().includes(search.toLowerCase()) || n.id.toLowerCase().includes(search.toLowerCase()))
     : null;
 
-  const handleNodeClick = (nodeType: NodeTypeDef) => {
-    onSelectNode(nodeType);
+  const handleNodeClick = (nodeType: NodeTypeDef, e: React.MouseEvent) => {
+    onSelectNode(nodeType, { x: e.clientX, y: e.clientY });
     onClose();
+  };
+
+  // 支持从菜单直接拖拽节点到画布（与左侧节点面板共用 application/reactflow 数据格式）
+  const handleNodeDragStart = (e: React.DragEvent, nodeType: NodeTypeDef) => {
+    e.dataTransfer.setData("application/reactflow", JSON.stringify(nodeType));
+    e.dataTransfer.effectAllowed = "move";
   };
 
   const handleCategoryEnter = (cat: CategoryKey) => {
@@ -97,7 +104,8 @@ export default function ContextMenu({ visible, position, onClose, onSelectNode }
   const catMenuWidth = 220;
   const subMenuWidth = 240;
   const totalWidth = catMenuWidth + subMenuWidth;
-  const menuMaxHeight = 420;
+  // 菜单高度在原 420px 基础上提升 20%
+  const menuMaxHeight = 504;
 
   // Position: try to keep the full two-panel menu in viewport
   let px = position.x;
@@ -144,7 +152,8 @@ export default function ContextMenu({ visible, position, onClose, onSelectNode }
           <div className="overflow-y-auto py-1" style={{ maxHeight: menuMaxHeight - 44 }}>
             {filteredNodes && filteredNodes.length > 0 ? (
               filteredNodes.map((nodeType) => (
-                <NodeItem key={nodeType.id} nodeType={nodeType} onClick={() => handleNodeClick(nodeType)} />
+                <NodeItem key={nodeType.id} nodeType={nodeType} onClick={(e) => handleNodeClick(nodeType, e)}
+                  onDragStartNode={handleNodeDragStart} onDragEndNode={onClose} />
               ))
             ) : (
               <div className="px-4 py-6 text-center text-xs text-muted-foreground/50">无匹配节点</div>
@@ -202,7 +211,8 @@ export default function ContextMenu({ visible, position, onClose, onSelectNode }
           <div className="py-1">
             {subNodes.length > 0 ? (
               subNodes.map((nodeType) => (
-                <NodeItem key={nodeType.id} nodeType={nodeType} onClick={() => handleNodeClick(nodeType)} />
+                <NodeItem key={nodeType.id} nodeType={nodeType} onClick={(e) => handleNodeClick(nodeType, e)}
+                  onDragStartNode={handleNodeDragStart} onDragEndNode={onClose} />
               ))
             ) : (
               <div className="px-4 py-6 text-center text-xs text-muted-foreground/50">该分类下无节点</div>
@@ -214,12 +224,21 @@ export default function ContextMenu({ visible, position, onClose, onSelectNode }
   );
 }
 
-function NodeItem({ nodeType, onClick }: { nodeType: NodeTypeDef; onClick: () => void }) {
+function NodeItem({ nodeType, onClick, onDragStartNode, onDragEndNode }: {
+  nodeType: NodeTypeDef;
+  onClick: (e: React.MouseEvent) => void;
+  onDragStartNode: (e: React.DragEvent, nodeType: NodeTypeDef) => void;
+  onDragEndNode: () => void;
+}) {
   const IconComp = ICON_MAP[nodeType.icon] || Wrench;
   return (
     <button
+      draggable
       onClick={onClick}
-      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-primary/5 transition-colors group"
+      onDragStart={(e) => onDragStartNode(e, nodeType)}
+      onDragEnd={onDragEndNode}
+      title="点击选择后粘附鼠标放置，或直接拖入画布"
+      className="w-full flex items-center gap-2.5 px-3 py-2 hover:bg-primary/5 transition-colors group cursor-grab active:cursor-grabbing"
     >
       <div
         className="w-5 h-5 rounded flex items-center justify-center flex-shrink-0"

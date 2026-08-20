@@ -101,12 +101,12 @@ VideoLingoFlow/
 │   ├── voiceforge/           # VoiceForge TTS (separate DB + Celery tasks)
 │   ├── aigc/                 # AIGC services (ComfyUI/Jimeng/RunningHub)
 │   ├── publish/              # Multi-platform publishing (Social MCP client)
-│   ├── pi_rpc/               # Pi agent bridge (session management, RPC client)
+│   ├── pi_rpc/               # 小π Agent bridge (session management, RPC client)
 │   ├── editor/               # Editing workbench + editing AI Agent
 │   ├── llm/ asr/ tts/ imagegen/ separation/  # Capability domains
 │   ├── main.py               # FastAPI entry
-│   ├── manager.py            # Process manager (port 18001)
-│   └── venv312/              # Python 3.12 virtual environment
+│   └── manager.py            # Process manager (port 18001)
+├── venv312/                  # Python 3.12 virtual environment
 ├── frontend/                 # Frontend (React + Vite, dev port 11003)
 │   └── dist/                 # Build output (served same-origin by backend)
 ├── data/                     # Runtime data (control-plane.db, redis/)
@@ -187,7 +187,7 @@ Open http://127.0.0.1:11001/ in your browser to enter the workbench.
 | `start.bat` / `start.sh` | One-click start: frontend dev server (11003) + all backend services |
 | `start-prod.bat` / `start-prod.sh` | Production start: no Vite; frontend served same-origin from `frontend/dist` |
 | `backend.bat` | Start the main backend alone |
-| `activate-venv.bat` / `activate-venv.sh` | Enter `backend\venv312` |
+| `activate-venv.bat` / `activate-venv.sh` | Enter `venv312` |
 
 ## License & Credits
 

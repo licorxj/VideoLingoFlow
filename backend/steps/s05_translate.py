@@ -28,10 +28,21 @@ class S05Translate(BaseStep):
         val = config.get(f"general.{key}")
         return val if val is not None else default
 
-    def _resolve_target_language(self) -> str:
+    def _resolve_target_language(self, task_dir: str) -> str:
+        """解析目标语言：节点设置优先，其次输入节点，最后全局设置。"""
         node_cfg = getattr(self, "_node_config", {}) or {}
-        lang = node_cfg.get("target_language") or config.get("general.target_language")
-        return lang or "en"
+        node_lang = str(node_cfg.get("target_language") or "").strip()
+        if node_lang and node_lang != "from_input":
+            return node_lang
+        _, tgt_from_input = self._resolve_languages_from_input(task_dir)
+        if tgt_from_input:
+            return tgt_from_input
+        return config.get("general.target_language") or "en"
+
+    @staticmethod
+    def _sanitize_lang_code(lang: str) -> str:
+        """清洗语言代码用于文件名后缀，防止非法字符。"""
+        return re.sub(r"[^A-Za-z0-9-]", "", str(lang or "").strip())[:8] or "und"
 
     def _resolve_reflect_mode(self) -> bool:
         mode = self._get_param("reflect_translate", "follow_global")
@@ -48,9 +59,12 @@ class S05Translate(BaseStep):
         return True
 
     def _resolve_languages_from_input(self, task_dir: str):
-        """Read source_language and target_language from input node in workflow.json."""
+        """读取节点处理语言和输入节点目标语言。"""
         src_lang = "auto"
         tgt_lang = "en"
+        node_language = str((getattr(self, "_node_config", {}) or {}).get("processing_language") or "from_input").strip()
+        if node_language not in ("", "from_input", "auto"):
+            src_lang = node_language
         wf_path = os.path.join(task_dir, "workflow.json")
         if os.path.exists(wf_path):
             try:
@@ -61,7 +75,7 @@ class S05Translate(BaseStep):
                         cfg = node.get("data", {}).get("config", {})
                         src = cfg.get("source_language", "")
                         tgt = cfg.get("target_language", "")
-                        if src and src != "auto":
+                        if src and src != "auto" and node_language in ("", "from_input", "auto"):
                             src_lang = src
                         if tgt:
                             tgt_lang = tgt
@@ -254,6 +268,39 @@ class S05Translate(BaseStep):
                 f"Return ONLY the JSON object, no extra text."
             )
         }
+
+    # ------------------------------------------------------------------
+    # Input normalization
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _normalize_sentences(raw: Any) -> List[Dict]:
+        """将上游多种结构的句子输入统一规范为 [{id, text, ...}, ...]。
+
+        兼容：
+        - 标准句子列表（含 text 的 dict，来自句子分割/断句预处理）
+        - ASR 原生结果 dict（含 segments，上游未经句子分割直连时）
+        - 纯文本字符串列表 / 单个字符串
+        """
+        data = raw
+        if isinstance(data, dict):
+            data = data.get("segments") or []
+        if isinstance(data, str):
+            data = [data]
+        if not isinstance(data, list):
+            return []
+        normalized: List[Dict] = []
+        for idx, item in enumerate(data, start=1):
+            if isinstance(item, str):
+                normalized.append({"id": idx, "text": item})
+            elif isinstance(item, dict):
+                entry = dict(item)
+                if "text" not in entry:
+                    entry["text"] = entry.get("origin") or entry.get("sentence") or ""
+                if "id" not in entry:
+                    entry["id"] = idx
+                normalized.append(entry)
+        return normalized
 
     # ------------------------------------------------------------------
     # Batching
@@ -503,9 +550,23 @@ class S05Translate(BaseStep):
     # ------------------------------------------------------------------
 
     def check_artifact(self, task_dir: str) -> bool:
-        node_suffix = f"_{self._node_id}" if self._node_id else ""
-        return all(os.path.exists(os.path.join(task_dir, "cache", f"{name}{node_suffix}.json"))
-                   for name in ("translation_direct", "translation_reflect"))
+        # 输出文件名含语言代码后缀（如 translation_direct_{node_id}_zh.json），按前缀匹配
+        cache_dir = os.path.join(task_dir, "cache")
+        return all(find_artifact(cache_dir, f"{name}.json") for name in ("translation_direct", "translation_reflect"))
+
+    def rollback(self, task_dir: str):
+        # 文件名含 node_id 与语言代码后缀，按前缀清理本节点产物
+        cache_dir = os.path.join(task_dir, "cache")
+        if not os.path.isdir(cache_dir):
+            return
+        node_suffix = f"_{self._node_id}" if getattr(self, "_node_id", "") else ""
+        prefixes = tuple(f"{name}{node_suffix}" for name in ("translation_direct", "translation_reflect"))
+        for name in os.listdir(cache_dir):
+            if name.endswith(".json") and name.startswith(prefixes):
+                try:
+                    os.remove(os.path.join(cache_dir, name))
+                except OSError:
+                    pass
 
     def validate_inputs(self, task_dir: str) -> bool:
         sentences_path = find_artifact(os.path.join(task_dir, "cache"), "sentences.json")
@@ -531,21 +592,25 @@ class S05Translate(BaseStep):
             summarize_path = os.path.join(task_dir, summarize_path)
 
         with open(sentences_path, "r", encoding="utf-8") as f:
-            sentences = json.load(f)
+            sentences = self._normalize_sentences(json.load(f))
         with open(summarize_path, "r", encoding="utf-8") as f:
             summarize_data = json.load(f)
+
+        # Resolve target language early so output filenames carry the language suffix
+        tgt_lang = self._resolve_target_language(task_dir)
+        lang_suffix = f"_{self._sanitize_lang_code(tgt_lang)}"
 
         if not sentences:
             if callback:
                 callback(100, "No sentences to translate")
-            out_path = os.path.join(task_dir, "cache", f"translation_direct{node_suffix}.json")
+            out_path = os.path.join(task_dir, "cache", f"translation_direct{node_suffix}{lang_suffix}.json")
             with open(out_path, "w", encoding="utf-8") as f:
                 json.dump([], f, ensure_ascii=False, indent=2)
             return {
-                "artifacts": [f"cache/translation_direct{node_suffix}.json", f"cache/translation_reflect{node_suffix}.json"],
+                "artifacts": [f"cache/translation_direct{node_suffix}{lang_suffix}.json", f"cache/translation_reflect{node_suffix}{lang_suffix}.json"],
                 "outputs": {
-                    "subtitle": f"cache/translation_direct{node_suffix}.json",
-                    "reflect": f"cache/translation_reflect{node_suffix}.json",
+                    "subtitle": f"cache/translation_direct{node_suffix}{lang_suffix}.json",
+                    "reflect": f"cache/translation_reflect{node_suffix}{lang_suffix}.json",
                 },
             }
 
@@ -555,7 +620,6 @@ class S05Translate(BaseStep):
         # Read languages from input node first, then fallback
         src_from_input, tgt_from_input = self._resolve_languages_from_input(task_dir)
         src_lang = src_from_input if src_from_input != "auto" else (self._get_param("source_language") or "auto")
-        tgt_lang = tgt_from_input or self._resolve_target_language()
         enable_reflect = self._resolve_reflect_mode()
 
         # Resolve batch char limit: prefer global llm.max_request_chars
@@ -678,12 +742,12 @@ class S05Translate(BaseStep):
             reflect_output.append(r_item)
 
         # Save direct translation
-        direct_path = os.path.join(task_dir, "cache", f"translation_direct{node_suffix}.json")
+        direct_path = os.path.join(task_dir, "cache", f"translation_direct{node_suffix}{lang_suffix}.json")
         with open(direct_path, "w", encoding="utf-8") as f:
             json.dump(direct_output, f, ensure_ascii=False, indent=2)
 
         # Save reflect translation
-        reflect_path = os.path.join(task_dir, "cache", f"translation_reflect{node_suffix}.json")
+        reflect_path = os.path.join(task_dir, "cache", f"translation_reflect{node_suffix}{lang_suffix}.json")
         with open(reflect_path, "w", encoding="utf-8") as f:
             json.dump(reflect_output, f, ensure_ascii=False, indent=2)
 
@@ -691,9 +755,9 @@ class S05Translate(BaseStep):
             callback(100, f"Translation completed: {len(direct_output)} sentences")
 
         return {
-            "artifacts": [f"cache/translation_direct{node_suffix}.json", f"cache/translation_reflect{node_suffix}.json"],
+            "artifacts": [f"cache/translation_direct{node_suffix}{lang_suffix}.json", f"cache/translation_reflect{node_suffix}{lang_suffix}.json"],
             "outputs": {
-                "subtitle": f"cache/translation_direct{node_suffix}.json",
-                "reflect": f"cache/translation_reflect{node_suffix}.json",
+                "subtitle": f"cache/translation_direct{node_suffix}{lang_suffix}.json",
+                "reflect": f"cache/translation_reflect{node_suffix}{lang_suffix}.json",
             },
         }

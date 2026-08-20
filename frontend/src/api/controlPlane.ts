@@ -50,6 +50,17 @@ export async function loginControlSession(username: string, password: string): P
   return response.data.user;
 }
 
+export async function restoreLocalControlSession(): Promise<ControlUser | null> {
+  try {
+    const response = await client.post<{ user: ControlUser }>("/api/control/auth/local-session");
+    return response.data.user;
+  } catch (error: any) {
+    const status = Number(error?.status ?? error?.response?.status ?? 0);
+    if (status === 403 || status === 409) return null;
+    throw error;
+  }
+}
+
 export async function logoutControlSession() {
   await client.post("/api/control/auth/logout");
 }

@@ -10,27 +10,30 @@ import client from "@/api/client";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import {
   getNodeTypeDef, PORT_COLORS, getVisibleOutputs, getNodeInputs, isConfigFieldVisible,
-  PI_AGENT_OUTPUT_TYPES,
+  PI_AGENT_OUTPUT_TYPES, buildInlineGroupTypeDef, isGroupNodeData,
   type WorkflowNode as WFNode, type ConfigField, type PortType,
 } from "@/lib/workflowTypes";
 import VoiceSelectPanel from "../VoiceSelectPanel";
 import AudioSelectorDialog from "@/components/AudioSelectorDialog";
+import SkillMcpPickerDialog, { type PickerKind } from "@/components/workflow/SkillMcpPickerDialog";
 import {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, CheckCircle2, Loader2, XCircle, Clock, AlertTriangle, Play,
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
+  Layers, Captions, SlidersHorizontal,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
 import SubtitleEditorDialog from "./SubtitleEditorDialog";
-import { LcwrWatermarkEditor } from "./LcwrWatermarkEditor";
+import { LcwrNodeControls, LcwrRegionSummary, LcwrWatermarkEditor } from "./LcwrWatermarkEditor";
+import { SubtitleFindEditor } from "./SubtitleFindEditor";
 
 const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
-  Upload, Wrench, Play, Eye, Sparkles, FolderOpen,
+  Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
 };
 
 /** 解析 SRT/VTT/JSON 字幕内容为 [{start, end, text}]（时间为秒），支持双语（原文/译文两行） */
@@ -132,6 +135,309 @@ const CHIP_COLORS: Record<string, string> = {
   url: "#06b6d4",
 };
 
+function GroupWorkflowNodeCard({
+  id,
+  nd,
+  selected,
+  nodeType,
+  expanded,
+  setExpanded,
+  updateNodeData,
+  taskId,
+}: {
+  id: string;
+  nd: any;
+  selected: boolean;
+  nodeType: NonNullable<ReturnType<typeof buildInlineGroupTypeDef>>;
+  expanded: boolean;
+  setExpanded: (value: boolean) => void;
+  updateNodeData: (id: string, dataUpdate: Record<string, any>) => void;
+  taskId?: string;
+}) {
+  const [editingName, setEditingName] = useState(false);
+  const [nameDraft, setNameDraft] = useState(nd.groupMeta?.name || nd.label || "组合");
+  const [activeMemberId, setActiveMemberId] = useState<string | null>(null);
+  const visibleInputs = getNodeInputs(nodeType, nd.config || {});
+  const visibleOutputs = getVisibleOutputs(nodeType, nd.config || {});
+  const members = [...(nd.groupMeta?.internalWorkflow?.nodes || [])].sort((a: any, b: any) => (a.position?.y || 0) - (b.position?.y || 0));
+  const status = nd.status || "pending";
+  const statusCfg = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
+  const StatusIcon = statusCfg.icon;
+  const outputEntries = Object.entries(nd.outputs || {}).filter(([, value]) => value !== undefined && value !== null && value !== "");
+  const handleStyle = (portType: string, idx: number, total: number) => ({
+    top: ((idx + 1) / (total + 1)) * 100 + "%",
+    background: PORT_COLORS[portType as PortType] || "#6366f1",
+    width: 12, height: 12, border: "2px solid white",
+  });
+
+  const saveName = () => {
+    const nextName = nameDraft.trim() || "组合";
+    updateNodeData(id, {
+      label: nextName,
+      groupMeta: {
+        ...nd.groupMeta,
+        name: nextName,
+      },
+    });
+    setEditingName(false);
+  };
+
+  const updateMemberConfig = (memberId: string, key: string, value: any) => {
+    const internalWorkflow = nd.groupMeta?.internalWorkflow;
+    if (!internalWorkflow) return;
+    const internalNodes = (internalWorkflow.nodes || []).map((member: any) => {
+      if (member.id !== memberId) return member;
+      return {
+        ...member,
+        data: {
+          ...(member.data || {}),
+          config: { ...(member.data?.config || {}), [key]: value },
+        },
+      };
+    });
+    updateNodeData(id, {
+      groupMeta: {
+        ...nd.groupMeta,
+        internalWorkflow: { ...internalWorkflow, nodes: internalNodes },
+      },
+    });
+  };
+
+  return (
+    <div className={cn(
+      "rounded-2xl border-[3px] bg-card text-card-foreground w-[440px] max-w-[440px] transition-all duration-300",
+      selected ? "border-primary shadow-primary/20 shadow-lg scale-[1.02]" : "border-violet-400/60 shadow-md"
+    )}>
+      {visibleInputs.map((port, i) => (
+        <Handle
+          key={`in-${port.id}`}
+          type="target"
+          position={Position.Left}
+          id={`in-${port.id}`}
+          style={handleStyle(port.type, i, visibleInputs.length)}
+        />
+      ))}
+      {visibleOutputs.map((port, i) => (
+        <Handle
+          key={`out-${port.id}`}
+          type="source"
+          position={Position.Right}
+          id={`out-${port.id}`}
+          style={handleStyle(port.type, i, visibleOutputs.length)}
+        />
+      ))}
+
+      <div className="flex items-center gap-2 px-4 py-3 rounded-t-xl bg-violet-500/15">
+        <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-violet-500/20 text-violet-600 dark:text-violet-300">
+          <Layers className="w-5 h-5" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="text-[11px] font-semibold text-violet-600 dark:text-violet-300">组合</div>
+          {editingName ? (
+            <input
+              autoFocus
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onBlur={saveName}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveName();
+                if (e.key === "Escape") {
+                  setNameDraft(nd.groupMeta?.name || nd.label || "组合");
+                  setEditingName(false);
+                }
+              }}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 w-full text-sm font-bold bg-background/80 border border-border/60 rounded-md px-2 py-1"
+            />
+          ) : (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setEditingName(true); }}
+              className="text-left text-sm font-bold truncate hover:text-primary transition-colors"
+            >
+              {nd.groupMeta?.name || nd.label || "组合"}
+            </button>
+          )}
+        </div>
+        <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold", statusCfg.badgeBg, statusCfg.badgeText)} title={nd.message || statusCfg.label}>
+          <StatusIcon className={cn("w-3 h-3", status === "running" && "animate-spin")} />
+          {statusCfg.label}
+        </div>
+        <div className="flex items-center gap-1">
+          {nd.onExecuteNode && (
+            <button
+              onClick={(e) => { e.stopPropagation(); nd.onExecuteNode(id); }}
+              disabled={nd.disableExecute || nd.status === "running"}
+              className="w-6 h-6 rounded-md flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-40"
+              title="仅执行此节点"
+            >
+              <Play className="w-3 h-3" />
+            </button>
+          )}
+          {nd.onExecuteFromNode && (
+            <button
+              onClick={(e) => { e.stopPropagation(); nd.onExecuteFromNode(id); }}
+              disabled={nd.disableExecute || nd.status === "running"}
+              className="w-6 h-6 rounded-md flex items-center justify-center bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 transition-colors disabled:opacity-40"
+              title="从此节点继续执行下游"
+            >
+              <ArrowRight className="w-3 h-3" />
+            </button>
+          )}
+          {nd.onEditGroupNode && (
+            <button
+              onClick={(e) => { e.stopPropagation(); nd.onEditGroupNode(id); }}
+              className="w-6 h-6 rounded-md flex items-center justify-center bg-violet-500/10 text-violet-600 hover:bg-violet-500/20 transition-colors"
+              title="编辑组合"
+            >
+              <CheckSquare className="w-3 h-3" />
+            </button>
+          )}
+          {nd.onUngroupNode && (
+            <button
+              onClick={(e) => { e.stopPropagation(); nd.onUngroupNode(id); }}
+              className="w-6 h-6 rounded-md flex items-center justify-center bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 transition-colors"
+              title="解散组合"
+            >
+              <Square className="w-3 h-3" />
+            </button>
+          )}
+          {nd.onSaveAsGroupNode && (
+            <button
+              onClick={(e) => { e.stopPropagation(); nd.onSaveAsGroupNode(id); }}
+              className="w-6 h-6 rounded-md flex items-center justify-center bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors"
+              title="保存为组合节点"
+            >
+              <FileJson className="w-3 h-3" />
+            </button>
+          )}
+          <button
+            onClick={(e) => { e.stopPropagation(); setExpanded(!expanded); }}
+            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-foreground/10 transition-colors"
+            title={expanded ? "折叠" : "展开"}
+          >
+            {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+          </button>
+        </div>
+      </div>
+
+      {(status === "running" || status === "waiting") && (
+        <div className="px-3 pt-2">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-violet-100 dark:bg-violet-950/40">
+            <div className="h-full rounded-full bg-violet-500 transition-all duration-500" style={{ width: `${Math.max(0, Math.min(100, Number(nd.progress) || 0))}%` }} />
+          </div>
+          {nd.message && <div className="mt-1 truncate text-[11px] text-violet-600 dark:text-violet-300">{nd.message}</div>}
+        </div>
+      )}
+
+      <div className="px-3 py-2 border-b border-border/50 flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold text-muted-foreground">外部输入</div>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {visibleInputs.length ? visibleInputs.map((port) => (
+              <span key={port.id} className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md" style={{ backgroundColor: (PORT_COLORS[port.type] || "#6366f1") + "20", color: PORT_COLORS[port.type] || "#6366f1" }}>
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PORT_COLORS[port.type] || "#6366f1" }} />
+                {port.label}
+              </span>
+            )) : <span className="text-[11px] text-muted-foreground">无</span>}
+          </div>
+        </div>
+        <div className="min-w-0 text-right">
+          <div className="text-[11px] font-semibold text-muted-foreground">外部输出</div>
+          <div className="mt-1 flex flex-wrap gap-1 justify-end">
+            {visibleOutputs.length ? visibleOutputs.map((port) => (
+              <span key={port.id} className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded-md" style={{ backgroundColor: (PORT_COLORS[port.type] || "#6366f1") + "20", color: PORT_COLORS[port.type] || "#6366f1" }}>
+                {port.label}
+                <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: PORT_COLORS[port.type] || "#6366f1" }} />
+              </span>
+            )) : <span className="text-[11px] text-muted-foreground">无</span>}
+          </div>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-3 py-3 space-y-2">
+          {members.map((member: any, index: number) => {
+            const memberId = String(member.id || index);
+            const memberType = getNodeTypeDef(String(member.data?.nodeType || ""));
+            const memberConfig = member.data?.config || {};
+            const memberExpanded = activeMemberId === memberId;
+            return (
+              <div key={memberId} className="rounded-xl border border-border/60 bg-background/60 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={(event) => { event.stopPropagation(); setActiveMemberId(memberExpanded ? null : memberId); }}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-violet-500/5 transition-colors"
+                >
+                  <div className="w-6 h-6 rounded-md bg-violet-500/10 text-violet-600 flex items-center justify-center text-[10px] font-bold">
+                    {index + 1}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-semibold truncate">{member.data?.label || member.id}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">{member.data?.nodeType || "节点"}</div>
+                  </div>
+                  {memberType && (
+                    <span className="text-[10px] text-muted-foreground">{(memberType.configFields || []).length ? `${(memberType.configFields || []).length} 项设置` : "无设置"}</span>
+                  )}
+                  {memberExpanded ? <ChevronDown className="w-3.5 h-3.5 text-muted-foreground" /> : <ChevronRight className="w-3.5 h-3.5 text-muted-foreground" />}
+                </button>
+                {memberExpanded && (
+                  <div className="border-t border-border/50 px-3 py-3 bg-background/40" onClick={(event) => event.stopPropagation()}>
+                    {memberType ? (
+                      <ConfigForm
+                        nodeType={memberType}
+                        config={memberConfig}
+                        onConfigChange={(key, value) => updateMemberConfig(memberId, key, value)}
+                      />
+                    ) : (
+                      <div className="text-xs text-muted-foreground">未找到该节点的配置定义。</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {status === "completed" && outputEntries.length > 0 && (
+        <div className="border-t border-border/50 px-3 pb-3 pt-2">
+          <div className="mb-1.5 flex items-center gap-1.5">
+            <FileText className="w-3 h-3 text-emerald-500" />
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">输出产物</span>
+          </div>
+          <div className="space-y-1">
+            {outputEntries.map(([portId, value]) => {
+              const path = typeof value === "string" ? value : JSON.stringify(value);
+              const filename = path.replace(/\\/g, "/").split("/").pop() || path;
+              return (
+                <button
+                  key={portId}
+                  type="button"
+                  onClick={(event) => { event.stopPropagation(); if (typeof value === "string") client.post("/api/tasks/open-file", { file_path: value, task_id: taskId }).catch(() => { }); }}
+                  className="flex w-full items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 text-left text-[10px] transition-colors hover:bg-emerald-500/15"
+                  title={path}
+                >
+                  <span className="font-medium text-emerald-600 dark:text-emerald-400">{visibleOutputs.find((port) => port.id === portId)?.label || portId}</span>
+                  <span className="min-w-0 flex-1 truncate text-muted-foreground">{filename}</span>
+                  {typeof value === "string" && <ExternalLink className="w-3 h-3 flex-shrink-0 text-emerald-600" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {status === "failed" && nd.error && (
+        <div className="border-t border-border/50 px-3 pb-3 pt-2">
+          <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold text-red-600 dark:text-red-400"><AlertTriangle className="w-3 h-3" />执行错误</div>
+          <div className="max-h-20 overflow-y-auto break-all rounded-md border border-red-500/20 bg-red-500/5 px-2 py-1.5 text-[10px] text-red-600 dark:text-red-400">{nd.error}</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /** 生成稳定的文件流 URL，仅在 path 或 refreshKey 变化时添加新的 cache-bust 时间戳；
  *  相对产物路径需带上 task_id，让后端相对任务工作区解析（见 /api/files/stream）。 */
 function useStableFileUrl(path?: string, taskId?: string, refreshKey?: string): string {
@@ -150,7 +456,7 @@ function useStableFileUrl(path?: string, taskId?: string, refreshKey?: string): 
 }
 
 function VideoPreview({ config, videoPath, subtitlePath, taskId, onConfigChange, refreshKey }: { config: Record<string, any>; videoPath?: string; subtitlePath?: string; taskId?: string; onConfigChange?: (key: string, value: any) => void; refreshKey?: string }) {
-  const [fontSize, setFontSize] = useState(config.fontSize || 24);
+  const [fontSize, setFontSize] = useState(config.fontSize || 12);
   const [subtitles, setSubtitles] = useState<{ start: number; end: number; text: string }[]>([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -172,7 +478,7 @@ function VideoPreview({ config, videoPath, subtitlePath, taskId, onConfigChange,
   }, []);
 
   useEffect(() => {
-    setFontSize(config.fontSize || 24);
+    setFontSize(config.fontSize || 12);
   }, [config.fontSize]);
 
   useEffect(() => {
@@ -229,9 +535,9 @@ function VideoPreview({ config, videoPath, subtitlePath, taskId, onConfigChange,
   const toggleFullscreen = () => {
     if (!containerRef.current) return;
     if (!document.fullscreenElement) {
-      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => {});
+      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => { });
     } else {
-      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => {});
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => { });
     }
   };
 
@@ -330,36 +636,38 @@ function VideoPreview({ config, videoPath, subtitlePath, taskId, onConfigChange,
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
           </svg>
         </button>
-      </div>
-      {/* Custom Controls */}
-      <div className="flex items-center gap-2 px-1">
-        <button
-          onClick={togglePlay}
-          className="w-6 h-6 rounded-full flex items-center justify-center bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-        >
-          {isPlaying ? (
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-            </svg>
-          ) : (
-            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M8 5v14l11-7z" />
-            </svg>
-          )}
-        </button>
-        <span className="text-[10px] font-mono text-muted-foreground/70 w-10">{formatTime(currentTime)}</span>
-        <input
-          type="range"
-          min={0}
-          max={duration || 0}
-          step={0.1}
-          value={currentTime}
-          onChange={handleSeek}
-          onPointerDown={(e) => e.stopPropagation()}
-          onWheel={(e) => e.stopPropagation()}
-          className="flex-1 h-1 rounded-full appearance-none cursor-pointer accent-primary bg-secondary"
-        />
-        <span className="text-[10px] font-mono text-muted-foreground/70 w-10">{formatTime(duration)}</span>
+        <div className="absolute bottom-0 left-0 right-0 flex items-center gap-2 px-3 py-2 bg-gradient-to-t from-black/80 to-transparent pt-5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          <button
+            onClick={togglePlay}
+            className="w-7 h-7 rounded-full flex items-center justify-center bg-white/15 text-white hover:bg-white/25 transition-colors"
+            title={isPlaying ? "暂停" : "播放"}
+            aria-label={isPlaying ? "暂停" : "播放"}
+          >
+            {isPlaying ? (
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+              </svg>
+            ) : (
+              <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+            )}
+          </button>
+          <span className="text-[10px] font-mono text-white/80 w-10">{formatTime(currentTime)}</span>
+          <input
+            type="range"
+            min={0}
+            max={duration || 0}
+            step={0.1}
+            value={currentTime}
+            onChange={handleSeek}
+            onPointerDown={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            aria-label="视频播放进度"
+            className="flex-1 h-1 rounded-full appearance-none cursor-pointer accent-primary bg-white/30"
+          />
+          <span className="text-[10px] font-mono text-white/80 w-10 text-right">{formatTime(duration)}</span>
+        </div>
       </div>
       {!subtitlePath && (
         <div className="text-[10px] text-muted-foreground/70 text-center">连接字幕输入以显示字幕</div>
@@ -400,7 +708,7 @@ function ImagePreview({ config, imagePath, taskId, refreshKey }: { config: Recor
 }
 
 function ApiSelectField({ field, value, config, onConfigChange }: { field: ConfigField; value: string; config: Record<string, any>; onConfigChange: (key: string, value: any) => void }) {
-  const [apiOptions, setApiOptions] = useState<{value: string; label: string; description?: string}[]>([]);
+  const [apiOptions, setApiOptions] = useState<{ value: string; label: string; description?: string }[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredOption, setHoveredOption] = useState<string | null>(null);
@@ -439,7 +747,7 @@ function ApiSelectField({ field, value, config, onConfigChange }: { field: Confi
       setApiLoading(true);
       client.get(fetchKey).then((res) => {
         const resData = res.data || {};
-        let allItems: {value: string; label: string; description?: string}[] = [];
+        let allItems: { value: string; label: string; description?: string }[] = [];
         const optionLabel = field.optionLabel || "label";
         const optionValue = field.optionValue || "value";
 
@@ -473,7 +781,7 @@ function ApiSelectField({ field, value, config, onConfigChange }: { field: Confi
         } else if (!allItems.length) {
           // Handle { models_by_engine: {...} } or { models: {...} } shape
           const engineKey = config[field.dependsOn || ""] || "";
-          
+
           // Check for model_details_by_engine first (for separation models with descriptions)
           if (resData.model_details_by_engine && resData.model_details_by_engine[engineKey]) {
             allItems = resData.model_details_by_engine[engineKey];
@@ -492,13 +800,14 @@ function ApiSelectField({ field, value, config, onConfigChange }: { field: Confi
             }
           }
         }
-        setApiOptions(allItems);
-        
+        const uniqueItems = Array.from(new Map(allItems.map((item) => [item.value, item])).values());
+        setApiOptions(uniqueItems);
+
         // If current value is not in the new options, clear it
-        if (value && !allItems.some((opt) => opt.value === value)) {
+        if (value && !uniqueItems.some((opt) => opt.value === value)) {
           onConfigChange(field.key, "");
         }
-      }).catch(() => {}).finally(() => setApiLoading(false));
+      }).catch(() => { }).finally(() => setApiLoading(false));
     }
   }, [fetchKey, dependsValue, config.tts_engine]);
 
@@ -744,8 +1053,9 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const [piSkillOptions, setPiSkillOptions] = useState<{ value: string; label: string }[]>([]);
   const [piMcpOptions, setPiMcpOptions] = useState<{ value: string; label: string }[]>([]);
+  const [picker, setPicker] = useState<{ kind: PickerKind; label: string; open: boolean } | null>(null);
 
-  // pi_agent：从 Pi Agent 设置拉取已授权 Skill/MCP 选项
+  // pi_agent：从小π Agent 设置拉取已授权 Skill/MCP 选项
   useEffect(() => {
     if (nodeType.id !== "pi_agent") return;
     client.get("/api/pi/settings").then((res) => {
@@ -813,34 +1123,36 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
         // Build config fields from API response
         const fields: ConfigField[] = [];
         if (data.engine_options) {
-          fields.push({ key: "engine", label: "ASR 引擎", type: "select", placeholder: "跟随全局配置", options: data.engine_options });
+          fields.push({ key: "engine", label: "ASR 引擎", type: "select", colSpan: "half", placeholder: "跟随全局配置", options: data.engine_options });
         }
         if (data.models_by_engine) {
-          fields.push({ key: "model", label: "模型", type: "api-select", apiEndpoint: endpoint, dependsOn: "engine", placeholder: "跟随引擎默认" });
+          fields.push({ key: "model", label: "模型", type: "api-select", colSpan: "half", apiEndpoint: endpoint, dependsOn: "engine", placeholder: "跟随引擎默认" });
         }
         if (data.compute_types_by_engine) {
-          fields.push({ key: "compute_type", label: "计算精度", type: "api-select", apiEndpoint: endpoint, dependsOn: "engine", placeholder: "跟随全局配置" });
+          fields.push({ key: "compute_type", label: "计算精度", type: "api-select", colSpan: "half", apiEndpoint: endpoint, dependsOn: "engine", placeholder: "跟随全局配置" });
         }
         // Common ASR fields
-        fields.push({ key: "language", label: "识别语言", type: "select", placeholder: "跟随输入节点", options: [
-          { value: "from_input", label: "来自输入节点" },
-          { value: "auto", label: "自动检测(auto)" },
-          { value: "zh", label: "中文 (zh)" },
-          { value: "en", label: "英语 (en)" },
-          { value: "ja", label: "日语 (ja)" },
-          { value: "ko", label: "韩语 (ko)" },
-          { value: "fr", label: "法语 (fr)" },
-          { value: "de", label: "德语 (de)" },
-          { value: "es", label: "西班牙语 (es)" },
-          { value: "pt", label: "葡萄牙语 (pt)" },
-          { value: "ru", label: "俄语 (ru)" },
-        ] });
+        fields.push({
+          key: "language", label: "识别语言", type: "select", colSpan: "half", placeholder: "跟随输入节点", options: [
+            { value: "from_input", label: "来自输入节点" },
+            { value: "auto", label: "自动检测(auto)" },
+            { value: "zh", label: "中文 (zh)" },
+            { value: "en", label: "英语 (en)" },
+            { value: "ja", label: "日语 (ja)" },
+            { value: "ko", label: "韩语 (ko)" },
+            { value: "fr", label: "法语 (fr)" },
+            { value: "de", label: "德语 (de)" },
+            { value: "es", label: "西班牙语 (es)" },
+            { value: "pt", label: "葡萄牙语 (pt)" },
+            { value: "ru", label: "俄语 (ru)" },
+          ]
+        });
         fields.push({ key: "batch_size", label: "批处理大小", type: "text", placeholder: "0=自动检测GPU显存" });
         fields.push({ key: "word_timestamps", label: "启用词级时间戳对齐", type: "checkbox" });
         fields.push({ key: "vad_onset", label: "VAD 起始阈值", type: "text", placeholder: "0.500" });
         fields.push({ key: "vad_offset", label: "VAD 结束阈值", type: "text", placeholder: "0.363" });
         setDynamicFields(fields);
-      }).catch(() => {}).finally(() => setDynamicLoading(false));
+      }).catch(() => { }).finally(() => setDynamicLoading(false));
     }
   }, []);
 
@@ -848,12 +1160,12 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
     const base = (dynamicFields.length > 0 ? dynamicFields : nodeType.configFields) || [];
     if (nodeType.id !== "pi_agent") return base;
     return base
-       .filter((field: ConfigField) => field.key !== "inputCount" && field.key !== "outputCount")
-       .map((field: ConfigField) => {
-         if (field.key === "skills" && piSkillOptions.length) return { ...field, options: piSkillOptions };
-         if (field.key === "mcps" && piMcpOptions.length) return { ...field, options: piMcpOptions };
-         return field;
-       });
+      .filter((field: ConfigField) => field.key !== "inputCount" && field.key !== "outputCount")
+      .map((field: ConfigField) => {
+        if (field.key === "skills" && piSkillOptions.length) return { ...field, options: piSkillOptions };
+        if (field.key === "mcps" && piMcpOptions.length) return { ...field, options: piMcpOptions };
+        return field;
+      });
   })();
   // LCWR 去水印节点使用自定义编辑器（LcwrWatermarkEditor），跳过通用表单渲染
   if (nodeType.id === "lcwr_watermark_removal") return null;
@@ -862,636 +1174,687 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   const fieldSpanClass = (field: ConfigField) => {
     if (field.colSpan === "half") return "col-span-3";
     if (field.colSpan === "third") return "col-span-2";
+    if (nodeType.id === "asr" || nodeType.id === "audio_transcode") return "col-span-3";
     return "col-span-6";
   };
 
   return (
     <>
-    <div ref={formRef} className="px-3 pb-3 grid grid-cols-6 gap-x-3 gap-y-2 border-t border-border/50 pt-2">
-      {dynamicLoading && (
-        <div className="col-span-2 text-[11px] text-muted-foreground/70 py-1">加载配置中...</div>
-      )}
-      {configFields.map((field: ConfigField) => {
-        if (!isConfigFieldVisible(field, config)) return null;
+      <div ref={formRef} className="px-3 pb-3 grid grid-cols-6 gap-x-3 gap-y-2 border-t border-border/50 pt-2">
+        {dynamicLoading && (
+          <div className="col-span-2 text-[11px] text-muted-foreground/70 py-1">加载配置中...</div>
+        )}
+        {configFields.map((field: ConfigField) => {
+          if (!isConfigFieldVisible(field, config)) return null;
 
-        // Chips / toggle group
-        if (field.type === "chips") {
-          const selected: string[] = config[field.key] || [];
-          const isSingle = field.singleSelect;
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <div className="flex flex-wrap gap-1.5">
-                {field.options?.map((opt) => {
-                  const isSelected = selected.includes(opt.value);
-                  const chipColor = CHIP_COLORS[opt.value] || field.chipColor || "#6b7280";
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => {
-                        let next: string[];
-                        if (isSingle) {
-                          // 单选模式：直接选择当前
-                        next = [opt.value];
-                        } else {
-                          // 多选模式
-                          if (isSelected) {
-                            next = selected.filter((v) => v !== opt.value);
-                            if (next.length === 0) next = [opt.value]; // at least one
-                          } else {
-                            next = [...selected, opt.value];
-                          }
-                        }
-                        onConfigChange(field.key, next);
-                      }}
-                      className={cn(
-                        "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150",
-                        isSelected
-                          ? "text-white shadow-sm"
-                          : "text-muted-foreground border-border/50 bg-background hover:border-primary/25"
-                      )}
-                      style={isSelected ? {
-                        backgroundColor: chipColor,
-                        borderColor: chipColor,
-                        boxShadow: `0 1px 4px ${chipColor}33`,
-                      } : undefined}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-                {field.action && (() => {
-                  const st = actionState[field.key];
-                  return (
-                    <button
-                      key="__chips_action__"
-                      type="button"
-                      disabled={st?.busy}
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={(e) => { e.stopPropagation(); handleChipAction(field); }}
-                      className={cn(
-                        "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
-                        st?.busy
-                          ? "opacity-60 cursor-wait text-purple-500 border-purple-500/40 bg-purple-500/5"
-                          : st?.ok
-                            ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10"
-                            : "text-purple-600 dark:text-purple-400 border-purple-500/40 bg-purple-500/5 hover:bg-purple-500/10"
-                      )}
-                      title={st?.message}
-                    >
-                      {st?.busy ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : st?.ok ? (
-                        <CheckCircle2 className="w-3 h-3" />
-                      ) : (
-                        <Download className="w-3 h-3" />
-                      )}
-                      {st?.busy ? (field.action.busyLabel || "执行中...") : field.action.label}
-                    </button>
-                  );
-                })()}
-                {field.link && (
-                  <a
-                    key="__chips_link__"
-                    href={field.link.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={field.link.url}
-                    onPointerDown={(e) => e.stopPropagation()}
-                    onClick={(e) => e.stopPropagation()}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-sky-600 dark:text-sky-400 border border-sky-500/40 bg-sky-500/5 hover:bg-sky-500/10 transition-all"
-                  >
-                    <ExternalLink className="w-3 h-3" />
-                    {field.link.label || "访问"}
-                  </a>
-                )}
-              </div>
-            </div>
-          );
-        }
-
-        if (field.type === "button") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              {field.description && (
-                <p className="text-[11px] text-muted-foreground mb-1.5 leading-snug">{field.description}</p>
-              )}
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onButtonAction?.(field); }}
-                onPointerDown={(e) => e.stopPropagation()}
-                className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
-              >
-                <FileJson className="w-3.5 h-3.5" />
-                {field.label}
-              </button>
-            </div>
-          );
-        }
-
-        const value = config[field.key] ?? "";
-
-        if (field.type === "language-select") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <select
-                value={value || "auto"}
-                onChange={(e) => onConfigChange(field.key, e.target.value)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onWheel={(e) => e.stopPropagation()}
-                className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
-              >
-                {LANGUAGE_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          );
-        }
-
-        if (field.type === "file") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <div className="flex gap-1">
-                <input
-                  type="text"
-                  value={value}
-                  onChange={(e) => onConfigChange(field.key, e.target.value)}
-                  placeholder={field.placeholder}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onWheel={(e) => e.stopPropagation()}
-                  className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-                />
-                <button
-                  onClick={async () => {
-                    // Determine if this is a folder selector (outputDir, cookie_file, etc.)
-                    const isFolder = field.key === "outputDir" || (field.fileFilter && field.fileFilter.length === 0);
-                    const filterArr: [string, string][] = (field.fileFilter || []).map((f: string) => [f, f] as [string, string]);
-                    const path = await nativeFileDialog(
-                      isFolder ? "folder" : "file",
-                      field.label || "Select",
-                      filterArr
-                    );
-                    if (path) onConfigChange(field.key, path);
-                  }}
-                  className="px-2 py-1 text-[10px] rounded-md bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 transition-colors flex-shrink-0"
-                >
-                  Browse
-                </button>
-              </div>
-            </div>
-          );
-        }
-
-        if (field.type === "hotwords") {
-          return (
-            <div key={field.key} className="col-span-2">
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <div className="flex gap-1">
-                <textarea
-                  value={value}
-                  onChange={(e) => onConfigChange(field.key, e.target.value)}
-                  placeholder={field.placeholder}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onWheel={(e) => e.stopPropagation()}
-                  rows={2}
-                  className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all resize-none"
-                />
-                <button
-                  onClick={async () => {
-                    const path = await nativeFileDialog("file", "选择热词文件", [["Text", "*.txt"]]);
-                    if (typeof path === "string" && path) {
-                      try {
-                        const res = await client.get("/api/files/read", { params: { path } });
-                        const content: string = res.data?.content || "";
-                        // Convert newline-separated words to semicolon-separated
-                        const hotwords = content.split(/\r?\n/).map(w => w.trim()).filter(Boolean).join(";");
-                        onConfigChange(field.key, hotwords);
-                      } catch (e) {
-                        console.error("Failed to read hotwords file:", e);
-                      }
-                    }
-                  }}
-                  className="px-2 py-1 text-[10px] rounded-md bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 transition-colors flex-shrink-0 self-start mt-0.5"
-                >
-                  加载文件
-                </button>
-              </div>
-            </div>
-          );
-        }
-
-        if (field.type === "text") {
-          // Special handling for path_to_title node's template field
-          const isPathTemplate = nodeType.id === "path_to_title" && field.key === "template";
-          const pathPlaceholders = [
-            { key: "filename", label: "文件名", placeholder: "{filename}" },
-            { key: "parent", label: "父文件夹", placeholder: "{parent}" },
-            { key: "grandparent", label: "父父文件夹", placeholder: "{grandparent}" },
-          ];
-
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <div className="relative group">
-                <input
-                  type="text"
-                  value={value}
-                  onChange={(e) => onConfigChange(field.key, e.target.value)}
-                  placeholder={field.placeholder}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onWheel={(e) => e.stopPropagation()}
-                  className="w-full text-xs px-2.5 py-1.5 pr-7 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-                />
-                <button
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => setExpandField({ key: field.key, label: field.label, value: value || "" })}
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="放大编辑"
-                >
-                  <Maximize2 className="w-3 h-3" />
-                </button>
-              </div>
-              {isPathTemplate && (
-                <div className="flex flex-wrap gap-1 mt-1.5">
-                  {pathPlaceholders.map((p) => (
-                    <button
-                      key={p.key}
-                      type="button"
-                      onPointerDown={(e) => e.stopPropagation()}
-                      onClick={() => {
-                        const newValue = (value || "") + p.placeholder;
-                        onConfigChange(field.key, newValue);
-                      }}
-                      className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border border-purple-500/30 transition-colors"
-                      title={`插入 ${p.placeholder} 到模板`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {field.description && (
-                <p className="text-[10px] text-muted-foreground/70 mt-1">{field.description}</p>
-              )}
-            </div>
-          );
-        }
-
-        if (field.type === "datetime-local") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <input
-                type="datetime-local"
-                value={value}
-                onChange={(e) => onConfigChange(field.key, e.target.value)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onWheel={(e) => e.stopPropagation()}
-                className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-              />
-            </div>
-          );
-        }
-
-        if (field.type === "date") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <input
-                type="date"
-                value={value}
-                onChange={(e) => onConfigChange(field.key, e.target.value)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onWheel={(e) => e.stopPropagation()}
-                className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-              />
-            </div>
-          );
-        }
-
-        if (field.type === "time") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <input
-                type="time"
-                value={value}
-                onChange={(e) => onConfigChange(field.key, e.target.value)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onWheel={(e) => e.stopPropagation()}
-                className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-              />
-            </div>
-          );
-        }
-
-        if (field.type === "textarea") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              {field.chips && field.chips.length > 0 && (
-                <div className="flex flex-wrap gap-1 mb-1.5">
-                  {field.chips.map((chip) => (
-                    <button
-                      key={chip.value}
-                      type="button"
-                      onClick={() => {
-                        const textarea = textareaRefs.current[field.key];
-                        const cur = typeof value === "string" ? value : "";
-                        const start = textarea?.selectionStart ?? cur.length;
-                        const end = textarea?.selectionEnd ?? cur.length;
-                        onConfigChange(field.key, cur.slice(0, start) + chip.value + cur.slice(end));
-                        requestAnimationFrame(() => {
-                          textarea?.focus();
-                          textarea?.setSelectionRange(start + chip.value.length, start + chip.value.length);
-                        });
-                      }}
-                      className="px-2 py-0.5 text-[10px] rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
-                      title={`插入 ${chip.value}`}
-                    >
-                      {chip.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="relative group">
-                <textarea
-                  ref={(element) => { textareaRefs.current[field.key] = element; }}
-                  value={value}
-                  onChange={(e) => onConfigChange(field.key, e.target.value)}
-                  placeholder={field.placeholder}
-                  rows={3}
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onWheel={(e) => e.stopPropagation()}
-                  className="w-full text-xs px-2.5 py-1.5 pr-7 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all resize-none"
-                />
-                <button
-                  onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => setExpandField({ key: field.key, label: field.label, value: value || "" })}
-                  className="absolute right-1.5 bottom-1.5 p-1 rounded text-muted-foreground/70 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="放大编辑"
-                >
-                  <Maximize2 className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          );
-        }
-
-        if (field.type === "select") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <select
-                value={value}
-                onChange={(e) => onConfigChange(field.key, e.target.value)}
-                onPointerDown={(e) => e.stopPropagation()}
-                onWheel={(e) => e.stopPropagation()}
-                className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
-              >
-                {field.options?.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
-              </select>
-            </div>
-          );
-        }
-
-        if (field.type === "api-select") {
-          return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={config} onConfigChange={onConfigChange} /></div>;
-        }
-
-        if (field.type === "multiselect") {
-          const selectedValues: string[] = Array.isArray(value) ? value : (value ? [String(value)] : []);
-          const options = field.options || [];
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <div className="rounded-md border border-border/50 bg-background">
-                <div className="flex flex-wrap gap-1 px-2 py-1.5 min-h-[30px]">
-                  {selectedValues.length === 0 && (
-                    <span className="text-[11px] text-muted-foreground/70">{field.placeholder || "自行选择"}</span>
-                  )}
-                  {selectedValues.map((sv) => (
-                    <span key={sv} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
-                      {options.find((o) => o.value === sv)?.label || sv}
+          // Chips / toggle group
+          if (field.type === "chips") {
+            const selected: string[] = config[field.key] || [];
+            const isSingle = field.singleSelect;
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {field.options?.map((opt) => {
+                    const isSelected = selected.includes(opt.value);
+                    const chipColor = CHIP_COLORS[opt.value] || field.chipColor || "#6b7280";
+                    return (
                       <button
+                        key={opt.value}
                         type="button"
+                        onClick={() => {
+                          let next: string[];
+                          if (isSingle) {
+                            // 单选模式：直接选择当前
+                            next = [opt.value];
+                          } else {
+                            // 多选模式
+                            if (isSelected) {
+                              next = selected.filter((v) => v !== opt.value);
+                              if (next.length === 0) next = [opt.value]; // at least one
+                            } else {
+                              next = [...selected, opt.value];
+                            }
+                          }
+                          onConfigChange(field.key, next);
+                        }}
+                        className={cn(
+                          "px-3 py-1.5 rounded-lg text-xs font-medium border transition-all duration-150",
+                          isSelected
+                            ? "text-white shadow-sm"
+                            : "text-muted-foreground border-border/50 bg-background hover:border-primary/25"
+                        )}
+                        style={isSelected ? {
+                          backgroundColor: chipColor,
+                          borderColor: chipColor,
+                          boxShadow: `0 1px 4px ${chipColor}33`,
+                        } : undefined}
+                      >
+                        {opt.label}
+                      </button>
+                    );
+                  })}
+                  {field.action && (() => {
+                    const st = actionState[field.key];
+                    return (
+                      <button
+                        key="__chips_action__"
+                        type="button"
+                        disabled={st?.busy}
                         onPointerDown={(e) => e.stopPropagation()}
-                        onClick={(e) => { e.stopPropagation(); onConfigChange(field.key, selectedValues.filter((v) => v !== sv)); }}
-                        className="hover:text-destructive"
-                      >×</button>
-                    </span>
-                  ))}
+                        onClick={(e) => { e.stopPropagation(); handleChipAction(field); }}
+                        className={cn(
+                          "inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium border transition-all",
+                          st?.busy
+                            ? "opacity-60 cursor-wait text-purple-500 border-purple-500/40 bg-purple-500/5"
+                            : st?.ok
+                              ? "text-emerald-600 dark:text-emerald-400 border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10"
+                              : "text-purple-600 dark:text-purple-400 border-purple-500/40 bg-purple-500/5 hover:bg-purple-500/10"
+                        )}
+                        title={st?.message}
+                      >
+                        {st?.busy ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : st?.ok ? (
+                          <CheckCircle2 className="w-3 h-3" />
+                        ) : (
+                          <Download className="w-3 h-3" />
+                        )}
+                        {st?.busy ? (field.action.busyLabel || "执行中...") : field.action.label}
+                      </button>
+                    );
+                  })()}
+                  {field.link && (
+                    <a
+                      key="__chips_link__"
+                      href={field.link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={field.link.url}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium text-sky-600 dark:text-sky-400 border border-sky-500/40 bg-sky-500/5 hover:bg-sky-500/10 transition-all"
+                    >
+                      <ExternalLink className="w-3 h-3" />
+                      {field.link.label || "访问"}
+                    </a>
+                  )}
                 </div>
+              </div>
+            );
+          }
+
+          if (field.type === "button") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                {field.description && (
+                  <p className="text-[11px] text-muted-foreground mb-1.5 leading-snug">{field.description}</p>
+                )}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); onButtonAction?.(field); }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                >
+                  <FileJson className="w-3.5 h-3.5" />
+                  {field.label}
+                </button>
+              </div>
+            );
+          }
+
+          const value = config[field.key] ?? "";
+
+          if (field.type === "language-select") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
                 <select
-                  multiple
-                  value={selectedValues}
-                  onChange={(e) => {
-                    const next = Array.from(e.target.selectedOptions).map((o) => o.value);
-                    onConfigChange(field.key, next);
-                  }}
+                  value={value || "auto"}
+                  onChange={(e) => onConfigChange(field.key, e.target.value)}
                   onPointerDown={(e) => e.stopPropagation()}
                   onWheel={(e) => e.stopPropagation()}
-                  className="w-full text-[11px] px-2 py-1 border-t border-border/40 bg-background outline-none"
+                  className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
                 >
-                  {options.map((opt) => (
+                  {LANGUAGE_OPTIONS.map((opt) => (
                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
-              {field.description && <p className="text-[10px] text-muted-foreground mt-1">{field.description}</p>}
-            </div>
-          );
-        }
+            );
+          }
 
-        if (field.type === "account-select") {
-          return <div key={field.key} className={fieldSpanClass(field)}><AccountSelectField field={field} value={value} onConfigChange={onConfigChange} /></div>;
-        }
-
-        if (field.type === "voice-select") {
-          const selectedVoice = value || "";
-          return (
-            <div key={field.key} className="space-y-1.5">
-              <label className="text-xs font-medium text-muted-foreground">{field.label}</label>
-              <button
-                type="button"
-                onClick={() => onVoiceSelect?.(field)}
-                className="w-full px-3 py-2 border border-border/50 bg-background rounded-xl text-sm text-left hover:border-primary/50 transition-colors"
-              >
-                {selectedVoice || "点击选择音色..."}
-              </button>
-              {field.description && (
-                <p className="text-[10px] text-muted-foreground">{field.description}</p>
-              )}
-            </div>
-          );
-        }
-
-        if (field.type === "checkbox" || field.type === "toggle") {
-          const nextField = configFields[configFields.indexOf(field) + 1];
-          const hasInlineNext = nextField?.inline;
-          return (
-            <div key={field.key} className={`${fieldSpanClass(field)} flex items-center gap-2`}>
-              <input
-                type="checkbox"
-                checked={!!value}
-                onChange={(e) => onConfigChange(field.key, e.target.checked)}
-                className="w-3 h-3 rounded border-border/50 bg-background accent-primary"
-              />
-              <label className="text-[11px] font-medium text-muted-foreground">{field.label}</label>
-              {hasInlineNext && (
-                <div className="flex items-center gap-1 ml-auto">
-                  <span className="text-[11px] text-muted-foreground">{nextField.label}</span>
+          if (field.type === "file") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="flex gap-1">
                   <input
-                    type="number"
-                    min={nextField.min}
-                    max={nextField.max}
-                    step={nextField.step}
-                    value={config[nextField.key] ?? ""}
-                    onChange={(e) => onConfigChange(nextField.key, parseInt(e.target.value) || 0)}
-                    className="w-16 text-xs px-1.5 py-0.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
+                    type="text"
+                    value={value}
+                    onChange={(e) => onConfigChange(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
+                    className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
                   />
+                  <button
+                    onClick={async () => {
+                      // Determine if this is a folder selector (outputDir, cookie_file, etc.)
+                      const isFolder = field.key === "outputDir" || (field.fileFilter && field.fileFilter.length === 0);
+                      const filterArr: [string, string][] = (field.fileFilter || []).map((f: string) => [f, f] as [string, string]);
+                      const path = await nativeFileDialog(
+                        isFolder ? "folder" : "file",
+                        field.label || "Select",
+                        filterArr
+                      );
+                      if (path) onConfigChange(field.key, path);
+                    }}
+                    className="px-2 py-1 text-[10px] rounded-md bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 transition-colors flex-shrink-0"
+                  >
+                    Browse
+                  </button>
                 </div>
-              )}
-            </div>
-          );
-        }
-
-        if (field.type === "slider") {
-          const min = field.min ?? 0;
-          const max = field.max ?? 100;
-          const step = field.step ?? 1;
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <div className="flex items-center justify-between mb-1">
-                <label className="text-[11px] font-medium text-muted-foreground">{field.label}</label>
-                <span className="text-[11px] font-mono text-muted-foreground">{value ?? min}</span>
               </div>
-              <input
-                type="range"
-                min={min}
-                max={max}
-                step={step}
-                value={value ?? min}
-                onChange={(e) => onConfigChange(field.key, parseFloat(e.target.value))}
-                onPointerDown={(e) => e.stopPropagation()}
-                onWheel={(e) => e.stopPropagation()}
-                className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary bg-secondary"
-              />
-            </div>
-          );
-        }
+            );
+          }
 
-        if (field.type === "number") {
-          // Skip rendering if this field is marked as inline (already rendered with previous toggle)
-          if (field.inline) return null;
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <input
-                type="number"
-                min={field.min}
-                max={field.max}
-                step={field.step}
-                value={value ?? ""}
-                onChange={(e) => onConfigChange(field.key, parseFloat(e.target.value) || 0)}
-                placeholder={field.placeholder}
-                onPointerDown={(e) => e.stopPropagation()}
-                onWheel={(e) => e.stopPropagation()}
-                className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
-              />
-            </div>
-          );
-        }
+          if (field.type === "hotwords") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="flex gap-1">
+                  <textarea
+                    value={value}
+                    onChange={(e) => onConfigChange(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
+                    rows={2}
+                    className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all resize-none"
+                  />
+                  <button
+                    onClick={async () => {
+                      const path = await nativeFileDialog("file", "选择热词文件", [["Text", "*.txt"]]);
+                      if (typeof path === "string" && path) {
+                        try {
+                          const res = await client.get("/api/files/read", { params: { path } });
+                          const content: string = res.data?.content || "";
+                          // Convert newline-separated words to semicolon-separated
+                          const hotwords = content.split(/\r?\n/).map(w => w.trim()).filter(Boolean).join(";");
+                          onConfigChange(field.key, hotwords);
+                        } catch (e) {
+                          console.error("Failed to read hotwords file:", e);
+                        }
+                      }
+                    }}
+                    className="px-2 py-1 text-[10px] rounded-md bg-primary/10 text-primary hover:bg-primary/20 border border-primary/30 transition-colors flex-shrink-0 self-start mt-0.5"
+                  >
+                    加载文件
+                  </button>
+                </div>
+              </div>
+            );
+          }
 
-        if (field.type === "audio-selector") {
-          return (
-            <div key={field.key} className={fieldSpanClass(field)}>
-              <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-              <div className="flex items-center gap-1.5">
+          if (field.type === "text") {
+            // Special handling for path_to_title node's template field
+            const isPathTemplate = nodeType.id === "path_to_title" && field.key === "template";
+            const pathPlaceholders = [
+              { key: "filename", label: "文件名", placeholder: "{filename}" },
+              { key: "parent", label: "父文件夹", placeholder: "{parent}" },
+              { key: "grandparent", label: "父父文件夹", placeholder: "{grandparent}" },
+            ];
+
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="relative group">
+                  <input
+                    type="text"
+                    value={value}
+                    onChange={(e) => onConfigChange(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
+                    className="w-full text-xs px-2.5 py-1.5 pr-7 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                  />
+                  <button
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={() => setExpandField({ key: field.key, label: field.label, value: value || "" })}
+                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="放大编辑"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                  </button>
+                </div>
+                {isPathTemplate && (
+                  <div className="flex flex-wrap gap-1 mt-1.5">
+                    {pathPlaceholders.map((p) => (
+                      <button
+                        key={p.key}
+                        type="button"
+                        onPointerDown={(e) => e.stopPropagation()}
+                        onClick={() => {
+                          const newValue = (value || "") + p.placeholder;
+                          onConfigChange(field.key, newValue);
+                        }}
+                        className="px-2 py-0.5 rounded-md text-[10px] font-medium bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 border border-purple-500/30 transition-colors"
+                        title={`插入 ${p.placeholder} 到模板`}
+                      >
+                        {p.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {field.description && (
+                  <p className="text-[10px] text-muted-foreground/70 mt-1">{field.description}</p>
+                )}
+              </div>
+            );
+          }
+
+          if (field.type === "datetime-local") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
                 <input
-                  type="text"
-                  value={value ? String(value) : ""}
-                  readOnly
-                  placeholder="未选择音频"
-                  title={value ? String(value) : ""}
-                  className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background text-muted-foreground cursor-not-allowed truncate"
-                />
-                <button
+                  type="datetime-local"
+                  value={value}
+                  onChange={(e) => onConfigChange(field.key, e.target.value)}
                   onPointerDown={(e) => e.stopPropagation()}
-                  onClick={() => setAudioSelectorField({ key: field.key, label: field.label })}
-                  className="px-2.5 py-1.5 text-[11px] font-medium rounded-md border border-border/50 bg-background hover:bg-primary/10 hover:border-primary/30 text-primary transition-all flex-shrink-0"
-                >
-                  <Music className="w-3 h-3 inline mr-1" />
-                  选择
-                </button>
+                  onWheel={(e) => e.stopPropagation()}
+                  className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                />
               </div>
+            );
+          }
+
+          if (field.type === "date") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <input
+                  type="date"
+                  value={value}
+                  onChange={(e) => onConfigChange(field.key, e.target.value)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                />
+              </div>
+            );
+          }
+
+          if (field.type === "time") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <input
+                  type="time"
+                  value={value}
+                  onChange={(e) => onConfigChange(field.key, e.target.value)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                />
+              </div>
+            );
+          }
+
+          if (field.type === "textarea") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                {field.chips && field.chips.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mb-1.5">
+                    {field.chips.map((chip) => (
+                      <button
+                        key={chip.value}
+                        type="button"
+                        onClick={() => {
+                          const textarea = textareaRefs.current[field.key];
+                          const cur = typeof value === "string" ? value : "";
+                          const start = textarea?.selectionStart ?? cur.length;
+                          const end = textarea?.selectionEnd ?? cur.length;
+                          onConfigChange(field.key, cur.slice(0, start) + chip.value + cur.slice(end));
+                          requestAnimationFrame(() => {
+                            textarea?.focus();
+                            textarea?.setSelectionRange(start + chip.value.length, start + chip.value.length);
+                          });
+                        }}
+                        className="px-2 py-0.5 text-[10px] rounded-full border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 transition-colors cursor-pointer"
+                        title={`插入 ${chip.value}`}
+                      >
+                        {chip.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                <div className="relative group">
+                  <textarea
+                    ref={(element) => { textareaRefs.current[field.key] = element; }}
+                    value={value}
+                    onChange={(e) => onConfigChange(field.key, e.target.value)}
+                    placeholder={field.placeholder}
+                    rows={3}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
+                    className="w-full text-xs px-2.5 py-1.5 pr-7 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all resize-none"
+                  />
+                  <button
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={() => setExpandField({ key: field.key, label: field.label, value: value || "" })}
+                    className="absolute right-1.5 bottom-1.5 p-1 rounded text-muted-foreground/70 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="放大编辑"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          if (field.type === "select") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <select
+                  value={value}
+                  onChange={(e) => onConfigChange(field.key, e.target.value)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
+                >
+                  {field.options?.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
+
+          if (field.type === "api-select") {
+            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={config} onConfigChange={onConfigChange} /></div>;
+          }
+
+          if (field.type === "multiselect") {
+            const selectedValues: string[] = Array.isArray(value) ? value : (value ? [String(value)] : []);
+            const options = field.options || [];
+            // pi_agent 节点的 Skill/MCP：按钮拉起弹窗（左列搜索勾选 + 右列介绍），已选以卡片显示并支持快捷删除
+            if (nodeType.id === "pi_agent" && (field.key === "skills" || field.key === "mcps")) {
+              const pickerKind: PickerKind = field.key === "skills" ? "skills" : "mcps";
+              return (
+                <div key={field.key} className={fieldSpanClass(field)}>
+                  <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                  <div className="rounded-md border border-border/50 bg-background">
+                    <div className="flex flex-wrap gap-1.5 px-2 py-2 min-h-[34px]">
+                      {selectedValues.length === 0 && (
+                        <span className="py-0.5 text-[11px] text-muted-foreground/70">{field.placeholder || "自行选择"}</span>
+                      )}
+                      {selectedValues.map((name) => (
+                        <span key={name} className="inline-flex items-center gap-1 rounded-md bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                          {options.find((o) => o.value === name)?.label || name}
+                          <button
+                            type="button"
+                            onPointerDown={(e) => e.stopPropagation()}
+                            onClick={(e) => { e.stopPropagation(); onConfigChange(field.key, selectedValues.filter((v) => v !== name)); }}
+                            className="hover:text-destructive"
+                            title={`移除 ${name}`}
+                          >×</button>
+                        </span>
+                      ))}
+                    </div>
+                    <button
+                      type="button"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={(e) => { e.stopPropagation(); setPicker({ kind: pickerKind, label: field.label, open: true }); }}
+                      className="flex w-full items-center justify-center gap-1 border-t border-border/40 py-1.5 text-[11px] font-medium text-primary transition-colors hover:bg-primary/5"
+                    >
+                      + 选择{field.label}
+                    </button>
+                  </div>
+                  {field.description && <p className="text-[10px] text-muted-foreground mt-1">{field.description}</p>}
+                  {picker?.kind === pickerKind && picker.open && (
+                    <SkillMcpPickerDialog
+                      kind={pickerKind}
+                      open
+                      selected={selectedValues}
+                      label={field.label}
+                      onConfirm={(next) => { onConfigChange(field.key, next); setPicker(null); }}
+                      onClose={() => setPicker(null)}
+                    />
+                  )}
+                </div>
+              );
+            }
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="rounded-md border border-border/50 bg-background">
+                  <div className="flex flex-wrap gap-1 px-2 py-1.5 min-h-[30px]">
+                    {selectedValues.length === 0 && (
+                      <span className="text-[11px] text-muted-foreground/70">{field.placeholder || "自行选择"}</span>
+                    )}
+                    {selectedValues.map((sv) => (
+                      <span key={sv} className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md bg-primary/10 text-primary">
+                        {options.find((o) => o.value === sv)?.label || sv}
+                        <button
+                          type="button"
+                          onPointerDown={(e) => e.stopPropagation()}
+                          onClick={(e) => { e.stopPropagation(); onConfigChange(field.key, selectedValues.filter((v) => v !== sv)); }}
+                          className="hover:text-destructive"
+                        >×</button>
+                      </span>
+                    ))}
+                  </div>
+                  <select
+                    multiple
+                    value={selectedValues}
+                    onChange={(e) => {
+                      const next = Array.from(e.target.selectedOptions).map((o) => o.value);
+                      onConfigChange(field.key, next);
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onWheel={(e) => e.stopPropagation()}
+                    className="w-full text-[11px] px-2 py-1 border-t border-border/40 bg-background outline-none"
+                  >
+                    {options.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                {field.description && <p className="text-[10px] text-muted-foreground mt-1">{field.description}</p>}
+              </div>
+            );
+          }
+
+          if (field.type === "account-select") {
+            return <div key={field.key} className={fieldSpanClass(field)}><AccountSelectField field={field} value={value} onConfigChange={onConfigChange} /></div>;
+          }
+
+          if (field.type === "voice-select") {
+            const selectedVoice = value || "";
+            return (
+              <div key={field.key} className="space-y-1.5">
+                <label className="text-xs font-medium text-muted-foreground">{field.label}</label>
+                <button
+                  type="button"
+                  onClick={() => onVoiceSelect?.(field)}
+                  className="w-full px-3 py-2 border border-border/50 bg-background rounded-xl text-sm text-left hover:border-primary/50 transition-colors"
+                >
+                  {selectedVoice || "点击选择音色..."}
+                </button>
+                {field.description && (
+                  <p className="text-[10px] text-muted-foreground">{field.description}</p>
+                )}
+              </div>
+            );
+          }
+
+          if (field.type === "checkbox" || field.type === "toggle") {
+            const nextField = configFields[configFields.indexOf(field) + 1];
+            const hasInlineNext = nextField?.inline;
+            return (
+              <div key={field.key} className={`${fieldSpanClass(field)} flex items-center gap-2`}>
+                <input
+                  type="checkbox"
+                  checked={!!value}
+                  onChange={(e) => onConfigChange(field.key, e.target.checked)}
+                  className="w-3 h-3 rounded border-border/50 bg-background accent-primary"
+                />
+                <label className="text-[11px] font-medium text-muted-foreground">{field.label}</label>
+                {hasInlineNext && (
+                  <div className="flex items-center gap-1 ml-auto">
+                    <span className="text-[11px] text-muted-foreground">{nextField.label}</span>
+                    <input
+                      type="number"
+                      min={nextField.min}
+                      max={nextField.max}
+                      step={nextField.step}
+                      value={config[nextField.key] ?? ""}
+                      onChange={(e) => onConfigChange(nextField.key, parseInt(e.target.value) || 0)}
+                      className="w-16 text-xs px-1.5 py-0.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
+                    />
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          if (field.type === "slider") {
+            const min = field.min ?? 0;
+            const max = field.max ?? 100;
+            const step = field.step ?? 1;
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">{field.label}</label>
+                  <span className="text-[11px] font-mono text-muted-foreground">{value ?? min}</span>
+                </div>
+                <input
+                  type="range"
+                  min={min}
+                  max={max}
+                  step={step}
+                  value={value ?? min}
+                  onChange={(e) => onConfigChange(field.key, parseFloat(e.target.value))}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="w-full h-1.5 rounded-full appearance-none cursor-pointer accent-primary bg-secondary"
+                />
+              </div>
+            );
+          }
+
+          if (field.type === "number") {
+            // Skip rendering if this field is marked as inline (already rendered with previous toggle)
+            if (field.inline) return null;
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <input
+                  type="number"
+                  min={field.min}
+                  max={field.max}
+                  step={field.step}
+                  value={value ?? ""}
+                  onChange={(e) => onConfigChange(field.key, parseFloat(e.target.value) || 0)}
+                  placeholder={field.placeholder}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                />
+              </div>
+            );
+          }
+
+          if (field.type === "audio-selector") {
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="flex items-center gap-1.5">
+                  <input
+                    type="text"
+                    value={value ? String(value) : ""}
+                    readOnly
+                    placeholder="未选择音频"
+                    title={value ? String(value) : ""}
+                    className="flex-1 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background text-muted-foreground cursor-not-allowed truncate"
+                  />
+                  <button
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={() => setAudioSelectorField({ key: field.key, label: field.label })}
+                    className="px-2.5 py-1.5 text-[11px] font-medium rounded-md border border-border/50 bg-background hover:bg-primary/10 hover:border-primary/30 text-primary transition-all flex-shrink-0"
+                  >
+                    <Music className="w-3 h-3 inline mr-1" />
+                    选择
+                  </button>
+                </div>
+              </div>
+            );
+          }
+
+          return null;
+        })}
+
+      </div>
+
+      {expandField && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onPointerDown={(e) => e.stopPropagation()}>
+          <div className="bg-card border border-border/50 rounded-xl shadow-2xl w-[600px] max-h-[80vh] flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
+              <span className="text-sm font-semibold">{expandField.label}</span>
+              <button onClick={() => setExpandField(null)} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors">
+                <XCircle className="w-4 h-4" />
+              </button>
             </div>
-          );
-        }
-
-        return null;
-      })}
-
-    </div>
-
-    {expandField && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onPointerDown={(e) => e.stopPropagation()}>
-        <div className="bg-card border border-border/50 rounded-xl shadow-2xl w-[600px] max-h-[80vh] flex flex-col" onPointerDown={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between px-4 py-3 border-b border-border/50">
-            <span className="text-sm font-semibold">{expandField.label}</span>
-            <button onClick={() => setExpandField(null)} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors">
-              <XCircle className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex-1 p-4 overflow-auto">
-            <textarea
-              ref={modalTextareaRef}
-              value={expandField.value}
-              onChange={(e) => {
-                onConfigChange(expandField.key, e.target.value);
-                setExpandField((f) => f ? { ...f, value: e.target.value } : null);
-              }}
-              className="w-full h-full min-h-[300px] text-sm p-3 rounded-lg border border-border/50 bg-background resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
-              autoFocus
-            />
-          </div>
-          <div className="flex justify-end px-4 py-3 border-t border-border/50">
-            <button
-              onClick={() => setExpandField(null)}
-              className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-            >
-              完成
-            </button>
+            <div className="flex-1 p-4 overflow-auto">
+              <textarea
+                ref={modalTextareaRef}
+                value={expandField.value}
+                onChange={(e) => {
+                  onConfigChange(expandField.key, e.target.value);
+                  setExpandField((f) => f ? { ...f, value: e.target.value } : null);
+                }}
+                className="w-full h-full min-h-[300px] text-sm p-3 rounded-lg border border-border/50 bg-background resize-none outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20"
+                autoFocus
+              />
+            </div>
+            <div className="flex justify-end px-4 py-3 border-t border-border/50">
+              <button
+                onClick={() => setExpandField(null)}
+                className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
+              >
+                完成
+              </button>
+            </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {audioSelectorField && createPortal(
-      <AudioSelectorDialog
-        open={true}
-        onClose={() => setAudioSelectorField(null)}
-        onSelect={(path) => {
-          onConfigChange(audioSelectorField.key, path);
-          setAudioSelectorField(null);
-        }}
-      />
-      , document.body
-    )}
+      {audioSelectorField && createPortal(
+        <AudioSelectorDialog
+          open={true}
+          onClose={() => setAudioSelectorField(null)}
+          onSelect={(path) => {
+            onConfigChange(audioSelectorField.key, path);
+            setAudioSelectorField(null);
+          }}
+        />
+        , document.body
+      )}
     </>
   );
 }
 
 function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const nd = data as any;
-  const nodeType = getNodeTypeDef(nd.nodeType);
+  const nodeType = isGroupNodeData(nd) ? buildInlineGroupTypeDef(nd) : getNodeTypeDef(nd.nodeType);
   const { updateNodeData, getNodes, getEdges } = useReactFlow();
+  const activeTaskId = useWorkflowStore((s) => s.activeTaskId);
+  const taskModeId = useWorkflowStore((s) => s.taskModeId);
+  const artifactTaskId = activeTaskId || taskModeId;
   const [expanded, setExpanded] = useState(true);
   const [jsonPreviewOpen, setJsonPreviewOpen] = useState(false);
   const [voiceSelectField, setVoiceSelectField] = useState<any>(null);
@@ -1505,8 +1868,24 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const [subtitleEditorOpen, setSubtitleEditorOpen] = useState(false);
   const [subtitleEditorEntries, setSubtitleEditorEntries] = useState<any[]>([]);
   const [subtitleEditorVideo, setSubtitleEditorVideo] = useState("");
+  const [lcwrPreviewOpen, setLcwrPreviewOpen] = useState(false);
+  const [subtitleFindOpen, setSubtitleFindOpen] = useState(false);
 
   if (!nodeType) return null;
+  if (isGroupNodeData(nd)) {
+    return (
+      <GroupWorkflowNodeCard
+        id={id}
+        nd={nd}
+        selected={!!selected}
+        nodeType={nodeType}
+        expanded={expanded}
+        setExpanded={setExpanded}
+        updateNodeData={updateNodeData}
+        taskId={artifactTaskId}
+      />
+    );
+  }
 
   // Get upstream node outputs for preview nodes
   const getUpstreamOutputs = useCallback(() => {
@@ -1579,13 +1958,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   }, [id, getNodes, getEdges]);
 
   // For preview nodes, get paths from upstream outputs or configs
-  const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } = 
+  const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } =
     (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
 
   // 当前任务 id（调试任务 activeTaskId 或一般/批量任务 taskModeId），用于相对产物路径解析
   const storeActiveTaskId = useWorkflowStore((s) => s.activeTaskId);
-  const taskModeId = useWorkflowStore((s) => s.taskModeId);
-  const previewTaskId = storeActiveTaskId || taskModeId;
+  const previewTaskId = storeActiveTaskId || artifactTaskId;
 
   const IconComp = ICON_MAP[nodeType.icon] || Wrench;
   const status = nd.status || "pending";
@@ -1763,6 +2141,17 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           <div className="text-sm font-bold truncate">{nd.label || nodeType.name}</div>
           <div className="text-xs text-muted-foreground truncate">{(nodeType.description || "").slice(0, 25)}</div>
         </div>
+        {nodeType.id === "lcwr_watermark_removal" && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setLcwrPreviewOpen(true); }}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-sky-700 dark:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
+            title="打开预览设置"
+          >
+            <Eye className="w-3 h-3" />
+            打开预览设置
+          </button>
+        )}
         {nodeType.id !== "input" && (
           <div className="relative">
             <button
@@ -1811,7 +2200,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
               </button>
             )}
           </div>
-)}
+        )}
         {nodeType.id === "cutia" && status === "waiting" && nd.workbench_url && (
           <button
             onClick={(e) => { e.stopPropagation(); window.location.href = nd.workbench_url; }}
@@ -1927,6 +2316,25 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           </div>
         )}
       </div>
+      {nodeType.id === "lcwr_watermark_removal" && (
+        <LcwrNodeControls config={config} onConfigChange={handleConfigChange} />
+      )}
+      {nodeType.id === "lcwr_watermark_removal" && (
+        <LcwrRegionSummary config={config} />
+      )}
+      {nodeType.id === "lcwr_watermark_removal" && (
+        <div className="px-3 pb-3 pt-1">
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); setLcwrPreviewOpen(true); }}
+            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium text-sky-700 dark:text-sky-300 bg-sky-500/10 border border-sky-500/20 hover:bg-sky-500/20 transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            打开预览设置
+          </button>
+        </div>
+      )}
       {/* Running Progress */}
       {status === "running" && (
         <div className="px-3 pb-2">
@@ -1946,7 +2354,112 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
       )}
 
       {/* Config Form (when expanded) */}
-      {hasConfig && expanded && (
+      {hasConfig && expanded && nodeType.id === "subtitle_position_search" && (() => {
+        const mode = String(config.position_mode || "ocr");
+        const mbox = config.manual_box && typeof config.manual_box === "object" && "x1" in config.manual_box
+          ? config.manual_box as { x1: number; y1: number; x2: number; y2: number }
+          : null;
+        const headSec = Number(config.skip_head_sec) || 0;
+        const tailSec = Number(config.skip_tail_sec) || 0;
+        return (
+          <div className="px-3 pb-3 pt-2 border-t border-border/50 space-y-2">
+            {/* 定位方式标签页（顶部） */}
+            <div className="grid grid-cols-2 gap-1 rounded-lg bg-muted/60 p-0.5">
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); handleConfigChange("position_mode", "ocr"); }}
+                className={cn(
+                  "py-1 rounded-md text-[11px] font-medium transition-colors",
+                  mode !== "manual" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground/80"
+                )}
+              >
+                OCR识别查找
+              </button>
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); handleConfigChange("position_mode", "manual"); }}
+                className={cn(
+                  "py-1 rounded-md text-[11px] font-medium transition-colors",
+                  mode === "manual" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground/80"
+                )}
+              >
+                手动定位
+              </button>
+            </div>
+            {mode === "manual" ? (
+              /* 手动定位标签页：仅按钮 + 字幕框坐标显示 */
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); setSubtitleFindOpen(true); }}
+                  className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 transition-colors"
+                >
+                  <Captions className="w-3.5 h-3.5" />
+                  打开手动定位页面
+                </button>
+                <div className="rounded-md border border-amber-500/20 bg-amber-500/5 px-2 py-1.5 text-[10px] text-muted-foreground">
+                  {mbox ? (
+                    <span>
+                      字幕框坐标（相对）：x {Math.min(mbox.x1, mbox.x2).toFixed(3)}~{Math.max(mbox.x1, mbox.x2).toFixed(3)} · y {Math.min(mbox.y1, mbox.y2).toFixed(3)}~{Math.max(mbox.y1, mbox.y2).toFixed(3)}
+                    </span>
+                  ) : (
+                    <span>尚未框选字幕区域，请打开手动定位页面框选</span>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <ConfigForm
+                nodeType={nodeType}
+                config={config}
+                onConfigChange={handleConfigChange}
+                onVoiceSelect={setVoiceSelectField}
+                onButtonAction={() => {
+                  if (nodeType.id === "text_editor") openTextEditor();
+                  else if (nodeType.id === "subtitle_editor") openSubtitleEditor();
+                  else openJsonEditor();
+                }}
+              />
+            )}
+            {/* 片头/片尾跳过（卡片最底部，不受标签页影响，默认 0） */}
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground min-w-0">
+                <span className="flex-shrink-0">片头跳过</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={headSec}
+                  onChange={(e) => handleConfigChange("skip_head_sec", Math.max(0, Number(e.target.value) || 0))}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="min-w-0 flex-1 text-[11px] px-1.5 py-1 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
+                  placeholder="0"
+                />
+                <span className="flex-shrink-0">s</span>
+              </label>
+              <label className="flex items-center gap-1.5 text-[10px] text-muted-foreground min-w-0">
+                <span className="flex-shrink-0">片尾跳过</span>
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={tailSec}
+                  onChange={(e) => handleConfigChange("skip_tail_sec", Math.max(0, Number(e.target.value) || 0))}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="min-w-0 flex-1 text-[11px] px-1.5 py-1 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
+                  placeholder="0"
+                />
+                <span className="flex-shrink-0">s</span>
+              </label>
+            </div>
+          </div>
+        );
+      })()}
+      {hasConfig && expanded && nodeType.id !== "lcwr_watermark_removal" && nodeType.id !== "subtitle_position_search" && (
         <ConfigForm
           nodeType={nodeType}
           config={config}
@@ -1960,13 +2473,27 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         />
       )}
 
-      {/* LCWR 去水印：自定义编辑器（视频/黑帧预览、区域框选、片头片尾时间轴、模型选择） */}
-      {nodeType.id === "lcwr_watermark_removal" && expanded && (
+      {/* LCWR 预览设置弹窗 */}
+      {nodeType.id === "lcwr_watermark_removal" && (
         <LcwrWatermarkEditor
+          open={lcwrPreviewOpen}
+          onOpenChange={setLcwrPreviewOpen}
           config={config}
           onConfigChange={handleConfigChange}
-          videoPath={upstreamOutputs.video}
-          imagePath={upstreamOutputs.image}
+          videoPath={upstreamOutputs.video || config.video_path || config.input_video || nd.outputs?.video}
+          imagePath={upstreamOutputs.image || config.image_path || config.input_image || nd.outputs?.image}
+          taskId={previewTaskId}
+        />
+      )}
+
+      {/* OCR字幕查找：手动定位弹窗 */}
+      {nodeType.id === "subtitle_position_search" && (
+        <SubtitleFindEditor
+          open={subtitleFindOpen}
+          onOpenChange={setSubtitleFindOpen}
+          config={config}
+          onConfigChange={handleConfigChange}
+          videoPath={upstreamOutputs.video || config.video_path || config.input_video || nd.outputs?.video}
           taskId={previewTaskId}
         />
       )}
@@ -1982,10 +2509,10 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
             const count = Math.min(Math.max(Number(config.outputCount) || 2, 1), 8);
             const items: { port: string; type: string; desc: string }[] = Array.isArray(config.output_items)
               ? config.output_items.map((item: any, i: number) => ({
-                  port: String(item?.port || `输出${i + 1}`),
-                  type: String(item?.type || "text"),
-                  desc: String(item?.desc || ""),
-                }))
+                port: String(item?.port || `输出${i + 1}`),
+                type: String(item?.type || "text"),
+                desc: String(item?.desc || ""),
+              }))
               : [];
             const rows = Array.from({ length: count }, (_, i) => items[i] || { port: `输出${i + 1}`, type: "text", desc: "" });
             const updateItem = (index: number, patch: Partial<{ port: string; type: string; desc: string }>) => {
@@ -2077,7 +2604,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                     key={key}
                     onClick={(e) => {
                       e.stopPropagation();
-                      client.post("/api/tasks/open-file", { file_path: String(filePath) }).catch(() => {});
+                      client.post("/api/tasks/open-file", { file_path: String(filePath), task_id: previewTaskId }).catch(() => { });
                     }}
                     className="flex items-center gap-2 text-[10px] px-2 py-1 rounded-md bg-emerald-500/5 border border-emerald-500/20 w-full text-left hover:bg-emerald-500/15 transition-colors cursor-pointer group"
                     title={full}
@@ -2116,7 +2643,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                             const vp = parsed.publish_params.video_path as string;
                             const taskDir = vp.substring(0, vp.lastIndexOf("/output/")) || vp.substring(0, vp.lastIndexOf("\\output\\"));
                             if (taskDir) {
-                              client.post("/api/tasks/open-file", { file_path: taskDir + "/output" }).catch(() => {});
+                              client.post("/api/tasks/open-file", { file_path: taskDir + "/output", task_id: previewTaskId }).catch(() => { });
                             }
                           }}
                           className="text-emerald-600/60 hover:text-emerald-600 transition-colors cursor-pointer flex-shrink-0"

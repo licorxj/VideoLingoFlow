@@ -99,10 +99,10 @@ export function DubbingToolbar({
 
         {/* AI提取对话按钮 */}
         <Button
-          variant="outline"
+          variant="ai-soft"
           size="sm"
           onClick={onAIDialogue}
-          className="gap-1.5 border-purple-500/30 bg-purple-500/20 text-purple-400 hover:bg-purple-500/30"
+          className="gap-1.5"
         >
           <Bot className="h-4 w-4" />
           AI提取对话
@@ -179,10 +179,10 @@ export function DubbingToolbar({
 
         {/* 补全生成按钮 */}
         <Button
-          variant="outline"
+          variant="info-soft"
           size="sm"
           onClick={onCompleteGenerate}
-          className="gap-1.5 border-blue-500/30 text-blue-400 hover:bg-blue-500/20"
+          className="gap-1.5"
         >
           <RefreshCw className="h-4 w-4" />
           补全生成
@@ -208,10 +208,10 @@ export function DubbingToolbar({
 
         {/* 预览小节按钮 */}
         <Button
-          variant="outline"
+          variant="success-soft"
           size="sm"
           onClick={onPreviewSection}
-          className="gap-1.5 border-green-500/30 text-green-400 hover:bg-green-500/20"
+          className="gap-1.5"
         >
           <PlayCircle className="h-4 w-4" />
           预览小节
@@ -219,10 +219,10 @@ export function DubbingToolbar({
 
         {/* 导出章节按钮 */}
         <Button
-          variant="outline"
+          variant="warning-soft"
           size="sm"
           onClick={onExportChapter}
-          className="gap-1.5 border-amber-500/30 text-amber-400 hover:bg-amber-500/20"
+          className="gap-1.5"
         >
           <Download className="h-4 w-4" />
           导出章节
@@ -230,10 +230,10 @@ export function DubbingToolbar({
 
         {/* 浏览产物按钮 */}
         <Button
-          variant="outline"
+          variant="ai-soft"
           size="sm"
           onClick={onBrowseExports}
-          className="gap-1.5 border-purple-500/30 text-purple-400 hover:bg-purple-500/20"
+          className="gap-1.5"
         >
           <FolderArchive className="h-4 w-4" />
           浏览产物

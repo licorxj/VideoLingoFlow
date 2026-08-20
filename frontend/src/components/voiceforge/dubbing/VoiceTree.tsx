@@ -80,7 +80,7 @@ export function VoiceTree({ voices, onPlayVoice }: VoiceTreeProps) {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex min-h-[50%] flex-col">
       {/* Header */}
       <div className="flex items-center gap-2 border-b border-border/60 px-3 py-3">
         <Headphones className="h-4 w-4 text-muted-foreground" />

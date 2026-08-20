@@ -5,7 +5,7 @@ import os
 import sys
 import subprocess
 from typing import Callable, Optional
-from backend.steps.base_step import BaseStep, find_artifact
+from backend.steps.base_step import BaseStep
 
 
 class StepExtractAudio(BaseStep):
@@ -13,13 +13,67 @@ class StepExtractAudio(BaseStep):
     step_name = "音频分离"
     dependencies = []
 
+    # 源音频编码 -> 可流复制写入的容器扩展名
+    AUDIO_CODEC_EXT = {
+        "aac": "m4a",
+        "alac": "m4a",
+        "mp3": "mp3",
+        "flac": "flac",
+        "opus": "opus",
+        "vorbis": "ogg",
+        "ac3": "ac3",
+        "eac3": "eac3",
+        "dts": "dts",
+        "pcm_s16le": "wav",
+        "pcm_s24le": "wav",
+        "pcm_s32le": "wav",
+        "pcm_f32le": "wav",
+    }
+
+    # 目标保存格式 -> ffmpeg 重编码参数（format 设为 auto 时不重编码，直接流复制）
+    FORMAT_ENCODE_ARGS = {
+        "wav": ["-acodec", "pcm_s16le"],
+        "mp3": ["-c:a", "libmp3lame", "-q:a", "2"],
+        "m4a": ["-c:a", "aac", "-b:a", "192k"],
+        "flac": ["-c:a", "flac"],
+        "ogg": ["-c:a", "libvorbis", "-q:a", "6"],
+    }
+
     @property
     def artifacts(self):
         node_suffix = f"_{getattr(self, '_node_id', '')}" if getattr(self, "_node_id", "") else ""
-        return [f"output/extracted_audio{node_suffix}.wav"]
+        return [f"output/extracted_audio{node_suffix}.*"]
 
     def check_artifact(self, task_dir: str) -> bool:
-        return bool(find_artifact(os.path.join(task_dir, "output"), "extracted_audio.wav"))
+        import os
+        output_dir = os.path.join(task_dir, "output")
+        if not os.path.isdir(output_dir):
+            return False
+        node_suffix = f"_{getattr(self, '_node_id', '')}" if getattr(self, "_node_id", "") else ""
+        return any(
+            name.startswith(f"extracted_audio{node_suffix}") for name in os.listdir(output_dir)
+        )
+
+    def _detect_source_audio_ext(self, video_path: str) -> str:
+        """探测源视频音频流编码，返回对应容器扩展名（保证 -c:a copy 可写入）。
+
+        探测失败或编码未知时返回空串，由调用方回退为 wav 重编码。
+        """
+        import json
+        try:
+            result = subprocess.run(
+                ["ffprobe", "-v", "quiet", "-print_format", "json",
+                 "-show_streams", "-select_streams", "a:0", video_path],
+                capture_output=True, text=True, timeout=60,
+            )
+            if result.returncode == 0:
+                streams = (json.loads(result.stdout) or {}).get("streams") or []
+                if streams:
+                    codec = str(streams[0].get("codec_name") or "").lower()
+                    return self.AUDIO_CODEC_EXT.get(codec, "")
+        except Exception as e:
+            print(f"[ExtractAudio] ffprobe failed: {e}")
+        return ""
 
     def validate_inputs(self, task_dir: str) -> bool:
         step_inputs = getattr(self, "_step_inputs", {}) or {}
@@ -64,11 +118,25 @@ class StepExtractAudio(BaseStep):
                 f"音频分离输入视频不存在。请检查上游连线是否正确连接视频。"
             )
 
-        node_config = getattr(self, '_node_config', {}) or {}
-        # 音频质量：节点优先、全局设置兜底（格式/采样率/位深/声道/码率）
-        from backend.utils.audio_quality import resolve_audio_quality, ffmpeg_encode_args
-        quality = resolve_audio_quality(node_config)
-        fmt = quality["format"]
+        # 读取节点配置的保存格式（空/auto = 保持源质量，直接流复制音频流）
+        node_config = getattr(self, "_node_config", {}) or {}
+        target_fmt = str(node_config.get("format", "") or "").strip().lower()
+        if target_fmt and target_fmt != "auto" and target_fmt not in self.FORMAT_ENCODE_ARGS:
+            raise ValueError(f"不支持的音频保存格式: {target_fmt}")
+
+        src_fmt = self._detect_source_audio_ext(video_path)
+        if target_fmt in ("", "auto"):
+            fmt = src_fmt
+            stream_copy = bool(fmt)
+            if not fmt:
+                print(f"[ExtractAudio] 无法识别源音频编码，回退为 wav 重编码")
+                fmt = "wav"
+        else:
+            fmt = target_fmt
+            # 目标容器与源编码容器一致时仍可流复制，避免重编码损耗
+            stream_copy = bool(src_fmt) and src_fmt == fmt
+            if not stream_copy:
+                print(f"[ExtractAudio] 按设置重编码为 {fmt}")
 
         output_dir = os.path.join(task_dir, "output")
         os.makedirs(output_dir, exist_ok=True)
@@ -81,13 +149,22 @@ class StepExtractAudio(BaseStep):
         if callback:
             callback(30, "Extracting audio from video...")
 
-        cmd = [
-            "ffmpeg", "-y",
-            "-i", video_path,
-            "-vn",
-            *ffmpeg_encode_args(quality),
-            output_path,
-        ]
+        if stream_copy:
+            cmd = [
+                "ffmpeg", "-y",
+                "-i", video_path,
+                "-vn",
+                "-c:a", "copy",
+                output_path,
+            ]
+        else:
+            cmd = [
+                "ffmpeg", "-y",
+                "-i", video_path,
+                "-vn",
+                *self.FORMAT_ENCODE_ARGS.get(fmt, ["-acodec", "pcm_s16le"]),
+                output_path,
+            ]
 
         if callback:
             callback(50, "Running ffmpeg...")

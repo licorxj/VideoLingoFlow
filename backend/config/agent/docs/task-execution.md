@@ -89,7 +89,7 @@ control_plane_workspaces/{task_id}/
 1. 前端调用 `POST /api/workflows/{wf_id}/execute`（mode 见下）或 `POST /api/workflows/{wf_id}/execute-node`。
 2. `submit_workflow` 归一化工作流 → 定位任务（见 4.3）→ 建/重建 `TaskNode` 记录（status=pending，resource_class 与 queue 按节点类型分配）→ 置 `queued`。
 3. 通过 Celery 投递 `videolingo.workflow.execute` 到 `videolingo_io` 队列；`send_task` 失败时任务置 `failed`（error_class=`queue_unavailable`）。
-4. Worker 执行前 `_prepare_workspace` 落盘 `workflow.json` + `task.json`，按 DAG 拓扑调度节点，每节点在**独立子进程**中执行（`python -m backend.control_plane.step_worker <args.json>`，方案 C 隔离，`worker_pid` 记录以便硬杀）。
+4. Worker 执行前 `_prepare_workspace` 落盘 `workflow.json` + `task.json`，按 DAG 拓扑调度节点：内置 `process` 节点走 `step_worker` 子进程，`thread` 节点在运行时线程执行；自定义节点由 `custom_node_runtime.py` 按定义执行。
 5. 完成/失败/取消后任务进入终态。
 
 ### 4.2 状态机

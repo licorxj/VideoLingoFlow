@@ -10,7 +10,7 @@ rem  Options: --force  force re-download / rebuild
 rem ============================================================
 cd /d "%~dp0.."
 
-set "VENV_PY=backend\venv312\Scripts\python.exe"
+set "VENV_PY=venv312\Scripts\python.exe"
 set "PY="
 if exist "%VENV_PY%" (
     set "PY=%VENV_PY%"
@@ -19,7 +19,7 @@ if exist "%VENV_PY%" (
 )
 if not defined PY (
     echo [ERROR] Python not found. Please install Python 3.12 or create the
-    echo        backend\venv312 virtual environment first.
+    echo        venv312 virtual environment first.
     pause
     exit /b 1
 )

@@ -8,13 +8,17 @@ interface UserSubscriptionDialogProps {
 }
 
 export default function UserSubscriptionDialog({ open, onOpenChange }: UserSubscriptionDialogProps) {
+  const preventAlertOutsideInteraction = (event: { target: EventTarget | null; preventDefault: () => void }) => {
+    if ((event.target as HTMLElement | null)?.closest("#avl-alert-overlay")) event.preventDefault();
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-[95vw] max-h-[90vh] overflow-y-auto p-0 sm:max-w-4xl"
-        onInteractOutside={(event) => {
-          if ((event.target as HTMLElement).closest("#avl-alert-overlay")) event.preventDefault();
-        }}
+        onInteractOutside={preventAlertOutsideInteraction}
+        onPointerDownOutside={preventAlertOutsideInteraction}
+        onFocusOutside={preventAlertOutsideInteraction}
       >
         <DialogHeader className="px-6 pt-6 pb-2">
           <DialogTitle className="flex items-center gap-2 text-lg">

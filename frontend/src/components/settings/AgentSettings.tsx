@@ -11,6 +11,7 @@ import {
   PlugZap,
   ShieldCheck,
   Sparkles,
+  Trash2,
   Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -39,10 +40,21 @@ const emptySettings: PiAgentSettings = {
   base_docs_paths: [],
   read_blacklist: [],
   write_blacklist: [],
+  tools_enabled: [],
   skills: [],
   mcps: [],
   assistants: {},
 };
+
+const toolOptions: { id: string; label: string; desc: string; danger?: boolean }[] = [
+  { id: "read", label: "读取文件", desc: "允许读取项目内文件内容" },
+  { id: "write", label: "写入文件", desc: "允许创建或覆盖文件" },
+  { id: "edit", label: "编辑文件", desc: "允许对已有文件进行原地修改" },
+  { id: "grep", label: "内容搜索", desc: "允许按关键字搜索文件内容" },
+  { id: "find", label: "文件查找", desc: "允许按名称查找项目文件" },
+  { id: "ls", label: "目录浏览", desc: "允许列出目录内容" },
+  { id: "bash", label: "Shell 命令", desc: "允许执行 shell 命令，高权限，谨慎开启", danger: true },
+];
 
 type SettingsTab = "general" | "model" | "permission" | "skill" | "mcp" | "assistant";
 
@@ -73,6 +85,8 @@ export default function AgentSettings() {
   >([]);
   const [modelProvider, setModelProvider] = useState("openai");
   const [modelSearch, setModelSearch] = useState("");
+  const [clearingCache, setClearingCache] = useState<"sessions" | "models" | "staging" | "all" | null>(null);
+  const [cacheNotice, setCacheNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
   const load = () =>
     piRpcApi
@@ -104,6 +118,22 @@ export default function AgentSettings() {
   useEffect(() => {
     if (activeTab === "skill" || activeTab === "mcp") loadStaging();
   }, [activeTab]);
+
+  const handleClearCache = async (category: "sessions" | "models" | "staging" | "all") => {
+    setClearingCache(category);
+    setCacheNotice(null);
+    try {
+      const { data } = await piRpcApi.clearCache(category);
+      setCacheNotice({
+        kind: "ok",
+        text: `清理完成：会话 ${data.sessions} 项、模型 ${data.models} 项、暂存 ${data.staging} 项`,
+      });
+    } catch (error) {
+      setCacheNotice({ kind: "error", text: normalizeApiError(error).message });
+    } finally {
+      setClearingCache(null);
+    }
+  };
 
   const installFromStaging = async (kind: "skill" | "mcp", name: string, sourceDir: string) => {
     setInstalling(name);
@@ -154,6 +184,14 @@ export default function AgentSettings() {
           : entry,
       ),
     }));
+  };
+  const toggleTool = async (id: string, enabled: boolean) => {
+    const current = settings.tools_enabled || [];
+    const next = enabled
+      ? [...current, id]
+      : current.filter((tool) => tool !== id);
+    if (!next.length) return; // 至少保留一个工具，避免 Agent 无可用能力
+    await update({ tools_enabled: next });
   };
   const assistant = settings.assistants[selected] || {};
   const paths = (value: string) =>
@@ -354,6 +392,50 @@ export default function AgentSettings() {
               })}
             </div>
           </div>
+          {/* 缓存管理 */}
+          <div className="rounded-xl border border-border/55 bg-card/75 p-5">
+            <div className="flex items-center gap-2">
+              <Trash2 className="h-4 w-4 text-primary" />
+              <h3 className="text-sm font-semibold">缓存管理</h3>
+            </div>
+            <p className="mt-1 text-xs leading-5 text-muted-foreground">
+              分类清除小 π Agent 产生的本地缓存数据，不影响当前设置与授权。
+            </p>
+            <div className="mt-4 space-y-2">
+              {([
+                ["sessions", "会话缓存", "清除已结束的对话记录与会话文件，释放磁盘空间"],
+                ["models", "模型缓存", "清除模型清单缓存，下次启动时自动重建"],
+                ["staging", "暂存安装包", "清空待安装的 Skill / MCP 暂存目录"],
+                ["all", "全部清除", "一键清除以上全部缓存"],
+              ] as ["sessions" | "models" | "staging" | "all", string, string][]).map(([category, label, desc]) => (
+                <div key={category} className="flex items-center justify-between gap-3 rounded-lg border border-border/50 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <div className="text-xs font-medium">{label}</div>
+                    <div className="truncate text-[11px] text-muted-foreground">{desc}</div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant={category === "all" ? "destructive" : "outline"}
+                    size="sm"
+                    onClick={() => handleClearCache(category)}
+                    disabled={clearingCache !== null}
+                    className="shrink-0"
+                  >
+                    {clearingCache === category ? (
+                      <><Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />清理中</>
+                    ) : (
+                      "清除"
+                    )}
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {cacheNotice && (
+              <p className={`mt-3 text-xs ${cacheNotice.kind === "ok" ? "text-emerald-600" : "text-destructive"}`}>
+                {cacheNotice.text}
+              </p>
+            )}
+          </div>
         </div>
       )}
       {activeTab === "model" && (
@@ -485,6 +567,52 @@ export default function AgentSettings() {
         </div>
       )}
       {activeTab === "permission" && (
+        <div className="space-y-5">
+        <div className="rounded-xl border border-border/55 bg-card/75 p-5">
+          <div className="flex items-center gap-2">
+            <Wrench className="h-4 w-4 text-primary" />
+            <h3 className="text-sm font-semibold">可用能力</h3>
+          </div>
+          <p className="mt-1 text-xs leading-5 text-muted-foreground">
+            授权给 Agent 的工具集合，作用于所有助手。关闭后对应工具不会出现在 Pi
+            的能力列表里（至少保留一个）。新会话创建时生效。
+          </p>
+          <div className="mt-4 grid gap-2.5 sm:grid-cols-2">
+            {toolOptions.map((tool) => {
+              const enabled = (settings.tools_enabled || []).includes(tool.id);
+              return (
+                <div
+                  key={tool.id}
+                  className="flex items-center gap-3 rounded-lg border border-border/50 bg-background/50 px-3 py-2.5"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5 text-sm font-medium">
+                      {tool.label}
+                      {tool.danger && (
+                        <span className="rounded bg-destructive/10 px-1 py-0.5 text-[9px] font-semibold text-destructive">
+                          高权限
+                        </span>
+                      )}
+                    </div>
+                    <div className="truncate text-[11px] text-muted-foreground">
+                      {tool.desc}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    aria-label={`切换 ${tool.label}`}
+                    onClick={() => toggleTool(tool.id, !enabled)}
+                    className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${enabled ? "bg-primary" : "bg-muted-foreground/30"}`}
+                  >
+                    <span
+                      className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${enabled ? "translate-x-4" : "translate-x-0.5"}`}
+                    />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
         <div className="rounded-xl border border-border/55 bg-card/75 p-5">
           <div className="flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-primary" />
@@ -518,6 +646,7 @@ export default function AgentSettings() {
               />
             </label>
           </div>
+        </div>
         </div>
       )}
       {activeTab === "skill" && integrations("skill", "Skill 授权", Sparkles)}

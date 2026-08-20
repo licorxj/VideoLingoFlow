@@ -14,6 +14,7 @@
 | 节点创建能力 | `backend/config/agent/docs/node-creation.md` | 新建/注册/导入自定义节点；设计节点输入输出端口；规范存放节点文件；配置接口 |
 | 工作流编排能力 | `backend/config/agent/docs/workflow-orchestration.md` | 按需求编排工作流 DAG；书写/校验工作流 JSON；规划节点顺序、连线与端口匹配 |
 | 任务执行能力 | `backend/config/agent/docs/task-execution.md` | 理解任务执行流程；定位执行失败/卡住的原因；查看任务目录与产物；批量任务管理 |
+| GPU 服务能力 | `backend/config/agent/docs/gpu-service.md` | 配置或排查可选 GPU lane 服务、显存和 ASR/分离调度 |
 | 文件整理能力 | `backend/config/agent/docs/file-management.md` | 梳理项目目录结构；整理素材/字幕/音频/导出产物；规划目录与命名规范 |
 | 作品发布能力 | `backend/config/agent/docs/publishing.md` | 准备多平台作品发布；标题/简介/封面检查；发布前素材与合规检查 |
 | 技能安装能力 | `backend/config/agent/docs/skill-mcp-install.md` | 安装 Skill/MCP 扩展包；询问项目专用或系统级别；说明授权与放行方式 |

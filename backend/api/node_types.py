@@ -9,21 +9,24 @@ import json
 import zipfile
 import shutil
 import uuid
+import re
 from pathlib import Path
 from pathlib import PurePosixPath
 from typing import Optional
-from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from datetime import datetime, timezone
 
 from backend.config.builtin_node_types import (
     BUILTIN_NODE_IDS,
+    delete_builtin_node_type,
     get_builtin_node_type,
     get_builtin_node_types,
 )
 from backend.config.node_schema import get_node_schema, validate_node_type_data
+from backend.control_plane.security import current_user, require_permission
 
-router = APIRouter(prefix="/api/node-types", tags=["node-types"])
+router = APIRouter(prefix="/api/node-types", tags=["node-types"], dependencies=[Depends(current_user)])
 
 NODE_TYPES_DIR = Path(__file__).parent.parent / "config" / "node_types"
 SHARE_DIR = Path(__file__).parent.parent.parent / "share"
@@ -32,6 +35,26 @@ NODE_TYPES_DIR.mkdir(parents=True, exist_ok=True)
 SHARE_DIR.mkdir(parents=True, exist_ok=True)
 NODE_BACKUP_DIR.mkdir(parents=True, exist_ok=True)
 PACKAGE_SCHEMA_VERSION = "1.0"
+NODE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
+
+
+def _validate_node_id(node_id: str) -> str:
+    value = str(node_id or "").strip()
+    if not NODE_ID_PATTERN.fullmatch(value):
+        raise HTTPException(status_code=400, detail="Node ID must contain only letters, digits, '_' or '-' and be at most 80 characters")
+    return value
+
+
+def _atomic_json_write(path: Path, data: dict) -> None:
+    temp_path = path.with_name(f".{path.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with open(temp_path, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp_path, path)
+    finally:
+        temp_path.unlink(missing_ok=True)
 
 
 class NodeTypeConfig(BaseModel):
@@ -52,6 +75,8 @@ class NodeTypeConfig(BaseModel):
     execCode: str = ""  # inline code or shell command
     execFile: str = ""  # path to external .py file
     execTimeout: int = 300  # seconds
+    kind: str = "normal"
+    groupDefinition: Optional[dict] = None
 
 
 class ExportRequest(BaseModel):
@@ -96,8 +121,9 @@ def _validate_or_raise(data: dict) -> None:
 def _validate_package_members(member_names: list[str]) -> None:
     """Validate archive members to avoid path traversal and unsupported roots."""
     for member in member_names:
-        path = PurePosixPath(member)
-        if path.is_absolute() or ".." in path.parts:
+        normalized = member.replace("\\", "/")
+        path = PurePosixPath(normalized)
+        if path.is_absolute() or Path(normalized).drive or ".." in path.parts:
             raise HTTPException(status_code=400, detail=f"Invalid package member path: {member}")
         if path.parts and path.parts[0].startswith(".") and path.parts[0] not in {".well-known"}:
             raise HTTPException(status_code=400, detail=f"Unsupported hidden package member: {member}")
@@ -379,8 +405,7 @@ def _restore_node_backup(node_id: str, backup_id: str, create_backup: bool) -> t
     _validate_or_raise(node_data)
 
     fpath = NODE_TYPES_DIR / f"{node_id}.json"
-    with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(node_data, f, ensure_ascii=False, indent=2)
+    _atomic_json_write(fpath, node_data)
 
     return node_data, current_backup_path
 
@@ -419,6 +444,8 @@ def _analyze_package(node_data: dict, member_names: list[str], share_meta: dict)
     node_id = analyzed.get("id", "")
     if not node_id:
         raise HTTPException(status_code=400, detail="Invalid node config: missing id")
+    node_id = _validate_node_id(node_id)
+    analyzed["id"] = node_id
     if node_id in BUILTIN_NODE_IDS:
         raise HTTPException(status_code=400, detail="Cannot import over built-in node types")
 
@@ -475,9 +502,10 @@ async def list_node_type_backups(node_id: str):
     return {"backups": _list_node_backups(node_id)}
 
 
-@router.post("/{node_id}/backups/{backup_id}/restore")
+@router.post("/{node_id}/backups/{backup_id}/restore", dependencies=[Depends(require_permission("workflow:write"))])
 async def restore_node_type_backup(node_id: str, backup_id: str, req: RestoreBackupRequest | None = None):
     """Restore a custom node from a local backup directory."""
+    node_id = _validate_node_id(node_id)
     if node_id in BUILTIN_NODE_IDS:
         raise HTTPException(status_code=400, detail="Cannot restore built-in node types")
 
@@ -494,29 +522,31 @@ async def restore_node_type_backup(node_id: str, backup_id: str, req: RestoreBac
     }
 
 
-@router.post("")
+@router.post("", dependencies=[Depends(require_permission("workflow:write"))])
 async def create_node_type(config: NodeTypeConfig):
     """Create a new custom node type."""
-    node_id = config.id.strip()
-    if not node_id:
-        raise HTTPException(status_code=400, detail="Node ID is required")
+    node_id = _validate_node_id(config.id)
 
     # Check if built-in
     if node_id in BUILTIN_NODE_IDS:
         raise HTTPException(status_code=400, detail="Cannot modify built-in node types")
 
     fpath = NODE_TYPES_DIR / f"{node_id}.json"
+    if fpath.exists():
+        raise HTTPException(status_code=409, detail="Node type already exists")
     data = config.model_dump()
     data["isBuiltIn"] = False
     _validate_or_raise(data)
-    with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    _atomic_json_write(fpath, data)
     return {"ok": True, "node": data}
 
 
-@router.put("/{node_id}")
+@router.put("/{node_id}", dependencies=[Depends(require_permission("workflow:write"))])
 async def update_node_type(node_id: str, config: NodeTypeConfig):
     """Update a custom node type."""
+    node_id = _validate_node_id(node_id)
+    if config.id.strip() != node_id:
+        raise HTTPException(status_code=400, detail="Node ID in path and payload must match")
     if node_id in BUILTIN_NODE_IDS:
         raise HTTPException(status_code=400, detail="Cannot modify built-in node types")
     fpath = NODE_TYPES_DIR / f"{node_id}.json"
@@ -525,16 +555,16 @@ async def update_node_type(node_id: str, config: NodeTypeConfig):
     data = config.model_dump()
     data["isBuiltIn"] = False
     _validate_or_raise(data)
-    with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    _atomic_json_write(fpath, data)
     return {"ok": True, "node": data}
 
 
-@router.delete("/{node_id}")
+@router.delete("/{node_id}", dependencies=[Depends(require_permission("workflow:write"))])
 async def delete_node_type(node_id: str):
-    """Delete a custom node type."""
+    node_id = _validate_node_id(node_id)
     if node_id in BUILTIN_NODE_IDS:
-        raise HTTPException(status_code=400, detail="Cannot delete built-in node types")
+        delete_builtin_node_type(node_id)
+        return {"ok": True, "isBuiltIn": True}
     fpath = NODE_TYPES_DIR / f"{node_id}.json"
     if not fpath.exists():
         raise HTTPException(status_code=404, detail="Node type not found")
@@ -542,7 +572,7 @@ async def delete_node_type(node_id: str):
     return {"ok": True}
 
 
-@router.post("/export")
+@router.post("/export", dependencies=[Depends(require_permission("workflow:write"))])
 async def export_node_type(req: ExportRequest):
     """Export a node type as a ZIP file to the share/ folder."""
     # Try custom nodes first, then built-in
@@ -595,7 +625,7 @@ async def export_node_type(req: ExportRequest):
     return {"ok": True, "zipPath": str(zip_path), "fileName": zip_name}
 
 
-@router.post("/validate-package")
+@router.post("/validate-package", dependencies=[Depends(require_permission("workflow:write"))])
 async def validate_node_type_package(file: UploadFile = File(...)):
     """Preflight validation for a node package ZIP without importing it."""
     if not file.filename.endswith(".zip"):
@@ -659,7 +689,7 @@ async def validate_node_type_package(file: UploadFile = File(...)):
         temp_zip.unlink(missing_ok=True)
 
 
-@router.post("/import")
+@router.post("/import", dependencies=[Depends(require_permission("workflow:write"))])
 async def import_node_type(
     file: UploadFile = File(...),
     allowOverwrite: bool = Form(False),
@@ -686,7 +716,7 @@ async def import_node_type(
             member_names, node_data, share_meta = _load_package_payload(temp_zip)
             node_data, warnings = _analyze_package(node_data, member_names, share_meta)
 
-            rename_to = renameTo.strip()
+            rename_to = _validate_node_id(renameTo) if renameTo.strip() else ""
             is_rename = bool(rename_to)
             if is_rename:
                 if rename_to == node_data.get("id"):
@@ -735,7 +765,10 @@ async def import_node_type(
                 for member in member_names:
                     if member.startswith("__MACOSX") or member.startswith("."):
                         continue
-                    target = nodes_code_dir / member
+                    normalized_member = member.replace("\\", "/")
+                    target = (nodes_code_dir / normalized_member).resolve()
+                    if nodes_code_dir.resolve() not in target.parents:
+                        raise HTTPException(status_code=400, detail=f"Invalid package member path: {member}")
                     target.parent.mkdir(parents=True, exist_ok=True)
                     if not member.endswith("/"):
                         with zf.open(member) as src, open(target, "wb") as dst:
@@ -749,21 +782,7 @@ async def import_node_type(
             req_file = nodes_code_dir / "requirements.txt"
             install_result = ""
             if req_file.exists():
-                import subprocess, sys
-                try:
-                    result = subprocess.run(
-                        [sys.executable, "-m", "pip", "install", "-r", str(req_file), "-q"],
-                        capture_output=True, text=True, timeout=120
-                    )
-                    install_result = result.stdout + result.stderr
-                    if result.returncode != 0:
-                        install_result = f"Warning: pip install had issues: {install_result[:500]}"
-                    else:
-                        install_result = f"Dependencies installed successfully"
-                except subprocess.TimeoutExpired:
-                    install_result = "Warning: pip install timed out"
-                except Exception as e:
-                    install_result = f"Warning: pip install failed: {str(e)[:200]}"
+                raise HTTPException(status_code=400, detail="requirements.txt is not supported for direct node import")
 
             # Save node config JSON
             node_data["isBuiltIn"] = False
@@ -771,8 +790,7 @@ async def import_node_type(
             node_data["schemaVersion"] = PACKAGE_SCHEMA_VERSION
             node_data["version"] = _normalize_version(node_data.get("version") or share_meta.get("version"))
             fpath = NODE_TYPES_DIR / f"{node_id}.json"
-            with open(fpath, "w", encoding="utf-8") as f:
-                json.dump(node_data, f, ensure_ascii=False, indent=2)
+            _atomic_json_write(fpath, node_data)
 
             # List extracted files
             extracted = [str(p.relative_to(nodes_code_dir)) for p in nodes_code_dir.rglob("*") if p.is_file()]

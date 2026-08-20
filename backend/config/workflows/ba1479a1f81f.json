@@ -21,7 +21,8 @@
           "source_language": "zh",
           "target_language": "en",
           "copyInputs": true,
-          "var1Required": false
+          "var1Required": false,
+          "filePath": ""
         },
         "status": "completed",
         "progress": 100,
@@ -115,8 +116,10 @@
           "max_sentence_length": "16",
           "merge_max_gap": "0.1",
           "split_on_speaker": true,
-          "split_by_punct": false,
-          "pause_split_threshold": "1.3"
+          "pause_split_threshold": "1.3",
+          "split_sentence_ends": false,
+          "split_clause_breaks": false,
+          "processing_language": "from_input"
         },
         "status": "completed",
         "progress": 100,
@@ -176,7 +179,8 @@
         "config": {
           "translation_style": "网络短剧",
           "reflect_translate": "yes",
-          "batch_char_limit": "2000"
+          "batch_char_limit": "2000",
+          "processing_language": "from_input"
         },
         "status": "completed",
         "progress": 100,
@@ -299,7 +303,7 @@
         "nodeType": "video_preview",
         "label": "视频预览器",
         "config": {
-          "fontSize": 24,
+          "fontSize": 12,
           "fontFamily": "sans-serif",
           "fontColor": "#ffffff",
           "backgroundColor": "rgba(0,0,0,0.6)",
@@ -511,7 +515,7 @@
         "label": "视频预览器",
         "config": {
           "title": "配音后视频",
-          "fontSize": 24,
+          "fontSize": 12,
           "fontFamily": "sans-serif",
           "fontColor": "#ffffff",
           "backgroundColor": "rgba(0,0,0,0.6)",

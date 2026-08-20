@@ -45,10 +45,13 @@ class ASRBase(ABC):
         vad_options: Optional[dict] = None,
         alignment_options: Optional[dict] = None,
         diarize_options: Optional[dict] = None,
+        punctuation_engine: Optional[str] = None,
+        punctuation_options: Optional[dict] = None,
         callback: Optional[Callable] = None,
         alignment_audio_path: Optional[str] = None,
     ) -> dict:
-        """Post-process ASR result with VAD, alignment, and/or speaker diarization.
+        """Post-process ASR result with VAD, alignment, speaker diarization,
+        and/or punctuation restoration.
 
         This method allows applying VAD, word-level alignment, and speaker 
         diarization from other engines to any ASR result, enabling hybrid 
@@ -65,15 +68,19 @@ class ASRBase(ABC):
         vad_engine : str, optional
             VAD engine name (e.g., "silero", "fsmn", "webrtc").
         alignment_engine : str, optional
-            Alignment engine name (e.g., "whisperx", "qwen3").
+            Alignment engine name (e.g., "whisperx", "qwen3", "funasr").
         diarize_engine : str, optional
-            Diarization engine name (e.g., "pyannote", "cam++").
+            Diarization engine name (e.g., "pyannote", "cam++", "diarize").
+        punctuation_engine : str, optional
+            Punctuation restoration engine name (e.g., "ct_punc").
         vad_options : dict, optional
             VAD-specific options.
         alignment_options : dict, optional
             Alignment-specific options.
         diarize_options : dict, optional
             Diarization-specific options.
+        punctuation_options : dict, optional
+            Punctuation restoration options.
         callback : callable, optional
             Progress callback (percent: int, message: str).
         alignment_audio_path : str, optional
@@ -123,7 +130,16 @@ class ASRBase(ABC):
                 result = self._apply_diarization(result, audio_path, diarize_engine, diarize_options or {})
             except Exception as e:
                 print(f"[PostProcess] Diarization failed ({diarize_engine}): {e}, continuing without speaker labels")
-        
+
+        # Apply punctuation restoration last (smart fallback for engines without punctuation)
+        if punctuation_engine:
+            if callback:
+                callback(85, f"Applying punctuation restoration with {punctuation_engine}...")
+            try:
+                result = self._apply_punctuation(result, punctuation_engine, punctuation_options or {}, language)
+            except Exception as e:
+                print(f"[PostProcess] Punctuation restoration failed ({punctuation_engine}): {e}, continuing without punctuation")
+
         if callback:
             callback(100, "Post-processing complete")
         
@@ -141,6 +157,7 @@ class ASRBase(ABC):
         from backend.asr.alignment_processor import (
             WhisperXAlignmentProcessor,
             Qwen3AlignmentProcessor,
+            FunASRAlignmentProcessor,
             apply_alignment_to_segments
         )
         
@@ -153,6 +170,8 @@ class ASRBase(ABC):
             processor = WhisperXAlignmentProcessor(**options)
         elif alignment_engine == "qwen3":
             processor = Qwen3AlignmentProcessor(**options)
+        elif alignment_engine == "funasr":
+            processor = FunASRAlignmentProcessor(**options)
         else:
             raise ValueError(f"Unknown alignment engine: {alignment_engine}")
         
@@ -237,6 +256,7 @@ class ASRBase(ABC):
         from backend.asr.speaker_diarization_processor import (
             PyannoteDiarizationProcessor,
             CamPlusDiarizationProcessor,
+            DiarizeLibProcessor,
             merge_diarization_with_asr
         )
         
@@ -245,6 +265,8 @@ class ASRBase(ABC):
             processor = PyannoteDiarizationProcessor(**options)
         elif diarize_engine == "cam++":
             processor = CamPlusDiarizationProcessor(**options)
+        elif diarize_engine == "diarize":
+            processor = DiarizeLibProcessor(**options)
         else:
             raise ValueError(f"Unknown diarization engine: {diarize_engine}")
         
@@ -253,6 +275,35 @@ class ASRBase(ABC):
         
         # Merge diarization results with ASR result
         return merge_diarization_with_asr(asr_result, diarization_result)
+
+    def _apply_punctuation(
+        self,
+        asr_result: dict,
+        punctuation_engine: str,
+        options: dict,
+        language: Optional[str] = None,
+    ) -> dict:
+        """Apply punctuation restoration to ASR result (final-stage fallback)."""
+        from backend.asr.punctuation_processor import (
+            CtPuncPunctuationProcessor,
+            normalize_lang_code,
+        )
+
+        if punctuation_engine == "ct_punc":
+            processor = CtPuncPunctuationProcessor(**options)
+        else:
+            raise ValueError(f"Unknown punctuation engine: {punctuation_engine}")
+
+        lang = language or asr_result.get("language", "")
+        segments = asr_result.get("segments", []) or []
+        before = [s.get("text") for s in segments]
+        processor.restore(segments, lang)
+
+        # 文本有变化时才重建顶层 text（zh 无分隔符、en 空格分隔）
+        if any(s.get("text") != b for s, b in zip(segments, before)):
+            sep = " " if normalize_lang_code(lang) == "en" else ""
+            asr_result["text"] = sep.join((s.get("text") or "") for s in segments)
+        return asr_result
 
     def _merge_vad_segments(
         self,

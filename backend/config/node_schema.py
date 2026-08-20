@@ -14,6 +14,7 @@ NODE_CATEGORIES = [
     {"value": "flow_control", "label": "流程控制", "color": "#6366f1", "icon": "GitBranch"},
     {"value": "network_request", "label": "网络请求", "color": "#0f766e", "icon": "Globe"},
     {"value": "agent", "label": "智能体", "color": "#8b5cf6", "icon": "Bot"},
+    {"value": "group_node", "label": "组合节点", "color": "#6366f1", "icon": "Boxes"},
 ]
 
 PORT_TYPES = [
@@ -26,6 +27,7 @@ PORT_TYPES = [
     {"value": "text", "label": "文本"},
     {"value": "image", "label": "图片"},
     {"value": "url", "label": "URL"},
+    {"value": "filepath", "label": "文件路径"},
     {"value": "preview", "label": "预览"},
     {"value": "any", "label": "通用"},
 ]
@@ -79,11 +81,34 @@ def validate_node_type_data(data: dict) -> None:
     exec_type = data.get("execType", "")
     if exec_type not in ALLOWED_EXEC_TYPES:
         raise ValueError(f"Invalid execType: {exec_type}")
+    if not str(data.get("id", "")).strip() or not str(data.get("name", "")).strip():
+        raise ValueError("Node id and name are required")
+    exec_timeout = data.get("execTimeout", 300)
+    if not isinstance(exec_timeout, int) or exec_timeout < 1:
+        raise ValueError("execTimeout must be a positive integer")
+    if exec_type == "python" and not (str(data.get("execCode", "")).strip() or str(data.get("execFile", "")).strip()):
+        raise ValueError("Python nodes require execCode or execFile")
+    if exec_type in {"shell", "llm"} and not str(data.get("execCode", "")).strip():
+        raise ValueError(f"{exec_type} nodes require execCode")
+
+    kind = data.get("kind", "normal")
+    if kind not in {"normal", "group"}:
+        raise ValueError(f"Invalid node kind: {kind}")
+    group_definition = data.get("groupDefinition")
+    if kind == "group":
+        if category != "group_node":
+            raise ValueError("Group nodes must use group_node category")
+        if exec_type:
+            raise ValueError("Group nodes cannot define execType")
+        _validate_group_definition(group_definition)
+    elif group_definition is not None:
+        raise ValueError("groupDefinition is only supported by group nodes")
 
     for port_kind in ("inputs", "outputs"):
         ports = data.get(port_kind) or []
         if not isinstance(ports, list):
             raise ValueError(f"{port_kind} must be a list")
+        seen_port_ids: set[str] = set()
         for port in ports:
             if not isinstance(port, dict):
                 raise ValueError(f"Invalid {port_kind} item")
@@ -92,6 +117,9 @@ def validate_node_type_data(data: dict) -> None:
             port_type = port.get("type", "")
             if not port_id:
                 raise ValueError(f"{port_kind} port id is required")
+            if port_id in seen_port_ids:
+                raise ValueError(f"Duplicate {port_kind} port id: {port_id}")
+            seen_port_ids.add(port_id)
             if not port_label:
                 raise ValueError(f"{port_kind} port label is required")
             if port_type not in ALLOWED_PORT_TYPES:
@@ -100,6 +128,9 @@ def validate_node_type_data(data: dict) -> None:
     config_fields = data.get("configFields") or []
     if not isinstance(config_fields, list):
         raise ValueError("configFields must be a list")
+    default_config = data.get("defaultConfig") or {}
+    if not isinstance(default_config, dict):
+        raise ValueError("defaultConfig must be an object")
     seen_field_keys: set[str] = set()
     for field in config_fields:
         if not isinstance(field, dict):
@@ -156,3 +187,41 @@ def validate_node_type_data(data: dict) -> None:
             max_value = field.get("max")
             if isinstance(min_value, (int, float)) and isinstance(max_value, (int, float)) and max_value < min_value:
                 raise ValueError(f"Config field max must be >= min: {field_key}")
+
+
+def _validate_group_definition(definition: object) -> None:
+    if not isinstance(definition, dict):
+        raise ValueError("Group nodes require groupDefinition")
+    if definition.get("version") != 1:
+        raise ValueError("Unsupported groupDefinition version")
+    internal = definition.get("internalWorkflow")
+    if not isinstance(internal, dict):
+        raise ValueError("groupDefinition.internalWorkflow must be an object")
+    internal_nodes = internal.get("nodes")
+    internal_edges = internal.get("edges")
+    if not isinstance(internal_nodes, list) or len(internal_nodes) < 2:
+        raise ValueError("Group nodes require at least two internal nodes")
+    if not isinstance(internal_edges, list):
+        raise ValueError("groupDefinition.internalWorkflow.edges must be a list")
+    node_ids = {str(node.get("id", "")) for node in internal_nodes if isinstance(node, dict)}
+    if len(node_ids) != len(internal_nodes) or "" in node_ids:
+        raise ValueError("Group internal node ids must be unique")
+    for node in internal_nodes:
+        if not isinstance(node, dict) or (node.get("data") or {}).get("kind") == "group":
+            raise ValueError("Nested group nodes are not supported")
+    for mapping_key, node_key, port_key in (("inputMappings", "targetNodeId", "targetPortId"), ("outputMappings", "internalNodeId", "internalPortId")):
+        mappings = definition.get(mapping_key)
+        if not isinstance(mappings, list):
+            raise ValueError(f"groupDefinition.{mapping_key} must be a list")
+        exposed_ids: set[str] = set()
+        for mapping in mappings:
+            if not isinstance(mapping, dict):
+                raise ValueError(f"Invalid {mapping_key} item")
+            exposed_id = str(mapping.get("exposedPortId", "")).strip()
+            if not exposed_id or exposed_id in exposed_ids:
+                raise ValueError(f"{mapping_key} exposedPortId must be unique")
+            exposed_ids.add(exposed_id)
+            if str(mapping.get(node_key, "")) not in node_ids or not str(mapping.get(port_key, "")).strip():
+                raise ValueError(f"Invalid {mapping_key} target")
+            if mapping.get("type") not in ALLOWED_PORT_TYPES:
+                raise ValueError(f"Invalid {mapping_key} port type")

@@ -105,8 +105,8 @@ VideoLingoFlow/
 │   ├── editor/               # 剪辑工作台 + 剪辑 AI Agent
 │   ├── llm/ asr/ tts/ imagegen/ separation/  # 各能力域
 │   ├── main.py               # FastAPI 入口
-│   ├── manager.py            # 进程管理器（端口 18001）
-│   └── venv312/              # Python 3.12 虚拟环境
+│   └── manager.py            # 进程管理器（端口 18001）
+├── venv312/                  # Python 3.12 虚拟环境
 ├── frontend/                 # 前端（React + Vite，开发端口 11003）
 │   └── dist/                 # 构建产物（由后端同源托管）
 ├── data/                     # 运行时数据（control-plane.db、redis/）
@@ -187,7 +187,7 @@ VideoLingoFlow/
 | `start.bat` / `start.sh` | 通用一键启动：前端 dev server（11003）+ 全部后端服务 |
 | `start-prod.bat` / `start-prod.sh` | 生产模式一键启动：不启 Vite，前端由后端同源托管 `frontend/dist` |
 | `backend.bat` | 单独启动主后端 |
-| `activate-venv.bat` / `activate-venv.sh` | 进入 `backend\venv312` |
+| `activate-venv.bat` / `activate-venv.sh` | 进入 `venv312` |
 
 ## 许可与致谢
 

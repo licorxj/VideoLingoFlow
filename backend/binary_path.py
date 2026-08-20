@@ -1,11 +1,4 @@
-"""受保护编译模块的平台路径选择。
-
-仅使用标准库，不记录 Token、状态文件内容或设备信息。
-规则：
-- 仅 CPython 3.12 且平台目录存在时，将对应平台二进制目录前置插入包的 __path__，
-  使普通导入优先发现 Nuitka 编译扩展（.pyd / .so）；
-- 平台不匹配、版本不符或目录缺失时保持默认源码导入。
-"""
+"""平台路径选择。"""
 
 import os
 import platform
@@ -14,9 +7,7 @@ from pathlib import Path
 
 _CP312 = (3, 12)
 
-# 二进制根目录（相对 backend/），与私有编译仓库 Release 归档的包路径保持一致：
-#   backend/auth_binaries/cp312/<target>/backend/auth
-#   backend/control_plane_binaries/cp312/<target>/backend/control_plane
+# 二进制根目录
 _BINARY_ROOTS = ("auth_binaries", "control_plane_binaries")
 
 
@@ -52,11 +43,7 @@ def binary_directory(package_name: str) -> Path | None:
 
 
 def prepend_binary_path(package_name: str, current_path: list[str]) -> None:
-    """将匹配平台的二进制目录前置插入包的 __path__；无匹配时保持不变。
-
-    设置环境变量 VIDEOLINGO_USE_SOURCE=1 时强制回退源码导入
-    （开发/调试用途，跳过可能滞后的编译产物）。
-    """
+    """将匹配平台的二进制目录前置插入包的 __path__。"""
     if os.environ.get("VIDEOLINGO_USE_SOURCE", "").strip() in ("1", "true", "yes"):
         return
     directory = binary_directory(package_name)

@@ -1,5 +1,6 @@
 """FastAPI main entry point. CORS + route mounting + WebSocket."""
 import ipaddress
+import logging
 import os
 import sys
 import time
@@ -9,14 +10,16 @@ import shutil
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
-from fastapi import FastAPI, HTTPException
+import httpx
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, Response
+from fastapi.responses import JSONResponse, Response, StreamingResponse
+from starlette.background import BackgroundTask
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Scope, Receive, Send
 
-from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr
+from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces
 from backend.control_plane import runtime_flags
 from backend.utils.observability import correlation_id
 
@@ -32,6 +35,16 @@ class WebSocketSafeStaticFiles(StaticFiles):
         await super().__call__(scope, receive, send)
 
 
+class SPAStaticFiles(WebSocketSafeStaticFiles):
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        response = await super().get_response(path, scope)
+        headers = dict(scope.get("headers", []))
+        accepts_html = b"text/html" in headers.get(b"accept", b"")
+        if response.status_code == 404 and accepts_html and not os.path.splitext(path)[1]:
+            return await super().get_response("index.html", scope)
+        return response
+
+
 class UnicodeJSONResponse(JSONResponse):
     def render(self, content):
         import json as _json
@@ -39,6 +52,53 @@ class UnicodeJSONResponse(JSONResponse):
 
 
 app = FastAPI(title="VideoLingo API", version="2.0.0", default_response_class=UnicodeJSONResponse)
+
+
+class _SafeLogStream:
+    """给 logging handler 的 stream 做兜底，避免 write/flush 抛 OSError 反噬主流程。"""
+
+    def __init__(self, raw):
+        self._raw = raw
+
+    def write(self, data):
+        if data is None:
+            return 0
+        try:
+            return self._raw.write(data)
+        except (OSError, ValueError):
+            return len(str(data))
+
+    def flush(self):
+        try:
+            self._raw.flush()
+        except (OSError, ValueError):
+            pass
+
+    def fileno(self):
+        try:
+            return self._raw.fileno()
+        except (OSError, ValueError, AttributeError):
+            raise OSError("stream has no valid fileno")
+
+    @property
+    def encoding(self):
+        return getattr(self._raw, "encoding", None) or "utf-8"
+
+    def isatty(self):
+        try:
+            return bool(getattr(self._raw, "isatty", lambda: False)())
+        except (OSError, ValueError):
+            return False
+
+
+def _harden_logging_streams():
+    """包装 uvicorn / fastapi logger 的 handler stream，避免 access log flush 报 Invalid argument。"""
+    for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access", "fastapi"):
+        logger = logging.getLogger(logger_name)
+        for handler in logger.handlers:
+            stream = getattr(handler, "stream", None)
+            if stream is not None and not isinstance(stream, _SafeLogStream):
+                handler.stream = _SafeLogStream(stream)
 
 
 class CorrelationMiddleware(BaseHTTPMiddleware):
@@ -109,6 +169,7 @@ app.include_router(cutia.router, prefix="/api/cutia", tags=["cutia"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(history.router, prefix="/api/history", tags=["history"])
 app.include_router(batch.router, prefix="/api/batch", tags=["batch"])
+app.include_router(gpu_service.router, prefix="/api", tags=["gpu-service"])
 app.include_router(llm.router, prefix="/api/llm", tags=["llm"])
 app.include_router(pi_rpc.router, prefix="/api/pi", tags=["pi-agent"])
 app.include_router(aigc_capabilities.router, tags=["aigc-capabilities"])
@@ -117,6 +178,7 @@ app.include_router(tts_interfaces.voice_router, prefix="/api/tts-voices", tags=[
 app.include_router(asr_interfaces.router, prefix="/api/asr-interfaces", tags=["asr-interfaces"])
 app.include_router(imagegen_interfaces.router, prefix="/api/imagegen-interfaces", tags=["imagegen-interfaces"])
 app.include_router(separation_interfaces.router, prefix="/api/separation-interfaces", tags=["separation-interfaces"])
+app.include_router(ocr_interfaces.router, prefix="/api/ocr-interfaces", tags=["ocr-interfaces"])
 app.include_router(publish.router, prefix="/api/publish", tags=["publish"])
 app.include_router(subscription.router, prefix="/api/subscription", tags=["subscription"])
 app.include_router(public_info.router, tags=["public-info"])
@@ -137,6 +199,57 @@ app.include_router(subtitle_preview.router, prefix="/api/subtitle-preview", tags
 app.include_router(voiceforge.router, prefix="/api/voiceforge", tags=["voiceforge"])
 app.include_router(voiceforge_ws.router, prefix="/ws/voiceforge", tags=["voiceforge-websocket"])
 app.include_router(lcwr.router, tags=["lcwr"])
+app.include_router(llm_router_update.router, tags=["llm-router-update"])
+
+LLM_ROUTER_UPSTREAM = "http://127.0.0.1:8800"
+HOP_BY_HOP_HEADERS = {
+    "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
+    "te", "trailer", "transfer-encoding", "upgrade",
+}
+
+
+def _proxy_headers(headers):
+    return {
+        name: value for name, value in headers.items()
+        if name.lower() not in HOP_BY_HOP_HEADERS | {"host"}
+    }
+
+
+@app.api_route("/llm-router", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+@app.api_route("/llm-router/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+async def proxy_llm_router(request: Request, path: str):
+    upstream_url = f"{LLM_ROUTER_UPSTREAM}/{path}"
+    if request.url.query:
+        upstream_url = f"{upstream_url}?{request.url.query}"
+    client = httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=None, write=60.0, pool=5.0), trust_env=False)
+    try:
+        upstream_response = await client.send(
+            client.build_request(
+                request.method,
+                upstream_url,
+                headers=_proxy_headers(request.headers),
+                content=await request.body(),
+            ),
+            stream=True,
+        )
+    except httpx.RequestError:
+        await client.aclose()
+        raise HTTPException(status_code=502, detail="大模型路由器服务不可用")
+
+    async def stream_response():
+        async for chunk in upstream_response.aiter_raw():
+            yield chunk
+
+    async def close_upstream():
+        await upstream_response.aclose()
+        await client.aclose()
+
+    return StreamingResponse(
+        stream_response(),
+        status_code=upstream_response.status_code,
+        headers=_proxy_headers(upstream_response.headers),
+        background=BackgroundTask(close_upstream),
+    )
 
 os.makedirs(os.path.join(ROOT, "tasks"), exist_ok=True)
 
@@ -252,13 +365,24 @@ async def startup_event():
     img_mgr.reload()
     print(f"ImageGen interfaces loaded: {len(img_mgr.list_all())}")
 
+    from backend.ocr.ocr_interface_manager import get_ocr_interface_manager
+    ocr_mgr = get_ocr_interface_manager()
+    ocr_mgr.reload()
+    print(f"OCR interfaces loaded: {len(ocr_mgr.list_all())}")
+
     from backend.api.logs import install_log_redirectors
     install_log_redirectors()
+    _harden_logging_streams()
     print("Log redirectors installed")
 
     from backend.api.ws_queue import start_queue_drainer
     start_queue_drainer()
     print("WS queue drainer started")
+
+    # 启动时后台拉取云端加密配置，覆盖每日用量限额（失败时保持预设兜底值）
+    from backend.auth.subscription_guard import start_limits_refresh
+    start_limits_refresh()
+    print("Subscription limits refresh scheduled")
 
 
 @app.on_event("shutdown")
@@ -269,7 +393,7 @@ async def shutdown_event():
 
 frontend_build = os.path.join(ROOT, "frontend", "dist")
 if os.path.isdir(frontend_build):
-    app.mount("/", WebSocketSafeStaticFiles(directory=frontend_build, html=True), name="frontend")
+    app.mount("/", SPAStaticFiles(directory=frontend_build, html=True), name="frontend")
 
 
 if __name__ == "__main__":

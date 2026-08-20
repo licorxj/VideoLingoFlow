@@ -57,6 +57,13 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
 
   const tasks = batch.tasks || [];
   const workflowNodes = batch.workflow_nodes || [];
+  const selectedTaskList = tasks.filter((t) => selectedTasks.has(t.task_id));
+  const resumableStatuses = new Set(["created", "paused", "failed", "cancelled", "interrupted"]);
+  const retryableStatuses = new Set(["failed", "cancelled"]);
+  const stoppableStatuses = new Set(["running"]);
+  const resumableSelectedCount = selectedTaskList.filter((t) => resumableStatuses.has(t.status)).length;
+  const retryableSelectedCount = selectedTaskList.filter((t) => retryableStatuses.has(t.status)).length;
+  const stoppableSelectedCount = selectedTaskList.filter((t) => stoppableStatuses.has(t.status)).length;
 
   const completedCount = tasks.filter((t) => t.status === "completed").length;
   const failedCount = tasks.filter((t) => t.status === "failed" || t.status === "cancelled").length;
@@ -68,6 +75,7 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
       case "running": return { label: "执行中", cls: "bg-blue-500/10 text-blue-600" };
       case "failed": return { label: "失败", cls: "bg-red-500/10 text-red-600" };
       case "partial": return { label: "部分完成", cls: "bg-amber-500/10 text-amber-600" };
+      case "interrupted": return { label: "等待继续", cls: "bg-orange-500/10 text-orange-600" };
       case "paused": return { label: "已暂停", cls: "bg-amber-500/10 text-amber-600" };
       default: return { label: "待执行", cls: "bg-muted text-muted-foreground" };
     }
@@ -318,24 +326,27 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
             <div className="flex items-center gap-2">
               <button
                 onClick={(e) => { e.stopPropagation(); handleSelectedAction("恢复执行", (taskId) => batchApi.resumeTask(batch.batch_id, taskId)); }}
-                disabled={batchActionLoading}
+                disabled={batchActionLoading || resumableSelectedCount === 0}
                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
+                title={selectedTasks.size === 0 ? "请先勾选当前批次中的任务" : resumableSelectedCount === 0 ? "选中的任务里没有可继续项" : `继续 ${resumableSelectedCount} 个选中任务`}
               >
-                <Play className="w-3 h-3" />开始
+                <Play className="w-3 h-3" />选中继续({resumableSelectedCount})
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); handleSelectedAction("从头执行", (taskId) => batchApi.retryTask(batch.batch_id, taskId)); }}
-                disabled={batchActionLoading}
+                disabled={batchActionLoading || retryableSelectedCount === 0}
                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 transition-colors disabled:opacity-50"
+                title={selectedTasks.size === 0 ? "请先勾选当前批次中的任务" : retryableSelectedCount === 0 ? "选中的任务里没有可从头执行项" : `重跑 ${retryableSelectedCount} 个选中任务`}
               >
-                <RotateCcw className="w-3 h-3" />从头执行
+                <RotateCcw className="w-3 h-3" />选中重跑({retryableSelectedCount})
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); handleSelectedAction("停止", (taskId) => batchApi.cancelTask(batch.batch_id, taskId)); }}
-                disabled={batchActionLoading}
+                disabled={batchActionLoading || stoppableSelectedCount === 0}
                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-red-500/10 text-red-600 hover:bg-red-500/20 transition-colors disabled:opacity-50"
+                title={selectedTasks.size === 0 ? "请先勾选当前批次中的任务" : stoppableSelectedCount === 0 ? "选中的任务里没有执行中的任务" : `停止 ${stoppableSelectedCount} 个选中任务`}
               >
-                <Square className="w-3 h-3" />停止
+                <Square className="w-3 h-3" />选中停止({stoppableSelectedCount})
               </button>
               <button
                 onClick={(e) => { e.stopPropagation(); openSyncModal(); }}

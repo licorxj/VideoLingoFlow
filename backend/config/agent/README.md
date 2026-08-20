@@ -1,6 +1,6 @@
 # VideoLingoFlow Agent Knowledge
 
-This directory contains the English knowledge documents loaded by the Pi agent.
+This directory contains the English knowledge documents loaded by the 小π Agent.
 
 ## Path Resolution
 
@@ -25,4 +25,4 @@ Do not infer a different root from a session directory or a temporary working di
 - `docs/capability-index.md`: capability document index used by the general assistant (read on demand).
 - `docs/*.md`: role capability documents (node creation, workflow orchestration, task execution, file management, publishing).
 
-The Pi manager loads selected base documents at session creation. Changing a document affects newly created sessions. Role capability documents are selected per assistant in the Pi Agent settings.
+The Pi manager loads selected base documents at session creation. Changing a document affects newly created sessions. Role capability documents are selected per assistant in the 小π Agent settings.

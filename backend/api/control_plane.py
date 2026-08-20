@@ -2,6 +2,8 @@ import os
 import shutil
 import subprocess
 import time
+import json
+import ipaddress
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -85,6 +87,129 @@ def _cookie_secure(http_request: Request) -> bool:
     return (http_request.headers.get("x-forwarded-proto", "") or "").lower() == "https"
 
 
+def _is_loopback_request(http_request: Request) -> bool:
+    client = http_request.client
+    if client is None:
+        return False
+    try:
+        return ipaddress.ip_address(client.host).is_loopback
+    except ValueError:
+        return False
+
+
+@router.get("/runtime/status")
+def runtime_status():
+    """统一运行态聚合：批量 inflight、控制面队列、worker、资源容量、GPU 服务状态。"""
+    batch = {"inflight_tasks": 0, "running_batches": 0, "paused_batches": 0}
+    control_plane = {
+        "tasks": {"queued": 0, "running": 0, "paused": 0, "stopping": 0},
+        "queues": {},
+        "workers": {"available": False, "stats": {}, "active": {}, "reserved": {}},
+        "resources": {"capacity": {}, "gpu_service_enabled": False},
+    }
+    try:
+        from backend.config.config_manager import config
+        from backend.control_plane.runtime import queue_for
+        from backend.control_plane.celery_runtime import celery_app
+        from backend.engine.batch_executor import get_batch_executor
+        from backend.gpu_service import config as gpu_config
+        from backend.control_plane import workflow_runtime as workflow_runtime_module
+
+        resource_tokens = getattr(workflow_runtime_module, "RESOURCE_TOKENS", None)
+        gpu_service_active = bool(getattr(workflow_runtime_module, "_gpu_service_active", None))
+        if callable(getattr(workflow_runtime_module, "_gpu_service_active", None)):
+            try:
+                gpu_service_active = bool(workflow_runtime_module._gpu_service_active())
+            except Exception:
+                gpu_service_active = gpu_config.enabled()
+        else:
+            gpu_service_active = gpu_config.enabled()
+
+        batches = get_batch_executor().list_batches()
+        batch["running_batches"] = sum(1 for item in batches if item.get("status") == "running")
+        batch["paused_batches"] = sum(1 for item in batches if item.get("status") in {"paused", "interrupted"})
+
+        with session_scope() as db:
+            tasks = db.scalars(select(Task)).all()
+            for task in tasks:
+                if task.status in {"queued", "running", "paused", "stopping"}:
+                    control_plane["tasks"][task.status] = control_plane["tasks"].get(task.status, 0) + 1
+                if (task.payload or {}).get("batch", {}).get("batch_id") and task.status in {"queued", "running", "stopping"}:
+                    batch["inflight_tasks"] += 1
+
+        control_plane["resources"]["capacity"] = dict(getattr(resource_tokens, "capacities", {}) or {})
+        control_plane["resources"]["gpu_service_enabled"] = gpu_service_active
+        control_plane["resources"]["batch_max_inflight_tasks"] = int(config.get("batch.max_concurrent_tasks", 3))
+        control_plane["resources"]["batch_task_start_interval"] = float(config.get("batch.task_start_interval", 0))
+
+        if celery_app is not None:
+            try:
+                inspect = celery_app.control.inspect()
+                stats = inspect.stats() or {}
+                active = inspect.active() or {}
+                reserved = inspect.reserved() or {}
+                control_plane["workers"] = {
+                    "available": True,
+                    "stats": stats,
+                    "active": active,
+                    "reserved": reserved,
+                }
+            except Exception:
+                pass
+            try:
+                client = celery_app.connection_for_read().default_channel.client
+                for resource in ("cpu", "gpu", "llm", "tts", "io"):
+                    qname = queue_for(resource)
+                    control_plane["queues"][resource] = {"name": qname, "depth": int(client.llen(qname))}
+            except Exception:
+                pass
+    except Exception as exc:
+        control_plane["error"] = str(exc)
+
+    gpu_service = {"enabled": False, "available": False}
+    try:
+        from backend.gpu_service import config as gpu_config
+        from backend.gpu_service import jobs as gpu_jobs
+        gpu_service["enabled"] = gpu_config.enabled()
+        if gpu_service["enabled"]:
+            rc = gpu_jobs.get_redis()
+            raw = rc.get(gpu_config.status_key())
+            gpu_service["available"] = gpu_jobs.service_alive(rc)
+            if raw:
+                gpu_service.update(json.loads(raw))
+            gpu_service["configured"] = {
+                "max_lanes": gpu_config.max_lanes(),
+                "idle_timeout": gpu_config.lane_idle_timeout(),
+                "vram_headroom_gb": gpu_config.vram_headroom_gb(),
+            }
+    except Exception:
+        pass
+
+    system = {"available": False, "cpu_percent": None, "ram_percent": None, "gpu_percent": None, "vram_percent": None}
+    try:
+        import psutil
+
+        system["available"] = True
+        system["cpu_percent"] = round(float(psutil.cpu_percent(interval=0.1)), 1)
+        system["ram_percent"] = round(float(psutil.virtual_memory().percent), 1)
+    except Exception:
+        pass
+    vram = gpu_service.get("vram") if isinstance(gpu_service.get("vram"), dict) else {}
+    total_gb = vram.get("total_gb")
+    used_gb = vram.get("used_gb")
+    if isinstance(total_gb, (int, float)) and total_gb > 0 and isinstance(used_gb, (int, float)):
+        system["vram_percent"] = round(used_gb / total_gb * 100, 1)
+    if isinstance(vram.get("utilization_percent"), (int, float)):
+        system["gpu_percent"] = vram["utilization_percent"]
+
+    return {
+        "batch": batch,
+        "control_plane": control_plane,
+        "gpu_service": gpu_service,
+        "system": system,
+    }
+
+
 @router.post("/auth/bootstrap")
 def bootstrap(request: Credentials, response: Response, http_request: Request):
     with session_scope() as db:
@@ -118,6 +243,20 @@ def login(request: Credentials, response: Response, http_request: Request):
             raise HTTPException(401, detail={"code": "invalid_credentials", "message": "用户名或密码错误"})
         token = issue_session(db, user)
         audit(db, user.id, "login", "user", user.id)
+        response.set_cookie("cp_session", token, httponly=True, samesite="lax", secure=_cookie_secure(http_request), max_age=43200)
+        return {"user": user_view(user, roles_for(db, user.id))}
+
+
+@router.post("/auth/local-session")
+def create_local_session(response: Response, http_request: Request):
+    if not _is_loopback_request(http_request):
+        raise HTTPException(403, detail={"code": "local_session_forbidden", "message": "仅允许本机访问"})
+    with session_scope() as db:
+        user = db.scalar(select(User).where(User.is_active.is_(True)).order_by(User.created_at).limit(1))
+        if user is None:
+            raise HTTPException(409, detail={"code": "bootstrap_required", "message": "请先初始化本地管理员"})
+        token = issue_session(db, user)
+        audit(db, user.id, "local_session", "user", user.id)
         response.set_cookie("cp_session", token, httponly=True, samesite="lax", secure=_cookie_secure(http_request), max_age=43200)
         return {"user": user_view(user, roles_for(db, user.id))}
 

@@ -116,8 +116,8 @@ def find_exe(names):
 def venv_python() -> str | None:
     """返回共享 venv 的 python（存在时），否则 None。"""
     for p in (
-        PROJECT_ROOT / "backend" / "venv312" / "Scripts" / "python.exe",
-        PROJECT_ROOT / "backend" / "venv312" / "bin" / "python",
+        PROJECT_ROOT / "venv312" / "Scripts" / "python.exe",
+        PROJECT_ROOT / "venv312" / "bin" / "python",
     ):
         if p.exists():
             return str(p)
@@ -344,7 +344,7 @@ def ensure_backend_pip(req_path: Path, label: str) -> None:
     """后端 pip 依赖：venv 存在则安装，否则提示（后端启动管理器启动时会自愈）。"""
     py = venv_python()
     if not py:
-        warn(f"{label}: 未发现共享 venv（backend/venv312），跳过 pip 安装（启动管理器会自愈）")
+        warn(f"{label}: 未发现共享 venv（venv312），跳过 pip 安装（启动管理器会自愈）")
         return
     run([py, "-m", "pip", "install", "-r", str(req_path), "-q"], check=False)
     ok(f"{label}: 后端依赖已安装（venv）")

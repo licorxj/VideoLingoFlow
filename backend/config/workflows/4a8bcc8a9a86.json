@@ -21,7 +21,8 @@
           "videoPath": "M:\\视频下载\\西门子UG-NX-12初学者教程\\1-Siemens NX 12 Tutorial for Beginners.webm",
           "source_language": "en",
           "target_language": "zh",
-          "copyInputs": true
+          "copyInputs": true,
+          "filePath": ""
         },
         "status": "completed",
         "progress": 100,
@@ -113,8 +114,10 @@
           "max_sentence_length": "18",
           "merge_max_gap": "0.2",
           "split_on_speaker": false,
-          "split_by_punct": false,
-          "pause_split_threshold": "2"
+          "pause_split_threshold": "2",
+          "split_sentence_ends": false,
+          "split_clause_breaks": false,
+          "processing_language": "from_input"
         },
         "status": "pending",
         "progress": 0,
@@ -166,7 +169,8 @@
         "label": "逐句翻译",
         "config": {
           "translation_style": "忠于原文",
-          "reflect_translate": "yes"
+          "reflect_translate": "yes",
+          "processing_language": "from_input"
         },
         "status": "pending",
         "progress": 0,
@@ -277,7 +281,7 @@
         "nodeType": "video_preview",
         "label": "视频预览器",
         "config": {
-          "fontSize": 24,
+          "fontSize": 12,
           "fontFamily": "sans-serif",
           "fontColor": "#ffffff",
           "backgroundColor": "rgba(0,0,0,0.6)",
@@ -471,7 +475,7 @@
         "label": "视频预览器",
         "config": {
           "title": "配音后视频",
-          "fontSize": 24,
+          "fontSize": 12,
           "fontFamily": "sans-serif",
           "fontColor": "#ffffff",
           "backgroundColor": "rgba(0,0,0,0.6)",
