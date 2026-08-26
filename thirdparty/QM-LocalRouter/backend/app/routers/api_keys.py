@@ -145,7 +145,7 @@ async def _test_single_key(key: ApiKey, provider: Provider, db: AsyncSession) ->
 
     try:
         if provider.protocol == "openai":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
                     f"{provider.base_url.rstrip('/')}/models",
                     headers={"Authorization": f"Bearer {real_key}"},
@@ -164,7 +164,7 @@ async def _test_single_key(key: ApiKey, provider: Provider, db: AsyncSession) ->
                     return {"key_id": key_id, "alias": alias, "success": False, "message": msg, "latency_ms": elapsed}
 
         elif provider.protocol == "claude":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(
                     f"{provider.base_url.rstrip('/')}/messages",
                     headers={
@@ -188,7 +188,7 @@ async def _test_single_key(key: ApiKey, provider: Provider, db: AsyncSession) ->
                     return {"key_id": key_id, "alias": alias, "success": False, "message": msg, "latency_ms": elapsed}
 
         elif provider.protocol == "gemini":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
                     f"{provider.base_url.rstrip('/')}/models?key={real_key}",
                 )
@@ -230,7 +230,7 @@ async def test_key(key_id: int, db: AsyncSession = Depends(get_db)):
 
     try:
         if provider.protocol == "openai":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
                     f"{provider.base_url.rstrip('/')}/models",
                     headers={"Authorization": f"Bearer {real_key}"},
@@ -249,7 +249,7 @@ async def test_key(key_id: int, db: AsyncSession = Depends(get_db)):
                     return ApiKeyTestResult(success=False, message=msg, latency_ms=elapsed)
 
         elif provider.protocol == "claude":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(
                     f"{provider.base_url.rstrip('/')}/messages",
                     headers={
@@ -273,7 +273,7 @@ async def test_key(key_id: int, db: AsyncSession = Depends(get_db)):
                     return ApiKeyTestResult(success=False, message=msg, latency_ms=elapsed)
 
         elif provider.protocol == "gemini":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
                     f"{provider.base_url.rstrip('/')}/models?key={real_key}",
                 )

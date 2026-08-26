@@ -107,7 +107,7 @@ class ASRBase(ABC):
             try:
                 result = self._apply_vad(result, audio_path, vad_engine, vad_options or {})
             except Exception as e:
-                print(f"[PostProcess] VAD failed ({vad_engine}): {e}, continuing without VAD segmentation")
+                print(f"[PostProcess] VAD failed ({vad_engine}): {e}, continuing without VAD segmentation", flush=True)
         
         # Apply word-level alignment within VAD boundaries
         # Use alignment_audio_path if provided (e.g., vocal-separated audio for better alignment)
@@ -116,11 +116,11 @@ class ASRBase(ABC):
                 callback(50, f"Applying word alignment with {alignment_engine}...")
             align_audio = alignment_audio_path or audio_path
             if alignment_audio_path:
-                print(f"[PostProcess] Using alignment audio for alignment: {alignment_audio_path}")
+                print(f"[PostProcess] Using alignment audio for alignment: {alignment_audio_path}", flush=True)
             try:
                 result = self._apply_alignment(result, align_audio, alignment_engine, alignment_options or {}, language)
             except Exception as e:
-                print(f"[PostProcess] Alignment failed ({alignment_engine}): {e}, continuing without word timestamps")
+                print(f"[PostProcess] Alignment failed ({alignment_engine}): {e}, continuing without word timestamps", flush=True)
         
         # Apply speaker diarization last
         if diarize_engine:
@@ -129,7 +129,7 @@ class ASRBase(ABC):
             try:
                 result = self._apply_diarization(result, audio_path, diarize_engine, diarize_options or {})
             except Exception as e:
-                print(f"[PostProcess] Diarization failed ({diarize_engine}): {e}, continuing without speaker labels")
+                print(f"[PostProcess] Diarization failed ({diarize_engine}): {e}, continuing without speaker labels", flush=True)
 
         # Apply punctuation restoration last (smart fallback for engines without punctuation)
         if punctuation_engine:
@@ -138,7 +138,7 @@ class ASRBase(ABC):
             try:
                 result = self._apply_punctuation(result, punctuation_engine, punctuation_options or {}, language)
             except Exception as e:
-                print(f"[PostProcess] Punctuation restoration failed ({punctuation_engine}): {e}, continuing without punctuation")
+                print(f"[PostProcess] Punctuation restoration failed ({punctuation_engine}): {e}, continuing without punctuation", flush=True)
 
         if callback:
             callback(100, "Post-processing complete")
@@ -154,6 +154,7 @@ class ASRBase(ABC):
         language: Optional[str] = None,
     ) -> dict:
         """Apply word-level alignment to ASR result."""
+        print(f"[ASRBase._apply_alignment] START engine={alignment_engine} audio={audio_path} language={language} options={options}", flush=True)
         from backend.asr.alignment_processor import (
             WhisperXAlignmentProcessor,
             Qwen3AlignmentProcessor,
@@ -177,12 +178,15 @@ class ASRBase(ABC):
         
         # Run alignment
         segments = asr_result.get("segments", [])
+        print(f"[ASRBase._apply_alignment] segments={len(segments)}, calling processor.align...", flush=True)
         alignment_result = processor.align(audio_path, segments, language)
+        print(f"[ASRBase._apply_alignment] processor.align returned, words={len(alignment_result.words) if alignment_result.words else 0}", flush=True)
         
         # Apply alignment results to segments
         if alignment_result.words:
             asr_result["segments"] = apply_alignment_to_segments(segments, alignment_result)
         
+        print(f"[ASRBase._apply_alignment] END", flush=True)
         return asr_result
 
     def _apply_vad(
@@ -200,6 +204,7 @@ class ASRBase(ABC):
         If every engine fails, the original result is returned unchanged so the
         remaining post-processing stages (alignment/diarization) still run.
         """
+        print(f"[ASRBase._apply_vad] START engine={vad_engine} audio={audio_path} options={options}", flush=True)
         from backend.asr.vad_processor import (
             SileroVADProcessor, 
             FSMNVADProcessor, 
@@ -224,10 +229,10 @@ class ASRBase(ABC):
                 elif engine == "webrtc":
                     processor = WebRTCVADProcessor(**options)
                 else:
-                    print(f"[VAD] Unknown VAD engine: {engine}, trying next")
+                    print(f"[VAD] Unknown VAD engine: {engine}, trying next", flush=True)
                     continue
                 
-                print(f"[VAD] Running VAD with engine: {engine}")
+                print(f"[VAD] Running VAD with engine: {engine}", flush=True)
                 vad_segments = processor.detect(audio_path)
                 
                 # Merge VAD results with ASR segments
@@ -235,14 +240,14 @@ class ASRBase(ABC):
                     asr_result["segments"] = self._merge_vad_segments(
                         asr_result["segments"], vad_segments
                     )
-                print(f"[VAD] VAD completed with engine: {engine}, {len(vad_segments)} segment(s)")
+                print(f"[VAD] VAD completed with engine: {engine}, {len(vad_segments)} segment(s)", flush=True)
                 return asr_result
             except Exception as e:
                 last_error = e
-                print(f"[VAD] VAD engine '{engine}' failed: {e}")
+                print(f"[VAD] VAD engine '{engine}' failed: {e}", flush=True)
         
         if last_error:
-            print(f"[VAD] All VAD engines failed (last error: {last_error}); continuing without VAD segmentation")
+            print(f"[VAD] All VAD engines failed (last error: {last_error}); continuing without VAD segmentation", flush=True)
         return asr_result
 
     def _apply_diarization(
@@ -284,6 +289,7 @@ class ASRBase(ABC):
         language: Optional[str] = None,
     ) -> dict:
         """Apply punctuation restoration to ASR result (final-stage fallback)."""
+        print(f"[ASRBase._apply_punctuation] START engine={punctuation_engine} language={language}", flush=True)
         from backend.asr.punctuation_processor import (
             CtPuncPunctuationProcessor,
             normalize_lang_code,
@@ -297,12 +303,15 @@ class ASRBase(ABC):
         lang = language or asr_result.get("language", "")
         segments = asr_result.get("segments", []) or []
         before = [s.get("text") for s in segments]
+        print(f"[ASRBase._apply_punctuation] segments={len(segments)}, calling processor.restore...", flush=True)
         processor.restore(segments, lang)
+        print(f"[ASRBase._apply_punctuation] processor.restore done", flush=True)
 
         # 文本有变化时才重建顶层 text（zh 无分隔符、en 空格分隔）
         if any(s.get("text") != b for s, b in zip(segments, before)):
             sep = " " if normalize_lang_code(lang) == "en" else ""
             asr_result["text"] = sep.join((s.get("text") or "") for s in segments)
+        print(f"[ASRBase._apply_punctuation] END", flush=True)
         return asr_result
 
     def _merge_vad_segments(
@@ -334,7 +343,7 @@ class ASRBase(ABC):
         has_words = any("words" in seg and seg["words"] for seg in asr_segments)
         
         if has_words:
-            print(f"[VAD] Merging {len(asr_segments)} ASR segments with {len(vad_segments)} VAD segments using word timestamps")
+            print(f"[VAD] Merging {len(asr_segments)} ASR segments with {len(vad_segments)} VAD segments using word timestamps", flush=True)
             all_words = []
             for seg in asr_segments:
                 all_words.extend(seg.get("words", []))
@@ -372,6 +381,13 @@ class ASRBase(ABC):
                     else:
                         seg_text = " ".join(w.get("word", "") for w in seg_words)
                     
+                    # 保留原始 ASR 文本中的标点符号：
+                    # word-level 对齐（whisperx 等）返回的 word token 可能不包含标点，
+                    # 直接用 words 重建 text 会丢失标点。
+                    # 策略：找到这段 words 对应的原始 ASR segment，用原始 text 中
+                    # 的标点版本替换重建的 text。
+                    seg_text = self._restore_punctuation(seg_words, asr_segments, seg_text)
+                    
                     merged.append({
                         "id": len(merged) + 1,
                         "start": round(vad_seg.start, 3),
@@ -382,10 +398,10 @@ class ASRBase(ABC):
             
             # If we managed to produce merged segments, return them
             if merged:
-                print(f"[VAD] Word-aware merge produced {len(merged)} segments")
+                print(f"[VAD] Word-aware merge produced {len(merged)} segments", flush=True)
                 return merged
             # Fallback if no words matched VAD segments (unlikely)
-            print("[VAD] Word-aware merge failed to find matches, falling back to duration-based split")
+            print("[VAD] Word-aware merge failed to find matches, falling back to duration-based split", flush=True)
 
         # If ASR already has many segments, just filter by VAD overlap
         if len(asr_segments) > len(vad_segments) * 0.5:
@@ -403,7 +419,7 @@ class ASRBase(ABC):
             return merged if merged else asr_segments
         
         # ASR returned few segments (e.g., 1 big segment), use VAD to split
-        print(f"[VAD] Splitting {len(asr_segments)} ASR segments using {len(vad_segments)} VAD segments")
+        print(f"[VAD] Splitting {len(asr_segments)} ASR segments using {len(vad_segments)} VAD segments", flush=True)
         
         # Concatenate all ASR text（英文按空格拼接，避免单词在切分边界粘连）
         texts = [seg.get("text", "") for seg in asr_segments]
@@ -480,5 +496,85 @@ class ASRBase(ABC):
                     "text": seg_text.strip(),
                 })
         
-        print(f"[VAD] Split into {len(merged)} segments")
+        print(f"[VAD] Split into {len(merged)} segments", flush=True)
         return merged
+
+    @staticmethod
+    def _restore_punctuation(
+        seg_words: List[dict],
+        asr_segments: List[dict],
+        rebuilt_text: str,
+    ) -> str:
+        """VAD 合并用 words 重建 text 后，尝试从原始 ASR segment 中恢复标点。
+
+        word-level 对齐（whisperx wav2vec2 等）返回的 word token 通常不包含标点，
+        直接用 words 重建 text 会丢失 ASR 引擎返回的标点符号。
+        本方法在原始 ASR segment text 中定位这段 words 对应的文本区间，
+        用原始文本（含标点）替换重建的文本。
+
+        定位策略：去掉标点后，用 rebuilt_text 在原始 ASR segments 的拼接文本中
+        做子串匹配，命中则取原始文本的对应区间（含标点）。
+        """
+        import re as _re
+        if not rebuilt_text.strip():
+            return rebuilt_text
+
+        def _strip_punct(s: str) -> str:
+            return _re.sub(r'[，。！？、；：,.!?;:\s]', '', s or '')
+
+        rebuilt_clean = _strip_punct(rebuilt_text)
+        if not rebuilt_clean:
+            return rebuilt_text
+
+        # 在原始 ASR segments 中查找包含这些 words 的 segment
+        # 优先用 word 时间戳匹配：seg_words 的第一个 word 的 start 时间落在
+        # 哪个原始 segment 的时间范围内
+        word_start = 0.0
+        for w in seg_words:
+            try:
+                word_start = float(w.get("start") or 0)
+                break
+            except (TypeError, ValueError):
+                continue
+
+        for orig_seg in asr_segments:
+            orig_text = orig_seg.get("text", "")
+            if not orig_text:
+                continue
+            orig_clean = _strip_punct(orig_text)
+            # 用去掉标点后的文本做子串匹配
+            if rebuilt_clean in orig_clean:
+                # 找到了！从原始文本中提取含标点的对应区间
+                # 逐字符扫描原始文本，跳过标点，匹配 rebuilt_clean 的字符
+                result_chars: list[str] = []
+                match_idx = 0
+                for ch in orig_text:
+                    if _strip_punct(ch):  # 非标点字符
+                        if match_idx < len(rebuilt_clean):
+                            if ch == rebuilt_clean[match_idx] or _strip_punct(ch) == rebuilt_clean[match_idx:match_idx+1]:
+                                result_chars.append(ch)
+                                match_idx += 1
+                            else:
+                                # 字符不匹配，重置
+                                result_chars = []
+                                match_idx = 0
+                        else:
+                            # 已经匹配完，追加剩余标点（如果紧跟在匹配区间后）
+                            if ch in "，。！？、；：,.!?;:":
+                                result_chars.append(ch)
+                            else:
+                                break
+                    else:
+                        # 标点字符
+                        if match_idx < len(rebuilt_clean):
+                            # 匹配进行中，标点可能是重建 text 中缺失的
+                            result_chars.append(ch)
+                        else:
+                            # 匹配完成后，追加紧邻的标点
+                            result_chars.append(ch)
+
+                restored = "".join(result_chars).strip()
+                # 校验：去掉标点后应该和 rebuilt_clean 一致
+                if _strip_punct(restored) == rebuilt_clean:
+                    return restored
+        return rebuilt_text

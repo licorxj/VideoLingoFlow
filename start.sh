@@ -41,14 +41,28 @@ fi
 
 mkdir -p data/assets data/workspace data/checkpoints data/backups logs
 
-# Manager 端口检查
-if command -v ss >/dev/null 2>&1 && ss -tln 2>/dev/null | grep -q ':18001 '; then
-    echo "[错误] 18001 已被占用，请先停止已运行的 Manager"
-    exit 1
+# Manager 端口检查（占用则先关闭再启动）
+MANAGER_PID=""
+if command -v lsof >/dev/null 2>&1; then
+    MANAGER_PID=$(lsof -ti tcp:18001 2>/dev/null | head -n1)
+elif command -v fuser >/dev/null 2>&1; then
+    MANAGER_PID=$(fuser 18001/tcp 2>/dev/null | tr -d ' ' | head -n1)
+elif command -v ss >/dev/null 2>&1; then
+    MANAGER_PID=$(ss -tlnp 2>/dev/null | grep ':18001 ' | grep -o 'pid=[0-9]*' | head -n1 | cut -d= -f2)
+elif command -v netstat >/dev/null 2>&1; then
+    MANAGER_PID=$(netstat -tlnp 2>/dev/null | grep ':18001 ' | grep -o 'LISTEN.*' | grep -o '[0-9]*/' | head -n1 | tr -d '/')
 fi
-if command -v netstat >/dev/null 2>&1 && netstat -tln 2>/dev/null | grep -q ':18001 '; then
-    echo "[错误] 18001 已被占用，请先停止已运行的 Manager"
-    exit 1
+if [ -n "$MANAGER_PID" ]; then
+    echo "[Manager] 端口 18001 已被占用（PID: $MANAGER_PID），先停止已运行的 Manager..."
+    kill -9 "$MANAGER_PID" 2>/dev/null
+    for _ in $(seq 1 30); do
+        if command -v lsof >/dev/null 2>&1 && ! lsof -ti tcp:18001 >/dev/null 2>&1; then break
+        elif command -v ss >/dev/null 2>&1 && ! ss -tln 2>/dev/null | grep -q ':18001 '; then break
+        elif command -v netstat >/dev/null 2>&1 && ! netstat -tln 2>/dev/null | grep -q ':18001 '; then break
+        fi
+        sleep 1
+    done
+    echo "[Manager] 已停止旧 Manager，端口 18001 已释放。"
 fi
 
 # 前端：清理残留 vite 后，后台等待主后端(11001)就绪再启动 Vite dev server（后端先、前端后）

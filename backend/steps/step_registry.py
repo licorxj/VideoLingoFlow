@@ -6,6 +6,8 @@ from backend.steps.s00_platform_download import S00PlatformDownload
 from backend.steps.s01_download import S01Download
 from backend.steps.s02_asr import S02ASR
 from backend.steps.s_asr_stages import S_ASRRecognize, S_ASRPostProcess
+from backend.steps.s_audio_denoise import StepAudioDenoise
+from backend.steps.s_aigc_comfyui import S_AIGC_ComfyUI
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
 from backend.steps.s04_summarize import S04Summarize
@@ -35,6 +37,7 @@ from backend.steps.s_http_request import S_HttpRequest
 from backend.steps.s_pi_agent import S_PiAgent
 from backend.steps.s_imagegen import S_ImageGen
 from backend.steps.s_video_frame_extract import S_VideoFrameExtract
+from backend.steps.s_video_transcode import S_VideoTranscode
 from backend.steps.s_subtitle_position_search import S_SubtitlePositionSearch
 from backend.steps.s_subtitle_recognition import S_SubtitleRecognition
 from backend.steps.s_video_publish import S_VideoPublish
@@ -49,7 +52,12 @@ from backend.steps.s_subtitle_editor import S_SubtitleEditor
 from backend.steps.s_video_split import S_VideoSplit
 from backend.steps.s_cutia import S_Cutia
 from backend.steps.s_lcwr_watermark_removal import S_LcwrWatermarkRemoval
+from backend.steps.s_media_to_url import S_MediaToUrl
+from backend.steps.s_online_watermark_removal import S_OnlineWatermarkRemoval
+from backend.steps.s_qm_virtual_mailbox import S_QmVirtualMailbox
 from backend.steps.passthrough_step import PassthroughStep
+from backend.steps.s_archive import S_ArchiveArtifacts
+from backend.steps.s_ai_punctuate import S_AiPunctuate
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -62,6 +70,8 @@ _STEPS = {
     "asr_recognize": S_ASRRecognize(),
     "s_asr_postprocess": S_ASRPostProcess(),
     "asr_postprocess": S_ASRPostProcess(),
+    "s_audio_denoise": StepAudioDenoise(),
+    "audio_denoise": StepAudioDenoise(),
     "s03_sentence_split": S03SentenceSplit(),
     "sentence_split": S03SentenceSplit(),
     "s_sentence_preprocess": S_SentencePreprocess(),
@@ -116,8 +126,11 @@ _STEPS = {
     "pi_agent": S_PiAgent(),
     "s_imagegen": S_ImageGen(),
     "image_gen": S_ImageGen(),
+    "aigc_comfyui": S_AIGC_ComfyUI(),
     "s_video_frame_extract": S_VideoFrameExtract(),
     "video_frame_extract": S_VideoFrameExtract(),
+    "s_video_transcode": S_VideoTranscode(),
+    "video_transcode": S_VideoTranscode(),
     "s_subtitle_position_search": S_SubtitlePositionSearch(),
     "subtitle_position_search": S_SubtitlePositionSearch(),
     "s_subtitle_recognition": S_SubtitleRecognition(),
@@ -146,6 +159,14 @@ _STEPS = {
     "cutia": S_Cutia(),
     "s_lcwr_watermark_removal": S_LcwrWatermarkRemoval(),
     "lcwr_watermark_removal": S_LcwrWatermarkRemoval(),
+    "s_media_to_url": S_MediaToUrl(),
+    "media_to_url": S_MediaToUrl(),
+    "s_online_watermark_removal": S_OnlineWatermarkRemoval(),
+    "online_watermark_removal": S_OnlineWatermarkRemoval(),
+    "s_qm_virtual_mailbox": S_QmVirtualMailbox(),
+    "qm_virtual_mailbox": S_QmVirtualMailbox(),
+    "archive_artifacts": S_ArchiveArtifacts(),
+    "ai_punctuate": S_AiPunctuate(),
 }
 
 

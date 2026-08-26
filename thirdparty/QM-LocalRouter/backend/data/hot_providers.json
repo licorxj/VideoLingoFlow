@@ -3,7 +3,7 @@
     "name": "OpenAI",
     "protocol": "openai",
     "base_url": "https://api.openai.com/v1",
-    "description": "GPT-4o / GPT-4 / o1 / o3 系列模型",
+    "description": "openaiGPT系列模型",
     "icon_keyword": "openai",
     "homepage": "https://openai.com"
   },
@@ -11,7 +11,7 @@
     "name": "Anthropic",
     "protocol": "claude",
     "base_url": "https://api.anthropic.com/v1",
-    "description": "Claude Opus 4 / Claude 4 / Claude 3.5 系列模型",
+    "description": "Claude系列模型",
     "icon_keyword": "claude anthropic",
     "homepage": "https://anthropic.com"
   },
@@ -19,7 +19,7 @@
     "name": "Google Gemini",
     "protocol": "gemini",
     "base_url": "https://generativelanguage.googleapis.com/v1beta",
-    "description": "Gemini 2.5 Pro / Gemini 2.0 Flash 系列",
+    "description": "googel家Gemini系列",
     "icon_keyword": "google gemini",
     "homepage": "https://gemini.google.com"
   },
@@ -27,9 +27,25 @@
     "name": "DeepSeek",
     "protocol": "openai",
     "base_url": "https://api.deepseek.com/v1",
-    "description": "DeepSeek V3 / R1 系列，国产高性价比",
+    "description": "DeepSeek国产高性价比",
     "icon_keyword": "deepseek",
     "homepage": "https://deepseek.com"
+  },
+  {
+    "name": "小米 MiMo",
+    "protocol": "openai",
+    "base_url": "https://api.xiaomimimo.com/v1",
+    "description": "邀请码HKEQ8J,输入得10元.小米 MiMo 万亿参数 Agent 大模型,性价比很高，1M 上下文.",
+    "icon_keyword": "xiaomi mimo",
+    "homepage": "https://platform.xiaomimimo.com?ref=HKEQ8J"
+  },
+  {
+    "name": "小米 MiMo-toekenplan",
+    "protocol": "openai",
+    "base_url": "https://token-plan-cn.xiaomimimo.com/v1",
+    "description": "邀请码HKEQ8J,输入得10元.小米 MiMo 万亿参数 Agent 大模型,性价比很高，1M 上下文.",
+    "icon_keyword": "xiaomi mimo",
+    "homepage": "https://platform.xiaomimimo.com?ref=HKEQ8J"
   },
   {
     "name": "Moonshot (Kimi)",
@@ -46,6 +62,14 @@
     "description": "GLM-4 系列模型，国产大模型",
     "icon_keyword": "zhipu glm",
     "homepage": "https://zhipuai.cn"
+  },
+  {
+    "name": "SiliconFlow (硅基流动)",
+    "protocol": "openai",
+    "base_url": "https://api.siliconflow.cn/v1",
+    "description": "国产模型聚合平台，支持多种开源模型，有免费额度",
+    "icon_keyword": "siliconflow",
+    "homepage": "https://cloud.siliconflow.cn/i/L5HvpICN"
   },
   {
     "name": "阿里百炼 (DashScope)",
@@ -96,14 +120,6 @@
     "homepage": "https://openai-hk.com/?i=47782"
   },
   {
-    "name": "京东云言犀",
-    "protocol": "openai",
-    "base_url": "https://modelservice.jdcloud.com/coding/openai/v1",
-    "description": "言犀大模型，京东云平台",
-    "icon_keyword": "jd cloud",
-    "homepage": "https://www.jdcloud.com/cn/ai"
-  },
-  {
     "name": "MiniMax",
     "protocol": "openai",
     "base_url": "https://api.minimax.chat/v1",
@@ -136,14 +152,6 @@
     "homepage": "https://www.dmxapi.cn/panel"
   },
   {
-    "name": "SiliconFlow (硅基流动)",
-    "protocol": "openai",
-    "base_url": "https://api.siliconflow.cn/v1",
-    "description": "国产模型聚合平台，支持多种开源模型",
-    "icon_keyword": "siliconflow",
-    "homepage": "https://cloud.siliconflow.cn/i/L5HvpICN"
-  },
-  {
     "name": "商汤日日新",
     "protocol": "openai",
     "base_url": "https://token.sensenova.cn/v1",
@@ -152,36 +160,12 @@
     "homepage": "https://sensenova.com.cn"
   },
   {
-    "name": "昆仑万维天工",
-    "protocol": "openai",
-    "base_url": "https://api.tiangong.cn/v1",
-    "description": "天工大模型",
-    "icon_keyword": "tiangong kunlun",
-    "homepage": "https://www.tiangong.cn"
-  },
-  {
     "name": "面壁智能 (MiniCPM)",
     "protocol": "openai",
     "base_url": "https://api.openbmcl.com/v1",
     "description": "MiniCPM 系列端侧模型，高效部署",
     "icon_keyword": "modelbest minicpm",
     "homepage": "https://modelbest.ai"
-  },
-  {
-    "name": "紫东太初",
-    "protocol": "openai",
-    "base_url": "https://ai-maas.wair.ac.cn/v1",
-    "description": "中科院紫东太初多模态大模型",
-    "icon_keyword": "zidong taichu",
-    "homepage": "https://taichu-web.air.ac.cn"
-  },
-  {
-    "name": "小米 MiMo",
-    "protocol": "openai",
-    "base_url": "https://api.xiaomimimo.com/v1",
-    "description": "邀请码HKEQ8J,输入得10元.小米 MiMo 万亿参数 Agent 大模型,性价比很高，1M 上下文",
-    "icon_keyword": "xiaomi mimo",
-    "homepage": "https://account.xiaomi.com/fe/service/login/password?_group=DEFAULT&sid=api-platform&qs=%253Fcallback%253Dhttps%25253A%25252F%25252Fplatform.xiaomimimo.com%25252Fsts%25253Fsign%25253DM7gfywevl3CG5YTTcZDifhK6IK8%2525253D%252526followup%25253Dhttps%2525253A%2525252F%2525252Fplatform.xiaomimimo.com%2525252Fconsole%2525252Fbalance%2526sid%253Dapi-platform%2526_group%253DDEFAULT&callback=https%3A%2F%2Fplatform.xiaomimimo.com%2Fsts%3Fsign%3DM7gfywevl3CG5YTTcZDifhK6IK8%253D%26followup%3Dhttps%253A%252F%252Fplatform.xiaomimimo.com%252Fconsole%252Fbalance&_sign=iV9Q5kxBqXGdbkb6kmapXvJrkZM%3D&serviceParam=%7B%22checkSafePhone%22%3Afalse%2C%22checkSafeAddress%22%3Afalse%2C%22lsrp_score%22%3A0.0%7D&showActiveX=false&theme=&needTheme=false&bizDeviceType=&_locale=zh_CN"
   },
   {
     "name": "Groq",

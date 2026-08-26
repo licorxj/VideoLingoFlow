@@ -212,7 +212,8 @@
           "videoPath": "",
           "subtitlePath": "",
           "url": "",
-          "processing_language": "from_input"
+          "processing_language": "from_input",
+          "target_language": "from_input"
         },
         "status": "completed",
         "progress": 100,

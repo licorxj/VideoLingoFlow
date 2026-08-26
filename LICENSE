@@ -1,0 +1,81 @@
+VideoLingoFlow —— 开源许可声明（非商业用途）
+=================================================
+
+本项目（VideoLingoFlow）的**自有源代码与文档**（仓库中除 `thirdparty/`、`cloudflare/` 等明确标注为第三方组件的目录之外的全部内容）采用如下许可：
+
+  Creative Commons Attribution-NonCommercial 4.0 International
+  （知识共享署名-非商业性使用 4.0 国际许可协议，简称 CC BY-NC 4.0）
+
+自本文件发布之日起，任何使用者均须遵守上述协议。协议全文见：
+  https://creativecommons.org/licenses/by-nc/4.0/legalcode
+  https://creativecommons.org/licenses/by-nc/4.0/deed.zh
+
+----------------------------------------------------------------------
+一、核心授权条款（摘要，正式文本以上述链接为准）
+----------------------------------------------------------------------
+
+在遵守下列条件的前提下，许可人授予您全球范围内、免费、非独占、不可撤销的许可，
+以本作品为基础进行以下行为：
+
+  1. 分享 —— 复制、发行本作品，以及在任何媒介或格式中再制作本作品；
+  2. 演绎 —— 修改、转换本作品，并基于本作品进行二次创作。
+
+但您必须：
+
+  - 署名（BY）：您必须给出适当的署名，提供许可协议链接，并说明是否作出了修改。
+    您可以以任何合理方式署名，但不得以任何方式暗示许可人认可您或您的使用。
+  - 非商业性使用（NC）：您不得将本作品用于**商业目的**。
+    商业目的指主要旨在或指向商业优势或金钱补偿的任何使用，包括但不限于：
+      * 向第三方提供付费的托管、SaaS、API 或订阅服务；
+      * 将本作品或其衍生作品集成进付费产品或服务并对外销售/收费；
+      * 以营利为目的的内部生产环境规模化部署；
+      * 任何直接或间接获取经济收益的使用方式。
+
+----------------------------------------------------------------------
+二、本项目的补充声明
+----------------------------------------------------------------------
+
+  1. 本声明仅约束「VideoLingoFlow 自有代码与文档」。仓库中 `thirdparty/` 下的
+     第三方组件（如 social-auto-upload-web-ui、QM-LocalRouter、Cutia、Pi 等）
+     以及 `cloudflare/` 下的组件，仍分别遵循其各自目录内声明的许可（如 MIT 等），
+     与本声明互不冲突；使用这些组件时请同时遵守其原有许可。
+
+  2. 「非商业性使用」不包含：个人学习、教学演示、科研实验、开源社区内部协作，
+     以及其它不以营利为目的的用途。
+
+  3. 如需将本项目用于**任何商业用途**（含前述商业目的之任一情形），请务必事先
+     与著作权人取得书面授权。联系方式请见仓库 README 中的「联系 / 授权」说明。
+
+  4. 本作品按「现状」提供，不作任何明示或暗示的担保。许可人在任何情况下均不对
+     因使用本作品产生的任何损害承担责任。
+
+  5. 本声明不排除您在遵守 CC BY-NC 4.0 的前提下对第三方组件的既有合法使用权利。
+
+----------------------------------------------------------------------
+三、署名示例（用于转载、二次创作时）
+----------------------------------------------------------------------
+
+  视频创作框架 VideoLingoFlow —— 采用 CC BY-NC 4.0 许可
+  原始仓库：<项目仓库地址>
+  许可协议：https://creativecommons.org/licenses/by-nc/4.0/
+
+======================================================================
+English Summary (Non-Commercial)
+======================================================================
+
+The original source code and documentation of this project (VideoLingoFlow),
+excluding third-party directories such as `thirdparty/` and `cloudflare/`,
+are licensed under the **Creative Commons Attribution-NonCommercial 4.0
+International (CC BY-NC 4.0)** license.
+
+You are free to share and adapt the material for any purpose **except
+commercial advantage or monetary compensation**. You must give appropriate
+credit, provide a link to the license, and indicate if changes were made.
+
+Third-party components under `thirdparty/` and `cloudflare/` retain their
+respective original licenses (e.g., MIT) and are not covered by this notice.
+
+For any commercial use, please obtain prior written permission from the
+copyright holder.
+
+Full license text: https://creativecommons.org/licenses/by-nc/4.0/legalcode

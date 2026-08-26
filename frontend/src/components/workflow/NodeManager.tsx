@@ -108,7 +108,7 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
   const [iconPickerOpen, setIconPickerOpen] = useState(false);
 
   const emptyForm: Partial<NodeTypeConfig> = {
-    id: "", name: "", category: "process", description: "",
+    id: "", name: "", category: "utility", description: "",
     icon: "Wrench", color: "#6b7280",
     inputs: [], outputs: [], defaultConfig: {}, configFields: [],
     execType: "", execCode: "", execFile: "", execTimeout: 300,

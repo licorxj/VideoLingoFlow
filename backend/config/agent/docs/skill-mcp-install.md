@@ -10,7 +10,7 @@
 | Skill | `PROJECT_ROOT/backend/config/agent/skills/<name>/` | `~/.agent/skills/<name>/`（即 `%USERPROFILE%\.agent\skills\<name>\`） |
 | MCP | `PROJECT_ROOT/backend/config/agent/mcp/<name>/` | `~/.agent/mcps/<name>/`（即 `%USERPROFILE%\.agent\mcps\<name>\`） |
 
-- `PROJECT_ROOT` 是本机 VideoLingoFlow 安装根目录（如 `Y:\VideoLingoLc`）。
+- `PROJECT_ROOT` 是本机 VideoLingoFlow（中文：流连视听）安装根目录（如 `Y:\VideoLingoLc`）。
 - `~` 指用户主目录（Windows 下为 `%USERPROFILE%`，通常形如 `C:\Users\<用户名>`）。
 - 系统级别目录由所有使用该用户账户的项目共享；项目专用目录只属于当前 VideoLingoFlow 项目。
 
@@ -46,7 +46,7 @@ PROJECT_ROOT/data/workspace/pi-install-staging/<包名>/
 
 ## 4. 安装执行方式
 
-实际安装动作由 VideoLingoFlow 的 Agent 设置界面完成（后端 API 负责复制目录并写入授权状态）。作为助手你的职责是**引导与校验**：
+实际安装动作由 VideoLingoFlow（中文：流连视听）的 Agent 设置界面完成（后端 API 负责复制目录并写入授权状态）。作为助手你的职责是**引导与校验**：
 
 1. 确认暂存包存在且格式合规。
 2. 与用户确认安装级别（项目专用 / 系统级别）。

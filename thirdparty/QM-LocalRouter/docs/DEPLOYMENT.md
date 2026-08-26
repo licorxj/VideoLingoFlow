@@ -1,4 +1,4 @@
-﻿﻿﻿﻿# LocalRouter - Deployment Guide
+﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿﻿# LocalRouter - Deployment Guide
 
 This guide covers deploying LocalRouter on various platforms.
 
@@ -91,6 +91,15 @@ npm run dev
 
 ## Docker Deployment
 
+### Architecture
+
+The Docker image runs **two processes in a single container** (managed by `docker/entrypoint.sh`):
+
+- **nginx** on `FRONTEND_PORT` (default `12001`): serves the built frontend and reverse-proxies `/api` and `/v1` to the backend (with SSE/streaming support).
+- **uvicorn** on `BACKEND_PORT` (default `12002`): the FastAPI backend.
+
+All browser traffic should go through port `12001`. Port `12002` is exposed for direct API access and troubleshooting.
+
 ### Using Docker Compose (Recommended)
 
 ```bash
@@ -140,13 +149,24 @@ print(f'Backup created: {dst}')
 To customize ports or other settings, create a `docker-compose.override.yml`:
 
 ```yaml
-version: "3.8"
 services:
   localrouter:
     environment:
-      - BACKEND_PORT=8080
+      - FRONTEND_PORT=8080   # nginx gateway port
+      - BACKEND_PORT=8081    # uvicorn backend port
     ports:
       - "8080:8080"
+      - "8081:8081"
+```
+
+For the full list of supported variables, see the [Environment Variables Reference](#environment-variables-reference) below.
+
+### Docker Health Check
+
+The image declares a `HEALTHCHECK` that probes the backend at `http://127.0.0.1:12002/api/health`. With Docker Compose, container health can be checked via:
+
+```bash
+docker inspect --format='{{.State.Health.Status}}' localrouter
 ```
 
 ---
@@ -470,12 +490,14 @@ spec:
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `BACKEND_PORT` | `12002` | Backend uvicorn server port |
-| `FRONTEND_PORT` | `12001` | Frontend Vite dev server port |
+| `FRONTEND_PORT` | `12001` | Frontend port: nginx gateway in Docker, Vite dev server locally |
 | `HOST` | `127.0.0.1` | Backend bind address (use `0.0.0.0` for Docker/VPS) |
 | `DATABASE_URL` | `sqlite+aiosqlite:///data/app.db` | SQLite database path |
 | `LOG_RETENTION_DAYS` | `30` | Days to keep request logs |
 | `DEFAULT_TIMEOUT` | `120` | Default upstream request timeout (seconds) |
 | `DEFAULT_RETRY_COUNT` | `2` | Default retry count for failed requests |
+| `TZ` | `Asia/Shanghai` | Container timezone (Docker) |
+| `ENCRYPTION_KEY` | *(auto-generated)* | Optional fixed Fernet key. If unset, a key is generated and persisted in the data volume on first start. Generate one with: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
 
 ---
 
@@ -494,7 +516,7 @@ kill -9 <PID>
 
 ```bash
 # Check if backend is accessible from the frontend
-curl http://localhost:12002/health
+curl http://localhost:12002/api/health
 ```
 
 ### Database issues

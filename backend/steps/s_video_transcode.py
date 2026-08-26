@@ -1,0 +1,290 @@
+# -*- coding: utf-8 -*-
+"""
+视频转码节点（Step）
+
+使用 ffmpeg 对输入视频进行转码，支持容器格式、视频/音频编码、码率、
+分辨率、帧率、编码速度档、像素格式等参数在前端节点卡片上配置。
+
+执行域：thread（ffmpeg 为本地进程，按规范 3.1 重/网络型建议用 process，
+但 ffmpeg 为短任务且需进度上报，这里用 thread 并在内部通过子进程方式调用 ffmpeg，
+通过 callback(proct, message) 上报进度、通过 cancel_callback 协作取消）。
+"""
+import os
+import subprocess
+import threading
+import time
+
+from steps.base_step import Step, TaskCancelledError
+
+
+# 视频/音频编码器下拉值 -> ffmpeg 实际编码器名
+_VIDEO_CODEC_MAP = {
+    "libx264": "libx264",
+    "libx265": "libx265",
+    "vp9": "libvpx-vp9",
+    "mpeg4": "mpeg4",
+}
+_AUDIO_CODEC_MAP = {
+    "aac": "aac",
+    "mp3": "libmp3lame",
+    "opus": "libopus",
+}
+# 支持 -crf 的编码器
+_CRF_CODECS = ("libx264", "libx265", "libvpx-vp9")
+# 支持 -preset 的编码器
+_PRESET_CODECS = ("libx264", "libx265")
+# 输出格式 -> 文件扩展名
+_FORMAT_EXT = {
+    "mp4": "mp4",
+    "mkv": "mkv",
+    "webm": "webm",
+    "mov": "mov",
+    "avi": "avi",
+    "flv": "flv",
+}
+
+
+def _probe_duration(input_path: str):
+    """用 ffprobe 获取视频时长（秒），失败返回 0。"""
+    try:
+        out = subprocess.run(
+            [
+                "ffprobe", "-v", "error",
+                "-show_entries", "format=duration",
+                "-of", "default=noprint_wrappers=1:nokey=1",
+                input_path,
+            ],
+            capture_output=True, text=True, encoding="utf-8", errors="replace",
+            timeout=60,
+        )
+        if out.returncode == 0 and out.stdout.strip():
+            return float(out.stdout.strip())
+    except Exception:
+        pass
+    return 0.0
+
+
+class S_VideoTranscode(Step):
+    TYPE = "video_transcode"
+    STEP_ID = "s_video_transcode"
+
+    def __init__(self):
+        super().__init__()
+        self.log("视频转码步骤初始化")
+
+    # ------------------------------------------------------------------
+    # 输入解析
+    # ------------------------------------------------------------------
+    def _resolve_input_video(self, task_dir: str):
+        if self.step_inputs and "video" in self.step_inputs and self.step_inputs["video"]:
+            resolved = self.resolve_file_path(self.step_inputs["video"], task_dir)
+            if resolved:
+                return resolved
+        cfg = getattr(self, "_node_config", {}) or {}
+        if cfg.get("video_path"):
+            p = cfg["video_path"].strip()
+            if os.path.isabs(p) and os.path.exists(p):
+                return p
+            cand = os.path.join(task_dir, p)
+            if os.path.exists(cand):
+                return cand
+        raise ValueError("未提供输入视频：请在视频输入端口连线，或在配置中填写视频路径")
+
+    # ------------------------------------------------------------------
+    # ffmpeg 命令构建
+    # ------------------------------------------------------------------
+    def _build_command(self, input_path: str, output_path: str, cfg: dict):
+        cmd = ["ffmpeg", "-y", "-i", input_path, "-progress", "pipe:1", "-nostats"]
+
+        video_mode = cfg.get("video_mode", "reencode")
+        if video_mode == "none":
+            cmd += ["-vn"]
+        elif video_mode == "copy":
+            cmd += ["-c:v", "copy"]
+        else:
+            vcodec = _VIDEO_CODEC_MAP.get(cfg.get("video_codec", "libx264"), "libx264")
+            cmd += ["-c:v", vcodec]
+            crf = cfg.get("crf")
+            if vcodec in _CRF_CODECS and crf not in (None, ""):
+                try:
+                    crf_val = int(crf)
+                    cmd += ["-crf", str(crf_val)]
+                    if vcodec == "libvpx-vp9":
+                        cmd += ["-b:v", "0"]
+                except (TypeError, ValueError):
+                    pass
+            vbitrate = (cfg.get("video_bitrate") or "").strip()
+            if vbitrate:
+                cmd += ["-b:v", vbitrate]
+            resolution = (cfg.get("resolution") or "").strip()
+            if resolution:
+                cmd += ["-vf", f"scale={resolution}"]
+            fps = (cfg.get("fps") or "").strip()
+            if fps:
+                cmd += ["-r", str(fps)]
+            preset = (cfg.get("preset") or "").strip()
+            if vcodec in _PRESET_CODECS and preset:
+                cmd += ["-preset", preset]
+            pix_fmt = (cfg.get("pix_fmt") or "").strip()
+            if pix_fmt:
+                cmd += ["-pix_fmt", pix_fmt]
+
+        audio_mode = cfg.get("audio_mode", "reencode")
+        if audio_mode == "none":
+            cmd += ["-an"]
+        elif audio_mode == "copy":
+            cmd += ["-c:a", "copy"]
+        else:
+            acodec = _AUDIO_CODEC_MAP.get(cfg.get("audio_codec", "aac"), "aac")
+            cmd += ["-c:a", acodec]
+            abitrate = (cfg.get("audio_bitrate") or "").strip()
+            if abitrate:
+                cmd += ["-b:a", abitrate]
+
+        cmd.append(output_path)
+        return cmd
+
+    # ------------------------------------------------------------------
+    # 带进度/取消的 ffmpeg 执行
+    # ------------------------------------------------------------------
+    def _run_ffmpeg(self, cmd, duration, callback, cancel_callback, timeout=86400):
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            bufsize=1,
+            encoding="utf-8",
+            errors="replace",
+        )
+        stderr_chunks = []
+        last = {"pct": 0}
+
+        def _progress_reader():
+            try:
+                for line in proc.stdout:
+                    s = line.strip()
+                    if s.startswith("out_time_ms="):
+                        try:
+                            ms = int(s.split("=", 1)[1])
+                        except ValueError:
+                            continue
+                        cur = ms / 1_000_000.0
+                        pct = min(99, int(cur / duration * 100)) if duration and duration > 0 else last["pct"]
+                        last["pct"] = pct
+                        if callback:
+                            try:
+                                callback(pct, f"转码中 {cur:.1f}s / {duration:.1f}s")
+                            except Exception:
+                                pass
+                    elif s == "progress=end":
+                        last["pct"] = 100
+                        if callback:
+                            try:
+                                callback(100, "转码完成")
+                            except Exception:
+                                pass
+            except Exception:
+                pass
+
+        def _stderr_reader():
+            try:
+                for line in proc.stderr:
+                    stderr_chunks.append(line)
+            except Exception:
+                pass
+
+        t1 = threading.Thread(target=_progress_reader, daemon=True)
+        t2 = threading.Thread(target=_stderr_reader, daemon=True)
+        t1.start()
+        t2.start()
+
+        elapsed = 0.0
+        while True:
+            rc = proc.poll()
+            if rc is not None:
+                break
+            if cancel_callback is not None and cancel_callback():
+                proc.terminate()
+                try:
+                    proc.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+                raise TaskCancelledError("用户取消转码")
+            time.sleep(0.5)
+            elapsed += 0.5
+            if elapsed > timeout:
+                proc.kill()
+                raise RuntimeError("转码超时（超过 %d 秒）" % int(timeout))
+
+        t1.join(timeout=2)
+        t2.join(timeout=2)
+        stderr_text = "".join(stderr_chunks)
+        if proc.returncode != 0:
+            snippet = stderr_text[-1500:] if stderr_text else ""
+            raise RuntimeError(f"ffmpeg 转码失败（返回码 {proc.returncode}）：\n{snippet}")
+
+    # ------------------------------------------------------------------
+    # 主流程
+    # ------------------------------------------------------------------
+    def run(self, task_dir, callback=None, cancel_callback=None):
+        cfg = getattr(self, "_node_config", {}) or {}
+
+        input_path = self._resolve_input_video(task_dir)
+        output_format = cfg.get("output_format", "mp4")
+        ext = _FORMAT_EXT.get(output_format, "mp4")
+        node_suffix = "_" + self.node_id if getattr(self, "node_id", "") else ""
+        output_dir = os.path.join(task_dir, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        output_path = os.path.join(output_dir, f"transcoded_video{node_suffix}.{ext}")
+
+        if callback:
+            try:
+                callback(2, "准备转码命令")
+            except Exception:
+                pass
+
+        cmd = self._build_command(input_path, output_path, cfg)
+        self.log("转码命令: " + " ".join(cmd))
+        if callback:
+            try:
+                callback(5, f"开始转码 -> .{ext}")
+            except Exception:
+                pass
+
+        duration = _probe_duration(input_path)
+        self._run_ffmpeg(cmd, duration, callback, cancel_callback)
+
+        if not os.path.exists(output_path):
+            raise RuntimeError("转码完成但未找到输出文件: " + output_path)
+
+        if callback:
+            try:
+                callback(100, "视频转码完成")
+            except Exception:
+                pass
+        self.log("视频转码完成: " + output_path)
+        return {
+            "output": {
+                "video": output_path,
+            }
+        }
+
+    # ------------------------------------------------------------------
+    # 断点/产物管理
+    # ------------------------------------------------------------------
+    def check_artifact(self, task_dir):
+        output_dir = os.path.join(task_dir, "output")
+        if not os.path.isdir(output_dir):
+            return False
+        node_suffix = "_" + self.node_id if getattr(self, "node_id", "") else ""
+        prefix = f"transcoded_video{node_suffix}."
+        for fn in os.listdir(output_dir):
+            if fn.startswith(prefix) and os.path.getsize(os.path.join(output_dir, fn)) > 0:
+                return True
+        return False
+
+    @property
+    def artifacts(self):
+        node_suffix = "_" + self.node_id if getattr(self, "node_id", "") else ""
+        return [f"output/transcoded_video{node_suffix}.*"]

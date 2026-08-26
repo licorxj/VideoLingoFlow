@@ -15,6 +15,7 @@ import Collaboration from "./pages/Collaboration";
 import Community from "./pages/Community";
 import { VoiceForgeAssets, VoiceForgeHome, VoiceForgeSettings, VoiceForgeVoices, VoiceForgeWorkspace } from "./pages/VoiceForge";
 import { restoreLocalControlSession } from "./api/controlPlane";
+import { useSubscriptionStore } from "./stores/subscriptionStore";
 
 function applyUISettings() {
   try {
@@ -66,6 +67,14 @@ export default function App() {
   useEffect(() => {
     applyUISettings();
     restoreLocalControlSession().catch(() => undefined);
+    // 启动时若存在“记住密码/自动登录”，用本地记忆的凭据向前端发起登录，
+    // 真正写入后端 token；否则兜底向后端刷新一次权益状态。
+    const sub = useSubscriptionStore.getState();
+    sub.tryAutoLogin().catch(() => undefined).finally(() => {
+      if (!useSubscriptionStore.getState().status?.is_logged_in) {
+        sub.fetchStatus().catch(() => undefined);
+      }
+    });
   }, []);
 
   return (

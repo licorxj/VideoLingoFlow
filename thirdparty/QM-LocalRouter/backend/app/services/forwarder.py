@@ -1,5 +1,6 @@
 import time
 import json
+from typing import Any, AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.provider import Provider
 from app.models.api_key import ApiKey
@@ -12,6 +13,15 @@ from app.utils.protocol_adapter import (
     claude_response_to_openai, gemini_response_to_openai,
 )
 import httpx
+
+# LiteLLM 适配器导入 (延迟导入避免循环依赖)
+_litellm_adapter = None
+def _get_litellm_adapter():
+    global _litellm_adapter
+    if _litellm_adapter is None:
+        from app.services.litellm_adapter import get_litellm_adapter
+        _litellm_adapter = get_litellm_adapter()
+    return _litellm_adapter
 
 
 class Forwarder:
@@ -368,3 +378,134 @@ class Forwarder:
         async with httpx.AsyncClient(timeout=30, trust_env=False) as client:
             resp = await client.get(url, headers=headers)
             return resp
+
+    # ============================================================
+    # LiteLLM 转发方法
+    # ============================================================
+
+    async def forward_with_litellm(
+        self,
+        provider: Provider,
+        model: Model,
+        api_key: ApiKey,
+        request_body: dict,
+        is_stream: bool = False,
+        timeout: int = 120,
+    ) -> Any:
+        """
+        使用 LiteLLM 转发请求到上游提供商
+
+        Args:
+            provider: 提供商
+            model: 模型
+            api_key: API 密钥
+            request_body: 请求体 (OpenAI 格式)
+            is_stream: 是否流式
+            timeout: 超时秒数
+
+        Returns:
+            litellm 响应对象
+        """
+        adapter = _get_litellm_adapter()
+
+        # 构建模型配置
+        config = adapter.build_model_config(provider, model, api_key)
+
+        # 提取消息
+        messages = request_body.get("messages", [])
+
+        # 构建 litellm 请求参数
+        params = {
+            "model": config.litellm_model,
+            "messages": messages,
+            "stream": is_stream,
+        }
+
+        # 添加可选参数
+        for param in ["temperature", "max_tokens", "top_p", "frequency_penalty",
+                      "presence_penalty", "stop", "response_format", "tools",
+                      "tool_choice", "seed"]:
+            if param in request_body:
+                params[param] = request_body[param]
+
+        # 如果有自定义 api_base
+        if config.api_base:
+            params["api_base"] = config.api_base
+
+        # 调用 litellm
+        return await adapter.completion(**params, timeout=timeout)
+
+    async def forward_stream_with_litellm(
+        self,
+        provider: Provider,
+        model: Model,
+        api_key: ApiKey,
+        request_body: dict,
+        timeout: int = 120,
+    ) -> AsyncGenerator[str, None]:
+        """
+        使用 LiteLLM 转发流式请求
+
+        Yields:
+            SSE 格式的数据块
+        """
+        adapter = _get_litellm_adapter()
+        config = adapter.build_model_config(provider, model, api_key)
+
+        messages = request_body.get("messages", [])
+
+        params = {
+            "model": config.litellm_model,
+            "messages": messages,
+        }
+
+        for param in ["temperature", "max_tokens", "top_p", "frequency_penalty",
+                      "presence_penalty", "stop", "response_format", "tools",
+                      "tool_choice", "seed"]:
+            if param in request_body:
+                params[param] = request_body[param]
+
+        if config.api_base:
+            params["api_base"] = config.api_base
+
+        async for chunk in adapter.completion_stream(**params, timeout=timeout):
+            yield chunk
+
+    async def multi_forward_litellm(
+        self,
+        targets: list[dict],
+        messages: list,
+        timeout: int = 120,
+    ) -> list[dict]:
+        """
+        同时向多个端点发送请求 (使用 LiteLLM)
+
+        Args:
+            targets: 目标列表，每项包含 provider, model, api_key
+            messages: 消息列表
+            timeout: 超时秒数
+
+        Returns:
+            所有响应的列表
+        """
+        adapter = _get_litellm_adapter()
+
+        requests = []
+        for target in targets:
+            provider = target["provider"]
+            model = target["model"]
+            api_key = target["api_key"]
+
+            config = adapter.build_model_config(provider, model, api_key)
+
+            req = {
+                "model": config.litellm_model,
+                "messages": messages,
+            }
+
+            if config.api_base:
+                req["api_base"] = config.api_base
+
+            requests.append(req)
+
+        return await adapter.multi_forward(requests, timeout)

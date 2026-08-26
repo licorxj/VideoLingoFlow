@@ -111,28 +111,66 @@ class CtPuncPunctuationProcessor(PunctuationProcessor):
     def restore(self, segments: List[dict], language: str = "") -> List[dict]:
         lang = normalize_lang_code(language)
         if lang not in ("zh", "en"):
-            print(f"[Punctuation] Language '{language or 'unknown'}' not supported by ct-punc, skipping")
+            print(f"[Punctuation] Language '{language or 'unknown'}' not supported by ct-punc, skipping", flush=True)
             return segments
 
         if not _needs_punctuation(segments):
-            print("[Punctuation] Text already has sufficient punctuation, skipping")
+            print("[Punctuation] Text already has sufficient punctuation, skipping", flush=True)
             return segments
 
         model = self._get_model()
-        print(f"[Punctuation] Restoring punctuation for {len(segments)} segment(s)")
-        for seg in segments:
+        print(f"[Punctuation] Restoring punctuation for {len(segments)} segment(s)", flush=True)
+        for idx, seg in enumerate(segments):
             text = (seg.get("text") or "").strip()
             if not text:
                 continue
+            # CT-Punc 对超长文本会卡死/OOM（模型上限约 512 token），
+            # 按句号/问号/感叹号切分为不超过 MAX_CHARS 的片段分别处理
+            MAX_CHARS = 200
             try:
-                res = model.generate(input=text)
+                restored_parts: List[str] = []
+                chunks = self._split_text(text, MAX_CHARS)
+                for chunk in chunks:
+                    if not chunk.strip():
+                        continue
+                    print(f"[Punctuation]   seg[{idx}] chunk({len(chunk)} chars): {chunk[:40]}...", flush=True)
+                    res = model.generate(input=chunk, )
+                    print(f"[Punctuation]   seg[{idx}] chunk done", flush=True)
+                    restored = self._extract_text(res)
+                    restored_parts.append(restored or chunk)
+                restored_text = "".join(restored_parts) if lang == "zh" else " ".join(restored_parts)
+                if restored_text:
+                    seg["text"] = restored_text
             except Exception as e:
-                print(f"[Punctuation] Segment restore failed, keeping original text: {e}")
+                print(f"[Punctuation] Segment {idx} restore failed ({len(text)} chars), keeping original: {e}", flush=True)
                 continue
-            restored = self._extract_text(res)
-            if restored:
-                seg["text"] = restored
         return segments
+
+    @staticmethod
+    def _split_text(text: str, max_chars: int) -> List[str]:
+        """把长文本切分为不超过 max_chars 的片段，优先在标点/空格处断开。"""
+        if len(text) <= max_chars:
+            return [text]
+        chunks: List[str] = []
+        remaining = text
+        while len(remaining) > max_chars:
+            # 在 max_chars 范围内找最后一个空格（英文）或标点（中英）
+            cut = remaining[:max_chars]
+            # 从后往前找断点：优先标点，其次空格
+            split_pos = -1
+            for i in range(len(cut) - 1, 0, -1):
+                if cut[i] in "，。！？、；：,.!?;:":
+                    split_pos = i + 1
+                    break
+                if split_pos < 0 and cut[i] == " ":
+                    split_pos = i + 1
+            if split_pos <= 0:
+                split_pos = max_chars  # 找不到断点，硬切
+            chunks.append(remaining[:split_pos])
+            remaining = remaining[split_pos:]
+        if remaining:
+            chunks.append(remaining)
+        return chunks
 
     def _get_model(self):
         model_name = self.options.get("model") or _resolve_local_punc_model() or PUNC_MODEL_ID
@@ -144,8 +182,10 @@ class CtPuncPunctuationProcessor(PunctuationProcessor):
             raise ImportError("funasr package required for 'ct_punc' punctuation engine")
         import torch
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"[Punctuation] Loading CT-Punc model: {model_name} (device={device})")
+        print(f"[Punctuation] Loading CT-Punc model: {model_name} (device={device})", flush=True)
+        print(f"[Punctuation]   calling AutoModel(model={model_name})...", flush=True)
         model = AutoModel(model=model_name, device=device, disable_update=True)
+        print(f"[Punctuation]   AutoModel loaded OK", flush=True)
         _MODEL_CACHE[model_name] = model
         return model
 

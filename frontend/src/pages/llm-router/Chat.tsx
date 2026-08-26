@@ -1,7 +1,7 @@
 // @ts-nocheck
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { getStrategies, getProviders, getModels, getConversations, createConversation, updateConversation, deleteConversation, generateImage, generateSpeech, createVideo, getVideoTask } from './api';
+import { getStrategies, getProviders, getModels, getConversations, createConversation, updateConversation, deleteConversation, generateImage, generateSpeech, createVideo, getVideoTask, LLM_ROUTER_BASE } from './api';
 import { useI18n } from './i18n';
 import { toast } from './toast';
 import { Button } from '@/components/ui/button';
@@ -200,8 +200,8 @@ export default function Chat() {
     });
     try {
       let response: Response;
-      if (chatMode === 'strategy') { response = await fetch('/llm-router/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: selectedStrategy, messages: apiMessages, stream: streamMode }) }); }
-      else { response = await fetch('/llm-router/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: selectedModelId, messages: apiMessages, stream: streamMode, _direct_provider_id: selectedProviderId }) }); }
+      if (chatMode === 'strategy') { response = await fetch(LLM_ROUTER_BASE + '/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: selectedStrategy, messages: apiMessages, stream: streamMode }) }); }
+      else { response = await fetch(LLM_ROUTER_BASE + '/v1/chat/completions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ model: selectedModelId, messages: apiMessages, stream: streamMode, _direct_provider_id: selectedProviderId }) }); }
       if (!response.ok) { const err = await response.json().catch(() => ({ error: { message: response.statusText } })); throw new Error(err.error?.detail || err.error?.message || 'Request failed'); }
       let assistantContent = '';
       if (streamMode) {

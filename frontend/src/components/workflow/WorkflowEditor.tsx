@@ -1134,6 +1134,19 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         const progress = typeof data.progress === "number" ? data.progress : 0;
         const message = typeof data.message === "string" ? data.message : "";
         if (stepId === "__task__") return;
+
+        // node_log 事件：子进程转发的调试日志，追加到节点 logLines（独立于 message）
+        if (data.event_type === "node_log" && stepId) {
+          setNodes((nds) => nds.map((node: any) => {
+            if (isGroupNodeData(node.data)) return node;
+            if (node.id !== stepId) return node;
+            const prevLines: string[] = Array.isArray((node.data as any)?.logLines) ? (node.data as any).logLines : [];
+            const nextLines = [...prevLines, message].slice(-8); // 保留最后 8 行
+            return { ...node, data: { ...node.data, logLines: nextLines } };
+          }));
+          return;
+        }
+
         setNodes((nds) => {
           const taskNodes = {
             [stepId]: {
@@ -1148,7 +1161,9 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             if (isGroupNodeData(node.data)) return projectGroupRuntimeState(node, taskNodes);
             if (node.id !== stepId) return node;
             const ninfo = taskNodes[stepId];
-            return { ...node, data: { ...node.data, status: runtimeStatus(ninfo.status), progress: ninfo.progress, message: ninfo.message, outputs: ninfo.outputs, error: ninfo.error } };
+            // 空消息不覆盖已有消息（避免进度文字一闪而过）
+            const keepMessage = ninfo.message || (node.data as any)?.message || "";
+            return { ...node, data: { ...node.data, status: runtimeStatus(ninfo.status), progress: ninfo.progress, message: keepMessage, outputs: ninfo.outputs, error: ninfo.error } };
           });
         });
       },
@@ -1484,7 +1499,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               <button
                 onClick={() => loadWorkflow(wf.id)}
                 className={cn(
-                  "w-full h-[112px] p-3 rounded-2xl text-left transition-all duration-300 flex flex-col",
+                  "w-full h-[112px] p-3 rounded-2xl text-left transition-all duration-300 flex flex-col overflow-hidden",
                   "border bg-gradient-to-b from-card to-card/90",
                   "shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.6)]",
                   "hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),0_10px_24px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.7)]",
@@ -1495,7 +1510,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                     : "border-border/70 hover:border-primary/40"
                 )}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 min-w-0">
                   <span className="w-7 h-7 rounded-xl flex items-center justify-center bg-primary/10 flex-shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
                     <FileText className="w-3.5 h-3.5 text-primary" />
                   </span>

@@ -1,0 +1,321 @@
+{
+  "id": "048ead64e0b2",
+  "name": "QMHub测试",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1787440128190",
+      "type": "workflow",
+      "position": {
+        "x": -930,
+        "y": -960
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "X:/PCTMoveData/Videos/测试111.mp4",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\d26088fcb2984e0c91d6d199511909ed\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          }
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 502
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1787440135837",
+      "type": "workflow",
+      "position": {
+        "x": -405,
+        "y": -900
+      },
+      "data": {
+        "nodeType": "media_to_url",
+        "label": "媒体转链接",
+        "config": {
+          "timeout_sec": 300,
+          "file_path": "",
+          "normalize_video": true,
+          "segment_duration": "30"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "cache/media_url_node_2_1787440135837.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 358
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787441400717",
+      "type": "workflow",
+      "position": {
+        "x": 300,
+        "y": -660
+      },
+      "data": {
+        "nodeType": "online_watermark_removal",
+        "label": "在线去水印去字幕",
+        "config": {
+          "watermark_regions": [],
+          "resume_request_id": "",
+          "wm_mode": "normal"
+        },
+        "status": "failed",
+        "progress": 0,
+        "message": "去水印任务失败（状态: failed）: 视频需要过剪映",
+        "outputs": {},
+        "error": "去水印任务失败（状态: failed）: 视频需要过剪映",
+        "workbench_url": "",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 419
+      }
+    },
+    {
+      "id": "node_2_1787441427517",
+      "type": "workflow",
+      "position": {
+        "x": 1290,
+        "y": -555
+      },
+      "data": {
+        "nodeType": "qm_virtual_mailbox",
+        "label": "QM虚拟邮箱",
+        "config": {
+          "mailbox_id": "4",
+          "target_email": "727909969@qq.com",
+          "prefix_content": "测试转发："
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 436
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1787441435430",
+      "type": "workflow",
+      "position": {
+        "x": 885,
+        "y": -870
+      },
+      "data": {
+        "nodeType": "json_to_text",
+        "label": "JSON转文本",
+        "config": {
+          "mode": "full",
+          "key_expr": ""
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 187
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787546723318",
+      "type": "workflow",
+      "position": {
+        "x": -165,
+        "y": -165
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 420
+      },
+      "selected": false
+    },
+    {
+      "id": "node_2_1787546739837",
+      "type": "workflow",
+      "position": {
+        "x": 360,
+        "y": -150
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 160
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787440128190",
+      "sourceHandle": "out-video",
+      "target": "node_2_1787440135837",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787440128190out-video-node_2_1787440135837in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787440135837",
+      "sourceHandle": "out-json",
+      "target": "node_1_1787441400717",
+      "targetHandle": "in-url_json",
+      "id": "xy-edge__node_2_1787440135837out-json-node_1_1787441400717in-url_json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787441400717",
+      "sourceHandle": "out-json",
+      "target": "node_3_1787441435430",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1787441400717out-json-node_3_1787441435430in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1787441435430",
+      "sourceHandle": "out-text",
+      "target": "node_2_1787441427517",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_3_1787441435430out-text-node_2_1787441427517in-text"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787440128190",
+      "sourceHandle": "out-video",
+      "target": "node_1_1787546723318",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787440128190out-video-node_1_1787546723318in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787441400717",
+      "sourceHandle": "out-video",
+      "target": "node_2_1787546739837",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787441400717out-video-node_2_1787546739837in-video"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-08-23T07:09:20",
+  "updatedAt": "2026-08-26T21:15:06",
+  "revision": 11
+}

@@ -63,10 +63,20 @@ if not exist "%cd%\logs" mkdir "%cd%\logs"
 
 :: --- Manager 端口检查 ---
 echo [Manager] 检查端口 18001...
+set MANAGER_PID=
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":18001" ^| findstr "LISTENING"') do (
-    echo [ERROR] Manager 端口 18001 已被占用（PID: %%p），请先停止已运行的 Manager
-    pause
-    exit /b 1
+    set MANAGER_PID=%%p
+)
+if defined MANAGER_PID (
+    echo [Manager] 端口 18001 已被占用（PID: !MANAGER_PID!），先停止已运行的 Manager...
+    taskkill /f /pid !MANAGER_PID! >nul 2>&1
+    for /L %%i in (1,1,30) do (
+        netstat -ano ^| findstr ":18001" ^| findstr "LISTENING" >nul 2>&1
+        if errorlevel 1 goto :manager_port_free
+        ping -n 2 127.0.0.1 >nul
+    )
+    :manager_port_free
+    echo [Manager] 已停止旧 Manager，端口 18001 已释放。
 )
 
 :: --- 前端：清理残留 vite 后，新窗口等待主后端(11001)就绪再启动 Vite（后端先、前端后）---

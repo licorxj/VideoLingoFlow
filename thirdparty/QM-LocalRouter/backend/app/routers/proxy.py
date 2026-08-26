@@ -574,3 +574,313 @@ async def video_task_status(task_id: str, request: Request, db: AsyncSession = D
     from app.utils.protocol_adapter import video_response_to_openai
     normalized = video_response_to_openai(data, task_id)
     return JSONResponse(content=normalized)
+
+
+# ============================================================
+# Multi-Forward: 同时向多个端点发送请求
+# ============================================================
+
+@router.post("/v1/multi/chat/completions")
+async def multi_chat_completions(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    同时向多个端点发送相同的聊天请求
+
+    请求体格式:
+    {
+        "targets": [
+            {"strategy": "strategy_name"},
+            {"provider_id": 1, "model_id": "gpt-4o"}
+        ],
+        "messages": [{"role": "user", "content": "..."}],
+        "options": {
+            "temperature": 0.7,
+            "max_tokens": 1000
+        }
+    }
+
+    返回格式:
+    {
+        "results": [
+            {"target": "strategy_name", "success": true, "content": "..."},
+            {"target": "provider_id:1", "success": false, "error": "..."}
+        ]
+    }
+    """
+    body = await request.json()
+    targets_config = body.get("targets", [])
+    messages = body.get("messages", [])
+    options = body.get("options", {})
+
+    if not targets_config:
+        raise HTTPException(400, detail="No targets specified")
+
+    if not messages:
+        raise HTTPException(400, detail="No messages provided")
+
+    forwarder = Forwarder(db)
+    results = []
+
+    for target in targets_config:
+        try:
+            if "strategy" in target:
+                # 通过策略路由
+                strategy_name = target["strategy"]
+                strategy = await _resolve(strategy_name, db)
+                balancer = Balancer(db)
+
+                rule = await balancer.select_rule(strategy)
+                if not rule:
+                    results.append({
+                        "target": strategy_name,
+                        "success": False,
+                        "error": "No active rules in strategy"
+                    })
+                    continue
+
+                provider = await db.get(Provider, rule.provider_id)
+                model = await db.get(Model, rule.model_id)
+                if not provider or not model:
+                    results.append({
+                        "target": strategy_name,
+                        "success": False,
+                        "error": "Provider or model not found"
+                    })
+                    continue
+
+                api_key = await balancer.select_key(provider.id, strategy)
+                if not api_key:
+                    results.append({
+                        "target": strategy_name,
+                        "success": False,
+                        "error": f"No active API key for {provider.name}"
+                    })
+                    continue
+
+                # 使用 litellm 转发
+                request_body = {
+                    "messages": messages,
+                    **options
+                }
+
+                # 检查是否使用 litellm
+                use_litellm = target.get("use_litellm", True)
+                if use_litellm:
+                    response = await forwarder.forward_with_litellm(
+                        provider, model, api_key, request_body, timeout=strategy.timeout or 120
+                    )
+                    content = response.choices[0].message.content
+                else:
+                    response = await forwarder.forward(
+                        strategy, rule, provider, model, api_key, request_body, is_stream=False
+                    )
+                    data = response.json()
+                    if provider.protocol == "claude":
+                        data = claude_response_to_openai(data, model.model_id)
+                    elif provider.protocol == "gemini":
+                        data = gemini_response_to_openai(data, model.model_id)
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+                results.append({
+                    "target": strategy_name,
+                    "success": True,
+                    "provider": provider.name,
+                    "model": model.model_id,
+                    "content": content
+                })
+
+            elif "provider_id" in target:
+                # 直接指定 provider 和 model
+                provider_id = target["provider_id"]
+                model_name = target.get("model_id", target.get("model"))
+
+                provider = await db.get(Provider, int(provider_id))
+                if not provider or not provider.is_active:
+                    results.append({
+                        "target": f"provider_id:{provider_id}",
+                        "success": False,
+                        "error": "Provider not found or inactive"
+                    })
+                    continue
+
+                # 查找模型
+                model_result = await db.execute(
+                    select(Model).where(
+                        Model.provider_id == provider.id,
+                        (Model.model_id == model_name) | (Model.display_name == model_name),
+                        Model.is_active == True
+                    )
+                )
+                model_obj = model_result.scalar_one_or_none()
+                if not model_obj:
+                    results.append({
+                        "target": f"provider_id:{provider_id}",
+                        "success": False,
+                        "error": f"Model '{model_name}' not found"
+                    })
+                    continue
+
+                # 选择 API key
+                api_key = await _select_key_for_provider(provider.id, db)
+                if not api_key:
+                    results.append({
+                        "target": f"provider_id:{provider_id}",
+                        "success": False,
+                        "error": f"No active API key"
+                    })
+                    continue
+
+                request_body = {
+                    "messages": messages,
+                    **options
+                }
+
+                use_litellm = target.get("use_litellm", True)
+                if use_litellm:
+                    response = await forwarder.forward_with_litellm(
+                        provider, model_obj, api_key, request_body
+                    )
+                    content = response.choices[0].message.content
+                else:
+                    response = await forwarder.forward(
+                        Strategy(), None, provider, model_obj, api_key, request_body, is_stream=False
+                    )
+                    data = response.json()
+                    content = data.get("choices", [{}])[0].get("message", {}).get("content", "")
+
+                results.append({
+                    "target": f"{provider.name}/{model_obj.model_id}",
+                    "success": True,
+                    "provider": provider.name,
+                    "model": model_obj.model_id,
+                    "content": content
+                })
+
+            else:
+                results.append({
+                    "target": str(target),
+                    "success": False,
+                    "error": "Invalid target format"
+                })
+
+        except Exception as e:
+            results.append({
+                "target": str(target),
+                "success": False,
+                "error": str(e)[:500]
+            })
+
+    return JSONResponse(content={"results": results})
+
+
+@router.post("/v1/multi/stream/chat/completions")
+async def multi_stream_chat_completions(request: Request, db: AsyncSession = Depends(get_db)):
+    """
+    同时向多个端点发送相同的聊天请求，流式返回第一个成功的响应
+
+    请求体格式:
+    {
+        "targets": [
+            {"strategy": "strategy_name"},
+            {"provider_id": 1, "model_id": "gpt-4o"}
+        ],
+        "messages": [{"role": "user", "content": "..."}],
+        "options": {...}
+    }
+
+    响应: SSE 流，第一个成功的响应
+    """
+    body = await request.json()
+    targets_config = body.get("targets", [])
+    messages = body.get("messages", [])
+    options = body.get("options", {})
+
+    if not targets_config:
+        raise HTTPException(400, detail="No targets specified")
+
+    if not messages:
+        raise HTTPException(400, detail="No messages provided")
+
+    async def generate():
+        for target in targets_config:
+            try:
+                if "strategy" in target:
+                    strategy_name = target["strategy"]
+                    strategy = await _resolve(strategy_name, db)
+                    balancer = Balancer(db)
+                    forwarder = Forwarder(db)
+
+                    rule = await balancer.select_rule(strategy)
+                    if not rule:
+                        continue
+
+                    provider = await db.get(Provider, rule.provider_id)
+                    model = await db.get(Model, rule.model_id)
+                    if not provider or not model:
+                        continue
+
+                    api_key = await balancer.select_key(provider.id, strategy)
+                    if not api_key:
+                        continue
+
+                    request_body = {"messages": messages, **options}
+
+                    use_litellm = target.get("use_litellm", True)
+                    if use_litellm:
+                        async for chunk in forwarder.forward_stream_with_litellm(
+                            provider, model, api_key, request_body, timeout=strategy.timeout or 120
+                        ):
+                            yield f"target: {strategy_name}\n".encode() + chunk.encode()
+                            return  # 返回第一个成功的响应
+                    else:
+                        async for chunk in forwarder.forward_stream(strategy, rule, provider, model, api_key, request_body):
+                            yield f"target: {strategy_name}\n".encode() + chunk.encode()
+                            return
+
+                elif "provider_id" in target:
+                    provider_id = target["provider_id"]
+                    model_name = target.get("model_id", target.get("model"))
+
+                    provider = await db.get(Provider, int(provider_id))
+                    if not provider or not provider.is_active:
+                        continue
+
+                    model_result = await db.execute(
+                        select(Model).where(
+                            Model.provider_id == provider.id,
+                            (Model.model_id == model_name) | (Model.display_name == model_name),
+                            Model.is_active == True
+                        )
+                    )
+                    model_obj = model_result.scalar_one_or_none()
+                    if not model_obj:
+                        continue
+
+                    api_key = await _select_key_for_provider(provider.id, db)
+                    if not api_key:
+                        continue
+
+                    request_body = {"messages": messages, **options}
+                    forwarder = Forwarder(db)
+
+                    use_litellm = target.get("use_litellm", True)
+                    if use_litellm:
+                        async for chunk in forwarder.forward_stream_with_litellm(
+                            provider, model_obj, api_key, request_body
+                        ):
+                            yield f"target: {provider.name}/{model_obj.model_id}\n".encode() + chunk.encode()
+                            return
+                    else:
+                        async for chunk in forwarder.forward_stream(
+                            Strategy(), None, provider, model_obj, api_key, request_body
+                        ):
+                            yield f"target: {provider.name}/{model_obj.model_id}\n".encode() + chunk.encode()
+                            return
+
+            except Exception as e:
+                continue
+
+        # 所有目标都失败
+        yield b'data: {"error": "All targets failed"}\n\n'
+        yield b"data: [DONE]\n\n"
+
+    return StreamingResponse(generate(), media_type="text/event-stream")

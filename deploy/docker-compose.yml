@@ -54,7 +54,17 @@ services:
     build:
       context: ..
       dockerfile: deploy/api.Dockerfile
+      args:
+        TORCH_INDEX: ${TORCH_INDEX:-cu128}
     restart: unless-stopped
+    # 需要 GPU 推理时取消下行注释（宿主需安装 NVIDIA Container Toolkit）
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     environment:
       CLUSTER_MODE: "1"
       POSTGRES_HOST: postgres
@@ -70,8 +80,14 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}
+      # 模型缓存 / 任务数据 / 预览 落到挂载卷
+      HF_HOME: /app/_model_cache
+      TRANSFORMERS_CACHE: /app/_model_cache/transformers
     volumes:
       - app-data:/app/voiceforge_data
+      - app-data-root:/app/data
+      - app-model-cache:/app/_model_cache
+      - app-temp:/app/temp
     networks:
       - backend
     depends_on:
@@ -95,8 +111,18 @@ services:
     build:
       context: ..
       dockerfile: deploy/api.Dockerfile
+      args:
+        TORCH_INDEX: ${TORCH_INDEX:-cu128}
     restart: unless-stopped
     command: ["celery", "-A", "backend.control_plane.celery_runtime.celery_app", "worker", "--loglevel=INFO", "--hostname=videolingo-worker@%h", "--pool=threads", "--concurrency=5", "--queues=videolingo_cpu,videolingo_gpu,videolingo_llm,videolingo_tts,videolingo_io,voiceforge_synthesis,voiceforge_voice,voiceforge_export"]
+    # 需要 GPU 推理时取消下行注释（宿主需安装 NVIDIA Container Toolkit）
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
     environment:
       CLUSTER_MODE: "1"
       POSTGRES_HOST: postgres
@@ -112,8 +138,13 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
       MINIO_BUCKET: ${MINIO_BUCKET}
+      HF_HOME: /app/_model_cache
+      TRANSFORMERS_CACHE: /app/_model_cache/transformers
     volumes:
       - app-data:/app/voiceforge_data
+      - app-data-root:/app/data
+      - app-model-cache:/app/_model_cache
+      - app-temp:/app/temp
     networks:
       - backend
     depends_on:
@@ -153,3 +184,6 @@ volumes:
   redis-data:
   minio-data:
   app-data:
+  app-data-root:
+  app-model-cache:
+  app-temp:

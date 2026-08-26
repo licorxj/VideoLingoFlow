@@ -6,6 +6,7 @@ interface SubscriptionState {
   loading: boolean;
   error: string;
   fetchStatus: () => Promise<SubscriptionStatus | null>;
+  tryAutoLogin: () => Promise<boolean>;
   refresh: () => Promise<SubscriptionStatus | null>;
   login: (payload: LoginPayload) => Promise<SubscriptionStatus>;
   logout: () => Promise<void>;
@@ -21,6 +22,24 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
   status: null,
   loading: false,
   error: "",
+  tryAutoLogin: async () => {
+    try {
+      const rememberEnabled = localStorage.getItem("vl_subscription_remember_enabled") === "true";
+      const rememberPasswordEnabled = localStorage.getItem("vl_subscription_remember_password_enabled") === "true";
+      const autoLoginEnabled = localStorage.getItem("vl_subscription_auto_login_enabled") === "true";
+      if (!(rememberPasswordEnabled || autoLoginEnabled)) return false;
+      const username = (localStorage.getItem("vl_subscription_remember_username") || "").trim();
+      const password = localStorage.getItem("vl_subscription_remember_password") || "";
+      if (!username || !password) return false;
+      const status = await subscriptionApi.login({ username, password });
+      set({ status });
+      return true;
+    } catch (error: any) {
+      const message = getSubscriptionError(error);
+      set({ error: message });
+      return false;
+    }
+  },
   fetchStatus: async () => {
     set({ loading: true, error: "" });
     try {

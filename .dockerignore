@@ -1,0 +1,49 @@
+# ---- Python ----
+venv312/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---- 运行时数据 / 模型缓存（容器内重新生成或挂载 volume） ----
+data/
+_model_cache/
+control_plane_workspaces/
+tasks/
+temp/
+*.db
+*.sqlite
+*.sqlite3
+
+# ---- 前端源与构建中间产物（镜像内自构建 frontend/dist） ----
+frontend/node_modules/
+frontend/.vite/
+frontend/dist/
+frontend/src/
+
+# ---- 环境 / 凭据 ----
+.env
+.env.*
+!.env.example
+config.yaml
+*.temp
+tls/
+
+# ---- 文档 / 工具 ----
+docs/
+*.md
+scripts/
+installer/
+cloudflare/
+
+# ---- 版本控制 ----
+.git/
+.github/
+
+# ---- 系统 ----
+.DS_Store
+Thumbs.db

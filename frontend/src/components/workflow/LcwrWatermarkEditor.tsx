@@ -1,8 +1,9 @@
 import { memo, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import client from "@/api/client";
+import { nativeFileDialog } from "@/api/files";
 import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { RefreshCw, ExternalLink, Trash2, Loader2, Info, Eraser, ChevronLeft, ChevronRight } from "lucide-react";
+import { RefreshCw, ExternalLink, Trash2, Loader2, Info, Eraser, ChevronLeft, ChevronRight, Upload, FolderOpen } from "lucide-react";
 
 const LCWR_DOWNLOAD_URL = "https://qinmuzhifang.feishu.cn/wiki/IkBVwfe72iEVLTkhVQ0cW0mvnBc";
 
@@ -170,12 +171,16 @@ function LcwrWatermarkEditorInner({ config, onConfigChange, videoPath, imagePath
   const durationSec = Number(config.duration_sec) || 10;
   const fps = Number(config.fps) || 25;
 
+  // 手动加载的示例视频（优先级高于上游连线视频），用于无连线或需本地参考时框选
+  const [exampleVideoPath, setExampleVideoPath] = useState<string>("");
+  const effectiveVideoPath = exampleVideoPath || videoPath;
+
   // 视频元信息与帧浏览
   const [meta, setMeta] = useState<VideoMeta | null>(null);
   const [metaError, setMetaError] = useState("");
   const [frameStep, setFrameStep] = useState(0); // 每格 = 10 帧
   const videoRef = useRef<HTMLVideoElement>(null);
-  const mediaUrl = useStableFileUrl(videoPath || imagePath, taskId);
+  const mediaUrl = useStableFileUrl(effectiveVideoPath || imagePath, taskId);
 
   // 框选状态
   const overlayRef = useRef<HTMLDivElement>(null);
@@ -188,19 +193,28 @@ function LcwrWatermarkEditorInner({ config, onConfigChange, videoPath, imagePath
   // 图片自然比例（用于对齐框选坐标）
   const [imgRatio, setImgRatio] = useState<string>("");
 
-  const hasVideo = !!videoPath;
+  const hasVideo = !!effectiveVideoPath;
   const hasImage = !hasVideo && !!imagePath;
   // 有效时长：视频用元信息，无视频时用黑帧预设时长
   const duration = hasVideo ? (meta?.duration || 0) : durationSec;
+
+  // 加载本地视频作为示例视频：打开系统文件选择框
+  const handleLoadExampleVideo = useCallback(async () => {
+    const path = await nativeFileDialog("file", "选择示例视频", [["视频", "*.mp4;*.mkv;*.avi;*.mov;*.webm;*.flv;*.wmv;*.m4v"]]);
+    if (typeof path === "string" && path) {
+      setExampleVideoPath(path);
+      setFrameStep(0);
+    }
+  }, []);
 
   // 加载视频元信息
   useEffect(() => {
     setMeta(null);
     setMetaError("");
     setFrameStep(0);
-    if (!hasVideo || !videoPath) return;
+    if (!hasVideo || !effectiveVideoPath) return;
     let cancelled = false;
-    client.get("/api/files/video-info", { params: { path: videoPath, task_id: taskId || undefined } })
+    client.get("/api/files/video-info", { params: { path: effectiveVideoPath, task_id: taskId || undefined } })
       .then((res) => {
         if (cancelled) return;
         const d = res.data || {};
@@ -210,7 +224,7 @@ function LcwrWatermarkEditorInner({ config, onConfigChange, videoPath, imagePath
         if (!cancelled) setMetaError(err?.response?.data?.detail || err?.message || "视频信息读取失败");
       });
     return () => { cancelled = true; };
-  }, [hasVideo, videoPath, taskId]);
+  }, [hasVideo, effectiveVideoPath, taskId]);
 
   // 帧浏览参数
   const totalFrames = meta ? Math.max(1, Math.floor(meta.duration * meta.fps)) : Math.max(1, Math.floor(durationSec * fps));
@@ -299,7 +313,33 @@ function LcwrWatermarkEditorInner({ config, onConfigChange, videoPath, imagePath
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground min-w-0">
           <Eraser className="w-3.5 h-3.5 text-sky-500 flex-shrink-0" />
-          <span className="truncate">在画面上鼠标拖拽框选水印/字幕区域（可多选），坐标按视频尺寸比例保存</span>
+          <span className="truncate">
+            在画面上鼠标拖拽框选水印/字幕区域（可多选），坐标按视频尺寸比例保存
+            {exampleVideoPath && <span className="ml-1 text-sky-600 dark:text-sky-400">· 示例：{exampleVideoPath.split(/[\\/]/).pop()}</span>}
+          </span>
+        </div>
+        <div className="flex items-center gap-1 flex-shrink-0">
+          {exampleVideoPath ? (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setExampleVideoPath(""); }}
+              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-border/50 hover:bg-muted transition-colors"
+              title="恢复使用连线视频/图片"
+            >
+              <FolderOpen className="w-3 h-3" /> 恢复连线视频
+            </button>
+          ) : (
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); handleLoadExampleVideo(); }}
+              className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-sky-500/40 bg-sky-500/5 text-sky-600 dark:text-sky-400 hover:bg-sky-500/10 transition-colors"
+              title="选择任意本地视频作为预览示例进行框选"
+            >
+              <Upload className="w-3 h-3" /> 加载示例视频
+            </button>
+          )}
         </div>
       </div>
 
@@ -344,7 +384,7 @@ function LcwrWatermarkEditorInner({ config, onConfigChange, videoPath, imagePath
           <div className="absolute inset-0 bg-neutral-500 flex items-center justify-center">
             <span className="text-[10px] text-white/40 px-3 text-center leading-snug">
               未接入视频，使用黑帧（{aspectPreset}）框选区域<br />
-              实际执行时需连接视频/图片输入
+              可点击「加载示例视频」选择本地视频预览，或连接视频/图片输入
             </span>
           </div>
         )}

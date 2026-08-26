@@ -1,0 +1,48 @@
+# ============================================================
+# .dockerignore - 减小构建上下文，避免将本地运行文件打入镜像
+# ============================================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# 文档（不影响运行）
+docs/
+*.md
+README.md
+README_ZH.md
+
+# Python 缓存与虚拟环境
+**/__pycache__/
+**/*.py[cod]
+**/*.egg-info/
+backend/venv/
+backend/.venv/
+backend/.env
+
+# 运行时数据（由 Docker volume 持久化）
+backend/data/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Node 构建产物与依赖（前端在构建阶段重新构建）
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+
+# IDE / 系统文件
+.idea/
+.vscode/
+.trae/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# 日志与备份
+*.log
+logs/
+*.bak

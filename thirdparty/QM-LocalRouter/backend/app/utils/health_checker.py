@@ -17,7 +17,7 @@ async def check_key_health(db: AsyncSession, api_key: ApiKey, provider: Provider
 
     try:
         if provider.protocol == "openai":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
                     f"{provider.base_url.rstrip('/')}/models",
                     headers={"Authorization": f"Bearer {real_key}"},
@@ -28,7 +28,7 @@ async def check_key_health(db: AsyncSession, api_key: ApiKey, provider: Provider
                 return {"success": False, "message": f"HTTP {resp.status_code}", "latency_ms": elapsed}
 
         elif provider.protocol == "claude":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(
                     f"{provider.base_url.rstrip('/')}/messages",
                     headers={
@@ -44,7 +44,7 @@ async def check_key_health(db: AsyncSession, api_key: ApiKey, provider: Provider
                 return {"success": False, "message": f"HTTP {resp.status_code}", "latency_ms": elapsed}
 
         elif provider.protocol == "gemini":
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
                     f"{provider.base_url.rstrip('/')}/models?key={real_key}",
                 )

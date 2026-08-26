@@ -1,37 +1,48 @@
 # ============================================================
-# LocalRouter - Docker Compose
+# LLM API Router - Docker Compose
+# ------------------------------------------------------------
+# 用法：
+#   docker compose up -d           # 启动
+#   docker compose up -d --build   # 重新构建后启动
+#   docker compose logs -f         # 查看日志
+#   docker compose down            # 停止（数据保留在 volume 中）
+#   docker compose down -v         # 停止并删除数据卷（慎用！）
 # ============================================================
-# Usage:
-#   docker compose up -d
-#   docker compose logs -f
-#   docker compose down
-# ============================================================
-
-version: "3.8"
 
 services:
   localrouter:
     build:
       context: .
       dockerfile: Dockerfile
+    image: localrouter:latest
     container_name: localrouter
     ports:
-      - "12002:12002"   # Backend API
-      - "12001:12001"   # Frontend UI
+      - "12001:12001"   # 前端 UI + API 网关（nginx，推荐入口）
+      - "12002:12002"   # 后端 API（可选，直接访问 uvicorn）
     volumes:
-      # Persist SQLite database and uploaded data
+      # 持久化 SQLite 数据库、图标与加密密钥
       - localrouter_data:/app/backend/data
     environment:
+      - TZ=Asia/Shanghai
+      - HOST=0.0.0.0
       - BACKEND_PORT=12002
       - FRONTEND_PORT=12001
-      - HOST=0.0.0.0
+      # 可选：固定 Fernet 密钥。不设置时首次启动会在数据卷内自动生成并持久化。
+      # 如需固定，请用以下命令生成后填入：
+      #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+      # - ENCRYPTION_KEY=
+      # 可选：覆盖默认超时/日志保留天数
+      # - DEFAULT_TIMEOUT=120
+      # - DEFAULT_RETRY_COUNT=2
+      # - LOG_RETENTION_DAYS=30
     restart: unless-stopped
+    init: true
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:12002/health"]
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:12002/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
-      start_period: 15s
+      start_period: 20s
 
 volumes:
   localrouter_data:

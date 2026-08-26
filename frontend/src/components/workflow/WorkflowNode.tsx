@@ -22,7 +22,7 @@ import {
   Upload, Wrench, CheckCircle2, Loader2, XCircle, Clock, AlertTriangle, Play,
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
-  Layers, Captions, SlidersHorizontal,
+  Layers, Captions, SlidersHorizontal, RefreshCw, Eraser,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
@@ -34,6 +34,7 @@ const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
+  Eraser,
 };
 
 /** 解析 SRT/VTT/JSON 字幕内容为 [{start, end, text}]（时间为秒），支持双语（原文/译文两行） */
@@ -327,6 +328,19 @@ function GroupWorkflowNodeCard({
             <div className="h-full rounded-full bg-violet-500 transition-all duration-500" style={{ width: `${Math.max(0, Math.min(100, Number(nd.progress) || 0))}%` }} />
           </div>
           {nd.message && <div className="mt-1 truncate text-[11px] text-violet-600 dark:text-violet-300">{nd.message}</div>}
+          {Array.isArray(nd.logLines) && nd.logLines.length > 0 && (
+            <div className="mt-1 max-h-20 overflow-y-auto rounded bg-gray-900/5 dark:bg-gray-900/40 px-1.5 py-1 space-y-0.5">
+              {nd.logLines.map((line: string, i: number) => (
+                <div key={i} className="text-[10px] font-mono text-gray-600 dark:text-gray-400 leading-tight break-all">{line}</div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {/* 节点完成后保留显示最后一条进度消息（非 running/waiting 状态） */}
+      {status !== "running" && status !== "waiting" && nd.message && (
+        <div className="px-3 pt-1">
+          <div className="truncate text-[11px] text-muted-foreground">{nd.message}</div>
         </div>
       )}
 
@@ -1869,6 +1883,9 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const [subtitleEditorEntries, setSubtitleEditorEntries] = useState<any[]>([]);
   const [subtitleEditorVideo, setSubtitleEditorVideo] = useState("");
   const [lcwrPreviewOpen, setLcwrPreviewOpen] = useState(false);
+  const [onlineWmPreviewOpen, setOnlineWmPreviewOpen] = useState(false);
+  const [qmMailboxes, setQmMailboxes] = useState<any[]>([]);
+  const [qmMailLoading, setQmMailLoading] = useState(false);
   const [subtitleFindOpen, setSubtitleFindOpen] = useState(false);
 
   if (!nodeType) return null;
@@ -1959,11 +1976,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
   // For preview nodes, get paths from upstream outputs or configs
   const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } =
-    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
+    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
 
   // 当前任务 id（调试任务 activeTaskId 或一般/批量任务 taskModeId），用于相对产物路径解析
   const storeActiveTaskId = useWorkflowStore((s) => s.activeTaskId);
   const previewTaskId = storeActiveTaskId || artifactTaskId;
+  const currentWfId = useWorkflowStore((s) => s.currentWfId);
 
   const IconComp = ICON_MAP[nodeType.icon] || Wrench;
   const status = nd.status || "pending";
@@ -2335,6 +2353,203 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           </button>
         </div>
       )}
+      {nodeType.id === "online_watermark_removal" && (
+        <div className="px-3 pb-3 pt-1 space-y-2">
+          {/* 水印区域设置按钮 */}
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); setOnlineWmPreviewOpen(true); }}
+            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium text-violet-700 dark:text-violet-300 bg-violet-500/10 border border-violet-500/20 hover:bg-violet-500/20 transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" />
+            设置水印区域
+          </button>
+          {/* 水印区域摘要 */}
+          {Array.isArray(config.watermark_regions) && config.watermark_regions.length > 0 ? (
+            <div className="text-[10px] text-muted-foreground text-center">
+              已设置 {config.watermark_regions.length} 个区域
+            </div>
+          ) : (
+            <div className="text-[10px] text-amber-600 dark:text-amber-400 text-center leading-snug">
+              未设置水印区域将全屏去除，可能误伤不需要去除的元素
+            </div>
+          )}
+          {/* 分隔线 */}
+          <div className="border-t border-border/30" />
+          {/* 继续查询上次任务（勾选后节点执行时自动从上次记录恢复查询） */}
+          <label
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className="flex items-center gap-2 px-1 py-1 rounded-md hover:bg-muted/50 cursor-pointer transition-colors"
+            title="勾选后执行节点时将自动读取上次任务的 request_id 继续查询，无需重新提交"
+          >
+            {config.resume_request_id ? (
+              <CheckSquare className="w-4 h-4 text-blue-500 flex-shrink-0" />
+            ) : (
+              <Square className="w-4 h-4 text-muted-foreground/50 flex-shrink-0" />
+            )}
+            <span className="text-[11px] text-muted-foreground leading-tight">
+              继续查询上次任务
+              {config.resume_request_id && config.resume_request_id !== "auto" && (
+                <span className="ml-1 text-[10px] text-muted-foreground/60">({config.resume_request_id})</span>
+              )}
+            </span>
+            <input
+              type="checkbox"
+              className="sr-only"
+              checked={!!config.resume_request_id}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleConfigChange("resume_request_id", e.target.checked ? "auto" : "");
+              }}
+              onPointerDown={(e) => e.stopPropagation()}
+            />
+          </label>
+          {/* 查询用量和历史：前往网页查看额度 */}
+          <a
+            href="https://www.licorxj.online/capability-hub"
+            target="_blank"
+            rel="noopener noreferrer"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium text-slate-700 dark:text-slate-300 bg-slate-500/10 border border-slate-500/20 hover:bg-slate-500/20 transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            查询用量和历史
+          </a>
+        </div>
+      )}
+      {nodeType.id === "qm_virtual_mailbox" && (
+        <div className="px-3 pb-3 pt-1 space-y-2">
+          {/* 第一行：前往网页设置按钮 */}
+          <a
+            href="https://www.licorxj.online/mail-forwarding"
+            target="_blank"
+            rel="noopener noreferrer"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full inline-flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-md text-[11px] font-medium text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/20 transition-colors"
+          >
+            <ExternalLink className="w-3.5 h-3.5" />
+            前往网页设置
+          </a>
+
+          {/* 第二行：虚拟邮箱下拉选择 + 刷新按钮 */}
+          <div className="flex items-center gap-1.5">
+            <select
+              value={config.mailbox_id || ""}
+              onChange={(e) => handleConfigChange("mailbox_id", e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
+              className="min-w-0 flex-1 text-[11px] px-2 py-1 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
+            >
+              <option value="">选择虚拟邮箱...</option>
+              {qmMailboxes.map((mb: any) => (
+                <option key={mb.id} value={String(mb.id)}>
+                  {mb.address} ({mb.status})
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setQmMailLoading(true);
+                client.get("/api/qm-mail/mailboxes")
+                  .then((res) => {
+                    setQmMailboxes(res.data?.mailboxes || []);
+                  })
+                  .catch(() => setQmMailboxes([]))
+                  .finally(() => setQmMailLoading(false));
+              }}
+              className="flex-shrink-0 inline-flex items-center gap-1 text-[10px] px-1.5 py-1 rounded-md border border-border/50 hover:bg-muted transition-colors"
+              title="刷新邮箱列表"
+            >
+              {qmMailLoading ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+            </button>
+          </div>
+
+          {/* 转发目标选择 */}
+          {config.mailbox_id && (() => {
+            const selected = qmMailboxes.find((mb: any) => String(mb.id) === String(config.mailbox_id));
+            if (!selected) return null;
+            const targets = selected.targets || [];
+            if (targets.length === 0) {
+              return (
+                <div className="text-[10px] text-amber-600 dark:text-amber-400 px-1">
+                  该邮箱尚未设置转发目标，请前往网页设置
+                </div>
+              );
+            }
+            const verified = targets.filter((t: any) => t.verification_status === "verified");
+            return (
+              <div className="space-y-1">
+                <select
+                  value={config.target_email || ""}
+                  onChange={(e) => handleConfigChange("target_email", e.target.value)}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="w-full text-[11px] px-2 py-1 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
+                >
+                  <option value="">选择转发目标（已验证）...</option>
+                  {targets.map((t: any) => (
+                    <option key={t.id} value={t.email} disabled={t.verification_status !== "verified"}>
+                      {t.email} {t.verification_status === "verified" ? "✓" : "⚠未验证"}
+                    </option>
+                  ))}
+                </select>
+                <div className="text-[10px] text-muted-foreground/70 px-1">
+                  将向选中的已验证转发目标发送内容邮件（2分钱/封）。未验证目标不可选，请先前往网页验证。
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* 邮件主题输入 */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-muted-foreground">
+              邮件主题（Subject）
+            </label>
+            <input
+              type="text"
+              value={config.subject || ""}
+              onChange={(e) => handleConfigChange("subject", e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
+              placeholder="邮件主题，留空则使用默认主题"
+              className="w-full text-[11px] px-2 py-1.5 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
+            />
+          </div>
+
+          {/* 内容输入框：作为前缀拼接连线文本 */}
+          <div className="space-y-1">
+            <label className="text-[11px] font-medium text-muted-foreground">
+              内容输入（前缀）
+            </label>
+            <textarea
+              value={config.prefix_content || ""}
+              onChange={(e) => handleConfigChange("prefix_content", e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              onWheel={(e) => e.stopPropagation()}
+              placeholder="输入内容作为前缀；连线文本将拼接在其后（无连线时仅发送此处内容）"
+              rows={3}
+              className="w-full text-[11px] px-2 py-1.5 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50 resize-none"
+            />
+            <div className="text-[10px] text-muted-foreground/70">
+              输入框内容作为前缀，自动拼接上方 text 连线传入的文本或文本文件内容；无连线时仅发送输入框内内容。
+            </div>
+          </div>
+
+          {/* 分隔线 */}
+          <div className="border-t border-border/30" />
+
+          <div className="text-[10px] text-muted-foreground px-1">
+            运行节点即以虚拟邮箱身份，向所选已验证转发目标发送内容邮件（2分钱/封，云端转发处理）。主题留空用默认；拼接后的内容会记录在任务 JSON 的 content 字段中。
+          </div>
+        </div>
+      )}
       {/* Running Progress */}
       {status === "running" && (
         <div className="px-3 pb-2">
@@ -2350,6 +2565,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
               {nd.message}
             </div>
           )}
+        </div>
+      )}
+      {/* 节点完成后保留显示最后一条进度消息 */}
+      {status !== "running" && status !== "waiting" && nd.message && (
+        <div className="px-3 pb-1">
+          <div className="text-[11px] text-muted-foreground truncate">{nd.message}</div>
         </div>
       )}
 
@@ -2459,7 +2680,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           </div>
         );
       })()}
-      {hasConfig && expanded && nodeType.id !== "lcwr_watermark_removal" && nodeType.id !== "subtitle_position_search" && (
+      {hasConfig && expanded && nodeType.id !== "lcwr_watermark_removal" && nodeType.id !== "subtitle_position_search" && nodeType.id !== "qm_virtual_mailbox" && (
         <ConfigForm
           nodeType={nodeType}
           config={config}
@@ -2482,6 +2703,25 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           onConfigChange={handleConfigChange}
           videoPath={upstreamOutputs.video || config.video_path || config.input_video || nd.outputs?.video}
           imagePath={upstreamOutputs.image || config.image_path || config.input_image || nd.outputs?.image}
+          taskId={previewTaskId}
+        />
+      )}
+
+      {/* 在线去水印：水印区域设置弹窗（复用 LCWR 弹窗） */}
+      {nodeType.id === "online_watermark_removal" && (
+        <LcwrWatermarkEditor
+          open={onlineWmPreviewOpen}
+          onOpenChange={setOnlineWmPreviewOpen}
+          config={{ ...config, regions: config.watermark_regions || [] }}
+          onConfigChange={(key, value) => {
+            if (key === "regions") {
+              handleConfigChange("watermark_regions", value);
+            } else {
+              handleConfigChange(key, value);
+            }
+          }}
+          videoPath={upstreamOutputs.video || config.video_path || nd.outputs?.video}
+          imagePath={upstreamOutputs.image || config.image_path || nd.outputs?.image}
           taskId={previewTaskId}
         />
       )}

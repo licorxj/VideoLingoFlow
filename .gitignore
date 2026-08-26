@@ -46,6 +46,9 @@ backend/venv*/
 /python-base/
 /Windows分发包-*/
 VLF_for_20-Windows_*/
+/VideoLingoFlow20-for-windows20260826/
+# 非本项目：Cloudflare Worker 测试页面（独立部署，不随仓库分发）
+/cloudflare/
 **/.venv/
 
 # IDE
@@ -66,6 +69,7 @@ logs/
 *.sqlite
 *.sqlite3
 voiceforge.db
+/voiceforge_data/
 
 # Uploads and Outputs
 uploads/
@@ -79,6 +83,7 @@ tasks/
 .runtime/*
 !.runtime/README.md
 !.runtime/local_env.bat.template
+/scripts/llmrouter/run/
 
 # 闭源核心源码：收费/计费源码不入库（分发时由编译产物提供）
 backend/auth/cloud_auth_client.py
@@ -105,6 +110,8 @@ data/*
 data/workspace/*
 !data/workspace/pi-agent-config/
 !data/workspace/pi-install-staging/
+data/workspace/pi-agent-config/auth.json
+/backend/data/
 # 例外：QM-LocalRouter 的 backend/data 预设（含 app.db 预设设置）需随仓库分享
 !thirdparty/QM-LocalRouter/backend/data/
 # 例外内再排除：QM 数据备份目录（可能含敏感运行数据/密钥快照）
@@ -158,6 +165,11 @@ check_syntax.py
 patch_*.js
 run_validation.*
 tepss07_*
+backend/_tmp_*.py
+frontend/src/components/settings/*.trae-tmp
+net_check.py
+download_moss.py
+/npm
 
 # Debug session notes
 debug-*.md

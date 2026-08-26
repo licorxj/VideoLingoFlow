@@ -190,32 +190,19 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
   }, []);
 
   useEffect(() => {
-    if (!autoLogin || loading || status?.is_logged_in) return;
-    if (!loginForm.username.trim() || !loginForm.password.trim()) return;
-    let cancelled = false;
-
-    const runAutoLogin = async () => {
-      try {
-        await login({
-          username: loginForm.username.trim(),
-          password: loginForm.password,
-        });
-        if (!cancelled) showAlert("已自动登录", "success");
-      } catch (e) {
-        if (!cancelled) showAlert(getSubscriptionError(e), "error");
-      }
-    };
-
-    runAutoLogin();
-    return () => {
-      cancelled = true;
-    };
-  }, [autoLogin, loading, status?.is_logged_in]);
+    // 复用全局自动登录逻辑：应用启动时已尝试过，这里仅对“本页面挂载时”做带提示的兜底，
+    // 避免与 App 启动逻辑重复触发。已登录则跳过。
+    if (useSubscriptionStore.getState().status?.is_logged_in) return;
+    useSubscriptionStore.getState().tryAutoLogin()
+      .then((done) => { if (done) showAlert("已自动登录", "success"); })
+      .catch((e) => showAlert(getSubscriptionError(e), "error"));
+  }, []);
 
   const userType = status?.user_type || "guest";
   const links = {
     ...status?.links,
     products: "https://68n.cn/PUweA",
+    credits: "https://www.qianxun1688.com/liebiao/F8C59199B99DCADF",
     home: "https://www.licorxj.online/home",
     versions: "https://www.licorxj.online/versions",
   };
@@ -560,6 +547,7 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
         <CardContent className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           {[
             ["购买订阅", "开通或续费当前软件权益", links.products],
+            ["购买积分", "购买晴沐智坊系列软件通用积分，用于在线服务如虚拟邮箱、视频去字幕去水印等服务的消耗", links.credits],
             ["晴沐智坊主页", "访问账号与产品主页", links.home],
             ["软件中心", "查看版本与更新信息", links.versions],
           ].map(([title, desc, url]) => (

@@ -1,7 +1,10 @@
 import axios from 'axios';
 
+// 直连大模型路由器服务（默认端口 8800），绕过本项目后端桥接以降低延迟
+export const LLM_ROUTER_BASE = 'http://localhost:8800';
+
 const api = axios.create({
-  baseURL: '/llm-router',
+  baseURL: LLM_ROUTER_BASE,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -63,8 +66,9 @@ export const createBackup = () => api.post('/api/backup/create');
 export const listBackups = () => api.get('/api/backup/list');
 export const restoreLocalBackup = (filename: string) => api.post('/api/backup/restore-local?filename=' + encodeURIComponent(filename));
 export const deleteBackup = (filename: string) => api.delete('/api/backup/' + encodeURIComponent(filename));
-export const downloadBackupUrl = (filename: string) => '/llm-router/api/backup/download/' + encodeURIComponent(filename);
+export const downloadBackupUrl = (filename: string) => LLM_ROUTER_BASE + '/api/backup/download/' + encodeURIComponent(filename);
 
+// 以下两个接口属于本项目后端（路由器自身更新），仍走同源 /api，不可直连 8800
 export const getLlmRouterUpdateStatus = () => axios.get('/api/llm-router-update/status');
 export const runLlmRouterUpdate = () => axios.post('/api/llm-router-update/run');
 
@@ -84,7 +88,7 @@ export const generateImage = (data: any) => api.post('/v1/images/generations', d
 
 // TTS (Text-to-Speech)
 export const generateSpeech = async (data: any): Promise<Blob> => {
-  const resp = await fetch('/llm-router/v1/audio/speech', {
+  const resp = await fetch(LLM_ROUTER_BASE + '/v1/audio/speech', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),

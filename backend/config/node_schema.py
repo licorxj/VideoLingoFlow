@@ -3,18 +3,19 @@ from __future__ import annotations
 
 
 NODE_CATEGORIES = [
-    {"value": "input", "label": "输入节点", "color": "#3b82f6", "icon": "Upload"},
-    {"value": "ai", "label": "AI 处理节点", "color": "#8b5cf6", "icon": "Brain"},
-    {"value": "process", "label": "过程处理节点", "color": "#f59e0b", "icon": "Wrench"},
-    {"value": "ai_gen", "label": "AI 生成类节点", "color": "#10b981", "icon": "Sparkles"},
+    {"value": "io", "label": "输入输出节点", "color": "#3b82f6", "icon": "Upload"},
     {"value": "preview", "label": "预览节点", "color": "#14b8a6", "icon": "Eye"},
-    {"value": "output", "label": "输出节点", "color": "#ef4444", "icon": "Download"},
-    {"value": "publish", "label": "发布节点", "color": "#10b981", "icon": "Share2"},
-    {"value": "utility", "label": "工具节点", "color": "#8b5cf6", "icon": "Wrench"},
-    {"value": "flow_control", "label": "流程控制", "color": "#6366f1", "icon": "GitBranch"},
-    {"value": "network_request", "label": "网络请求", "color": "#0f766e", "icon": "Globe"},
-    {"value": "agent", "label": "智能体", "color": "#8b5cf6", "icon": "Bot"},
-    {"value": "group_node", "label": "组合节点", "color": "#6366f1", "icon": "Boxes"},
+    {"value": "audio", "label": "音频处理节点", "color": "#0ea5e9", "icon": "Volume2"},
+    {"value": "video", "label": "视频处理节点", "color": "#ef4444", "icon": "Film"},
+    {"value": "ai_gen", "label": "AI生成类节点", "color": "#10b981", "icon": "Sparkles"},
+    {"value": "translation", "label": "翻译相关节点", "color": "#8b5cf6", "icon": "Languages"},
+    {"value": "flow_control", "label": "流程控制节点", "color": "#6366f1", "icon": "GitBranch"},
+    {"value": "network_request", "label": "网络请求类节点", "color": "#0f766e", "icon": "Globe"},
+    {"value": "aigc", "label": "AIGC流程链", "color": "#22c55e", "icon": "Boxes"},
+    {"value": "agent", "label": "智能体", "color": "#a855f7", "icon": "Bot"},
+    {"value": "utility", "label": "工具类节点", "color": "#f59e0b", "icon": "Wrench"},
+    {"value": "file", "label": "文件操作类节点", "color": "#f97316", "icon": "FolderOpen"},
+    {"value": "group_node", "label": "组合节点", "color": "#64748b", "icon": "Boxes"},
 ]
 
 PORT_TYPES = [

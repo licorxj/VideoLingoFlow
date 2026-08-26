@@ -112,7 +112,7 @@ VideoLingoFlow/
 ├── data/                     # 运行时数据（control-plane.db、redis/）
 ├── control_plane_workspaces/ # 任务工作区
 ├── docs/                     # 知识库文档（智能体与开发者指南）
-├── deploy/                   # Docker 集群部署（docker-compose、nginx、TLS）
+├── deploy/                   # Docker 生产/集群部署（docker-compose、api.Dockerfile、nginx、TLS、.env.example）
 ├── cloudflare/               # 共享社区 Worker（src/index.js + wrangler.toml）
 ├── thirdparty/               # 第三方组件（pi、cutia、social 等）
 ├── install.bat / install.sh
@@ -155,6 +155,103 @@ VideoLingoFlow/
 
 - 存活：`GET /api/health/live`；就绪：`GET /api/health/ready`（校验 schema、数据目录、Redis、Celery Worker）；指标：`GET /api/metrics`
 
+## Docker 部署
+
+除了本地「脚本安装」模式，项目也提供了基于 Docker 的**生产 / 集群部署**方案（`deploy/` 目录）。该方案使用同一镜像同时承载 API（`uvicorn`）与任务 Worker（`celery worker`），由 PostgreSQL + Redis + MinIO + Nginx 组成完整栈。
+
+> 镜像设计要点：统一以 `python:3.12-slim` 为基座；通过 PyTorch 的 `cu128` / `cpu` wheel 选择 GPU / CPU，GPU 加速运行时只需 `--gpus all`；前端在构建阶段编译后由后端同源托管。详细镜像说明见 `deploy/README.md`。
+
+### 环境要求
+
+- 已安装 Docker Engine 与 Docker Compose v2。
+- 可选：NVIDIA GPU + 已安装 [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/)（启用 GPU 推理时）。
+
+### 1. 准备环境文件
+
+```bash
+cp deploy/.env.example .env
+```
+
+编辑 `.env`，为 `POSTGRES_PASSWORD`、`REDIS_PASSWORD`、`MINIO_ROOT_PASSWORD` 等设置强随机密码，并按需调整 `API_PORT` / `HTTPS_PORT`。GPU 部署保持 `TORCH_INDEX=cu128`（默认）；纯 CPU 部署改为 `TORCH_INDEX=cpu`。
+
+### 2. 准备 TLS 证书（HTTPS 反向代理需要）
+
+```bash
+mkdir -p deploy/tls
+# 将证书放到 deploy/tls/fullchain.pem 与 deploy/tls/privkey.pem
+```
+
+具体策略见 `deploy/TLS.md`。仅做本地自签测试可参考该文档生成自签证书。
+
+### 3. 构建镜像
+
+```bash
+# 默认 GPU（cu128）
+docker compose -f deploy/docker-compose.yml --env-file .env build api
+
+# 纯 CPU 版（镜像更小）
+docker compose -f deploy/docker-compose.yml --env-file .env build --build-arg TORCH_INDEX=cpu api
+```
+
+`worker` 服务复用同一镜像，`api` 构建完成后即已就绪。
+
+### 4. 启动依赖并迁移数据库
+
+```bash
+# 启动 PostgreSQL / Redis / MinIO
+docker compose -f deploy/docker-compose.yml --env-file .env up -d postgres redis minio
+
+# 执行版本化迁移（唯一数据库 schema 入口）
+docker compose -f deploy/docker-compose.yml --env-file .env run --rm --no-deps api alembic upgrade head
+```
+
+### 5. 启动全部服务
+
+```bash
+docker compose -f deploy/docker-compose.yml --env-file .env up -d api worker proxy
+```
+
+- `api`：FastAPI + 同源前端（端口 `11001`，外网经 Nginx 的 `HTTPS_PORT` 暴露）。
+- `worker`：Celery Worker，按资源队列（GPU / TTS / LLM / IO）消费任务。
+- `proxy`：Nginx 反向代理 + HTTPS 终止。
+
+### 6. 验证
+
+```bash
+curl -k https://localhost/api/health/live    # 进程存活
+curl -k https://localhost/api/health/ready   # 依赖（PostgreSQL schema / Redis / MinIO / Worker）就绪
+```
+
+浏览器访问 `https://<host>/`（HTTPS 端口，默认 `443`）进入工作台。
+
+### 启用 GPU 推理
+
+在 `deploy/docker-compose.yml` 的 `api` 与 `worker` 服务下，取消 `# deploy.resources` 一段注释即可（需要宿主已安装 NVIDIA Container Toolkit）。首次启动会把模型下载到挂载卷 `/app/_model_cache`，之后因卷持久化而加速。
+
+### 持久化与数据
+
+以下目录以 named volume 持久化，容器重建不丢失：
+
+| 卷 | 容器内路径 | 内容 |
+| --- | --- | --- |
+| `app-data` | `/app/voiceforge_data` | 配音谷（VoiceForge）数据 |
+| `app-data-root` | `/app/data` | 控制平面任务数据 |
+| `app-model-cache` | `/app/_model_cache` | HuggingFace 模型缓存 |
+| `app-temp` | `/app/temp` | 预览视频等临时产物 |
+
+### 常用运维命令
+
+```bash
+# 查看日志
+docker compose -f deploy/docker-compose.yml --env-file .env logs -f api worker
+
+# 停止 / 重建
+docker compose -f deploy/docker-compose.yml --env-file .env down
+docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recreate api worker
+```
+
+> 更完整的镜像设计、注意事项与排障见 `deploy/README.md`。
+
 ## 配置说明
 
 - **局域网协作**：复制 `.runtime/local_env.bat.template` 为 `local_env.bat`，设 `VIDEOLINGO_LAN_MODE=1` 后重启 Manager，API 与 Manager 监听 `0.0.0.0`（仅限可信局域网）。
@@ -191,4 +288,5 @@ VideoLingoFlow/
 
 ## 许可与致谢
 
-- 工作流编辑器基于 `@xyflow/react`；集成开源组件 social-auto-upload-web-ui、QM-LocalRouter、Cutia、Pi、VoiceForge（许可见 `thirdparty/` 各自目录）。
+- **本项目（VideoLingoFlow 自有代码与文档）采用 [CC BY-NC 4.0](LICENSE)（署名-非商业性使用 4.0）许可，不可用于商业用途。** 如需商业使用，请事先取得著作权人书面授权（详见 `LICENSE`）。
+- 工作流编辑器基于 `@xyflow/react`；集成开源组件 social-auto-upload-web-ui、QM-LocalRouter、Cutia、Pi、VoiceForge，这些第三方组件保留其各自目录内声明的许可（如 MIT），与本项目的非商业声明互不冲突，使用时应同时遵守其原有许可。
