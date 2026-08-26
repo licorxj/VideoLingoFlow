@@ -31,14 +31,18 @@ interface Props {
 
 export default function NodePalette({ onAddNode, collapsed, onToggleCollapse }: Props) {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
-    input: true,
-    ai: true,
-    process: true,
-    ai_gen: false,
-    output: true,
+    io: true,
     preview: false,
-    publish: true,
+    audio: false,
+    video: false,
+    ai_gen: false,
+    translation: false,
+    flow_control: false,
+    network_request: false,
+    aigc: false,
+    agent: false,
     utility: true,
+    file: false,
   });
   const [managerOpen, setManagerOpen] = useState(false);
   const [nodeRegistry, setNodeRegistry] = useState<NodeTypeDef[]>(getAllNodeTypes());
@@ -51,7 +55,7 @@ export default function NodePalette({ onAddNode, collapsed, onToggleCollapse }: 
       const mapped: NodeTypeDef[] = nodes.map((n) => ({
         id: n.id,
         name: n.name,
-        category: (n.category as any) || "process",
+        category: (n.category as any) || "utility",
         description: n.description || "",
         icon: n.icon || "Wrench",
         color: n.color || "#6b7280",

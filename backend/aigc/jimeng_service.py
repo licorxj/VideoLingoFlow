@@ -232,7 +232,14 @@ class JimengService:
             return "720p"
         return "720p"
 
-    def _poll_seconds(self) -> str:
+    def _poll_seconds(self, duration: float | int = 0) -> str:
+        """查询轮询间隔（秒）。
+
+        有视频时长时按 max(10, duration/10) 计算；其余场景回退到配置 poll（默认 60）。
+        """
+        d = int(duration or 0)
+        if d > 0:
+            return str(max(10, int(d / 10)))
         return str(int(self.config.get("poll") or 60))
 
     def generate_image(
@@ -364,7 +371,7 @@ class JimengService:
             version = str(model).strip().lower()
             if version in self.VIDEO_MODELS:
                 args.append(f"--model_version={version}")
-        args.append(f"--poll={self._poll_seconds()}")
+        args.append(f"--poll={self._poll_seconds(duration)}")
         if callback:
             callback(30, f"调用即梦 CLI：{sub_cmd}")
         return self.run_cli([sub_cmd, *args])

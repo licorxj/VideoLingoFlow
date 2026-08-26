@@ -1,18 +1,16 @@
 """基于 OpenCV 的视频局部变速工具。
 
-处理流程（异步流水线，低内存占用）：
-1. 异步预读取下一段帧（后台线程），同时处理写入当前段
-2. 对当前段执行变速处理（跳帧/光流插针），逐帧写入输出视频
-3. 写入完成立即释放当前段内存，然后处理下一段
+处理流程（流式处理，低内存占用）：
+1. 逐批读取帧（批次大小按分辨率自适应，单批约 64MB）
+2. 对片段执行变速处理（跳帧/光流插针），逐帧写入输出视频
+3. 批次处理完立即释放，内存占用始终限制在少数几个批次内
 4. 光流法插针使用多线程加速
 5. 帧写入优先用 ffmpeg(libx264) 管道编码，OpenCV mp4v 仅作兜底
    （mp4v 编码质量低，变速跳帧后帧间预测失败会导致花屏）
 """
 import os
-import gc
 import shutil
 import subprocess
-import threading
 import cv2
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -137,16 +135,19 @@ def _create_frame_writer(output_path: str, fps: float, width: int, height: int):
 
 # ───────────────── 逐段变速处理（写入器直接写入，不缓存） ─────────────────
 
-def _read_segment_frames(
+def _iter_segment_frames(
     cap: cv2.VideoCapture, start_frame: int, end_frame: int, batch_size: int
-) -> np.ndarray:
-    """从 VideoCapture 中读取指定帧范围，返回 (N, H, W, 3) 数组。"""
+):
+    """逐批读取 [start_frame, end_frame) 的帧，内存占用限制在一个批次内。
+
+    Yields (local_start, frames)：local_start 为相对段首的起始帧下标，
+    frames 为形状 (N, H, W, 3) 的批次数组。
+    """
     cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
     n_frames = end_frame - start_frame
-    batch_list = []
-    remaining = n_frames
-    while remaining > 0:
-        cnt = min(batch_size, remaining)
+    local = 0
+    while local < n_frames:
+        cnt = min(batch_size, n_frames - local)
         frames_batch = []
         for _ in range(cnt):
             ret, frame = cap.read()
@@ -155,82 +156,138 @@ def _read_segment_frames(
             frames_batch.append(frame)
         if not frames_batch:
             break
-        batch_list.append(np.stack(frames_batch))
-        remaining -= len(frames_batch)
-    if batch_list:
-        return np.concatenate(batch_list, axis=0)
-    return np.empty((0,), dtype=np.uint8)
+        yield local, np.stack(frames_batch)
+        local += len(frames_batch)
 
 
 def _process_and_write_segment(
     writer: cv2.VideoWriter,
-    frames: np.ndarray,
+    frames_iter,
     task_type: str,
+    n_input: int,
     speed_ratio: float,
     output_count: int,
     num_workers: int,
 ) -> int:
-    """处理一个片段的帧并直接写入 VideoWriter，返回写入帧数。"""
-    n_input = len(frames)
-    if n_input == 0 or output_count <= 0:
-        return 0
+    """流式处理一个片段并写入 writer，返回写入帧数。
 
+    frames_iter: 由 _iter_segment_frames 生成的 (local_start, batch) 迭代器。
+    帧以滑动窗口形式持有，内存占用始终限制在少数几个批次内，不缓存整段。
+    """
     if task_type == "normal":
-        # 正常片段：直接逐帧写入，无需复制
-        for i in range(n_input):
-            writer.write(frames[i])
-        return n_input
-
-    # speed 片段：计算输出帧的源位置映射
-    output_frames = []
-    if speed_ratio >= 1.0:
-        # 加速：跳帧（不需要额外内存分配，直接引用源帧切片）
-        for i in range(output_count):
-            src_pos = i * (n_input - 1) / max(output_count - 1, 1) if output_count > 1 else 0
-            src_idx = min(int(src_pos), n_input - 1)
-            output_frames.append(("copy", src_idx))
-    else:
-        # 减速：可能需要光流插针
-        for i in range(output_count):
-            src_pos = i * (n_input - 1) / max(output_count - 1, 1) if output_count > 1 else 0
-            src_idx = int(src_pos)
-            alpha = src_pos - src_idx
-            if src_idx >= n_input - 1:
-                output_frames.append(("copy", n_input - 1))
-            elif alpha < 0.01:
-                output_frames.append(("copy", src_idx))
-            else:
-                output_frames.append(("interp", src_idx, alpha))
-
-    # 多线程处理需要插针的帧
-    interp_items = [(i, item) for i, item in enumerate(output_frames) if item[0] == "interp"]
-    interp_results = {}
-
-    if interp_items and num_workers > 1:
-        def _do_interp(item):
-            idx, (_, src_idx, alpha) = item
-            return idx, interpolate_frame(frames[src_idx], frames[src_idx + 1], alpha)
-
-        with ThreadPoolExecutor(max_workers=num_workers) as pool:
-            futures = [pool.submit(_do_interp, item) for item in interp_items]
-            for f in as_completed(futures):
-                idx, frame = f.result()
-                interp_results[idx] = frame
-
-    # 顺序写入
-    written = 0
-    for i, item in enumerate(output_frames):
-        if item[0] == "copy":
-            writer.write(frames[item[1]])
-        else:
-            if i in interp_results:
-                writer.write(interp_results[i])
-            else:
-                # 单线程回退
-                _, src_idx, alpha = item
-                frame = interpolate_frame(frames[src_idx], frames[src_idx + 1], alpha)
+        # 正常片段：逐批读取、逐帧写入，无需任何缓存
+        n = 0
+        for _, batch in frames_iter:
+            for frame in batch:
                 writer.write(frame)
-        written += 1
+                n += 1
+        return n
+
+    # ── speed 片段：预计算输出帧的源帧映射（src_idx 单调不减） ──
+    mapping = []  # ("copy", src_idx) | ("interp", src_idx, alpha)
+    for i in range(output_count):
+        if output_count > 1:
+            src_pos = i * (n_input - 1) / (output_count - 1)
+        else:
+            src_pos = 0
+        src_idx = int(src_pos)
+        if src_idx >= n_input - 1:
+            mapping.append(("copy", n_input - 1))
+        elif speed_ratio >= 1.0:
+            # 加速：跳帧（不额外分配，直接引用源帧视图）
+            mapping.append(("copy", src_idx))
+        else:
+            # 减速：可能需要光流插针
+            alpha = src_pos - src_idx
+            if alpha < 0.01:
+                mapping.append(("copy", src_idx))
+            else:
+                mapping.append(("interp", src_idx, alpha))
+
+    def _do_interp(job):
+        j, (_, s, alpha) = job
+        return j, interpolate_frame(
+            window[s - window_start], window[s - window_start + 1], alpha
+        )
+
+    written = 0
+    out_i = 0
+    window = []            # 当前持有的源帧（升序）
+    window_start = 0       # window[0] 对应的全局源帧下标
+    pool = ThreadPoolExecutor(max_workers=num_workers) if num_workers > 1 else None
+
+    try:
+        for local_start, batch in frames_iter:
+            if not window:
+                window_start = local_start
+            window.extend(batch)
+            window_end = window_start + len(window)
+
+            # 统计本次可产出的输出帧数（其所需源帧均已就绪）
+            ready = 0
+            while out_i + ready < len(mapping):
+                op = mapping[out_i + ready]
+                s = op[1]
+                need = s if op[0] == "copy" else s + 1
+                if need >= window_end:
+                    break
+                ready += 1
+            if ready == 0:
+                continue
+
+            # 并行计算插针帧（内存限制在当前窗口内）
+            interp_jobs = [
+                (j, mapping[out_i + j])
+                for j in range(ready)
+                if mapping[out_i + j][0] == "interp"
+            ]
+            interp_results = {}
+            if interp_jobs:
+                if pool is not None:
+                    futures = [pool.submit(_do_interp, job) for job in interp_jobs]
+                    for f in as_completed(futures):
+                        j, frame = f.result()
+                        interp_results[j] = frame
+                else:
+                    for job in interp_jobs:
+                        j, frame = _do_interp(job)
+                        interp_results[j] = frame
+
+            # 按顺序写入
+            for j in range(ready):
+                op = mapping[out_i + j]
+                s = op[1]
+                if op[0] == "copy":
+                    writer.write(window[s - window_start])
+                else:
+                    writer.write(interp_results[j])
+            out_i += ready
+            written += ready
+
+            # 清理已消费的源帧，仅保留后续输出仍需要的帧
+            s_last = mapping[out_i - 1][1]
+            drop = max(0, s_last - window_start)
+            if drop > 0:
+                del window[:drop]
+                window_start += drop
+
+        # 结尾补充（视频在段末截断时安全退出）
+        while out_i < len(mapping):
+            op = mapping[out_i]
+            s = op[1]
+            if s >= window_start + len(window):
+                break
+            if op[0] == "copy":
+                writer.write(window[s - window_start])
+            else:
+                writer.write(interpolate_frame(
+                    window[s - window_start], window[s - window_start + 1], op[2]
+                ))
+            out_i += 1
+            written += 1
+    finally:
+        if pool is not None:
+            pool.shutdown()
 
     return written
 
@@ -248,7 +305,8 @@ def adjust_video_speed_segments(
 ) -> Optional[str]:
     """OpenCV 读取 + 局部变速，ffmpeg(libx264) 编码输出（无 ffmpeg 时回退 OpenCV mp4v）。
 
-    异步流水线：预读取下一段帧（后台线程）同时处理写入当前段，写完立即释放内存。
+    流式流水线：逐批读取帧并处理写入，批次大小按分辨率自适应，
+    内存占用始终限制在少数几个批次内，不会把整段帧缓存进内存。
 
     Args:
         input_path: 输入视频路径
@@ -351,87 +409,40 @@ def adjust_video_speed_segments(
             progress_callback(pct, msg)
 
     # ══════════════════════════════════════════════════
-    # 异步流水线：后台线程预读取下一段 → 主线程处理写入当前段 → 释放
+    # 流式流水线：逐批读取 → 处理写入 → 释放，内存占用限制在少数批次内
     # ══════════════════════════════════════════════════
-    _report(25, "开始异步流水线处理视频...")
+    # 内存自适应批次大小：单批约 64MB，高分辨率视频自动减小批次
+    frame_bytes = width * height * 3
+    if frame_bytes > 0:
+        batch_size = max(1, min(batch_size, (64 * 1024 * 1024) // frame_bytes))
+    print(f"  - 批次大小: {batch_size} 帧 ({frame_bytes * batch_size // (1024 * 1024)}MB/批)")
 
-    # 用第二个 VideoCapture 做异步预读取（避免线程间争抢同一个 cap）
-    cap_ahead = cv2.VideoCapture(input_path)
-    if not cap_ahead.isOpened():
-        cap.release()
-        raise Exception(f"无法打开预读取视频: {input_path}")
+    _report(25, "开始流式处理视频...")
 
     writer = _create_frame_writer(output_path, fps, width, height)
     if not writer.isOpened():
         cap.release()
-        cap_ahead.release()
         raise Exception(f"无法创建输出视频: {output_path}")
 
     written_total = 0
     read_total = 0
     speed_manifests = []
 
-    # 预读取结果容器（线程安全通过事件同步）
-    _ahead_lock = threading.Lock()
-    _ahead_data = [None, None]  # [frames, tidx] or None
-    _ahead_done = threading.Event()
-    _ahead_error = [None]
-
-    def _ahead_read(tidx: int):
-        """后台线程：读取指定片段的帧。"""
-        try:
-            task = tasks[tidx]
-            sf = task["start_frame"]
-            ef = task["end_frame"]
-            frames = _read_segment_frames(cap_ahead, sf, ef, batch_size)
-            with _ahead_lock:
-                _ahead_data[0] = frames
-                _ahead_data[1] = tidx
-        except Exception as e:
-            _ahead_error[0] = e
-        finally:
-            _ahead_done.set()
-
-    def _start_ahead_read(tidx: int):
-        """启动后台预读取。"""
-        _ahead_done.clear()
-        _ahead_data[0] = None
-        _ahead_data[1] = None
-        _ahead_error[0] = None
-        t = threading.Thread(target=_ahead_read, args=(tidx,), daemon=True)
-        t.start()
-
-    def _get_ahead_frames():
-        """等待预读取完成，返回 (frames, tidx)。"""
-        _ahead_done.wait()
-        if _ahead_error[0]:
-            raise _ahead_error[0]
-        with _ahead_lock:
-            return _ahead_data[0], _ahead_data[1]
-
-    # ── 预读取第 0 段 ──
-    if tasks:
-        _start_ahead_read(0)
-
     for tidx, task in enumerate(tasks):
         seg_label = f"段 {tidx + 1}/{len(tasks)} ({task['type']}, ratio={task['ratio']:.2f})"
 
-        # 获取当前段帧（来自预读取）
-        frames, got_idx = _get_ahead_frames()
-        assert got_idx == tidx, f"预读取顺序错误: 期望 {tidx}, 得到 {got_idx}"
-        read_total += (task["end_frame"] - task["start_frame"])
+        sf = task["start_frame"]
+        ef = task["end_frame"]
+        n_input = ef - sf
+        read_total += n_input
         pct = 25 + int(read_total / max(total_input_to_read, 1) * 35)
-        _report(pct, f"  读取 {seg_label}: {len(frames)} 帧")
+        _report(pct, f"  读取 {seg_label}: {n_input} 帧")
 
-        # 启动下一段的异步预读取（如果还有下一段）
-        next_idx = tidx + 1
-        if next_idx < len(tasks):
-            _start_ahead_read(next_idx)
-
-        # 处理+写入当前段（与下一段的读取并行执行）
+        # 流式读取 + 处理 + 写入（内部逐批进行，不缓存整段）
+        frames_iter = _iter_segment_frames(cap, sf, ef, batch_size)
         n_written = _process_and_write_segment(
-            writer, frames, task["type"], task["ratio"],
-            task["output_count"], num_workers,
+            writer, frames_iter, task["type"], n_input,
+            task["ratio"], task["output_count"], num_workers,
         )
         output_start = written_total / fps if fps > 0 else 0.0
         written_total += n_written
@@ -453,12 +464,7 @@ def adjust_video_speed_segments(
         pct = 60 + int(written_total / max(total_output_frames, 1) * 35)
         _report(pct, f"  写入 {seg_label}: {n_written} 帧 (累计 {written_total}/{total_output_frames})")
 
-        # 立即释放当前段帧数据
-        del frames
-        gc.collect()
-
     cap.release()
-    cap_ahead.release()
     writer.release()
 
     # 最终进度

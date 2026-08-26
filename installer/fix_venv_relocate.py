@@ -33,10 +33,15 @@ VENV = os.path.join(ROOT, "venv312")
 VENV_PY = os.path.join(VENV, "Scripts", "python.exe")
 SCRIPTS = os.path.join(VENV, "Scripts")
 # 随包 python-base 探测位置（按优先级）：
+#   0. VLF_ROOT 环境变量指定的分发包根（从 app\ 内运行时使用）
 #   1. 项目根 python-base/         （开发机布局）
 #   2. 项目根 Windows分发包-*/python-base/（分发包布局）
 #   3. 脚本所在目录自身（分发包根目录内的独立副本）
-BUNDLED_CANDIDATES = [os.path.join(ROOT, "python-base", "python.exe")]
+BUNDLED_CANDIDATES = []
+_vlf_root = os.environ.get("VLF_ROOT")
+if _vlf_root:
+    BUNDLED_CANDIDATES.append(os.path.join(_vlf_root, "python-base", "python.exe"))
+BUNDLED_CANDIDATES.append(os.path.join(ROOT, "python-base", "python.exe"))
 for _d in sorted(os.listdir(ROOT)):
     if _d.startswith("Windows分发包"):
         BUNDLED_CANDIDATES.append(os.path.join(ROOT, _d, "python-base", "python.exe"))

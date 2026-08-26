@@ -3,7 +3,7 @@ import { useI18n, LOCALES } from "../i18n";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getSettings, updateSettings, getProviders, getModels, getBackupConfig, updateBackupConfig, createBackup,
-  listBackups, restoreLocalBackup, deleteBackup, downloadBackupUrl, getLanIp,
+  listBackups, restoreLocalBackup, deleteBackup, downloadBackupUrl, getLanIp, getRepositoryStatus, updateRepository,
 } from "../services/api";
 import { toast } from "../stores/toast";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -14,7 +14,7 @@ import { Switch } from "../components/ui/switch";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "../components/ui/select";
-import { Palette, Globe, Copy, Check, Database, Download, Upload, Trash2, Loader2, HardDrive, Clock, FolderOpen, RefreshCw, ShieldCheck, Sun, Moon, Box, Save } from "lucide-react";
+import { Palette, Globe, Copy, Check, Database, Download, Upload, Trash2, Loader2, HardDrive, Clock, FolderOpen, RefreshCw, ShieldCheck, Sun, Moon, Box, Save, Github, GitPullRequest, CheckCircle2 } from "lucide-react";
 export default function SettingsPage() {
   const { t, locale, setLocale } = useI18n();
   const [dark, setDark] = useState(document.documentElement.classList.contains("dark"));
@@ -24,6 +24,9 @@ export default function SettingsPage() {
   const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
   const [appSettings, setAppSettings] = useState({ output_protocol: "openai", default_model: "", default_provider_id: 0, lan_access: false });
   const [lanIp, setLanIp] = useState("");
+  const [repositoryStatus, setRepositoryStatus] = useState<any>(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+  const [updatingRepository, setUpdatingRepository] = useState(false);
 
   useEffect(() => {
     getLanIp().then(r => setLanIp(r.data.ip)).catch(() => {});
@@ -34,6 +37,32 @@ export default function SettingsPage() {
     setDark(next);
     if (next) { document.documentElement.classList.add("dark"); }
     else { document.documentElement.classList.remove("dark"); }
+  };
+
+  const checkForUpdates = async () => {
+    setCheckingUpdate(true);
+    try {
+      const response = await getRepositoryStatus();
+      setRepositoryStatus(response.data);
+      toast({ title: response.data.update_available ? t("settings.updateAvailable") : t("settings.upToDate"), variant: "success" });
+    } catch (error: any) {
+      toast({ title: t("settings.updateCheckFailed"), description: error.response?.data?.detail, variant: "destructive" });
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
+
+  const installUpdate = async () => {
+    setUpdatingRepository(true);
+    try {
+      const response = await updateRepository();
+      setRepositoryStatus(response.data);
+      toast({ title: response.data.updated ? t("settings.updateComplete") : t("settings.upToDate"), variant: "success" });
+    } catch (error: any) {
+      toast({ title: t("settings.updateFailed"), description: error.response?.data?.detail, variant: "destructive" });
+    } finally {
+      setUpdatingRepository(false);
+    }
   };
 
   const copyCode = (text: string) => {
@@ -170,6 +199,48 @@ export default function SettingsPage() {
             </div>
           </div>
 
+        </CardContent>
+      </Card>
+      <Card className="card-hover">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-2"><Github className="h-4 w-4 text-foreground" /><CardTitle className="text-base">{t("settings.projectUpdates")}</CardTitle></div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <Label className="text-sm font-medium">{t("settings.sourceCode")}</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">{t("settings.sourceCodeDesc")}</p>
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5 shrink-0" onClick={() => window.open(repositoryStatus?.repository_url || "https://github.com/licorxj/QM-LocalRouter", "_blank", "noopener,noreferrer")}>
+              <Github className="h-3.5 w-3.5" />{t("settings.visitGithub")}
+            </Button>
+          </div>
+          <div className="flex flex-col gap-3 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <Label className="text-sm font-medium">{t("settings.versionUpdates")}</Label>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {repositoryStatus
+                  ? repositoryStatus.update_available
+                    ? t("settings.updateAvailableDesc", { count: repositoryStatus.behind_count })
+                    : t("settings.upToDateDesc")
+                  : t("settings.versionUpdatesDesc")}
+              </p>
+              {repositoryStatus && !repositoryStatus.working_tree_clean && <p className="text-xs text-amber-500 mt-1">{t("settings.localChangesWarning")}</p>}
+            </div>
+            <div className="flex gap-2 shrink-0">
+              <Button variant="outline" size="sm" className="gap-1.5" onClick={checkForUpdates} disabled={checkingUpdate || updatingRepository}>
+                {checkingUpdate ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                {t("settings.checkUpdates")}
+              </Button>
+              {repositoryStatus?.update_available && (
+                <Button size="sm" className="gap-1.5" onClick={installUpdate} disabled={updatingRepository || !repositoryStatus.working_tree_clean}>
+                  {updatingRepository ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <GitPullRequest className="h-3.5 w-3.5" />}
+                  {t("settings.installUpdate")}
+                </Button>
+              )}
+              {repositoryStatus && !repositoryStatus.update_available && <CheckCircle2 className="h-5 w-5 self-center text-emerald-500" aria-label={t("settings.upToDate")} />}
+            </div>
+          </div>
         </CardContent>
       </Card>
       {/* Route Management Model */}

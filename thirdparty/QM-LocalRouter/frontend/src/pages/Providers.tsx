@@ -686,7 +686,11 @@ const createModelMut = useMutation({
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-3'>
                 {selectedProvider.icon ? <img src={iconUrl(selectedProvider.icon)} alt='' className='w-10 h-10 rounded-lg' /> : <Server className='w-8 h-8 text-muted-foreground' />}
-                <div><h3 className='text-lg font-semibold'>{selectedProvider.name}</h3><p className='text-sm text-muted-foreground'>{selectedProvider.base_url}</p></div>
+                <div className='min-w-0'>
+                  <h3 className='text-lg font-semibold'>{selectedProvider.name}</h3>
+                  <p className='text-sm text-muted-foreground break-all'>{selectedProvider.base_url}</p>
+                  {selectedProvider.description && <p className='mt-1 text-sm text-muted-foreground'>{selectedProvider.description}</p>}
+                </div>
               </div>
               <Button
                 variant='outline'

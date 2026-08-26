@@ -14,23 +14,6 @@ _lock = threading.Lock()
 def get_backend_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
 
-
-def find_python():
-    """Locate a Python interpreter, preferring the project's own venv so the
-    project can be distributed/relocated without hardcoded absolute paths."""
-    base = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
-        os.path.join(base, "backend", "venv", "Scripts", "python.exe"),  # Windows venv
-        os.path.join(base, "backend", "venv", "bin", "python"),          # POSIX venv
-        "python",   # system fallback
-    ]
-    for cand in candidates:
-        if cand == "python":
-            return "python"
-        if os.path.isfile(cand):
-            return cand
-    return "python"
-
 class ServiceHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
@@ -68,7 +51,7 @@ class ServiceHandler(http.server.BaseHTTPRequestHandler):
                     return
                 try:
                     backend_dir = get_backend_dir()
-                    python_exe = find_python()
+                    python_exe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend", "venv", "Scripts", "python.exe")
                     _backend_process = subprocess.Popen(
                         [python_exe, "-m", "uvicorn", "app.main:app",
                          "--host", "0.0.0.0", "--port", str(BACKEND_PORT)],

@@ -86,24 +86,28 @@ class FSMNVADProcessor(VADProcessor):
         except ImportError:
             raise ImportError("funasr package required for FSMN VAD")
         
-        print(f"[VAD] Loading FSMN VAD model ({self.model})...")
+        print(f"[VAD] Loading FSMN VAD model ({self.model})...", flush=True)
         
         # 加载VAD模型（优先使用本地缓存，避免联网下载）
+        print(f"[VAD]   calling AutoModel(model={self.model})...", flush=True)
         model = AutoModel(
             model=self.model,
             max_single_segment_time=self.max_segment_time,
             disable_update=True
         )
+        print(f"[VAD]   AutoModel loaded OK", flush=True)
         
-        print(f"[VAD] Running FSMN VAD detection on {audio_path}...")
+        print(f"[VAD] Running FSMN VAD detection on {audio_path}...", flush=True)
         
         # 运行VAD检测
+        print(f"[VAD]   calling model.generate(input={audio_path})...", flush=True)
         result = model.generate(input=audio_path)
+        print(f"[VAD]   generate returned, result len={len(result) if result else 0}", flush=True)
         
         # 解析结果
         segments = self._parse_fsmn_result(result)
         
-        print(f"[VAD] FSMN VAD detected {len(segments)} segments")
+        print(f"[VAD] FSMN VAD detected {len(segments)} segments", flush=True)
         
         return segments
     
@@ -165,7 +169,7 @@ class WebRTCVADProcessor(VADProcessor):
         except ImportError:
             raise ImportError("webrtcvad package required for WebRTC VAD")
         
-        print(f"[VAD] Running WebRTC VAD detection...")
+        print(f"[VAD] Running WebRTC VAD detection...", flush=True)
         
         # 读取音频文件
         audio, sample_rate = self._read_audio(audio_path)
@@ -185,7 +189,7 @@ class WebRTCVADProcessor(VADProcessor):
         # 合并相邻的语音帧为段落
         segments = self._merge_speech_frames(speech_frames, sample_rate)
         
-        print(f"[VAD] WebRTC VAD detected {len(segments)} segments")
+        print(f"[VAD] WebRTC VAD detected {len(segments)} segments", flush=True)
         
         return segments
     
@@ -201,7 +205,7 @@ class WebRTCVADProcessor(VADProcessor):
         
         # 处理多声道音频：转换为单声道
         if len(audio.shape) > 1:
-            print(f"[VAD] Multi-channel audio detected ({audio.shape[1]} channels), converting to mono")
+            print(f"[VAD] Multi-channel audio detected ({audio.shape[1]} channels), converting to mono", flush=True)
             audio = audio.mean(axis=1).astype(np.int16)
         
         return audio, sr
@@ -272,13 +276,13 @@ class SileroVADProcessor(VADProcessor):
         except ImportError:
             raise ImportError("torch package required for Silero VAD")
         
-        print(f"[VAD] Loading Silero VAD model...")
+        print(f"[VAD] Loading Silero VAD model...", flush=True)
         
         # 加载Silero VAD模型：优先使用本地已缓存的repo（torch hub cache），避免联网下载
         try:
             local_repo = self._find_local_repo()
             if local_repo:
-                print(f"[VAD] Using locally cached Silero VAD repo: {local_repo}")
+                print(f"[VAD] Using locally cached Silero VAD repo: {local_repo}", flush=True)
                 model, utils = torch.hub.load(
                     local_repo,
                     model='silero_vad',
@@ -304,12 +308,12 @@ class SileroVADProcessor(VADProcessor):
             import torchaudio
             audio_tensor = torchaudio.functional.resample(audio_tensor, sr, 16000)
         
-        print(f"[VAD] Running Silero VAD detection...")
+        print(f"[VAD] Running Silero VAD detection...", flush=True)
         
         # 运行VAD检测
         segments = self._run_silero_vad(model, utils, audio_tensor)
         
-        print(f"[VAD] Silero VAD detected {len(segments)} segments")
+        print(f"[VAD] Silero VAD detected {len(segments)} segments", flush=True)
         
         return segments
     
@@ -325,7 +329,7 @@ class SileroVADProcessor(VADProcessor):
         
         # 处理多声道音频：转换为单声道
         if len(audio.shape) > 1:
-            print(f"[VAD] Multi-channel audio detected ({audio.shape[1]} channels), converting to mono")
+            print(f"[VAD] Multi-channel audio detected ({audio.shape[1]} channels), converting to mono", flush=True)
             audio = audio.mean(axis=1)
         
         return audio, sr

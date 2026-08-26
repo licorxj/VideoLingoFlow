@@ -47,6 +47,7 @@ BUILTIN_STEP_REGISTRY = {
     "output": ("backend.steps.s14_output", "StepOutput"),
     "extract_audio": ("backend.steps.s15_extract_audio", "StepExtractAudio"),
     "audio_transcode": ("backend.steps.s18_audio_transcode", "StepAudioTranscode"),
+    "audio_denoise": ("backend.steps.s_audio_denoise", "StepAudioDenoise"),
     "vocal_separation": ("backend.steps.s16_vocal_separation", "StepVocalSeparation"),
     "subtitle_align": ("backend.steps.s07_subtitle_align", "S07SubtitleAlign"),
     "llm_request": ("backend.steps.s_llm_request", "S_LLMRequest"),
@@ -75,6 +76,9 @@ BUILTIN_STEP_REGISTRY = {
     "aigc_comfyui": ("backend.steps.s_aigc_comfyui", "S_AIGC_ComfyUI"),
     "aigc_runninghub": ("backend.steps.s_aigc_runninghub", "S_AIGC_RunningHub"),
     "aigc_jimeng": ("backend.steps.s_aigc_jimeng", "S_AIGC_Jimeng"),
+    "media_to_url": ("backend.steps.s_media_to_url", "S_MediaToUrl"),
+    "online_watermark_removal": ("backend.steps.s_online_watermark_removal", "S_OnlineWatermarkRemoval"),
+    "qm_virtual_mailbox": ("backend.steps.s_qm_virtual_mailbox", "S_QmVirtualMailbox"),
 }
 
 FRONTEND_ONLY_NODE_TYPES = {"video_preview", "image_preview"}

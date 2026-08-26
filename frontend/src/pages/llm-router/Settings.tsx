@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getSettings, updateSettings, getProviders, getModels, getBackupConfig, updateBackupConfig, createBackup,
   listBackups, restoreLocalBackup, deleteBackup, downloadBackupUrl, getLanIp,
-  getLlmRouterUpdateStatus, runLlmRouterUpdate,
+  getLlmRouterUpdateStatus, runLlmRouterUpdate, LLM_ROUTER_BASE,
 } from "./api";
 import { toast } from "./toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -141,7 +141,7 @@ export default function SettingsPage() {
     const formData = new FormData();
     formData.append("file", file);
     try {
-      const resp = await fetch("/llm-router/api/backup/restore", { method: "POST", body: formData });
+      const resp = await fetch(LLM_ROUTER_BASE + "/api/backup/restore", { method: "POST", body: formData });
       const data = await resp.json();
       if (data.success) { toast({ title: t("settings.restored"), description: t("settings.restoreHint"), variant: "success" }); }
       else { toast({ title: t("settings.restoreFailed"), variant: "destructive" }); }

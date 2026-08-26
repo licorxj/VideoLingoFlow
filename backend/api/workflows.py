@@ -248,6 +248,14 @@ class NodeExecuteRequest(BaseModel):
     run_downstream: bool = False  # 兼容旧字段，True 等价于 scope="downstream"
 
 
+class ResumeWatermarkRequest(BaseModel):
+    """继续查询上一次去水印任务：前端仅传任务 id 与节点 id，后端自动到任务
+    cache 下寻找 watermark_removed_{node_id}.json，读取水印任务的查询 id，
+    沿用 qmhub sdk 继续轮询查询并下载结果。"""
+    task_id: str = ""
+    node_id: str = ""
+
+
 class SpawnTaskRequest(BaseModel):
     """新建一般任务：把当前画布快照复制为任务私有 workflow。"""
     nodes: List[dict] = Field(default_factory=list)
@@ -649,6 +657,160 @@ async def execute_single_node_api(wf_id: str, req: NodeExecuteRequest):
     except RuntimeError as exc:
         raise HTTPException(503, str(exc)) from exc
     return {"success": True, "task_id": task.id, "node_id": req.node_id, "run_downstream": scope == "downstream", "created": created, "status": task.status}
+
+
+@router.post("/{wf_id}/resume-watermark", dependencies=[Depends(require_permission("task:execute"))])
+async def resume_watermark_api(wf_id: str, req: ResumeWatermarkRequest):
+    """继续查询「在线去水印」节点上一次提交的水印任务。
+
+    前端只需传 task_id + node_id；后端自动到任务 workspace 的 cache 目录下寻找
+    watermark_removed_{node_id}.json，读取 submit_result 中的查询 id（task_id/request_id），
+    沿用 qmhub sdk 继续轮询查询直至完成，并下载结果到 outputs/。
+
+    不走 execute-node（其会清空节点 cache 产物，导致找不到上次提交记录），避免竞态与重复提交。
+    """
+    import requests as _requests
+    import re as _re
+
+    from backend.control_plane.workflow_runtime import _workspace
+    from backend.control_plane.database import session_scope
+    from backend.control_plane.models import Task
+    from backend.qmhub.auth_helper import build_qmhub_client_with_retry
+
+    _url_re = _re.compile(r"^https?://", _re.IGNORECASE)
+    _priority_keys = (
+        "result_url", "output_url", "video_url", "download_url",
+        "file_url", "url", "media_url", "play_url",
+    )
+
+    def _find_url(obj, depth=0):
+        """在响应中查找第一个可用的 http(s) URL，优先匹配已知键名。"""
+        if depth > 6:
+            return ""
+        if isinstance(obj, str):
+            return obj if _url_re.match(obj) else ""
+        if isinstance(obj, dict):
+            for k in _priority_keys:
+                v = obj.get(k)
+                if isinstance(v, str) and _url_re.match(v):
+                    return v
+            for v in obj.values():
+                found = _find_url(v, depth + 1)
+                if found:
+                    return found
+        if isinstance(obj, (list, tuple)):
+            for v in obj:
+                found = _find_url(v, depth + 1)
+                if found:
+                    return found
+        return ""
+
+    if not req.task_id:
+        raise HTTPException(400, "必须指定任务（task_id）")
+    if not req.node_id:
+        raise HTTPException(400, "必须指定节点（node_id）")
+
+    with session_scope() as session:
+        existing_task = session.get(Task, req.task_id)
+        if existing_task is None or existing_task.status == "deleted":
+            raise HTTPException(400, "任务不存在或已删除")
+        payload = existing_task.payload or {}
+        if (payload.get("workflow") or {}).get("id") != wf_id:
+            raise HTTPException(400, "任务与工作流不匹配")
+
+    task_dir = _workspace(req.task_id)
+    cache_dir = task_dir / "cache"
+    json_path = cache_dir / f"watermark_removed_{req.node_id}.json"
+    if not json_path.is_file():
+        raise HTTPException(404, f"未找到去水印任务记录：{json_path.name}")
+
+    try:
+        record = json.loads(json_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise HTTPException(500, f"读取去水印任务记录失败：{exc}") from exc
+
+    submit_result = record.get("submit_result") or {}
+    # qmhub task_status 的路径段是整数 request_id（服务端 pydantic 校验），
+    # 而 task_id 是任务哈希字符串不能直接使用，因此仅取 request_id 字段。
+    _raw_id = (
+        submit_result.get("request_id")
+        or submit_result.get("requestId")
+        or record.get("request_id")
+        or ""
+    )
+    try:
+        int(_raw_id)
+        request_id = str(_raw_id).strip()
+    except (ValueError, TypeError):
+        request_id = ""
+    if not request_id:
+        raise HTTPException(404, "去水印任务记录中未包含可继续查询的整数 request_id")
+
+    duration = float((record.get("input") or {}).get("duration") or 30.0)
+
+    try:
+        client = build_qmhub_client_with_retry()
+    except Exception as exc:
+        raise HTTPException(503, f"构造 qmhub 客户端失败：{exc}") from exc
+
+    # 轮询查询（沿用 qmhub sdk 的 task_status）
+    poll_interval = max(5, int(duration / 10))
+    task_timeout = max(120, int(duration * 5))
+    deadline = time.time() + task_timeout
+    status_result = None
+    while True:
+        try:
+            status_result = client.invoke.task_status(request_id=request_id)
+        except Exception as exc:
+            raise HTTPException(502, f"查询水印任务状态失败：{exc}") from exc
+        st = (status_result.get("status") if isinstance(status_result, dict) else "") or ""
+        if st != "processing":
+            break
+        if time.time() >= deadline:
+            raise HTTPException(504, f"查询水印任务超时（{task_timeout}s 内仍为 processing）")
+        time.sleep(poll_interval)
+
+    if (status_result.get("status") if isinstance(status_result, dict) else "") != "success":
+        raise HTTPException(502, f"水印任务未成功：{json.dumps(status_result, ensure_ascii=False)[:500]}")
+
+    result_url = ""
+    if isinstance(status_result, (dict, list, tuple)):
+        result_url = _find_url(status_result)
+    if not result_url:
+        raise HTTPException(502, f"未从查询结果中提取到结果 URL：{json.dumps(status_result, ensure_ascii=False)[:500]}")
+
+    output_dir = task_dir / "output"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_path = output_dir / f"watermark_removed_{req.node_id}.mp4"
+    try:
+        with _requests.get(result_url, stream=True, timeout=120) as r:
+            r.raise_for_status()
+            with open(output_path, "wb") as f:
+                for chunk in r.iter_content(chunk_size=1024 * 1024):
+                    f.write(chunk)
+    except Exception as exc:
+        raise HTTPException(502, f"下载去水印结果失败：{exc}") from exc
+
+    # 回写查询结果到任务记录，避免重复查询
+    record.setdefault("resume_result", {
+        "status": "success",
+        "result_url": result_url,
+        "output_path": str(output_path),
+        "resumed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
+    })
+    try:
+        json_path.write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+    except OSError:
+        pass
+
+    return {
+        "success": True,
+        "node_id": req.node_id,
+        "task_id": req.task_id,
+        "status": "success",
+        "result_url": result_url,
+        "output_path": str(output_path),
+    }
 
 
 @router.get("/{wf_id}/debug-task")

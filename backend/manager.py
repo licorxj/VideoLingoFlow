@@ -54,6 +54,9 @@ _gpu_service_process: subprocess.Popen | None = None
 _gpu_service_start_time: float = 0
 _redis_process: subprocess.Popen | None = None
 _lock = threading.Lock()
+# 运行时准备缓存：预检/迁移/孤儿清理只需执行一次，worker 启动复用结果
+_runtime_prepared = False
+_prepared_lock = threading.Lock()
 # 操作级互斥：串行化所有 start/stop/restart 的实际执行（RLock 可重入，restart→stop→start 同线程复用）
 _op_lock = threading.RLock()
 # 健康监督：服务期望运行状态登记（True=期望运行，崩溃自动拉起；False=已主动停止，不干预）
@@ -475,26 +478,37 @@ def _worker_available(python_exe: str, env: dict[str, str], project_root: str, q
 
 
 def _prepare_local_runtime() -> tuple[str, dict[str, str]] | None:
+    """准备本地运行时（依赖预检 → SQLite 迁移 → 孤儿工作区清理 → Redis）。
+
+    预检/迁移/孤儿清理在 Manager 生命周期内只需执行一次：后续 worker 启动复用
+    结果（_runtime_prepared 缓存），仅保留 Redis 存活探测以便崩溃后重新拉起。
+    """
+    global _runtime_prepared
     project_root = _project_root()
     python_exe = _get_python()
     env = _setup_env()
     for path in _local_runtime_dirs(project_root):
         path.mkdir(parents=True, exist_ok=True)
-    if not _python_ready(python_exe, env):
-        return None
-    if not _migrate_sqlite(python_exe, env, project_root):
-        return None
-    # 清理孤儿任务文件夹：DB 中已不存在的工作区残留（删除失败/历史遗留），避免磁盘堆积
-    try:
-        cleanup = subprocess.run(
-            [python_exe, "-c",
-             "from backend.control_plane.workflow_runtime import cleanup_orphan_workspaces; cleanup_orphan_workspaces()"],
-            cwd=project_root, env=env, timeout=120, capture_output=True, text=True,
-        )
-        if cleanup.stdout.strip():
-            print(f"[Manager] {cleanup.stdout.strip().splitlines()[-1]}")
-    except Exception as exc:
-        print(f"[Manager] 孤儿工作区清理跳过: {exc}")
+    with _prepared_lock:
+        if not _runtime_prepared:
+            if not _python_ready(python_exe, env):
+                return None
+            if not _migrate_sqlite(python_exe, env, project_root):
+                return None
+            # 迁移已完成：标记传递给子进程，主后端 startup 据此跳过重复迁移
+            os.environ["VIDEOLINGO_MIGRATION_DONE"] = "1"
+            # 清理孤儿任务文件夹：DB 中已不存在的工作区残留（删除失败/历史遗留），避免磁盘堆积
+            try:
+                cleanup = subprocess.run(
+                    [python_exe, "-c",
+                     "from backend.control_plane.workflow_runtime import cleanup_orphan_workspaces; cleanup_orphan_workspaces()"],
+                    cwd=project_root, env=env, timeout=120, capture_output=True, text=True,
+                )
+                if cleanup.stdout.strip():
+                    print(f"[Manager] {cleanup.stdout.strip().splitlines()[-1]}")
+            except Exception as exc:
+                print(f"[Manager] 孤儿工作区清理跳过: {exc}")
+            _runtime_prepared = True
     if not _start_redis(python_exe, env):
         return None
     return python_exe, env
@@ -1735,6 +1749,32 @@ class ManagerHandler(BaseHTTPRequestHandler):
         pass  # Suppress default HTTP logs
 
 
+def _start_all_services():
+    """并行拉起全部托管服务（main 启动路径专用）。
+
+    各服务相互独立，直接执行未加操作锁的原始函数（functools.wraps 保留的 __wrapped__）：
+    启动路径由 main 单线程触发，无并发竞态；API/watchdog 等并发入口仍走带锁版本。
+    """
+    starters = (
+        start_backend,
+        start_social_backend,
+        start_social_frontend,
+        start_llm_router,
+        start_cutia,
+        start_voiceforge_worker,
+        start_control_plane_worker,
+        start_gpu_service,
+    )
+    threads = []
+    for starter in starters:
+        target = getattr(starter, "__wrapped__", starter)
+        thread = threading.Thread(target=target, name=f"manager-start-{starter.__name__}", daemon=True)
+        thread.start()
+        threads.append(thread)
+    for thread in threads:
+        thread.join()
+
+
 def main():
     global _job_handle, _manager_shutdown_callback
     if _check_port(MANAGER_PORT):
@@ -1772,14 +1812,7 @@ def main():
     print(f"[Manager] Listening on http://{LOCAL_HOST}:{MANAGER_PORT}")
 
     # Start backends on launch (social_mcp is not started by default and can be started manually from frontend)
-    start_backend()
-    start_social_backend()
-    start_social_frontend()
-    start_llm_router()
-    start_cutia()
-    start_voiceforge_worker()
-    start_control_plane_worker()
-    start_gpu_service()
+    _start_all_services()
 
     # 健康监督：期望运行却崩溃的服务自动拉起（每 10s 探测，30s 冷却防重启风暴）
     threading.Thread(target=_watchdog_loop, name="manager-watchdog", daemon=True).start()

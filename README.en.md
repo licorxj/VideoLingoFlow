@@ -112,7 +112,7 @@ VideoLingoFlow/
 ├── data/                     # Runtime data (control-plane.db, redis/)
 ├── control_plane_workspaces/ # Task workspaces
 ├── docs/                     # Knowledge base docs (agent & developer guides)
-├── deploy/                   # Docker cluster deployment (docker-compose, nginx, TLS)
+├── deploy/                   # Docker production/cluster deployment (docker-compose, api.Dockerfile, nginx, TLS, .env.example)
 ├── cloudflare/               # Community Worker (src/index.js + wrangler.toml)
 ├── thirdparty/               # Third-party components (pi, cutia, social, etc.)
 ├── install.bat / install.sh
@@ -155,6 +155,103 @@ Open http://127.0.0.1:11001/ in your browser to enter the workbench.
 
 - Liveness: `GET /api/health/live`; readiness: `GET /api/health/ready` (validates schema, data dir, Redis, Celery worker); metrics: `GET /api/metrics`
 
+## Docker Deployment
+
+Besides the local "script-based install" mode, the project also ships a **production / cluster deployment** via Docker (under `deploy/`). It uses a single image for both the API (`uvicorn`) and the task Worker (`celery worker`), backed by a full stack of PostgreSQL + Redis + MinIO + Nginx.
+
+> Image design notes: a unified `python:3.12-slim` base; PyTorch `cu128` / `cpu` wheels select GPU / CPU, and GPU acceleration only needs `--gpus all` at runtime; the frontend is compiled at build time and served same-origin by the backend. See `deploy/README.md` for full details.
+
+### Requirements
+
+- Docker Engine and Docker Compose v2 installed.
+- Optional: NVIDIA GPU with the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/) installed (for GPU inference).
+
+### 1. Prepare the environment file
+
+```bash
+cp deploy/.env.example .env
+```
+
+Edit `.env` and set strong random passwords for `POSTGRES_PASSWORD`, `REDIS_PASSWORD`, `MINIO_ROOT_PASSWORD`, etc., and adjust `API_PORT` / `HTTPS_PORT` as needed. Keep `TORCH_INDEX=cu128` (default) for GPU; set `TORCH_INDEX=cpu` for a CPU-only build (smaller image).
+
+### 2. Prepare TLS certificates (required by the HTTPS proxy)
+
+```bash
+mkdir -p deploy/tls
+# place your certificates at deploy/tls/fullchain.pem and deploy/tls/privkey.pem
+```
+
+See `deploy/TLS.md` for the strategy. For a local self-signed test, generate one following that doc.
+
+### 3. Build the image
+
+```bash
+# default GPU (cu128)
+docker compose -f deploy/docker-compose.yml --env-file .env build api
+
+# CPU-only build (smaller image)
+docker compose -f deploy/docker-compose.yml --env-file .env build --build-arg TORCH_INDEX=cpu api
+```
+
+The `worker` service reuses the same image, so building `api` covers both.
+
+### 4. Start dependencies and run migrations
+
+```bash
+# start PostgreSQL / Redis / MinIO
+docker compose -f deploy/docker-compose.yml --env-file .env up -d postgres redis minio
+
+# run versioned migrations (the only DB schema entry point)
+docker compose -f deploy/docker-compose.yml --env-file .env run --rm --no-deps api alembic upgrade head
+```
+
+### 5. Start all services
+
+```bash
+docker compose -f deploy/docker-compose.yml --env-file .env up -d api worker proxy
+```
+
+- `api`: FastAPI + same-origin frontend (port `11001`; exposed externally via Nginx on `HTTPS_PORT`).
+- `worker`: Celery Worker consuming tasks by resource queue (GPU / TTS / LLM / IO).
+- `proxy`: Nginx reverse proxy + HTTPS termination.
+
+### 6. Verify
+
+```bash
+curl -k https://localhost/api/health/live    # process alive
+curl -k https://localhost/api/health/ready   # deps (PostgreSQL schema / Redis / MinIO / Worker) ready
+```
+
+Open `https://<host>/` (HTTPS port, default `443`) in your browser to enter the workbench.
+
+### Enable GPU inference
+
+Under the `api` and `worker` services in `deploy/docker-compose.yml`, uncomment the `# deploy.resources` block (requires the NVIDIA Container Toolkit on the host). On first start, models download into the mounted volume `/app/_model_cache`; subsequent starts are faster because the volume persists.
+
+### Persistence & data
+
+The following directories are persisted as named volumes and survive container recreation:
+
+| Volume | Container path | Contents |
+| --- | --- | --- |
+| `app-data` | `/app/voiceforge_data` | VoiceForge data |
+| `app-data-root` | `/app/data` | Control-plane task data |
+| `app-model-cache` | `/app/_model_cache` | HuggingFace model cache |
+| `app-temp` | `/app/temp` | Temp artifacts (preview videos, etc.) |
+
+### Common ops commands
+
+```bash
+# tail logs
+docker compose -f deploy/docker-compose.yml --env-file .env logs -f api worker
+
+# stop / recreate
+docker compose -f deploy/docker-compose.yml --env-file .env down
+docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recreate api worker
+```
+
+> For full image design, caveats, and troubleshooting, see `deploy/README.md`.
+
 ## Configuration
 
 - **LAN collaboration**: copy `.runtime/local_env.bat.template` to `local_env.bat`, set `VIDEOLINGO_LAN_MODE=1`, and restart Manager. API and Manager then listen on `0.0.0.0` (trusted LAN only).
@@ -191,4 +288,5 @@ Open http://127.0.0.1:11001/ in your browser to enter the workbench.
 
 ## License & Credits
 
-- Workflow editor built on `@xyflow/react`; integrates open-source components social-auto-upload-web-ui, QM-LocalRouter, Cutia, Pi, VoiceForge (see their licenses under `thirdparty/`).
+- **This project (VideoLingoFlow's own source code and documentation) is licensed under [CC BY-NC 4.0](LICENSE) (Attribution-NonCommercial 4.0). Commercial use is NOT permitted.** For any commercial use, obtain prior written permission from the copyright holder (see `LICENSE`).
+- The workflow editor is built on `@xyflow/react`; it integrates open-source components social-auto-upload-web-ui, QM-LocalRouter, Cutia, Pi, and VoiceForge. These third-party components retain their respective licenses (e.g., MIT) as declared in their own directories and are not affected by this project's non-commercial notice — follow their original licenses when using them.

@@ -24,10 +24,16 @@
       "id": "grp_d476d4e1",
       "name": "字幕生产",
       "order": 5
+    },
+    {
+      "id": "grp_9a885a56",
+      "name": "视频处理",
+      "order": 6
     }
   ],
   "membership": {
     "5fc0150ea613": "grp_d7395d52",
-    "8ed5bc8b526f": "grp_d476d4e1"
+    "8ed5bc8b526f": "grp_d476d4e1",
+    "51a138986318": "grp_9a885a56"
   }
 }

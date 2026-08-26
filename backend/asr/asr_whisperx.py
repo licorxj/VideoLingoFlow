@@ -192,12 +192,14 @@ class WhisperXLocal(ASRBase):
                 def _do_align():
                     """Load align model and align."""
                     align_lang = detected_language
-                    align_model, metadata = whisperx.load_align_model(
-                        language_code=align_lang,
-                        device=device,
+                    # 复用 alignment_processor 的加载逻辑：先本地 _model_cache/hub 缓存，
+                    # 无缓存时自动下载到该目录，避免因 cache_dir 指向错误导致联网卡住
+                    from backend.asr.alignment_processor import WhisperXAlignmentProcessor
+                    processor = WhisperXAlignmentProcessor(
                         model_name=align_model_name,
                         model_dir=self._model_dir,
                     )
+                    align_model, metadata = processor._load_align_model(align_lang, device)
                     aligned = whisperx.align(
                         result["segments"],
                         align_model,

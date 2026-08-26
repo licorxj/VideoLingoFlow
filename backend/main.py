@@ -19,7 +19,7 @@ from starlette.background import BackgroundTask
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Scope, Receive, Send
 
-from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces
+from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail
 from backend.control_plane import runtime_flags
 from backend.utils.observability import correlation_id
 
@@ -199,6 +199,7 @@ app.include_router(subtitle_preview.router, prefix="/api/subtitle-preview", tags
 app.include_router(voiceforge.router, prefix="/api/voiceforge", tags=["voiceforge"])
 app.include_router(voiceforge_ws.router, prefix="/ws/voiceforge", tags=["voiceforge-websocket"])
 app.include_router(lcwr.router, tags=["lcwr"])
+app.include_router(qm_mail.router, tags=["qm-mail"])
 app.include_router(llm_router_update.router, tags=["llm-router-update"])
 
 LLM_ROUTER_UPSTREAM = "http://127.0.0.1:8800"
@@ -342,13 +343,16 @@ async def restart_server():
 
 @app.on_event("startup")
 async def startup_event():
-    from alembic import command
-    from alembic.config import Config
-    from backend.voiceforge import initialize_database
-    migration_config = Config(os.path.join(ROOT, "alembic.ini"))
-    command.upgrade(migration_config, "head")
-    initialize_database()
-    print("VoiceForge database initialized")
+    # Manager 预迁移完成后会设置 VIDEOLINGO_MIGRATION_DONE=1，此处跳过重复迁移；
+    # 未经 Manager 直接启动（如手动 uvicorn）时仍在此兜底执行迁移
+    if os.getenv("VIDEOLINGO_MIGRATION_DONE", "").strip().lower() not in {"1", "true", "yes"}:
+        from alembic import command
+        from alembic.config import Config
+        from backend.voiceforge import initialize_database
+        migration_config = Config(os.path.join(ROOT, "alembic.ini"))
+        command.upgrade(migration_config, "head")
+        initialize_database()
+        print("VoiceForge database initialized")
 
     from backend.tts.tts_interface_manager import get_tts_interface_manager
     mgr = get_tts_interface_manager()

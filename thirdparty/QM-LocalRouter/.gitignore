@@ -16,7 +16,6 @@ env/
 # === Node.js ===
 node_modules/
 frontend/dist/
-!frontend/dist/
 frontend/build/
 *.tsbuildinfo
 

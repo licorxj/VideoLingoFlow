@@ -1,4 +1,4 @@
-import os
+﻿import os
 import uuid
 import httpx
 import json
@@ -39,7 +39,7 @@ async def search_baidu(keyword: str, page: int, count: int) -> list:
         "Referer": "https://image.baidu.com/",
     }
 
-    async with httpx.AsyncClient(timeout=15, follow_redirects=True, trust_env=False) as client:
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
         # Visit main page first to get cookies (BAIDUID)
         await client.get("https://image.baidu.com/", headers=headers)
 
@@ -86,7 +86,7 @@ async def search_bing(keyword: str, page: int, count: int) -> list:
         "Accept-Language": "en-US,en;q=0.9",
     }
 
-    async with httpx.AsyncClient(timeout=15, follow_redirects=True, trust_env=False) as client:
+    async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
         resp = await client.get(search_url, params=params, headers=headers)
         html = resp.text
 
@@ -112,7 +112,7 @@ async def search_sogou(keyword: str, page: int, count: int) -> list:
         "Accept": "application/json",
     }
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True, trust_env=False) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
             resp = await client.get(search_url, params=params, headers=headers)
             data = resp.json()
         results = []
@@ -164,7 +164,7 @@ async def save_icon(req: IconSaveRequest):
     }
 
     try:
-        async with httpx.AsyncClient(timeout=15, follow_redirects=True, trust_env=False) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
             resp = await client.get(url, headers=headers)
             if resp.status_code != 200:
                 raise HTTPException(502, f"Download failed: HTTP {resp.status_code}")

@@ -150,6 +150,14 @@ boto3>=1.43,<2
 oss2>=2.19,<3
 minio>=7.2,<8
 
+# 腾讯云 VOD 媒体上传（backend/auth/cloud_auth_service.py 依赖）
+# tencentcloud-sdk-python: 腾讯云通用 SDK（SearchMedia 等接口）
+# tencentcloud-sdk-python-vod: VOD 业务模块
+# vod-python-sdk: qcloud_vod 拉直上传客户端（VodUploadClient/VodUploadRequest）
+tencentcloud-sdk-python==3.1.162
+tencentcloud-sdk-python-vod==3.1.162
+vod-python-sdk==1.4.4
+
 # ============================================================
 # LLM 辅助工具
 # ============================================================

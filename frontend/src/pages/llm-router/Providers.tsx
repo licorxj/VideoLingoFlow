@@ -6,6 +6,7 @@ import {
   searchIcons, saveIcon, getHotProviders,
   getKeys, createKey, deleteKey, testKey, testAllKeys, deleteInvalidKeys,
   getModels, createModel, updateModel, deleteModel, fetchModels, syncModels, testAllModels, deleteInvalidModels, clearAllModels,
+  LLM_ROUTER_BASE,
 } from './api';
 import { useI18n } from './i18n';
 import { toast } from './toast';
@@ -367,7 +368,7 @@ const createModelMut = useMutation({
     mutationFn: async (m: any) => {
       setTestingModelId(m.id);
       try {
-        const res = await fetch('/llm-router/v1/chat/completions', {
+        const res = await fetch(LLM_ROUTER_BASE + '/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

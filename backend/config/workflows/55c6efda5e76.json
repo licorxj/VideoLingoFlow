@@ -42,7 +42,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 500
+        "height": 502
       },
       "selected": false,
       "dragging": false
@@ -76,7 +76,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 265
+        "height": 278
       },
       "selected": false,
       "dragging": false
@@ -85,8 +85,8 @@
       "id": "node_1_1780948332813",
       "type": "workflow",
       "position": {
-        "x": 660,
-        "y": -1680
+        "x": 720,
+        "y": -1695
       },
       "data": {
         "nodeType": "summarize",
@@ -105,11 +105,21 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": false,
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
+          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=29788",
+          "[step_worker] step instance created: S04Summarize",
+          "[step_worker] step_inputs keys=['text', 'language']",
+          "[step_worker] node_config keys=['audioPath', 'videoPath', 'subtitlePath', 'url']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780948332813_result.json, exiting 0"
+        ]
       },
       "measured": {
         "width": 420,
-        "height": 350
+        "height": 357
       },
       "selected": false,
       "dragging": false
@@ -143,11 +153,21 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": false,
+        "logLines": [
+          "[Translate] Retry success for [101] faithful: '创建之后，如果你想编辑它，只需双击此处，可以更改方向，移动它或修改任意基准坐标系。但请记住：无论何时...'",
+          "[Translate] Retry success for [102] faithful: '希望你们已经理解了所有不同类型的坐标系。...'",
+          "[Translate] Retry success for [103] faithful: '如果你有任何疑问，请在下方评论区留言，我会尽力解答。...'",
+          "[Translate] Retry success for [104] faithful: '谢谢大家。...'",
+          "[Translate] Retrying 1 empty faithful translations: [100]",
+          "[Translate] Retry success for [100] faithful: 'X轴的平面就是这个...'",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780954897405_result.json, exiting 0"
+        ]
       },
       "measured": {
         "width": 420,
-        "height": 469
+        "height": 530
       },
       "selected": false,
       "dragging": false
@@ -169,17 +189,21 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "output/tran_subtitles_node_1_1781200299298.srt",
+          "original": "output/tran_subtitles_original_node_1_1781200299298.srt",
+          "bilingual": "output/tran_subtitles_bilingual_node_1_1781200299298.srt"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 218
+        "height": 357
       },
       "selected": false,
       "dragging": false
@@ -211,7 +235,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 409
+        "height": 477
       },
       "selected": false,
       "dragging": false
@@ -245,17 +269,30 @@
           "overwrite_generate": true,
           "voice_role_1": "白桦"
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
         "disableExecute": false,
-        "workbench_url": ""
+        "workbench_url": "",
+        "logLines": [
+          "[S09] 分析变速倍数",
+          "  - 需要变速: 32 段",
+          "  - 超出最大变速(1.25x): 8 段",
+          "[S09] 最终溢出段数: 8",
+          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\dub_task_node_1_1781709944783.json",
+          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\dub_task_node_1_1781709944783.csv",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
+        ]
       },
       "measured": {
         "width": 420,
-        "height": 590
+        "height": 775
       },
       "selected": false,
       "dragging": false
@@ -280,17 +317,20 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 208
+        "height": 321
       },
       "selected": false,
       "dragging": false
@@ -299,14 +339,14 @@
       "id": "node_1_1781810867151",
       "type": "workflow",
       "position": {
-        "x": 1830,
-        "y": -735
+        "x": 1800,
+        "y": -720
       },
       "data": {
         "nodeType": "merge_audio",
         "label": "音频合并",
         "config": {
-          "video_speed_adjust": true,
+          "video_speed_adjust": false,
           "speed_min": "0.98",
           "speed_max": "1.3",
           "gap_threshold": "0.5",
@@ -314,19 +354,26 @@
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
-          "url": ""
+          "url": "",
+          "audio_format": "wav"
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/dub_node_1_1781810867151.wav",
+          "dub_srt": "output/dub_node_1_1781810867151.srt",
+          "dub_bilingual_srt": "output/dub_bilingual_node_1_1781810867151.srt",
+          "配音任务单": "cache\\dub_task_node_1_1781709944783.csv",
+          "video_adjusted": "output/video_adjusted.mp4"
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 485
+        "height": 756
       },
       "selected": false,
       "dragging": false
@@ -354,17 +401,19 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_with_dub_node_1_1781939413425.mp4"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 512
+        "height": 589
       },
       "selected": false,
       "dragging": false
@@ -401,7 +450,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 410
+        "height": 466
       },
       "selected": false,
       "dragging": false
@@ -410,8 +459,8 @@
       "id": "node_2_1781987851660",
       "type": "workflow",
       "position": {
-        "x": 2385,
-        "y": 105
+        "x": 2460,
+        "y": 120
       },
       "data": {
         "nodeType": "video_preview",
@@ -438,7 +487,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 167
+        "height": 427
       },
       "selected": false,
       "dragging": false
@@ -475,7 +524,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 437
+        "height": 418
       },
       "selected": false,
       "dragging": false
@@ -517,7 +566,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 484
+        "height": 528
       },
       "selected": false,
       "dragging": false
@@ -549,7 +598,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 237
+        "height": 229
       },
       "selected": false,
       "dragging": false
@@ -584,7 +633,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 276
+        "height": 267
       },
       "selected": false,
       "dragging": false
@@ -624,7 +673,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 341
+        "height": 327
       },
       "selected": false,
       "dragging": false
@@ -633,7 +682,7 @@
       "id": "node_1_1782672877872",
       "type": "workflow",
       "position": {
-        "x": 2940,
+        "x": 3015,
         "y": 510
       },
       "data": {
@@ -672,7 +721,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 663
+        "height": 641
       },
       "selected": false,
       "dragging": false
@@ -709,7 +758,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 437
+        "height": 418
       },
       "selected": false,
       "dragging": false
@@ -741,7 +790,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 159
+        "height": 154
       },
       "selected": false,
       "dragging": false
@@ -773,7 +822,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 193
+        "height": 186
       },
       "selected": false,
       "dragging": false
@@ -807,7 +856,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 309
+        "height": 299
       },
       "selected": false,
       "dragging": false
@@ -824,12 +873,12 @@
         "label": "断句预处理",
         "config": {
           "method": "punct",
-          "split_on_speaker": false,
-          "llm_max_chars": 5000,
+          "split_on_speaker": true,
+          "llm_max_chars": "2000",
           "processing_language": "from_input"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -841,7 +890,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 434
+        "height": 492
       },
       "selected": false,
       "dragging": false
@@ -851,7 +900,7 @@
       "type": "workflow",
       "position": {
         "x": -975,
-        "y": -1320
+        "y": -1290
       },
       "data": {
         "nodeType": "audio_transcode",
@@ -875,7 +924,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 379
+        "height": 392
       },
       "selected": false,
       "dragging": false
@@ -885,7 +934,7 @@
       "type": "workflow",
       "position": {
         "x": -975,
-        "y": -1740
+        "y": -1785
       },
       "data": {
         "nodeType": "audio_transcode",
@@ -909,150 +958,312 @@
       },
       "measured": {
         "width": 420,
-        "height": 379
+        "height": 435
       },
       "selected": false,
       "dragging": false
     },
     {
-      "id": "node_1_1787088409438",
+      "id": "node_2_1787654223924",
       "type": "workflow",
       "position": {
-        "x": 3045,
-        "y": -540
+        "x": 105,
+        "y": -1170
       },
       "data": {
-        "nodeType": "merge_dub",
-        "label": "配音拼接",
+        "nodeType": "sentence_split",
+        "label": "句子分割",
         "config": {
-          "audio_format": "",
-          "audio_bitrate": "",
-          "silence_interval": 0.5
+          "processing_language": "from_input",
+          "max_sentence_length": "25",
+          "use_llm_split": true,
+          "split_sentence_ends": true,
+          "split_clause_breaks": true,
+          "merge_min_duration": "0.1",
+          "merge_max_gap": "0.1",
+          "pause_split_threshold": "1.5",
+          "split_on_speaker": true,
+          "merge_short_enabled": true,
+          "merge_gap_enabled": true,
+          "pause_split_enabled": true
         },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/sentences_node_2_1787654223924.json",
+          "text": "cache/sentences_text_node_2_1787654223924.txt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 666
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787654769764",
+      "type": "workflow",
+      "position": {
+        "x": 1155,
+        "y": -630
+      },
+      "data": {
+        "nodeType": "audio_denoise",
+        "label": "声音降噪",
+        "config": {
+          "method": "ffmpeg",
+          "noise_reduction_level": 0.5,
+          "highpass_freq": 100,
+          "lowpass_freq": 0,
+          "output_format": "wav",
+          "custom_command": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/denoised_audio_node_1_1787654769764.wav"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 440
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787718696126",
+      "type": "workflow",
+      "position": {
+        "x": -435,
+        "y": -1035
+      },
+      "data": {
+        "nodeType": "ai_punctuate",
+        "label": "AI标点补全",
+        "config": {
+          "maxChars": "8000",
+          "langSource": "from_asr",
+          "manualLang": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output": "output/asr_punctuated_node_1_1787718696126.json",
+          "text": "Hello guys, this is Santosh, and welcome to Tech Design. So, this is the latest NX 202306 version, which is recently released in the month of June 2023. So, it has a lot of useful features that are updated, which will increase your time efficiency as well as productivity when you are working with NX. I'm going to discuss about these features in the future video, so please stay connected with the channel, and you are going to get all the updates as soon as possible. So, in this video, I'm going to tell you what are the different types of coordinate system and what is coordinate system. So, whenever you start working as a beginner in NX application, you may have heard this word a lot of times. That is, work coordinate system, absolute coordinate system, and then datum coordinate system. There may be a lot of, you know, confusion between all these three kinds of coordinate system. So, I'm sure that this confusion is going to be clear with you when you watch this complete video. So, before going to start all these three kinds of coordinate system, I'm going to tell you what is coordinate system. So, coordinate system is a system that uses x, y, z coordinates in order to define the geometry location. Say, for example, you have any sketch over here, and you're going to define that sketch with some distance or angle from the x, y, z coordinate. So, that is why this coordinate system is existing. So, now we are going to discuss about what are the different three kinds of coordinate system and why there are three different coordinate system and how to use these kind of coordinate system. So, there are three types of coordinate system in NX application. First one is going to be datum coordinate system, second will be absolute coordinate system, and third will be work coordinate system. So, we are going to discuss what is, you know, all of these and how we can create these work coordinate systems in NX. So, now we can see here I have created a simple model file here. So, this is going to be a modeling file. So, how we are going to get it? You can see here there is an NX modeling. So, it means that you are there in a modeling workbench. Suppose if you go to application and sheet metal, so it is going to show you sheet metal as work application. So, now I'm be I'm going to switch to modeling workbench. Okay. So, once you are in a modeling workbench or sheet metal or in any other, so whatever the coordinate system that is created in an X template is going to be your datum coordinate system. So, this is not a world coordinate system, and as well as this is not a absolute coordinate system. So, this is going to be a datum coordinate system, and on which you are going to create all the features, all the models, and everything on this datum coordinate system. Okay. And one more thing here is, using this datum coordinate system, you can move the datum coordinate system or a feature from one place to another place. So, you can see here this is the datum coordinate system. You can just double click on this. Okay. You can see this handle, and you can move it from one place to another place. You can see here this has been moved from one place to another place. So, once this is moved, say, for example, I'm going to create a sketch here. So, I'm going to select this sketch. Okay. And I'm going to create a line here. Okay. I'll just finish the sketch, and using this datum coordinate system, you can move the other features also. So, I'll just move this coordinate system. So, along with this, the sketch will also move. Okay. This is what when it comes to a datum coordinate system. Datum coordinate system is will be created when it is a new file is created. So, it comes from an X modeling template, and we can able to move the features whatever that is created on this datum coordinate system along with the features. Okay. So, this is going to be a datum coordinate system. So, next comes absolute coordinate system. So, absolute coordinate system is always will be there in whenever the new file is created, but it will not be shown. So, suppose if you want to show this, you can just go to datum and coordinate system here, and here you can just select the absolute coordinate system, and you can just click OK. So, once you do this, this is going to be your absolute coordinate system, which will be created. Okay. So, absolute coordinate system cannot be moved from one place to another place. For example, now if you double click on this, and you cannot see any option here to move from one place to another place. So, this is going to be a fixed coordinate system that is existing. And next, and also, since this cannot be moved, whatever the sketch feature or whatever the model feature that you are going to create on this absolute coordinate system cannot be moved from one place to another place. And here one more the difference is, datum coordinate system, you can able to create n number, so you can create multiple number of create in datum coordinate system in your work part, but absolute coordinate system will be only one. You cannot create more than one. Okay. So, this is going to be our absolute coordinate system. So, and the last we have work coordinate system. So, work coordinate system is introduced long back, it has been introduced, and it has no application as of now. It is a legacy datum coordinate system. It has been followed in the latest version also. So, how we are going to activate or show the work coordinate system? So, whenever you are into a 3D workbench or any workbench, you can just hit W. Okay. So, as and as you hit W, you can see these arrows. Okay. So, I'm going to hide this, so you can see this is going to be our work coordinate system, and this can be moved from one place to another place. So, you can just go here and double click on this, so it can be moved from one place to another place, but whatever the features that you are going to create on this will not be moved. Okay. So, this is, and also the work coordinate system will be only one. You cannot able to create any other work coordinate system in one part. Okay. So, here only thing is datum coordinate system. Whatever we have created here, so this can be created in multiple numbers, but whatever absolute coordinate system and work coordinate system will be remains only one. So, now what I am going to discuss with. So, you can able to move this whatever the handles, and you can able to create a datum co datum coordinate system with the dynamic option. And in the dynamic option, you can able to choose the reference, what reference if want to keep it. If I give WCS, you can see here our whatever the coordinate system is going to be a WCS. And from here, if you want 10 mm distance, you can just enter it here, okay. And if you want to keep it as from the absolute coordinate system, so absolute coordinate system will be here. It cannot be moved. And from here, if you want to give 10 mm, you can just give it. And if you want to make it as 90 degree angle rotation, so you can just give it, okay. And suppose if you want to create it from any selected coordinate system. So, this is going to be my selected coordinate system from this coordinate system as a reference 50 mm away. If you want to create, I can, you can just move it 5 mm, and you can just click okay. The coordinate system will be created. So, you can able to create a coordinate system in a dynamic coordinate system. You can give a reference. It may be a coordinate system that is already existing apart, or it may be a world coordinate system, or it may be an absolute coordinate system. Okay. So, by using these references, you can able to create particular coordinate system in a dynamic way, and also if you want to create directly, you can just give answer. You can just select the points, and it can able to create particular coordinate system, and you can just give whatever the angle you want, and it is going to create particular coordinate system. Okay. So, the next option will be you can see here inferred. So, inferred is, you know, combination of all these three. So, it depends on how you are going to give a input. So, suppose if you select this, it will be taking as an x direction, and it isection and z direction, so according to that it is going to create one more template over here. So this is the way how you can use this inferred option. Inferred option it is not commanded. You need to select only planes. You can able to select a curve. You can able able to select a point. Whatever the things you can able to select and based on that it is going to create a datum coordinate system. And the next we have is origin x and y point. Okay, so now what I'm going to do is I'll just create a simple model. So I'll just go to sketching element on this plane and let me create a simple model here and I'll just finish this. Let me create extrude this. Okay, so this I'm going to extrude. So on this model I'm going to show you how we can create a datum coordinate system in different ways. So let me go to datum plane and here and here you can see. Now I'm going to go to origin x and y point. So now suppose if you want to keep this as a origin you can select this or if you want to select a point as a origin so you can just select this and my x point x point is going to be this side and y point is going to be this side. So you can see here x direction is along this and y direction is along this and you can just click apply. It is going to create a coordinate system. So here you need to give three points. That is origin point, x point, and y point. Okay, so the You can just provide by using this. If you have a point you can just go to this origin, x point, y point. Okay, so these are three three methods are same. So x axis, y axis, and origin. So z axis, x axis, and origin and z axis, y axis, and origin. So these three remains a same. So two vectors you need to provide and one point of origin you need to provide. Okay, so now what I'm going to do is I'm going to select this plane, x axis, and point. So here you can see here for z axis you need to provide a plane. Say for example I'm going to create a coordinate similar to this one. So my plane will be this for z axis and then my plane for x axis will be this. Okay, and the origin point may be this. Okay, so you can see here x axis is along this direction and sorry z axis is along this direction and x axis is along this direction. And you can see the Coordinate system is being created okay. And then we have multiple options. You can see three planes. So three planes by using three planes you can able to do. So first one will be x direction. Say whenever you select a face the normal to that face will be considered as a vector okay. So normal to this will be x axis. So this is going to be my x direction and this is going to be my y direction and this is going to be z direction. And you can see you can not able to create a point here. So whenever the all the faces will now meet each other so there a point will be created on that point. Datum coordinate system will be created okay. So now absolute coordinate system we have already discussed. Offset to any coordinate system. Suppose if you want to create some offset from this coordinate system from this coordinate system or any other coordinate system you can use this option. So suppose if you want any coordinate system from this so along x direction some angle say for example hundred mm okay. At hundred mm axis there will be one more coordinate system. Suppose if you want to input y direction and x direction and some angle also you can just provide it over here and you can just click apply. Coordinate system will be created. So I'm going to discuss only which are most useful here. So now suppose if you need in some angle so you can just go to dynamic way and you can just select this and move it along and any direction say for example like this if you want to create and just make an angle and you can just give it okay. So this is a way how we can create a datum different kinds of datum coordinate system. So you can only create a datum coordinate system and world coordinate absolute coordinate system will be remains only one. And now you can see suppose if you are already created and if you want to edit it you can just double click on this and you can just change the direction and you can able to move it or change the whatever the datum coordinate system but make sure that whenever you move this coordinate system whatever the features that you have created on this datum coordinate system is going to move from that origin position to the next position okay. So hope you understand all the different types of coordinate system. So suppose if you have any doubts please comment in section below I will try to answer Thank you guys"
+        },
+        "error": "",
+        "workbench_url": "",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 339
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "group_mt9n4o5v_jmkv",
+      "type": "workflow",
+      "position": {
+        "x": -435,
+        "y": -1785
+      },
+      "selected": false,
+      "data": {
+        "kind": "group",
+        "nodeType": "group_inline",
+        "label": "ASR+后处理",
+        "config": {},
         "status": "pending",
+        "groupMeta": {
+          "version": 1,
+          "internalWorkflow": {
+            "nodes": [
+              {
+                "id": "node_1_1787215647939",
+                "type": "workflow",
+                "position": {
+                  "x": 0,
+                  "y": 0
+                },
+                "data": {
+                  "nodeType": "asr_recognize",
+                  "label": "ASR识别",
+                  "config": {
+                    "engine": "moss",
+                    "language": "auto",
+                    "model": "openmoss/MOSS-Transcribe-Diarize",
+                    "compute_type": "",
+                    "batch_size": 0,
+                    "word_timestamps": true,
+                    "hotwords_enabled": false,
+                    "hotwords": ""
+                  },
+                  "status": "pending",
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "disableExecute": true,
+                  "workbench_url": "",
+                  "logLines": [
+                    "[ASR] Audio split into 4 segments: [(0.0, 274.442187), (274.442187, 517.817937), (517.817937, 758.499063), (758.499063, 903.8735)]",
+                    "[ASR] Segment 1/4: 0.0s - 274.4s (274.4s)",
+                    "[ASR] Segment 2/4: 274.4s - 517.8s (243.4s)",
+                    "[ASR] Segment 3/4: 517.8s - 758.5s (240.7s)",
+                    "[ASR] Segment 4/4: 758.5s - 903.9s (145.4s)",
+                    "[ASR Recognize] Post-processing skipped (recognition-only node)",
+                    "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+                    "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1787215647939_result.json, exiting 0"
+                  ]
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 226
+                },
+                "selected": false,
+                "dragging": false
+              },
+              {
+                "id": "node_2_1787215768626",
+                "type": "workflow",
+                "position": {
+                  "x": 0,
+                  "y": 495
+                },
+                "data": {
+                  "nodeType": "asr_postprocess",
+                  "label": "ASR后处理",
+                  "config": {
+                    "run_vad": true,
+                    "run_alignment": true,
+                    "run_diarization": false,
+                    "force_rerun": false,
+                    "vad_engine": "silero",
+                    "vad_onset": 0.5,
+                    "vad_offset": 0.363,
+                    "alignment_engine": "whisperx",
+                    "alignment_model": "",
+                    "dtype": "",
+                    "diarize_engine": "pyannote",
+                    "diarize_model": "",
+                    "num_speakers": "",
+                    "min_speakers": "",
+                    "max_speakers": ""
+                  },
+                  "status": "pending",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "workbench_url": "",
+                  "logLines": [
+                    "[Pipeline] all stages done",
+                    "[ASR-PP] [5/6] pipeline returned, segments=220",
+                    "[ASR-PP] [6/6] normalizing and clamping result...",
+                    "[ASR-PP] [6/6] audio_duration=903.86",
+                    "[ASR-PP] [6/6] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\asr_postprocessed_node_2_1787215768626.json",
+                    "[ASR-PP] === run() END segments=220 ===",
+                    "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+                    "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_2_1787215768626_result.json, exiting 0"
+                  ]
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 251
+                },
+                "selected": false,
+                "dragging": false
+              }
+            ],
+            "edges": [
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#fb923c",
+                  "strokeWidth": 2
+                },
+                "source": "node_1_1787215647939",
+                "sourceHandle": "out-subtitle",
+                "target": "node_2_1787215768626",
+                "targetHandle": "in-subtitle",
+                "id": "xy-edge__node_1_1787215647939out-subtitle-node_2_1787215768626in-subtitle",
+                "selected": false
+              }
+            ]
+          },
+          "inputMappings": [
+            {
+              "exposedPortId": "gin_1",
+              "exposedLabel": "ASR识别 / ASR音源",
+              "targetNodeId": "node_1_1787215647939",
+              "targetPortId": "asr_audio",
+              "type": "audio"
+            },
+            {
+              "exposedPortId": "gin_2",
+              "exposedLabel": "ASR后处理 / 对齐音源",
+              "targetNodeId": "node_2_1787215768626",
+              "targetPortId": "alignment_audio",
+              "type": "audio"
+            },
+            {
+              "exposedPortId": "gin_3",
+              "exposedLabel": "ASR后处理 / 人声音源",
+              "targetNodeId": "node_2_1787215768626",
+              "targetPortId": "vocal_audio",
+              "type": "audio"
+            }
+          ],
+          "outputMappings": [
+            {
+              "exposedPortId": "gout_1",
+              "exposedLabel": "ASR后处理 / 后处理结果JSON",
+              "internalNodeId": "node_2_1787215768626",
+              "internalPortId": "subtitle",
+              "type": "json",
+              "enabled": true
+            }
+          ],
+          "layout": {
+            "memberPositionsRelativeToGroup": {
+              "node_1_1787215647939": {
+                "x": 0,
+                "y": 0
+              },
+              "node_2_1787215768626": {
+                "x": 0,
+                "y": 495
+              }
+            }
+          },
+          "groupId": "group_mt9n4o5v_jmkv",
+          "name": "ASR+后处理"
+        },
         "progress": 0,
         "message": "",
         "outputs": {},
         "error": "",
-        "workbench_url": ""
+        "disableExecute": false
       },
       "measured": {
-        "width": 420,
-        "height": 271
+        "width": 440,
+        "height": 313
       },
-      "selected": false
-    },
-    {
-      "id": "node_1_1787215647939",
-      "type": "workflow",
-      "position": {
-        "x": -405,
-        "y": -1740
-      },
-      "data": {
-        "nodeType": "asr_recognize",
-        "label": "ASR识别",
-        "config": {
-          "engine": "mimo_asr",
-          "language": "auto",
-          "model": "",
-          "compute_type": "",
-          "batch_size": 0,
-          "word_timestamps": true,
-          "hotwords_enabled": false,
-          "hotwords": ""
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/asr_result_node_1_1787215647939.json"
-        },
-        "error": "",
-        "disableExecute": false,
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 407
-      },
-      "selected": false,
       "dragging": false
-    },
-    {
-      "id": "node_2_1787215768626",
-      "type": "workflow",
-      "position": {
-        "x": -405,
-        "y": -1320
-      },
-      "data": {
-        "nodeType": "asr_postprocess",
-        "label": "ASR后处理",
-        "config": {
-          "run_vad": false,
-          "run_alignment": false,
-          "run_diarization": true,
-          "force_rerun": true,
-          "vad_engine": "",
-          "vad_onset": 0.5,
-          "vad_offset": 0.363,
-          "alignment_engine": "qwen3",
-          "alignment_model": "",
-          "dtype": "",
-          "diarize_engine": "diarize",
-          "diarize_model": "",
-          "num_speakers": "",
-          "min_speakers": "",
-          "max_speakers": ""
-        },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/asr_postprocessed_node_2_1787215768626.json"
-        },
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 456
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_3_1787217315500",
-      "type": "workflow",
-      "position": {
-        "x": 105,
-        "y": -1245
-      },
-      "data": {
-        "nodeType": "json_to_text",
-        "label": "JSON转文本",
-        "config": {
-          "mode": "key",
-          "key_expr": "text"
-        },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\output\\json2text_node_3_1787217315500.txt"
-        },
-        "error": "",
-        "note": "全文",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 324
-      },
-      "selected": false
     }
   ],
   "edges": [
@@ -1094,21 +1305,6 @@
       "target": "node_1_1781939413425",
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1781810867151out-video_adjusted-node_1_1781939413425in-video"
-    },
-    {
-      "type": "smoothstep",
-      "animated": false,
-      "style": {
-        "stroke": "#10b981",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_2_1781973904798",
-      "sourceHandle": "out-background",
-      "target": "node_1_1781939413425",
-      "targetHandle": "in-audio",
-      "id": "xy-edge__node_2_1781973904798out-background-node_1_1781939413425in-audio",
-      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1461,97 +1657,6 @@
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
-      },
-      "source": "n_msyu4zm55ofz",
-      "sourceHandle": "out-audio",
-      "target": "node_1_1787215647939",
-      "targetHandle": "in-asr_audio",
-      "id": "xy-edge__n_msyu4zm55ofzout-audio-node_1_1787215647939in-asr_audio"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787215647939",
-      "sourceHandle": "out-subtitle",
-      "target": "node_2_1787215768626",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1787215647939out-subtitle-node_2_1787215768626in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787067672223",
-      "sourceHandle": "out-audio",
-      "target": "node_2_1787215768626",
-      "targetHandle": "in-alignment_audio",
-      "id": "xy-edge__node_1_1787067672223out-audio-node_2_1787215768626in-alignment_audio"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1787215768626",
-      "sourceHandle": "out-subtitle",
-      "target": "node_1_1786046579815",
-      "targetHandle": "in-json",
-      "id": "xy-edge__node_2_1787215768626out-subtitle-node_1_1786046579815in-json"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1786046579815",
-      "sourceHandle": "out-subtitle",
-      "target": "node_3_1787217315500",
-      "targetHandle": "in-json",
-      "id": "xy-edge__node_1_1786046579815out-subtitle-node_3_1787217315500in-json"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
-      },
-      "source": "node_3_1787217315500",
-      "sourceHandle": "out-text",
-      "target": "node_1_1780948332813",
-      "targetHandle": "in-text",
-      "id": "xy-edge__node_3_1787217315500out-text-node_1_1780948332813in-text"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1786046579815",
-      "sourceHandle": "out-subtitle",
-      "target": "node_1_1780954897405",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1786046579815out-subtitle-node_1_1780954897405in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
         "stroke": "#a78bfa",
         "strokeWidth": 2
       },
@@ -1565,18 +1670,126 @@
       "type": "bezier",
       "animated": true,
       "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787654223924",
+      "sourceHandle": "out-text",
+      "target": "node_1_1780948332813",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_2_1787654223924out-text-node_1_1780948332813in-text"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1786046579815",
+      "sourceHandle": "out-subtitle",
+      "target": "node_2_1787654223924",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1786046579815out-subtitle-node_2_1787654223924in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787654223924",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1780954897405",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_2_1787654223924out-subtitle-node_1_1780954897405in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781973904798",
+      "sourceHandle": "out-background",
+      "target": "node_1_1787654769764",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_2_1781973904798out-background-node_1_1787654769764in-audio",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787654769764",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_1_1787654769764out-audio-node_1_1781939413425in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787718696126",
+      "sourceHandle": "out-output",
+      "target": "node_1_1786046579815",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1787718696126out-output-node_1_1786046579815in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "n_msyu4zm55ofz",
+      "sourceHandle": "out-audio",
+      "target": "group_mt9n4o5v_jmkv",
+      "targetHandle": "in-gin_1",
+      "id": "xy-edge__n_msyu4zm55ofzout-audio-node_1_1787215647939in-asr_audio",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787067672223",
+      "sourceHandle": "out-audio",
+      "target": "group_mt9n4o5v_jmkv",
+      "targetHandle": "in-gin_2",
+      "id": "xy-edge__node_1_1787067672223out-audio-node_2_1787215768626in-alignment_audio",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
         "stroke": "#34d399",
         "strokeWidth": 2
       },
       "source": "node_1_1787067672223",
       "sourceHandle": "out-audio",
-      "target": "node_2_1787215768626",
-      "targetHandle": "in-vocal_audio",
-      "id": "xy-edge__node_1_1787067672223out-audio-node_2_1787215768626in-vocal_audio"
+      "target": "group_mt9n4o5v_jmkv",
+      "targetHandle": "in-gin_3",
+      "id": "xy-edge__node_1_1787067672223out-audio-node_2_1787215768626in-vocal_audio",
+      "selected": false
     }
   ],
   "type": "user",
   "createdAt": "2026-08-19T05:28:27",
-  "updatedAt": "2026-08-20T20:37:30",
-  "revision": 5
+  "updatedAt": "2026-08-26T13:25:17",
+  "revision": 22
 }

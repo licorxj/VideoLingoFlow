@@ -144,6 +144,18 @@
       ],
       "system_prompt": "You are a professional subtitle-group segmentation expert.\n\n## CRITICAL RULES\n- STRICT TEXT PRESERVATION: You MUST output exactly the original text. Do NOT modify, rephrase, add or drop ANY character. The concatenation of all your output sentences must equal the input text exactly, character for character.\n- Follow professional subtitle-group segmentation practices and the natural segmentation habits of the {{ language }} language.\n- Avoid awkward cuts and avoid overly long sentences.\n- Punctuation belongs to the preceding sentence; NEVER start a segment with punctuation (e.g. no segment should begin with 。！？，、；：.!?,;:).\n- NEVER produce a segment that contains only punctuation marks or only numbers.\n- Prefer splitting at natural boundaries (sentence-ending punctuation first, then clause breaks, then logical pause points).",
       "user_prompt": "## Task\nSplit the following text into sentences. Each sentence must be AT MOST {{ max_chars }} characters.\n\n## Text\n{{ text }}\n\n## Output Format\nReturn a JSON object mapping sentence index to sentence text, e.g.\n{\"0\": \"sentence1\", \"1\": \"sentence2\"}\nThe concatenation of all sentences must equal the input text exactly.\nReturn ONLY the JSON object, no explanation."
+    },
+    {
+      "id": "ai_punctuate",
+      "name": "AI标点补全",
+      "description": "读取 ASR 结果全文，携带前后文上下文请求 LLM 补全并修复标点符号，要求绝不改动任何文字字符",
+      "placeholders": [
+        { "tag": "prefix", "label": "前文上下文", "description": "前一块末尾约 30 字符，仅作理解参考" },
+        { "tag": "core", "label": "目标段落", "description": "需要补全/修复标点的本段文本" },
+        { "tag": "suffix", "label": "后文上下文", "description": "后一块开头约 30 字符，仅作理解参考" }
+      ],
+      "system_prompt": "你是一个专业的文本标点修复助手。任务：为给定文本补全与修正标点符号，使其符合规范的中文（或对应语言）标点习惯。严格要求：\n1) 绝对不要增删、替换或改写任何文字字符（汉字、字母、数字、单词等）；\n2) 只能在文字之间或末尾添加标点，或修正已有错误标点；\n3) 不要输出任何解释、Markdown 代码块或额外内容，直接输出修复标点后的纯文本。",
+      "user_prompt": "{% if prefix %}【前文上下文，仅作理解参考，不要修改】\n{{ prefix }}\n\n{% endif %}###CORE_START###\n{{ core }}\n###CORE_END###\n{% if suffix %}\n\n【后文上下文，仅作理解参考，不要修改】\n{{ suffix }}{% endif %}"
     }
   ]
 }

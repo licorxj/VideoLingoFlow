@@ -218,32 +218,44 @@ class S_ASRPostProcess(BaseStep):
 
     def run(self, task_dir: str, callback: Optional[Callable] = None,
             cancel_callback: Optional[Callable] = None) -> dict:
+        print(f"[ASR-PP] === run() START pid={os.getpid()} task_dir={task_dir} ===", flush=True)
         if callback:
             callback(2, "Initializing ASR post-processing...")
 
         self._task_dir = task_dir
         step_inputs = getattr(self, "_step_inputs", {}) or {}
+        print(f"[ASR-PP] step_inputs={json.dumps(step_inputs, ensure_ascii=False)[:500]}", flush=True)
 
         # 1) 读取上游 ASR 结果 JSON
         subtitle = step_inputs.get("subtitle", "")
         subtitle_path = subtitle if os.path.isabs(subtitle) else os.path.join(task_dir, subtitle)
+        print(f"[ASR-PP] [1/6] reading ASR result: subtitle={subtitle!r} path={subtitle_path!r}", flush=True)
         if not os.path.exists(subtitle_path):
             raise FileNotFoundError(f"ASR后处理输入缺失：找不到 ASR 结果 JSON '{subtitle}'")
         with open(subtitle_path, "r", encoding="utf-8") as f:
             asr_result = json.load(f)
+        seg_count_in = len(asr_result.get("segments", []) or [])
+        print(f"[ASR-PP] [1/6] ASR result loaded: language={asr_result.get('language')!r} segments={seg_count_in}", flush=True)
 
         # 2) 解析音频输入（VAD/说话人需要音源；优先人声，其次 ASR 音源/缓存回退）
+        print(f"[ASR-PP] [2/6] resolving audio inputs...", flush=True)
         audio_io = resolve_asr_audio_inputs(task_dir, step_inputs)
         post_process_audio = audio_io["post_process_audio"]
         alignment_audio = audio_io["alignment_audio"]
+        print(f"[ASR-PP] [2/6] post_process_audio={post_process_audio!r}", flush=True)
+        print(f"[ASR-PP] [2/6] alignment_audio={alignment_audio!r}", flush=True)
+        print(f"[ASR-PP] [2/6] post_process_audio exists={os.path.exists(post_process_audio) if post_process_audio else False}", flush=True)
+        print(f"[ASR-PP] [2/6] alignment_audio exists={os.path.exists(alignment_audio) if alignment_audio else False}", flush=True)
 
         # 3) 节点配置与阶段决策
+        print(f"[ASR-PP] [3/6] loading node config...", flush=True)
         cfg = self._load_node_config(task_dir)
         run_vad = self._flag(cfg, "run_vad", True)
         run_alignment = self._flag(cfg, "run_alignment", True)
         run_diarization = self._flag(cfg, "run_diarization", False)
-        # 标点恢复默认开启：阶段内部有语言门控+标点密度检测，已有标点时零开销跳过
-        run_punctuation = self._flag(cfg, "run_punctuation", True)
+        # 标点恢复：前端 checkbox 取消勾选时不传该字段，默认 False 避免误执行
+        run_punctuation = self._flag(cfg, "run_punctuation", False)
+        print(f"[ASR-PP] [3/6] cfg flags: run_vad={run_vad} run_alignment={run_alignment} run_diarization={run_diarization} run_punctuation={run_punctuation} force_rerun={self._flag(cfg, 'force_rerun', False)}", flush=True)
 
         # 3.5) 防重复执行：上游 ASR 接口可能已一次性执行了识别+后处理，
         # 结果中已有有效后处理产物时默认跳过对应阶段，避免浪费与错误叠加；
@@ -251,13 +263,13 @@ class S_ASRPostProcess(BaseStep):
         if not self._flag(cfg, "force_rerun", False):
             if run_vad and self._already_vad_done(asr_result):
                 run_vad = False
-                print("[ASR PostProcess Node] VAD skipped: input already has valid VAD segmentation")
+                print("[ASR-PP] [3.5] VAD skipped: input already has valid VAD segmentation", flush=True)
             if run_alignment and self._already_aligned(asr_result):
                 run_alignment = False
-                print("[ASR PostProcess Node] Alignment skipped: input already has word-level timestamps")
+                print("[ASR-PP] [3.5] Alignment skipped: input already has word-level timestamps", flush=True)
             if run_diarization and self._already_diarized(asr_result):
                 run_diarization = False
-                print("[ASR PostProcess Node] Diarization skipped: input already has speaker labels")
+                print("[ASR-PP] [3.5] Diarization skipped: input already has speaker labels", flush=True)
 
         engines = {
             "vad": self._resolve_engine(cfg, "vad_engine", "asr.post_process.vad.engine", _STAGE_DEFAULT_ENGINES["vad"]),
@@ -275,7 +287,7 @@ class S_ASRPostProcess(BaseStep):
         if run_punctuation:
             stages.append("punctuation")
 
-        print(f"[ASR PostProcess Node] stages={stages}, engines={engines}")
+        print(f"[ASR-PP] [3/6] stages={stages}, engines={engines}", flush=True)
 
         # 4) 语言：ASR结果 > 节点配置 > input 节点 > auto
         language = asr_result.get("language", "")
@@ -283,6 +295,10 @@ class S_ASRPostProcess(BaseStep):
             language = cfg.get("language", "")
         if not language or language == "auto" or language == "from_input":
             language = _resolve_input_language(task_dir)
+        # 规范化为 ISO 码（WhisperX/FunASR 引擎需要 "en"/"zh"，不认识 "English"/"Chinese"）
+        from backend.asr.punctuation_processor import normalize_lang_code
+        language = normalize_lang_code(language) or language
+        print(f"[ASR-PP] [4/6] resolved language={language!r}", flush=True)
 
         # 5) 执行后处理流水线（各阶段独立容错）
         result = asr_result
@@ -294,6 +310,7 @@ class S_ASRPostProcess(BaseStep):
             from backend.asr.asr_factory import run_post_process_pipeline
 
             options = self._build_stage_options(cfg, engines)
+            print(f"[ASR-PP] [5/6] calling run_post_process_pipeline, options={json.dumps(options, ensure_ascii=False, default=str)[:500]}", flush=True)
             try:
                 result = run_post_process_pipeline(
                     asr_result,
@@ -311,12 +328,20 @@ class S_ASRPostProcess(BaseStep):
                     language=language,
                     callback=lambda pct, msg: callback(5 + int(pct * 0.85), msg) if callback else None,
                 )
+                seg_count_pipe = len(result.get("segments", []) or [])
+                print(f"[ASR-PP] [5/6] pipeline returned, segments={seg_count_pipe}", flush=True)
             except Exception as e:
-                print(f"[ASR PostProcess Node] Pipeline error: {e}, returning input result")
+                import traceback as _tb
+                print(f"[ASR-PP] [5/6] Pipeline error: {e}\n{_tb.format_exc()}", flush=True)
+                print(f"[ASR-PP] [5/6] returning input result (fallback)", flush=True)
+        else:
+            print(f"[ASR-PP] [5/6] no stages to run, skipping pipeline", flush=True)
 
         # 6) 收尾：规范化并钳制到音源时长（与全流程节点一致）
+        print(f"[ASR-PP] [6/6] normalizing and clamping result...", flush=True)
         result = _normalize_asr_result(result)
         audio_duration = _get_audio_duration(post_process_audio)
+        print(f"[ASR-PP] [6/6] audio_duration={audio_duration}", flush=True)
         if audio_duration > 0:
             result = _clamp_result_to_duration(result, audio_duration)
 
@@ -325,10 +350,12 @@ class S_ASRPostProcess(BaseStep):
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(result, f, ensure_ascii=False, indent=2)
+        print(f"[ASR-PP] [6/6] result written to {output_path}", flush=True)
 
         seg_count = len(result.get("segments", []))
         if callback:
             callback(100, f"ASR post-processing completed: {seg_count} segments")
+        print(f"[ASR-PP] === run() END segments={seg_count} ===", flush=True)
         return {
             "artifacts": [f"cache/asr_postprocessed{node_suffix}.json"],
             "outputs": {

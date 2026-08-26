@@ -48,6 +48,12 @@ def _load_engines():
         _ENGINES["whisper_302"] = WhisperX302()
     except ImportError:
         pass
+    try:
+        from backend.asr.asr_moss import MossTranscribeDiarizeLocal
+        _ENGINES["moss"] = MossTranscribeDiarizeLocal()
+    except ImportError as e:
+        # 依赖缺失（transformers>=5.6 / torch>=2.8 等）时静默跳过，避免影响其他引擎
+        print(f"[ASR Factory] moss engine unavailable: {e}")
 
 def get_asr_engine(name: str) -> ASRBase:
     _load_engines()
@@ -227,11 +233,15 @@ def run_vad(
 ) -> dict:
     """单独执行 VAD 断句阶段（引擎失败时按 fsmn → webrtc 链回退）。"""
     engine = engine or _STAGE_DEFAULT_ENGINES["vad"]
+    print(f"[Pipeline.VAD] >>> START engine={engine} audio={audio_path} options={options or {}}", flush=True)
     if callback:
         callback(0, f"Running VAD with {engine}...")
+    print(f"[Pipeline.VAD] calling _apply_vad...", flush=True)
     result = _make_temp_engine()._apply_vad(
         asr_result.copy(), audio_path, engine, options or {}
     )
+    seg_count = len(result.get("segments", []) or [])
+    print(f"[Pipeline.VAD] <<< END segments={seg_count}", flush=True)
     if callback:
         callback(100, "VAD completed")
     return result
@@ -250,11 +260,15 @@ def run_alignment(
     engine = engine or _STAGE_DEFAULT_ENGINES["alignment"]
     if language is None:
         language = asr_result.get("language", "auto")
+    print(f"[Pipeline.ALIGN] >>> START engine={engine} audio={audio_path} language={language} options={options or {}}", flush=True)
     if callback:
         callback(0, f"Applying word alignment with {engine}...")
+    print(f"[Pipeline.ALIGN] calling _apply_alignment...", flush=True)
     result = _make_temp_engine()._apply_alignment(
         asr_result.copy(), audio_path, engine, options or {}, language
     )
+    seg_count = len(result.get("segments", []) or [])
+    print(f"[Pipeline.ALIGN] <<< END segments={seg_count}", flush=True)
     if callback:
         callback(100, "Alignment completed")
     return result
@@ -270,11 +284,13 @@ def run_diarization(
 ) -> dict:
     """单独执行说话人识别阶段。"""
     engine = engine or _STAGE_DEFAULT_ENGINES["diarization"]
+    print(f"[Pipeline.DIAR] >>> START engine={engine} audio={audio_path}", flush=True)
     if callback:
         callback(0, f"Applying speaker diarization with {engine}...")
     result = _make_temp_engine()._apply_diarization(
         asr_result.copy(), audio_path, engine, options or {}
     )
+    print(f"[Pipeline.DIAR] <<< END", flush=True)
     if callback:
         callback(100, "Diarization completed")
     return result
@@ -290,11 +306,13 @@ def run_punctuation(
 ) -> dict:
     """单独执行标点恢复阶段（纯文本处理，无需音频）。"""
     engine = engine or _STAGE_DEFAULT_ENGINES["punctuation"]
+    print(f"[Pipeline.PUNC] >>> START engine={engine} language={language}", flush=True)
     if callback:
         callback(0, f"Restoring punctuation with {engine}...")
     result = _make_temp_engine()._apply_punctuation(
         asr_result.copy(), engine, options or {}, language
     )
+    print(f"[Pipeline.PUNC] <<< END", flush=True)
     if callback:
         callback(100, "Punctuation restoration completed")
     return result
@@ -350,10 +368,17 @@ def run_post_process_pipeline(
 
     if language is None:
         language = asr_result.get("language", "auto")
+    # 规范化为 ISO 码：上游 ASR 引擎可能返回 "English"/"Chinese" 全称，
+    # 而 WhisperX/FunASR 等下游引擎只认识 "en"/"zh" 两字母码
+    from backend.asr.punctuation_processor import normalize_lang_code
+    _norm_lang = normalize_lang_code(language)
+    if _norm_lang:
+        language = _norm_lang
 
     result = asr_result.copy()
     # 各阶段进度窗口：vad [0,35) / alignment [35,65) / diarization [65,90) / punctuation [90,100]
     windows = {"vad": (0, 35), "alignment": (35, 65), "diarization": (65, 90), "punctuation": (90, 100)}
+    print(f"[Pipeline] run_stages={run_stages} language={language}", flush=True)
 
     def _stage_cb(stage):
         if not callback:
@@ -363,41 +388,50 @@ def run_post_process_pipeline(
 
     if "vad" in run_stages:
         engine = engines["vad"] or _STAGE_DEFAULT_ENGINES["vad"]
+        print(f"[Pipeline] --- stage VAD (engine={engine}) ---", flush=True)
         try:
             result = run_vad(result, audio_path, engine=engine,
                              options=vad_options, callback=_stage_cb("vad"))
         except Exception as e:
-            print(f"[PostProcess Pipeline] VAD failed ({engine}): {e}, continuing")
+            import traceback as _tb
+            print(f"[Pipeline] VAD failed ({engine}): {e}\n{_tb.format_exc()}", flush=True)
 
     if "alignment" in run_stages:
         engine = engines["alignment"] or _STAGE_DEFAULT_ENGINES["alignment"]
         align_audio = alignment_audio_path or audio_path
         if alignment_audio_path:
-            print(f"[PostProcess Pipeline] Using alignment audio: {alignment_audio_path}")
+            print(f"[Pipeline] Using alignment audio: {alignment_audio_path}", flush=True)
+        print(f"[Pipeline] --- stage ALIGNMENT (engine={engine} audio={align_audio}) ---", flush=True)
         try:
             result = run_alignment(result, align_audio, engine=engine,
                                    options=alignment_options, language=language,
                                    callback=_stage_cb("alignment"))
         except Exception as e:
-            print(f"[PostProcess Pipeline] Alignment failed ({engine}): {e}, continuing")
+            import traceback as _tb
+            print(f"[Pipeline] Alignment failed ({engine}): {e}\n{_tb.format_exc()}", flush=True)
 
     if "diarization" in run_stages:
         engine = engines["diarization"] or _STAGE_DEFAULT_ENGINES["diarization"]
+        print(f"[Pipeline] --- stage DIARIZATION (engine={engine}) ---", flush=True)
         try:
             result = run_diarization(result, audio_path, engine=engine,
                                      options=diarize_options, callback=_stage_cb("diarization"))
         except Exception as e:
-            print(f"[PostProcess Pipeline] Diarization failed ({engine}): {e}, continuing")
+            import traceback as _tb
+            print(f"[Pipeline] Diarization failed ({engine}): {e}\n{_tb.format_exc()}", flush=True)
 
     if "punctuation" in run_stages:
         engine = engines["punctuation"] or _STAGE_DEFAULT_ENGINES["punctuation"]
+        print(f"[Pipeline] --- stage PUNCTUATION (engine={engine}) ---", flush=True)
         try:
             result = run_punctuation(result, engine=engine,
                                      options=punctuation_options, language=language,
                                      callback=_stage_cb("punctuation"))
         except Exception as e:
-            print(f"[PostProcess Pipeline] Punctuation restoration failed ({engine}): {e}, continuing")
+            import traceback as _tb
+            print(f"[Pipeline] Punctuation restoration failed ({engine}): {e}\n{_tb.format_exc()}", flush=True)
 
+    print(f"[Pipeline] all stages done", flush=True)
     if callback:
         callback(100, "Post-processing complete")
     return result

@@ -16,7 +16,13 @@ class Settings(BaseSettings):
     LOG_RETENTION_DAYS: int = 30
     DEFAULT_TIMEOUT: int = 120
     DEFAULT_RETRY_COUNT: int = 2
-    CORS_ORIGINS: list[str] = ["http://localhost:12001", "http://127.0.0.1:12001", "http://localhost:5173", "http://127.0.0.1:5173"]
+    CORS_ORIGINS: list[str] = [
+        "http://localhost:12001", "http://127.0.0.1:12001",
+        "http://localhost:5173", "http://127.0.0.1:5173",
+        # VideoLingoLc 前端端口（prod 11002 / dev 11003），用于直连路由器
+        "http://localhost:11002", "http://127.0.0.1:11002",
+        "http://localhost:11003", "http://127.0.0.1:11003",
+    ]
 
     @property
     def PORT(self) -> int:

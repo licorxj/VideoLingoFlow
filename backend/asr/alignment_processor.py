@@ -61,40 +61,52 @@ class WhisperXAlignmentProcessor(AlignmentProcessor):
     """WhisperX对齐处理器
     
     使用WhisperX的phoneme alignment功能，基于wav2vec2模型。
+
+    模型加载策略（优先级从高到低）：
+    1. 本地 HF 缓存目录（_model_cache/hub 或 HF_HOME/hub），local_files_only=True
+    2. 项目 _model_cache 根目录（兼容旧布局 .pth 文件），local_files_only=True
+    3. 自动下载到本地 HF 缓存目录（local_files_only=False）
     """
-    
+
     def __init__(self, 
                  model_name: Optional[str] = None,
                  model_dir: Optional[str] = None,
                  **kwargs):
         super().__init__(**kwargs)
         self.model_name = model_name
-        # 默认使用 HF_HOME；但项目内 _model_cache 往往已缓存好对齐模型，
-        # align() 时会依次尝试多个本地目录，优先命中已缓存的模型，避免联网下载。
-        self.model_dir = model_dir or os.environ.get(
-            "HF_HOME",
-            os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(
-                os.path.abspath(__file__)))), "_model_cache"),
-        )
-    
-    def _candidate_model_dirs(self) -> List[str]:
-        """返回候选模型目录（按优先级：已包含所需模型的目录优先）。
-        
-        优先使用本地已缓存的模型目录，避免在 huggingface.co / pytorch.org
-        不可达时反复尝试联网下载。
-        """
-        project_cache = os.path.join(
+        # 项目级模型缓存根目录（所有模型统一存放于此）
+        self._project_cache = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
             "_model_cache",
         )
-        dirs = []
-        for d in (self.model_dir, project_cache):
+        # HF 标准缓存目录：模型以 models--<org>--<name>/snapshots/<hash>/ 格式存放
+        # 优先使用显式传入的 model_dir 或 HF_HOME，回退到项目 _model_cache/hub
+        self.model_dir = model_dir or os.environ.get("HF_HOME") or self._project_cache
+
+    def _candidate_model_dirs(self) -> List[str]:
+        """返回候选 HF 缓存目录（按优先级：已包含所需模型的目录优先）。
+
+        HuggingFace 的 from_pretrained(cache_dir=X) 会在 X/models--<org>--<name>/
+        下查找模型，因此 cache_dir 必须指向包含 models--* 目录的父目录。
+        本项目的模型统一存放在 _model_cache/hub 下（标准 HF 布局），
+        同时兼容 _model_cache 根目录（旧版 torchaudio .pth 布局）。
+        """
+        dirs: List[str] = []
+        # 候选目录：model_dir 本身、model_dir/hub、项目 _model_cache、项目 _model_cache/hub
+        candidates = [
+            self.model_dir,
+            os.path.join(self.model_dir, "hub") if self.model_dir else "",
+            self._project_cache,
+            os.path.join(self._project_cache, "hub"),
+        ]
+        for d in candidates:
             if d and os.path.isdir(d) and d not in dirs:
                 dirs.append(d)
-        # 已包含对齐模型的目录排前面
-        dirs.sort(key=lambda d: (0 if self._dir_has_align_model(d) else 1, dirs.index(d)))
-        return dirs
-    
+        # 已包含对齐模型的目录排前面（保持原始顺序作为次排序键）
+        indexed = list(enumerate(dirs))
+        indexed.sort(key=lambda pair: (0 if self._dir_has_align_model(pair[1]) else 1, pair[0]))
+        return [d for _, d in indexed]
+
     def _dir_has_align_model(self, dir_path: str) -> bool:
         """粗略判断目录中是否已缓存了对齐模型（torchaudio .pth 或 HF 快照）。"""
         try:
@@ -107,7 +119,57 @@ class WhisperXAlignmentProcessor(AlignmentProcessor):
             if name.startswith("models--"):
                 return True
         return False
-    
+
+    def _load_align_model(self, language: str, device: str):
+        """加载对齐模型：先尝试本地缓存，全部失败后自动下载。
+
+        Returns (align_model, metadata) 或在所有尝试均失败时抛出最后一次异常。
+        """
+        import whisperx
+
+        # 阶段 1：依次尝试本地候选目录（local_files_only=True，不联网）
+        last_error = None
+        for model_dir in self._candidate_model_dirs():
+            try:
+                print(f"[Alignment] Trying local cache dir: {model_dir}", flush=True)
+                print(f"[Alignment]   calling whisperx.load_align_model(language={language}, device={device})...", flush=True)
+                align_model, metadata = whisperx.load_align_model(
+                    language_code=language,
+                    device=device,
+                    model_name=self.model_name,
+                    model_dir=model_dir,
+                    model_cache_only=True,
+                )
+                print(f"[Alignment]   load_align_model returned OK, model type={type(align_model).__name__}", flush=True)
+                print(f"[Alignment] Alignment model loaded from local cache: {model_dir}", flush=True)
+                return align_model, metadata
+            except Exception as e:
+                last_error = e
+                print(f"[Alignment] Local cache miss ({model_dir}): {e}", flush=True)
+
+        # 阶段 2：本地无缓存，自动下载到项目 _model_cache/hub（local_files_only=False）
+        download_dir = os.path.join(self._project_cache, "hub")
+        os.makedirs(download_dir, exist_ok=True)
+        print(f"[Alignment] No local cache found, downloading to {download_dir} ...", flush=True)
+        try:
+            print(f"[Alignment]   calling whisperx.load_align_model(download, language={language}, device={device})...", flush=True)
+            align_model, metadata = whisperx.load_align_model(
+                language_code=language,
+                device=device,
+                model_name=self.model_name,
+                model_dir=download_dir,
+                model_cache_only=False,
+            )
+            print(f"[Alignment]   download+load returned OK, model type={type(align_model).__name__}", flush=True)
+            print(f"[Alignment] Alignment model downloaded and loaded from: {download_dir}", flush=True)
+            return align_model, metadata
+        except Exception as e:
+            last_error = e
+            print(f"[Alignment] Auto-download failed: {e}", flush=True)
+            raise RuntimeError(
+                f"Failed to load alignment model (local cache miss + download failed): {last_error}"
+            )
+
     def align(self, audio_path: str, segments: List[dict], language: str = "") -> AlignmentResult:
         """使用WhisperX进行phoneme alignment"""
         try:
@@ -117,39 +179,21 @@ class WhisperXAlignmentProcessor(AlignmentProcessor):
             raise ImportError("whisperx package required for WhisperX alignment")
         
         device = "cuda" if torch.cuda.is_available() else "cpu"
-        print(f"[Alignment] WhisperX alignment starting, device={device}, language={language}")
+        print(f"[Alignment] WhisperX alignment starting, device={device}, language={language}", flush=True)
         
         # 加载音频
-        print("[Alignment] Loading audio...")
+        print(f"[Alignment] Loading audio: {audio_path}", flush=True)
+        print("[Alignment]   calling whisperx.load_audio...", flush=True)
         audio = whisperx.load_audio(audio_path)
-        print(f"[Alignment] Audio loaded, length={len(audio)}")
+        print(f"[Alignment]   load_audio returned, length={len(audio)}", flush=True)
         
-        # 加载对齐模型：依次尝试本地候选目录，命中已缓存模型即使用，避免联网下载
-        print("[Alignment] Loading alignment model...")
-        align_model = None
-        metadata = None
-        last_error = None
-        for model_dir in self._candidate_model_dirs():
-            try:
-                print(f"[Alignment] Trying alignment model dir: {model_dir}")
-                align_model, metadata = whisperx.load_align_model(
-                    language_code=language,
-                    device=device,
-                    model_name=self.model_name,
-                    model_dir=model_dir,
-                    model_cache_only=True,
-                )
-                print(f"[Alignment] Alignment model loaded from: {model_dir}")
-                break
-            except Exception as e:
-                last_error = e
-                print(f"[Alignment] Failed with model dir {model_dir}: {e}")
-        if align_model is None:
-            raise RuntimeError(f"Failed to load alignment model: {last_error}")
+        # 加载对齐模型：先本地缓存，无缓存时自动下载
+        print("[Alignment] Loading alignment model...", flush=True)
+        align_model, metadata = self._load_align_model(language, device)
         
         # 确保segments格式正确
         if not segments:
-            print("[Alignment] No segments to align")
+            print("[Alignment] No segments to align", flush=True)
             return AlignmentResult(words=[], language=language)
         
         # 检查segments是否有有效的时间戳
@@ -160,7 +204,7 @@ class WhisperXAlignmentProcessor(AlignmentProcessor):
         
         if not has_valid_timestamps:
             # 如果没有有效时间戳，将长文本拆分成多个segment
-            print("[Alignment] No valid timestamps, splitting text into segments")
+            print("[Alignment] No valid timestamps, splitting text into segments", flush=True)
             full_text = " ".join(seg.get("text", "") for seg in segments if seg.get("text"))
             if full_text:
                 # 获取音频时长
@@ -199,13 +243,14 @@ class WhisperXAlignmentProcessor(AlignmentProcessor):
                     })
                     current_time += duration
                 
-                print(f"[Alignment] Created {len(segments)} segments from text")
+                print(f"[Alignment] Created {len(segments)} segments from text", flush=True)
             else:
-                print("[Alignment] No text to align")
+                print("[Alignment] No text to align", flush=True)
                 return AlignmentResult(words=[], language=language)
         
         # 执行对齐
-        print(f"[Alignment] Starting alignment with {len(segments)} segments...")
+        print(f"[Alignment] Starting alignment with {len(segments)} segments...", flush=True)
+        print(f"[Alignment]   calling whisperx.align(device={device})...", flush=True)
         result = whisperx.align(
             segments,
             align_model,
@@ -214,7 +259,8 @@ class WhisperXAlignmentProcessor(AlignmentProcessor):
             device,
             return_char_alignments=False,
         )
-        print("[Alignment] Alignment complete")
+        print(f"[Alignment]   whisperx.align returned, result keys={list(result.keys()) if isinstance(result, dict) else type(result).__name__}", flush=True)
+        print("[Alignment] Alignment complete", flush=True)
         
         # 解析结果
         words = []
@@ -229,7 +275,7 @@ class WhisperXAlignmentProcessor(AlignmentProcessor):
                         score=w.get("score", 0.0),
                     ))
         
-        print(f"[Alignment] Extracted {len(words)} words")
+        print(f"[Alignment] Extracted {len(words)} words", flush=True)
         return AlignmentResult(words=words, language=language)
 
 
@@ -354,7 +400,7 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
             sf.write(output_path, audio, sr)
             return output_path
         except Exception as e:
-            print(f"[Qwen3Alignment] Failed to extract segment audio: {e}")
+            print(f"[Qwen3Alignment] Failed to extract segment audio: {e}", flush=True)
             return None
     
     def _align_single_segment(self, model, audio_path: str, text: str, language: str, 
@@ -379,7 +425,7 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
                             end=getattr(item, "end_time", 0.0) + seg_start,
                         ))
         except Exception as e:
-            print(f"[Qwen3Alignment] Segment alignment failed: {e}")
+            print(f"[Qwen3Alignment] Segment alignment failed: {e}", flush=True)
         
         return words
     
@@ -409,7 +455,7 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
         # Map language code to Qwen3 format
         qwen_lang = self._map_language(language)
         if not qwen_lang:
-            print(f"[Qwen3Alignment] Warning: Unknown language '{language}', using 'Chinese'")
+            print(f"[Qwen3Alignment] Warning: Unknown language '{language}', using 'Chinese'", flush=True)
             qwen_lang = "Chinese"
         
         # 检查segments是否有有效的时间戳（来自VAD）
@@ -420,7 +466,7 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
         
         # 获取音频总时长
         total_duration = self._get_audio_duration(audio_path)
-        print(f"[Qwen3Alignment] Audio duration: {total_duration:.1f}s")
+        print(f"[Qwen3Alignment] Audio duration: {total_duration:.1f}s", flush=True)
         
         # 解析dtype
         torch_dtype = self._resolve_dtype(self.dtype)
@@ -431,7 +477,7 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
             device_map = "cuda" if torch.cuda.is_available() else "cpu"
         
         # 加载 Qwen3ForcedAligner 模型
-        print(f"[Qwen3Alignment] Loading model '{self.aligner_model}'...")
+        print(f"[Qwen3Alignment] Loading model '{self.aligner_model}'...", flush=True)
         model = Qwen3ForcedAligner.from_pretrained(
             self.aligner_model,
             dtype=torch_dtype,
@@ -445,7 +491,7 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
             # 判断是否需要分段处理
             if has_valid_timestamps and total_duration > self.MAX_AUDIO_DURATION:
                 # VAD已执行且音频超过5分钟，按segments分段处理
-                print(f"[Qwen3Alignment] Audio > {self.MAX_AUDIO_DURATION}s, processing by segments")
+                print(f"[Qwen3Alignment] Audio > {self.MAX_AUDIO_DURATION}s, processing by segments", flush=True)
                 
                 for i, seg in enumerate(segments):
                     seg_text = seg.get("text", "").strip()
@@ -458,7 +504,7 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
                     # 检查segment时长是否超过限制
                     seg_duration = seg_end - seg_start
                     if seg_duration > self.MAX_AUDIO_DURATION:
-                        print(f"[Qwen3Alignment] Segment {i} too long ({seg_duration:.1f}s), skipping")
+                        print(f"[Qwen3Alignment] Segment {i} too long ({seg_duration:.1f}s), skipping", flush=True)
                         continue
                     
                     # 提取segment音频
@@ -471,13 +517,13 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
                         temp_files.append(temp_audio.name)
                         
                         # 对segment进行对齐
-                        print(f"[Qwen3Alignment] Aligning segment {i}: {seg_start:.1f}s-{seg_end:.1f}s")
+                        print(f"[Qwen3Alignment] Aligning segment {i}: {seg_start:.1f}s-{seg_end:.1f}s", flush=True)
                         seg_words = self._align_single_segment(model, extracted, seg_text, qwen_lang, seg_start)
                         all_words.extend(seg_words)
             
             elif total_duration > self.MAX_AUDIO_DURATION:
                 # 没有VAD结果但音频超过5分钟，需要先分段
-                print(f"[Qwen3Alignment] No VAD segments, splitting long audio")
+                print(f"[Qwen3Alignment] No VAD segments, splitting long audio", flush=True)
                 
                 # 按文本长度估算分段点
                 full_text = "".join(seg.get("text", "") for seg in segments if seg.get("text"))
@@ -507,13 +553,13 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
                     if extracted:
                         temp_files.append(temp_audio.name)
                         
-                        print(f"[Qwen3Alignment] Aligning chunk {i}: {chunk_start:.1f}s-{chunk_end:.1f}s")
+                        print(f"[Qwen3Alignment] Aligning chunk {i}: {chunk_start:.1f}s-{chunk_end:.1f}s", flush=True)
                         chunk_words = self._align_single_segment(model, extracted, chunk_text, qwen_lang, chunk_start)
                         all_words.extend(chunk_words)
             
             else:
                 # 音频在5分钟内，直接处理
-                print(f"[Qwen3Alignment] Audio within {self.MAX_AUDIO_DURATION}s limit, processing directly")
+                print(f"[Qwen3Alignment] Audio within {self.MAX_AUDIO_DURATION}s limit, processing directly", flush=True)
                 
                 full_text = "".join(seg.get("text", "") for seg in segments if seg.get("text"))
                 if full_text.strip():
@@ -533,7 +579,7 @@ class Qwen3AlignmentProcessor(AlignmentProcessor):
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         
-        print(f"[Qwen3Alignment] Extracted {len(all_words)} words total")
+        print(f"[Qwen3Alignment] Extracted {len(all_words)} words total", flush=True)
         return AlignmentResult(words=all_words, language=language)
 
 
@@ -602,7 +648,7 @@ class FunASRAlignmentProcessor(AlignmentProcessor):
             sf.write(output_path, audio, sr)
             return output_path
         except Exception as e:
-            print(f"[FunASRAlignment] Failed to extract segment audio: {e}")
+            print(f"[FunASRAlignment] Failed to extract segment audio: {e}", flush=True)
             return None
 
     @staticmethod
@@ -612,7 +658,7 @@ class FunASRAlignmentProcessor(AlignmentProcessor):
         try:
             res = model.generate(input=audio_path, text=text)
         except Exception as e:
-            print(f"[FunASRAlignment] Alignment failed: {e}")
+            print(f"[FunASRAlignment] Alignment failed: {e}", flush=True)
             return words
         if not res:
             return words
@@ -646,7 +692,7 @@ class FunASRAlignmentProcessor(AlignmentProcessor):
             pass
 
         resolved = self._resolve_model()
-        print(f"[FunASRAlignment] Loading CT-Aligner ({resolved})...")
+        print(f"[FunASRAlignment] Loading CT-Aligner ({resolved})...", flush=True)
         model = AutoModel(model=resolved, disable_update=True)
 
         has_valid_timestamps = any(
@@ -670,13 +716,13 @@ class FunASRAlignmentProcessor(AlignmentProcessor):
                     extracted = self._extract_segment_audio(audio_path, seg_start, seg_end, temp_audio.name)
                     if extracted:
                         temp_files.append(temp_audio.name)
-                        print(f"[FunASRAlignment] Aligning segment {i}: {seg_start:.1f}s-{seg_end:.1f}s")
+                        print(f"[FunASRAlignment] Aligning segment {i}: {seg_start:.1f}s-{seg_end:.1f}s", flush=True)
                         all_words.extend(self._align_text(model, extracted, seg_text, seg_start))
             else:
                 # 无时间戳：对完整音频 + 全文一次性对齐
                 full_text = "".join(seg.get("text", "") for seg in segments if seg.get("text"))
                 if full_text.strip():
-                    print(f"[FunASRAlignment] No segment timestamps, aligning full text ({len(full_text)} chars)")
+                    print(f"[FunASRAlignment] No segment timestamps, aligning full text ({len(full_text)} chars)", flush=True)
                     all_words = self._align_text(model, audio_path, full_text, 0.0)
         finally:
             for temp_file in temp_files:
@@ -692,7 +738,7 @@ class FunASRAlignmentProcessor(AlignmentProcessor):
             except Exception:
                 pass
 
-        print(f"[FunASRAlignment] Extracted {len(all_words)} chars total")
+        print(f"[FunASRAlignment] Extracted {len(all_words)} chars total", flush=True)
         return AlignmentResult(words=all_words, language=language)
 
 

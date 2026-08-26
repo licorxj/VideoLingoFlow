@@ -125,7 +125,7 @@ async def fetch_models(provider_id: int, db: AsyncSession = Depends(get_db)):
             headers = {"Content-Type": "application/json"}
             if key_obj:
                 headers["Authorization"] = f"Bearer {decrypt_value(key_obj.key_value)}"
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(f"{provider.base_url.rstrip('/')}/models", headers=headers)
                 if resp.status_code == 200:
                     data = resp.json()
@@ -151,7 +151,7 @@ async def fetch_models(provider_id: int, db: AsyncSession = Depends(get_db)):
             if not key_obj:
                 raise HTTPException(400, "No active API key for this provider")
             real_key = decrypt_value(key_obj.key_value)
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(f"{provider.base_url.rstrip('/')}/models?key={real_key}")
                 if resp.status_code == 200:
                     data = resp.json()
@@ -220,7 +220,7 @@ async def sync_models(provider_id: int, db: AsyncSession = Depends(get_db)):
 
                 headers["Authorization"] = f"Bearer {decrypt_value(key_obj.key_value)}"
 
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
 
                 resp = await client.get(f"{provider.base_url.rstrip('/')}/models", headers=headers)
 
@@ -264,7 +264,7 @@ async def sync_models(provider_id: int, db: AsyncSession = Depends(get_db)):
 
             real_key = decrypt_value(key_obj.key_value)
 
-            async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+            async with httpx.AsyncClient(timeout=15) as client:
 
                 resp = await client.get(f"{provider.base_url.rstrip('/')}/models?key={real_key}")
 
@@ -480,7 +480,7 @@ async def test_all_models(provider_id: int, db: AsyncSession = Depends(get_db)):
     success_count = 0
     failed_count = 0
 
-    async with httpx.AsyncClient(timeout=15, trust_env=False) as client:
+    async with httpx.AsyncClient(timeout=15) as client:
         for model in models:
             start = time.time()
             try:

@@ -55,7 +55,7 @@
       "type": "sdk",
       "builtin": true,
       "enabled": true,
-      "description": "本地 MOSS-TTS-Nano ONNX CPU 语音合成，支持内置音色和参考音频克隆",
+      "description": "【推荐值***】内置的 轻量级MOSS-TTS-Nano ONNX CPU 语音合成，支持内置音色和参考音频克隆，应对一般要求不高的配音任务",
       "config": {
         "sdk_package": "",
         "sdk_function": "synthesize",
@@ -67,16 +67,30 @@
         "voice": "Junhao",
         "model": "MOSS-TTS-Nano-100M-ONNX",
         "modes": {
-          "clone": {"enabled": true, "endpoint": ""},
-          "voice_design": {"enabled": false, "endpoint": ""},
-          "controllable_clone": {"enabled": true, "endpoint": ""},
-          "preset_voice": {"enabled": true, "endpoint": ""}
+          "clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": true,
+            "endpoint": ""
+          }
         },
         "model_list_url": "",
         "voice_list_url": "",
         "model_list_key": "",
         "voice_list_key": "",
-        "model_options": ["MOSS-TTS-Nano-100M-ONNX"],
+        "model_options": [
+          "MOSS-TTS-Nano-100M-ONNX"
+        ],
         "sdk_extra_args": {
           "cpu_threads": 4,
           "max_new_frames": 375,
@@ -87,7 +101,9 @@
         "custom_params": [],
         "max_concurrent": 1,
         "timeout": 600,
-        "voice_options": ["Junhao"]
+        "voice_options": [
+          "Junhao"
+        ]
       }
     },
     {

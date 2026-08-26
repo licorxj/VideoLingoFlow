@@ -1,6 +1,5 @@
 {
   "output_protocol": "openai",
-  "default_model": "mimo-v2.5",
-  "default_provider_id": 27,
-  "lan_access": false
+  "default_model": "mimo-v2-flash",
+  "default_provider_id": 16
 }
