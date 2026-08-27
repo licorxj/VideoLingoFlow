@@ -224,5 +224,5 @@
   - 社交前端（静态 UI）：**5173**
   - 社交 MCP 服务：**5410**
 - **发布机制**：走**浏览器自动化 + 账号 Cookie**（第三方社交上传模块），非平台官方 OpenAPI；需账号已登录、Cookie 有效。
-- **成片来源**：优先 `material_id`（素材库），或 `file_paths`（本地路径）。产物位置见 `file-management.md`（`tasks/<task_id>/output`），**不要猜测路径**。
+- **成片来源**：优先 `material_id`（素材库），或 `file_paths`（本地路径）。产物位置见 `file-management.md`（`control_plane_workspaces/<task_id>/output`），**不要猜测路径**。
 - **主后端业务端口**：**11001**（不是 8000）。发布相关接口在此；社交账户/排队状态由 5409 的社交后端提供。

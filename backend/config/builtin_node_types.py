@@ -1164,19 +1164,31 @@ BUILTIN_NODE_TYPES = [
     },
     {
         "id": "merge_dub_video",
-        "name": "配音视频合成",
+        "name": "音视频合成",
         "execution_domain": "thread",
         "category": "video",
-        "description": "将配音音频合成到视频",
+        "description": "将输入音频合成到视频，可设置原视频是否静音、输入音频的响度与淡入淡出。",
         "icon": "Clapperboard",
         "color": "#3b82f6",
         "inputs": [
             {"id": "video", "label": "视频", "type": "video", "required": True},
-            {"id": "audio", "label": "配音音频", "type": "audio", "required": True},
+            {"id": "audio", "label": "音频", "type": "audio", "required": True},
         ],
-        "outputs": [{"id": "video", "label": "配音视频", "type": "video"}],
-        "defaultConfig": {},
-        "configFields": [],
+        "outputs": [{"id": "video", "label": "合成后视频", "type": "video"}],
+        "defaultConfig": {
+            "video_mute": True,
+            "audio_volume": 1.0,
+            "audio_fade_in": 0.0,
+            "audio_fade_out": 0.0
+        },
+        "configFields": [
+            {"key": "video_mute", "label": "原视频静音", "type": "toggle", "colSpan": "full", "defaultValue": True,
+             "description": "开启：仅使用输入音频；关闭：将原视频音轨与输入音频混合"},
+            {"key": "audio_volume", "label": "输入音频·响度", "type": "slider", "colSpan": "half", "min": 0, "max": 2, "step": 0.05, "defaultValue": 1.0,
+             "description": "输入音频音量增益（1.0=原始）"},
+            {"key": "audio_fade_in", "label": "输入音频·淡入(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.0},
+            {"key": "audio_fade_out", "label": "输入音频·淡出(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.0}
+        ],
     },
     {
         "id": "cover",

@@ -53,13 +53,13 @@ python backend/manager.py 18001 11001   # 自定义端口
 ### 1.3 任务执行链路（逻辑层）
 
 ```
-用户在前端创建工作流 → POST /api/run-task
-  → ControlPlane 记录 Task/TaskNode（SQLite: data/control-plane.db）
-  → ThreadScheduler / Celery 调度各节点
-  → 每个节点 = 一个 Step 实例（backend/steps/s_*.py），按依赖拓扑顺序执行
+用户在前端创建工作流 → POST /api/workflows/{wf_id}/execute
+  → ControlPlane（workflow_runtime.submit_workflow）记录 Task/TaskNode（SQLite: data/control-plane.db）
+  → 状态机（control_plane/runtime.py）按依赖拓扑调度，每个节点派发为 Celery 任务
+  → 每个节点 = 一个 Step 实例（backend/steps/s_*.py），worker 内按 execution_domain 执行（thread 同进程 / process 子进程）
   → GPU 类节点（asr/vocal_separation/track_separation）若启用 GPU 服务则交由 lane 调度
-  → 产物写入 tasks/<task_id>/{cache,output}
-  → 进度经 /ws WebSocket 实时推回前端
+  → 产物写入 control_plane_workspaces/<task_id>/{cache,output}
+  → 进度经 /ws/tasks/{task_id} WebSocket 实时推回前端
 ```
 
 ---
@@ -71,9 +71,9 @@ python backend/manager.py 18001 11001   # 自定义端口
 | 服务编排/端口/启动 | `backend/manager.py` |
 | HTTP API 路由 | `backend/main.py` + `backend/api/*.py` |
 | 工作流运行引擎 | `backend/control_plane/workflow_runtime.py` |
-| 线程调度器 | `backend/engine/thread_scheduler.py` |
+| 线程调度器（遗留路径） | `backend/engine/thread_scheduler.py`（仅旧线程池路径；控制平面执行走 Celery） |
 | 异步任务（Celery） | `backend/control_plane/celery_runtime.py`、`runtime.py` |
-| 任务记录与目录 | `backend/engine/task_recorder.py` |
+| 任务/工作区记录 | `backend/control_plane/workflow_runtime.py`（写 task.json 到 `control_plane_workspaces/<task_id>/`） |
 | 节点注册表 | `backend/steps/step_registry.py` |
 | 节点类型定义（前端展示） | `backend/config/builtin_node_types.py` |
 | 步骤基类 | `backend/steps/base_step.py`（`BaseStep`） |
@@ -198,6 +198,7 @@ python backend/manager.py 18001 11001   # 自定义端口
 节点类型定义中每个节点带 `execution_domain` 字段，取值：
 - **`thread`**：在线程池中执行（默认，绝大多数节点）
 - **`process`**：在独立子进程中执行（重型/长时推理，避免阻塞 uvicorn 事件循环）
+- **`llm`**：以 LLM 调用方式执行（部分 LLM 类节点）
 
 > 注意：**没有 `gpu` 执行域**。GPU 计算由"GPU 服务层"接管（见 `gpu-service.md`），节点本身仍声明为 `process` 或 `thread`，运行时根据 `GPU_SERVICE_MANAGED_NODE_TYPES` 决定把 ASR/分离类任务交给 GPU lane。
 
@@ -211,13 +212,13 @@ python backend/manager.py 18001 11001   # 自定义端口
 - `RESOURCE_FREE_NODE_TYPES`：纯网络/API 调用节点（`llm_request`、`summarize`、`translate`、`sentence_split`、`http_request`、`platform_download`）不占本地计算令牌，可多任务并发
 - `GPU_SERVICE_MANAGED_NODE_TYPES`：`{asr, vocal_separation, track_separation}` 启用 GPU 服务后，显存调度交给服务层，worker 侧不再扣 gpu 令牌（避免双重限流）
 
-`ThreadScheduler` 默认 `max_workers=3`，`request_cancel` 可终止任务及其子进程。
+并发由 **Celery worker 进程数 + 资源令牌** 共同决定（`ThreadScheduler` 的 `max_workers=3` 属于遗留 engine 线程池路径，不在当前控制平面执行链路中）。`request_cancel` 可终止任务及其子进程。
 
 ---
 
 ## 5. 数据 / 文件布局
 
-- 任务目录：`tasks/<task_id>/`，含 `task.json`（任务元数据/节点状态）、`cache/`、`output/`
+- 任务目录：`control_plane_workspaces/<task_id>/`，含 `task.json`（任务元数据/节点状态，兼容副本）、`cache/`、`output/`（权威状态在 `data/control-plane.db`）
 - 控制平面数据库：`data/control-plane.db`（SQLite；Alembic 迁移）
 - 模型缓存：`_model_cache/`、`data/workspace/pi-agent-config/models-store.json`
 - 工作流模板：`backend/config/workflows/*.json`

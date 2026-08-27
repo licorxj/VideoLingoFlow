@@ -3,9 +3,11 @@
 File browser API for selecting local files.
 """
 import asyncio
+import json
 import os
 import re
 import subprocess
+import sys
 import uuid
 from pathlib import Path
 from fastapi import APIRouter, HTTPException, Request
@@ -155,95 +157,97 @@ async def list_languages():
     return {"languages": langs}
 
 
+async def _run_native_dialog(req: dict) -> dict:
+    """Spawn the tkinter dialog in a separate process to isolate GUI crashes."""
+    runner = Path(__file__).resolve().parent.parent / "utils" / "tk_dialog_runner.py"
+    if not runner.exists():
+        raise HTTPException(status_code=500, detail="Dialog runner not found")
+
+    # Prefer pythonw.exe on Windows so the dialog runner does not flash a console.
+    if os.name == "nt":
+        pythonw = Path(sys.executable).with_name("pythonw.exe")
+        exe = str(pythonw) if pythonw.exists() else sys.executable
+    else:
+        exe = sys.executable
+    cmd = [exe, str(runner), json.dumps(req, ensure_ascii=False)]
+    kwargs: dict = {}
+    if os.name == "nt":
+        kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            **kwargs,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=30)
+    except asyncio.TimeoutError:
+        if proc.returncode is None:
+            proc.kill()
+            await proc.wait()
+        return {"paths": [], "cancelled": True, "error": "timeout"}
+
+    if proc.returncode != 0:
+        err = (
+            stderr.decode("utf-8", errors="ignore").strip()
+            or stdout.decode("utf-8", errors="ignore").strip()
+            or "unknown dialog error"
+        )
+        raise HTTPException(status_code=500, detail=f"Native dialog error: {err}")
+
+    try:
+        result = json.loads(stdout.decode("utf-8", errors="ignore"))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=500, detail=f"Invalid dialog response: {exc}")
+
+    if result.get("error"):
+        raise HTTPException(status_code=500, detail=f"Native dialog error: {result['error']}")
+    return result
+
+
 @router.post("/native-dialog")
 async def native_file_dialog(req: dict):
     """Open system native file/folder dialog and return selected path(s)."""
-    import threading
-    
-    dialog_type = req.get("type", "file")  # "file" or "folder"
+    dialog_type = req.get("type") or req.get("dialog_type", "file")
     title = req.get("title", "Select")
     filetypes = req.get("filetypes", [])
     multiple = req.get("multiple", False)
-    
-    result = {"paths": [], "cancelled": True}
-    
-    def _run_dialog():
-        try:
-            import tkinter as tk
-            from tkinter import filedialog
-            root = tk.Tk()
-            root.withdraw()
-            root.attributes('-topmost', True)
-            
-            if dialog_type == "folder":
-                path = filedialog.askdirectory(title=title, mustexist=True)
-                if path:
-                    result["paths"] = [path]
-                    result["cancelled"] = False
-            else:
-                tf = [(f[0], f[1]) for f in filetypes] if filetypes else [("All files", "*.*")]
-                if multiple:
-                    paths = filedialog.askopenfilenames(title=title, filetypes=tf)
-                    if paths:
-                        result["paths"] = list(paths)
-                        result["cancelled"] = False
-                else:
-                    path = filedialog.askopenfilename(title=title, filetypes=tf)
-                    if path:
-                        result["paths"] = [path]
-                        result["cancelled"] = False
-            
-            root.destroy()
-        except Exception as e:
-            result["error"] = str(e)
-    
-    t = threading.Thread(target=_run_dialog, daemon=True)
-    t.start()
-    t.join(timeout=30)  # 30s timeout
-    
-    # Backward compat: also return single path for old callers
+    default_dir = req.get("default_dir")
+
+    result = await _run_native_dialog({
+        "type": dialog_type,
+        "title": title,
+        "filetypes": filetypes,
+        "multiple": multiple,
+        "default_dir": default_dir,
+    })
+
     paths = result.get("paths", [])
-    result["path"] = paths[0] if len(paths) == 1 else (paths[0] if paths else "")
-    return result
+    if not paths:
+        return {"paths": [], "path": "", "cancelled": True}
+    return {"paths": paths, "path": paths[0], "cancelled": False}
+
 
 @router.post("/native-save-dialog")
 async def native_save_dialog(req: dict):
     """Open system native save file dialog and return selected path."""
-    import threading
-    
     title = req.get("title", "Save As")
     default_name = req.get("defaultName", "")
     filetypes = req.get("filetypes", [])
-    
-    result = {"path": "", "cancelled": True}
-    
-    def _run_dialog():
-        try:
-            import tkinter as tk
-            from tkinter import filedialog
-            root = tk.Tk()
-            root.withdraw()
-            root.attributes('-topmost', True)
-            
-            tf = [(f[0], f[1]) for f in filetypes] if filetypes else [("All files", "*.*")]
-            path = filedialog.asksaveasfilename(
-                title=title, 
-                initialfile=default_name,
-                filetypes=tf
-            )
-            root.destroy()
-            
-            if path:
-                result["path"] = path
-                result["cancelled"] = False
-        except Exception as e:
-            result["error"] = str(e)
-    
-    t = threading.Thread(target=_run_dialog, daemon=True)
-    t.start()
-    t.join(timeout=30)
-    
-    return result
+    default_dir = req.get("default_dir")
+
+    result = await _run_native_dialog({
+        "type": "save",
+        "title": title,
+        "default_name": default_name,
+        "filetypes": filetypes,
+        "default_dir": default_dir,
+    })
+
+    paths = result.get("paths", [])
+    path = paths[0] if paths else ""
+    return {"path": path, "cancelled": not path}
 
 @router.get("/read")
 async def read_file(path: str, task_id: Optional[str] = None):

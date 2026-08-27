@@ -18,26 +18,33 @@
             "subtitle",
             "video"
           ],
-          "videoPath": "M:\\视频下载\\西门子UG-NX-初学者教程-数控软件\\01-Unigraphics NX Co-ordinate System, CSYS for Beginners ｜｜ NX 2306 Tutorials.webm",
+          "videoPath": "M:/翻译商单/加越南语/10657-复仇主妇（37集）回家的诱惑/6.mp4",
           "source_language": "en",
           "target_language": "zh",
           "copyInputs": true,
           "audioPath": "",
-          "subtitlePath": "",
+          "subtitlePath": "M:/翻译商单/加越南语/10657-复仇主妇（37集）回家的诱惑/6.srt",
           "url": "",
           "filePath": ""
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f\\cache\\input_video.mp4",
+          "subtitle": "Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f\\cache\\input_subtitle.srt",
+          "languages": {
+            "source_language": "en",
+            "target_language": "zh"
+          }
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 549
+        "height": 658
       },
       "selected": false,
       "dragging": false
@@ -53,16 +60,18 @@
         "nodeType": "srt_to_json",
         "label": "SRT字幕转json",
         "config": {},
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "cache\\srt_to_json_node_1_1787848888692.json"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 123
+        "height": 230
       },
       "selected": false,
       "dragging": false
@@ -86,31 +95,45 @@
           "mcps": [],
           "docs_path": "Y:\\VideoLingoLc\\backend\\config\\agent\\docs\\capability-index.md",
           "external_doc": "",
-          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：",
+          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：为我的视频配上合适的音效，增加视频的生动性和氛围感。我输入的是视频的字幕，请根据字幕来分析视频的情绪走向，在合适的地方配上合适的音效。音效请使用输入的skill通过关键词或者分类来获取备用列表清单，选择合适情绪和时长的音效并下载，最后将所有音效合成一个完整时长的音频，中间空白处使用空白音频填充，并同时输出你执行过程的音效设计配置单json",
           "output_items": [
             {
               "port": "输出1",
-              "type": "text",
-              "desc": ""
+              "type": "audio",
+              "desc": "合成的完成音效音轨视频"
             },
             {
               "port": "输出2",
               "type": "json",
-              "desc": ""
+              "desc": "执行过程的音效设计配置单json"
             }
           ]
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output_1": "cache/agent_node_2_1787848937594_1.wav",
+          "output_2": "cache/agent_node_2_1787848937594_2.json"
+        },
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f\\cache\\.step_node_2_1787848937594_result.json, exiting 0",
+          "[step_worker] start node_type=pi_agent node_id=node_2_1787848937594 pid=32180",
+          "[step_worker] step instance created: S_PiAgent",
+          "[step_worker] step_inputs keys=['input_1']",
+          "[step_worker] node_config keys=['inputCount', 'outputCount', 'skills', 'mcps', 'docs_path', 'external_doc', 'persona', 'output_items']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f\\cache\\.step_node_2_1787848937594_result.json, exiting 0"
+        ],
+        "note": "音效师"
       },
       "measured": {
         "width": 420,
-        "height": 708
+        "height": 888
       },
       "selected": false,
       "dragging": false
@@ -120,7 +143,7 @@
       "type": "workflow",
       "position": {
         "x": -1665,
-        "y": -390
+        "y": -705
       },
       "data": {
         "nodeType": "extract_audio",
@@ -128,11 +151,18 @@
         "config": {
           "format": "auto"
         },
-        "status": "pending"
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/extracted_audio_node_1_1787852708397.m4a"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 210
+        "height": 308
       },
       "selected": false,
       "dragging": false
@@ -150,12 +180,32 @@
         "config": {
           "source": "be0ad3b74d5b459f99ecf96992b2a641.mp3"
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f\\be0ad3b74d5b459f99ecf96992b2a641.mp3",
+          "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f\\be0ad3b74d5b459f99ecf96992b2a641.mp3",
+          "audioFileName": "be0ad3b74d5b459f99ecf96992b2a641.mp3"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] start node_type=audio_asset_library node_id=node_2_1787852723621 pid=33236",
+          "[step_worker] step instance created: S_AudioAssetLibrary",
+          "[step_worker] step_inputs keys=['any']",
+          "[step_worker] node_config keys=['source']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3b27cf4f0b7f43bdbc48a7087ae5678f\\cache\\.step_node_2_1787852723621_result.json, exiting 0"
+        ],
+        "note": "背景音乐"
       },
       "measured": {
         "width": 420,
-        "height": 387
+        "height": 516
       },
       "selected": false,
       "dragging": false
@@ -179,7 +229,7 @@
           "bgm_fade_in": 1,
           "bgm_fade_out": 1,
           "bgm_loop": true,
-          "track3_volume": 0.5,
+          "track3_volume": 0.8,
           "track3_fade_in": 0.3,
           "track3_fade_out": 0.3,
           "track3_loop": false,
@@ -190,14 +240,82 @@
           "audio_format": "wav",
           "audio_bitrate": "192"
         },
-        "status": "pending"
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "cache\\track_mix_node_3_1787852934946.wav"
+        },
+        "error": "",
+        "workbench_url": "",
+        "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 612
+        "height": 710
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
+    },
+    {
+      "id": "node_1_1787853657987",
+      "type": "workflow",
+      "position": {
+        "x": -1710,
+        "y": -345
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 453
+      },
+      "selected": false
+    },
+    {
+      "id": "node_7_1787855502537",
+      "type": "workflow",
+      "position": {
+        "x": 690,
+        "y": -270
+      },
+      "data": {
+        "nodeType": "merge_dub_video",
+        "label": "音视频合成",
+        "config": {
+          "video_mute": true,
+          "audio_volume": 1,
+          "audio_fade_in": 0,
+          "audio_fade_out": 0
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_dubbed.mp4"
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 398
+      }
     }
   ],
   "edges": [
@@ -270,31 +388,83 @@
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#60a5fa",
+        "stroke": "#facc15",
         "strokeWidth": 2
       },
-      "source": "node_2_1787848937594",
-      "sourceHandle": "out-output_1",
-      "target": "node_3_1787852934946",
-      "targetHandle": "in-bgm",
-      "id": "xy-edge__node_2_1787848937594out-output_1-node_3_1787852934946in-bgm"
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_1_1787853657987",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_1_1787853657987in-video"
     },
     {
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#fb923c",
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1787853657987",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1780590163157out-subtitle-node_1_1787853657987in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
         "strokeWidth": 2
       },
       "source": "node_2_1787852723621",
       "sourceHandle": "out-audio",
       "target": "node_3_1787852934946",
+      "targetHandle": "in-bgm",
+      "id": "xy-edge__node_2_1787852723621out-audio-node_3_1787852934946in-bgm"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787848937594",
+      "sourceHandle": "out-output_1",
+      "target": "node_3_1787852934946",
       "targetHandle": "in-track3",
-      "id": "xy-edge__node_2_1787852723621out-audio-node_3_1787852934946in-track3"
+      "id": "xy-edge__node_2_1787848937594out-output_1-node_3_1787852934946in-track3"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1787852934946",
+      "sourceHandle": "out-audio",
+      "target": "node_7_1787855502537",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1787852934946out-audio-node_7_1787855502537in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_7_1787855502537",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_7_1787855502537in-video"
     }
   ],
   "type": "user",
   "createdAt": "2026-08-28T00:45:18",
-  "updatedAt": "2026-08-28T01:49:24",
-  "revision": 1
+  "updatedAt": "2026-08-28T02:33:34",
+  "revision": 6
 }

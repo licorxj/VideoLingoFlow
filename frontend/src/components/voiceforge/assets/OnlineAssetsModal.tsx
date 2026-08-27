@@ -470,7 +470,7 @@ export default function OnlineAssetsModal({
   const loadCategories = useCallback(async () => {
     try {
       const cats = await voiceForgeApi.assetCategories();
-      setCategories(cats.map((c) => ({ id: c.id, label: c.label, asset_type: c.asset_type })));
+      setCategories(cats.data.categories.map((c: any) => ({ id: c.id, label: c.label, asset_type: c.asset_type })));
     } catch {
       setCategories([]);
     }
@@ -646,7 +646,7 @@ export default function OnlineAssetsModal({
                   onChange={(e) => setKeyword(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") doSearch(); }}
                 />
-                <Button onClick={doSearch} disabled={loading || (!keyword.trim() && !(activeTab === "chinaz" && chinazCategory))}>
+                <Button onClick={() => doSearch()} disabled={loading || (!keyword.trim() && !(activeTab === "chinaz" && chinazCategory))}>
                   {loading ? <Loader2 className="mr-1 size-4 animate-spin" /> : <Search className="mr-1 size-4" />}
                   搜索
                 </Button>
