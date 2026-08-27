@@ -19,11 +19,11 @@ from backend.steps.base_step import BaseStep, find_artifact
 from backend.steps.s02_asr import (
     S02ASR,
     resolve_asr_audio_inputs,
-    _get_audio_duration,
     _normalize_asr_result,
     _clamp_result_to_duration,
     _resolve_input_language,
 )
+from backend.asr.audio_split import get_audio_duration as _get_audio_duration
 
 # 各阶段引擎留空时的内置默认（与全局设置默认值一致）
 _STAGE_DEFAULT_ENGINES = {"vad": "fsmn", "alignment": "whisperx", "diarization": "diarize", "punctuation": "ct_punc"}

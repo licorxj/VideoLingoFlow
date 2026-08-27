@@ -200,8 +200,15 @@ export const voiceForgeApi = {
   aiDialoguePreview: (projectId: string, data: Record<string, unknown>) => client.post(`/api/voiceforge/projects/${projectId}/text/ai-dialogue`, data, { timeout: 180000 }),
   aiChapterPreview: (projectId: string, data: Record<string, unknown>) => client.post(`/api/voiceforge/projects/${projectId}/text/ai-chapters`, data, { timeout: 180000 }),
   applyTextPlan: (projectId: string, data: Record<string, unknown>) => client.post(`/api/voiceforge/projects/${projectId}/text/apply`, data),
-  synthesize: (sentenceId: string) => client.post(`/api/voiceforge/sentences/${sentenceId}/synthesize`),
-  synthesizeProject: (projectId: string, data: { sentence_ids?: string[]; retry_failed?: boolean } = {}) => client.post(`/api/voiceforge/projects/${projectId}/synthesize`, data),
+  synthesize: (sentenceId: string, interfaceId?: string) =>
+    client.post(
+      `/api/voiceforge/sentences/${sentenceId}/synthesize` +
+        (interfaceId ? `?interface_id=${encodeURIComponent(interfaceId)}` : ""),
+    ),
+  synthesizeProject: (
+    projectId: string,
+    data: { sentence_ids?: string[]; retry_failed?: boolean; interface_id?: string } = {},
+  ) => client.post(`/api/voiceforge/projects/${projectId}/synthesize`, data),
   tasks: (projectId: string, activeOnly = false) => client.get(`/api/voiceforge/projects/${projectId}/tasks`, { params: { active_only: activeOnly } }),
   cancelTask: (taskId: string) => client.post(`/api/voiceforge/tasks/${taskId}/cancel`),
   retryTask: (taskId: string) => client.post(`/api/voiceforge/tasks/${taskId}/retry`),

@@ -276,7 +276,7 @@ export default function Logs() {
 
       {/* Terminal area */}
       <div ref={containerRef} onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-[#0a0e14] font-mono text-[12px] leading-[1.7] min-h-0">
+        className="flex-1 overflow-y-auto bg-white font-mono text-[14px] leading-[1.7] min-h-0">
         {filtered.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-3 opacity-30">

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import AlertProvider from "./components/ui/AlertProvider";
+import WelcomeModal from "./components/ui/WelcomeModal";
 import AppLayout from "./components/layout/AppLayout";
 import Workbench from "./pages/Workbench";
 import BatchWorkshop from "./pages/BatchWorkshop";
@@ -13,6 +14,7 @@ import LLMRouter from "./pages/llm-router";
 import EditingWorkbench from "./pages/EditingWorkbench";
 import Collaboration from "./pages/Collaboration";
 import Community from "./pages/Community";
+import Guide from "./pages/Guide";
 import { VoiceForgeAssets, VoiceForgeHome, VoiceForgeSettings, VoiceForgeVoices, VoiceForgeWorkspace } from "./pages/VoiceForge";
 import { restoreLocalControlSession } from "./api/controlPlane";
 import { useSubscriptionStore } from "./stores/subscriptionStore";
@@ -79,6 +81,7 @@ export default function App() {
 
   return (
     <AlertProvider>
+      <WelcomeModal />
       <Routes>
         <Route element={<AppLayout />}>
           <Route path="/" element={<Workbench />} />
@@ -97,6 +100,7 @@ export default function App() {
           <Route path="/logs" element={<Logs />} />
           <Route path="/about" element={<About />} />
           <Route path="/community" element={<Community />} />
+          <Route path="/guide" element={<Guide />} />
         </Route>
       </Routes>
     </AlertProvider>

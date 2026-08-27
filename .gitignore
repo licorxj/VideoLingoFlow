@@ -10,6 +10,7 @@ backend/config/asr_interfaces.json
 backend/config/tts_interfaces.json
 backend/config/config.yaml
 backend/config/imagegen_interfaces.json
+backend/config/videogen_interfaces.json
 
 # Python
 __pycache__/

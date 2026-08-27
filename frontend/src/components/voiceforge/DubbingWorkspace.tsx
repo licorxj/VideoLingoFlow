@@ -260,13 +260,14 @@ function DubbingWorkspaceInner() {
       const sentenceIds = selectedIds.size > 0 ? [...selectedIds] : undefined;
       await voiceForgeApi.synthesizeProject(projectId, {
         sentence_ids: sentenceIds,
+        interface_id: state.engine || undefined,
       });
     } catch {
       dispatch({ type: "SET_ERROR", payload: "提交合成失败" });
     } finally {
       dispatch({ type: "SET_BUSY", payload: "" });
     }
-  }, [projectId, selectedIds, dispatch]);
+  }, [projectId, selectedIds, state.engine, dispatch]);
 
   const handleCompleteGenerate = useCallback(async () => {
     dispatch({ type: "SET_BUSY", payload: "batch" });
@@ -275,13 +276,14 @@ function DubbingWorkspaceInner() {
       await voiceForgeApi.synthesizeProject(projectId, {
         sentence_ids: sentenceIds,
         retry_failed: true,
+        interface_id: state.engine || undefined,
       });
     } catch {
       dispatch({ type: "SET_ERROR", payload: "补全合成失败" });
     } finally {
       dispatch({ type: "SET_BUSY", payload: "" });
     }
-  }, [projectId, selectedIds, dispatch]);
+  }, [projectId, selectedIds, state.engine, dispatch]);
 
   const handleToolbarPreviewSection = useCallback(
     () => setPreviewSectionOpen(true),
@@ -299,8 +301,22 @@ function DubbingWorkspaceInner() {
   );
 
   const handleEngineChange = useCallback(
-    (value: string) => dispatch({ type: "SET_ENGINE", payload: value }),
-    [dispatch],
+    async (value: string) => {
+      // 立即更新本地选择，保证后续合成即时生效
+      dispatch({ type: "SET_ENGINE", payload: value });
+      // 持久化到项目默认 TTS 接口，使「配音功能」真正联通本项目的 TTS 服务层
+      try {
+        if (state.project) {
+          await voiceForgeApi.updateProject(projectId, {
+            default_interface_id: value || null,
+            version: state.project.version,
+          });
+        }
+      } catch {
+        dispatch({ type: "SET_ERROR", payload: "保存引擎设置失败" });
+      }
+    },
+    [projectId, state.project, dispatch],
   );
 
   const handleVoiceControlModeChange = useCallback(
@@ -361,14 +377,14 @@ function DubbingWorkspaceInner() {
     async (id: string) => {
       dispatch({ type: "SET_BUSY", payload: `regen-${id}` });
       try {
-        await voiceForgeApi.synthesize(id);
+        await voiceForgeApi.synthesize(id, state.engine || undefined);
       } catch {
         dispatch({ type: "SET_ERROR", payload: "重新生成失败" });
       } finally {
         dispatch({ type: "SET_BUSY", payload: "" });
       }
     },
-    [dispatch],
+    [dispatch, state.engine],
   );
 
   const handleAddAfter = useCallback(
@@ -922,7 +938,7 @@ function DubbingWorkspaceInner() {
                 selectedCount={selectedIds.size}
                 totalCount={shownSentences.length}
                 engine={engine}
-                engines={capabilities.map((c) => c.name)}
+                engines={capabilities.map((c) => ({ id: c.id, name: c.name }))}
                 voiceControlMode={voiceControlMode}
                 defaultGap={defaultGap}
                 onSelectAll={handleSelectAll}

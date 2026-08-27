@@ -3,6 +3,10 @@
 引擎生命周期：空闲超过 5 秒无任务调用时自动卸载（模型多在 transcribe 内以局部
 变量使用、调用结束已释放，此处主要归还 torch 显存缓存），下次调用按需重建。
 """
+import os
+import json
+import tempfile
+import shutil
 from typing import Optional, Dict, Any
 from backend.asr.asr_base import ASRBase
 from backend.asr.asr_whisperx import WhisperXLocal
@@ -61,15 +65,39 @@ def get_asr_engine(name: str) -> ASRBase:
     if engine is None:
         print(f"Unknown ASR engine: {name}, falling back to whisperx_local")
         engine = _ENGINES["whisperx_local"]
-    return _REGISTRY.acquire(name, lambda: engine, unloader=_asr_unloader)
+    return _REGISTRY.acquire(
+        name, lambda: engine, unloader=_asr_unloader,
+        busy_check=lambda: bool(getattr(engine, "_busy", False)),
+    )
 
-def run_asr(
-    input_path: str, output_path: str, callback=None,
-    *, engine_name=None, interface_id=None,
-    model=None, language=None, **extra_kwargs,
-) -> dict:
-    engine_name = engine_name or "whisperx_local"
-    # GPU 服务层：启用且服务可用时，把转录任务提交到常驻服务执行（模型复用 + 显存调度）
+def _resolve_max_duration(engine_name, interface_id, explicit, extra_kwargs):
+    """解析切分阈值（秒）：显式参数 > extra_kwargs.max_duration > 接口配置。"""
+    def _to_float(v):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return 0.0
+    md = _to_float(explicit)
+    if md > 0:
+        return md
+    md = _to_float(extra_kwargs.get("max_duration"))
+    if md > 0:
+        return md
+    try:
+        from backend.asr.asr_interface_manager import get_asr_interface_manager
+        cfg = get_asr_interface_manager().get(interface_id or engine_name)
+        if cfg:
+            md = _to_float(cfg.get("config", {}).get("max_duration"))
+            if md > 0:
+                return md
+    except Exception:
+        pass
+    return 0.0
+
+
+def _run_asr_single(engine_name, input_path, output_path, callback,
+                    model, language, extra_kwargs):
+    """单文件转录（GPU 服务或进程内），不做切分。"""
     try:
         from backend.gpu_service import client as gpu_client
         if gpu_client.gpu_service_enabled():
@@ -83,20 +111,106 @@ def run_asr(
         if not isinstance(exc, GpuServiceUnavailableError):
             print(f"[ASR] GPU 服务调用失败，回退进程内执行: {exc}")
     engine = get_asr_engine(engine_name)
-    return engine.transcribe(
-        input_path, output_path,
-        callback=callback, model=model, language=language,
-        **extra_kwargs,
-    )
+    engine._busy = True
+    try:
+        return engine.transcribe(
+            input_path, output_path,
+            callback=callback, model=model, language=language,
+            **extra_kwargs,
+        )
+    finally:
+        engine._busy = False
+
+
+def _run_asr_chunked(engine_name, input_path, output_path, callback,
+                     model, language, extra_kwargs, interface_id,
+                     max_duration, duration):
+    """按时长安全切分音频，逐段推理后重新组装时间戳（集中处理）。
+
+    切分策略与安全下刀方法参考 audio_split.split_audio_at_silence（静音边界），
+    时间戳偏移/重组装参考 audio_split.adjust_timestamps / merge_results。
+    """
+    from backend.asr import audio_split as sp
+    segments = sp.split_audio_at_silence(input_path, max_duration)
+    print(f"[ASR] Audio split into {len(segments)} segments: {segments}")
+    if callback:
+        callback(5, f"Splitting audio ({duration:.0f}s) into {len(segments)} segments")
+
+    n = len(segments)
+    tmp_dir = tempfile.mkdtemp(prefix="asr_split_")
+    all_results = []
+    try:
+        for i, (start, end) in enumerate(segments):
+            if callback:
+                callback(10 + int(80 * i / n),
+                         f"Transcribing segment {i + 1}/{n} ({start:.1f}s-{end:.1f}s)")
+            seg_path = os.path.join(tmp_dir, f"seg_{i:04d}.wav")
+            sp.cut_audio_segment(input_path, start, end, seg_path)
+            seg_out = os.path.join(tmp_dir, f"result_{i:04d}.json")
+
+            def _cb(pct, msg, _i=i, _n=n):
+                if callback:
+                    callback(10 + int(80 * (_i + pct / 100.0) / _n), msg)
+
+            res = _run_asr_single(engine_name, seg_path, seg_out, _cb,
+                                  model, language, extra_kwargs)
+            sp.adjust_timestamps(res, start)
+            all_results.append(res)
+
+            # 释放段间显存碎片，防止长音频 OOM
+            try:
+                import gc as _gc
+                _gc.collect()
+                import torch as _torch
+                if _torch.cuda.is_available():
+                    _torch.cuda.empty_cache()
+            except Exception:
+                pass
+
+        merged = sp.merge_results(all_results)
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(merged, f, ensure_ascii=False, indent=2)
+        return merged
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def run_asr(
+    input_path: str, output_path: str, callback=None,
+    *, engine_name=None, interface_id=None,
+    model=None, language=None, max_duration=None, **extra_kwargs,
+) -> dict:
+    """执行 ASR 转录；当音频时长超过接口配置的 max_duration 时，自动按静音边界
+    安全切分、逐段推理、再重组装时间戳（集中处理）。"""
+    engine_name = engine_name or "whisperx_local"
+    md = _resolve_max_duration(engine_name, interface_id, max_duration, extra_kwargs)
+    extra_kwargs.pop("max_duration", None)
+    duration = 0.0
+    try:
+        from backend.asr.audio_split import get_audio_duration
+        duration = get_audio_duration(input_path)
+    except Exception:
+        pass
+    if md and duration and duration > md:
+        return _run_asr_chunked(
+            engine_name, input_path, output_path, callback,
+            model, language, extra_kwargs, interface_id, md, duration,
+        )
+    return _run_asr_single(engine_name, input_path, output_path, callback,
+                           model, language, extra_kwargs)
+
 
 def run_asr_with_post_processing(
-    input_path: str, 
-    output_path: str, 
+    input_path: str,
+    output_path: str,
     callback=None,
     *,
     engine_name: str = "whisperx_local",
+    interface_id: Optional[str] = None,
     model: str = None,
     language: str = None,
+    max_duration: Optional[float] = None,
     vad_engine: Optional[str] = None,
     alignment_engine: Optional[str] = None,
     diarize_engine: Optional[str] = None,
@@ -164,26 +278,38 @@ def run_asr_with_post_processing(
         alignment_engine="whisperx"
     )
     """
-    # Step 1: Run ASR
+    # Step 1: Run ASR（集中处理：超过 max_duration 时自动切分并重组装时间戳）
     if callback:
         callback(10, f"Running ASR with {engine_name}...")
-    
+
     engine_name = engine_name or "whisperx_local"
-    engine = get_asr_engine(engine_name)
-    
-    # Run ASR transcription
-    asr_result = engine.transcribe(
-        input_path, output_path,
-        callback=callback, model=model, language=language,
-        **extra_kwargs,
-    )
-    
+    md = _resolve_max_duration(engine_name, interface_id, max_duration, extra_kwargs)
+    extra_kwargs.pop("max_duration", None)
+    duration = 0.0
+    try:
+        from backend.asr.audio_split import get_audio_duration
+        duration = get_audio_duration(input_path)
+    except Exception:
+        pass
+
+    if md and duration and duration > md:
+        asr_result = _run_asr_chunked(
+            engine_name, input_path, output_path, callback,
+            model, language, extra_kwargs, interface_id, md, duration,
+        )
+    else:
+        asr_result = _run_asr_single(
+            engine_name, input_path, output_path, callback,
+            model, language, extra_kwargs,
+        )
+
     # Step 2: Apply post-processing if requested
     if vad_engine or alignment_engine or diarize_engine:
         if callback:
             callback(40, "Starting post-processing...")
-        
+
         # Use the engine's post_process method
+        engine = get_asr_engine(engine_name)
         asr_result = engine.post_process(
             asr_result=asr_result,
             audio_path=input_path,

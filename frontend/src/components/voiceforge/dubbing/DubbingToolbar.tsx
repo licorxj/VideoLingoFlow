@@ -19,7 +19,7 @@ interface DubbingToolbarProps {
   selectedCount: number;
   totalCount: number;
   engine: string;
-  engines: string[];
+  engines: { id: string; name: string }[];
   voiceControlMode: "clone" | "instruct";
   defaultGap: number;
   onSelectAll: () => void;
@@ -139,8 +139,8 @@ export function DubbingToolbar({
           onChange={(e) => onEngineChange(e.target.value)}
         >
           {engines.map((eng) => (
-            <option key={eng} value={eng}>
-              {eng}
+            <option key={eng.id} value={eng.id}>
+              {eng.name}
             </option>
           ))}
         </select>

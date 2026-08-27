@@ -170,7 +170,8 @@
         "config": {
           "translation_style": "忠于原文",
           "reflect_translate": "yes",
-          "processing_language": "from_input"
+          "processing_language": "from_input",
+          "target_language": "from_input"
         },
         "status": "pending",
         "progress": 0,

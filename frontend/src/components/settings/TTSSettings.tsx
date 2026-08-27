@@ -125,6 +125,21 @@ export default function TTSSettings() {
           </div>
         </div>
 
+        <div className="p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
+          <p className="text-xs text-amber-600 dark:text-amber-400">
+            <span className="font-semibold">小贴士：</span>
+            以下用到的外置开源配音TTS接口，请下载 LCTTSHUB，一包解忧，
+            <a
+              href="https://pan.quark.cn/s/705450a2358e"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-amber-700 dark:text-amber-300 underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-200 transition-colors"
+            >
+              点击下载
+            </a>
+          </p>
+        </div>
+
         <div className="space-y-2">
           {interfaces.map((iface) => {
             const isActive = activeEngine === iface.id;

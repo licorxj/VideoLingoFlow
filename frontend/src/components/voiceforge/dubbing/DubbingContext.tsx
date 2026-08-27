@@ -218,7 +218,11 @@ export function DubbingProvider({ children }: { children: React.ReactNode }) {
 
     const payload: Partial<DubbingState> = {};
 
-    if (pRes?.data?.project) payload.project = pRes.data.project as VoiceForgeProject;
+    if (pRes?.data?.project) {
+      payload.project = pRes.data.project as VoiceForgeProject;
+      // 初始化工具栏 TTS 引擎选择，使其与项目已保存的默认接口对齐
+      payload.engine = (pRes.data.project.default_interface_id as string) || "";
+    }
     if (cRes?.data) payload.characters = (cRes.data.characters ?? []) as Character[];
     if (chRes?.data) payload.chapters = (chRes.data.chapters ?? []) as Chapter[];
     if (vRes?.data) payload.voices = (vRes.data.voices ?? []) as VoiceForgeVoice[];

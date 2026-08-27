@@ -88,18 +88,18 @@ export function SentenceList({
         <table className="w-full text-sm">
           <thead className="sticky top-0 z-10 bg-muted/90 text-xs text-muted-foreground">
             <tr>
-              <th className="w-8 p-2" />
-              <th className="w-8 p-2" />
-              <th className="w-12 p-2">#</th>
-              <th className="p-2 text-left">文本</th>
-              <th className="p-2">语速</th>
-              <th className="p-2">角色</th>
-              <th className="p-2">情绪</th>
-              <th className="p-2">语气</th>
-              <th className="w-8 p-2">状态</th>
-              <th className="w-8 p-2" />
-              <th className="p-2">停顿</th>
-              <th className="w-8 p-2" />
+              <th className="w-8 px-1.5 py-1.5" />
+              <th className="w-8 px-1.5 py-1.5" />
+              <th className="w-12 px-1.5 py-1.5">#</th>
+              <th className="min-w-64 px-1.5 py-1.5 text-left">文本</th>
+              <th className="px-1.5 py-1.5">语速</th>
+              <th className="w-[120px] px-1.5 py-1.5">角色</th>
+              <th className="w-[120px] px-1.5 py-1.5">情绪</th>
+              <th className="w-[120px] px-1.5 py-1.5">语气</th>
+              <th className="w-9 px-1 py-1.5">状态</th>
+              <th className="w-8 px-1.5 py-1.5" />
+              <th className="px-1.5 py-1.5">停顿</th>
+              <th className="w-8 px-1.5 py-1.5" />
             </tr>
           </thead>
           <tbody>

@@ -7,7 +7,7 @@
 对接 ElevenLabs 音效库的「搜索接口」，从返回的 Next.js RSC(flight) 响应中
 提取「营销片段」(sound-effects 文档) 的详细信息与 URL，并输出为 JSON。
 
-接口说明（请求信息详见 11elevensound-effects.txt）：
+接口说明（请求信息详见 elevenlabs_request.json）：
     POST https://elevenlabs.io/zh/sound-effects
     Content-Type : text/plain;charset=UTF-8
     Accept       : text/x-component
@@ -34,10 +34,6 @@
 
     # 爬取并下载音效（按营销片段分子目录）
     python elevenlabs_sound_effects.py --query ferry --download --download-dir downloads
-    # 将返回结果的 name/short_description/labels 翻译为中文后返回
-    python elevenlabs_sound_effects.py --query explosion --translate-results --output zh.json
-    # 翻译为目标语言（如日语）
-    python elevenlabs_sound_effects.py --query explosion --translate-results --target-lang 日本語
     # 直接按 URL 下载（独立于爬取流程）
     python elevenlabs_sound_effects.py --download-url "https://eleven-public-cdn.../x.mp3"
 """
@@ -69,7 +65,6 @@ DEFAULT_UA = (
 
 # LLM 服务层 step 名称（在 backend.llm 中按此名路由模型，找不到时回退默认模型）
 TRANSLATE_STEP = "sound_effects_translate"
-RESULT_TRANSLATE_STEP = "sound_effects_result_translate"
 
 # 工作区根目录（backend 的父目录，用于 import backend 包）
 _HERE = os.path.dirname(os.path.abspath(__file__))
@@ -123,98 +118,41 @@ def translate_query_to_english(query):
     return query
 
 
-def _translate_results_via_llm(payload, target_lang):
-    """调用项目 LLM 服务层，将一批音效字段翻译为 target_lang。
-
-    payload: list of {"index", "name", "short_description", "labels"}
-    返回与输入同序的 list；加载/调用失败时返回 None（上层保留原值）。
-    """
-    try:
-        if _WORKSPACE_ROOT not in sys.path:
-            sys.path.insert(0, _WORKSPACE_ROOT)
-        from backend.llm.llm_client import get_llm_client
-    except Exception as e:  # noqa: BLE001
-        print(f"[translate-result] 无法加载 LLM 服务层: {e}，保留原文。", file=sys.stderr)
-        return None
-
-    system_prompt = (
-        f"You are a professional translator. Translate the provided sound-effect "
-        f"metadata into {target_lang}. Keep the original meaning concise and faithful. "
-        f"Return ONLY a JSON object of the form "
-        f'{{"results":[{{"index":<int>,"name":<str>,"short_description":<str>,'
-        f'"labels":[<str>,...]}}, ...]}} with the same number of entries and the '
-        f"same indexes as the input. Do not add any extra text or explanation."
-    )
-    prompt = (
-        "Translate the following list of sound-effect entries. Input JSON:\n"
-        + json.dumps(payload, ensure_ascii=False)
-    )
-    try:
-        client = get_llm_client()
-        resp = client.chat(
-            step_name=RESULT_TRANSLATE_STEP,
-            prompt=prompt,
-            system_prompt=system_prompt,
-            response_json=True,
-            log=True,
-        )
-    except Exception as e:  # noqa: BLE001
-        print(f"[translate-result] 翻译失败: {e}，保留原文。", file=sys.stderr)
-        return None
-
-    if isinstance(resp, list):
-        return resp
-    if isinstance(resp, dict) and isinstance(resp.get("results"), list):
-        return resp["results"]
-    return None
-
-
-def translate_items(items, target_lang="中文"):
-    """将返回的 item.sounds 中的 name / short_description / labels 翻译为 target_lang。
-
-    原地修改 items；单个营销片段翻译失败时保留其原值，不影响整体流程。
-    """
-    for item in items or []:
-        sounds = item.get("sounds") or []
-        if not sounds:
-            continue
-        payload = []
-        for i, s in enumerate(sounds):
-            payload.append({
-                "index": i,
-                "name": s.get("name") or "",
-                "short_description": s.get("short_description") or "",
-                "labels": s.get("labels") or [],
-            })
-        translated = _translate_results_via_llm(payload, target_lang)
-        if not isinstance(translated, list):
-            continue
-        for entry in translated:
-            if not isinstance(entry, dict):
-                continue
-            idx = entry.get("index")
-            if not isinstance(idx, int) or not (0 <= idx < len(sounds)):
-                continue
-            s = sounds[idx]
-            if isinstance(entry.get("name"), str) and entry["name"].strip():
-                s["name"] = entry["name"].strip()
-            if isinstance(entry.get("short_description"), str) and entry["short_description"].strip():
-                s["short_description"] = entry["short_description"].strip()
-            if isinstance(entry.get("labels"), list):
-                s["labels"] = [str(x) for x in entry["labels"]]
-    return items
-
-
 # --------------------------------------------------------------------------- #
 # 从「请求信息文件」解析请求头
 # --------------------------------------------------------------------------- #
 def load_headers_from_request_file(path):
     """解析浏览器导出的请求信息文件，返回 {header_name: value}。
 
-    文件格式：请求头以「名称 / 值」成对出现，位于 '请求头' 与 '响应头' 之间。
+    支持两种格式：
+      - 原始文本（请求头 / 响应头 区段，名称与值成对出现）；
+      - 精简 JSON：``{"cookie": "...", "next_action": "...", "x_deployment_id": "..."}``
+        （也接受带连字符的键名 ``next-action`` / ``x-deployment-id``）。
     """
     with open(path, "r", encoding="utf-8", errors="replace") as f:
-        lines = f.read().splitlines()
+        raw = f.read()
+    stripped = raw.lstrip()
+    if path.endswith(".json") or stripped.startswith("{") or stripped.startswith("["):
+        try:
+            data = json.loads(raw)
+        except Exception as error:
+            print(f"[request-file] JSON 解析失败: {error}", file=sys.stderr)
+            return {}
+        normalize = {
+            "cookie": "cookie",
+            "next_action": "next-action",
+            "next-action": "next-action",
+            "x_deployment_id": "x-deployment-id",
+            "x-deployment-id": "x-deployment-id",
+            "user_agent": "user-agent",
+            "user-agent": "user-agent",
+        }
+        return {
+            out_key: str(data[key]).strip()
+            for key, out_key in normalize.items()
+            if key in data and str(data[key]).strip()
+        }
+    lines = raw.splitlines()
 
     # 定位请求头区段
     start = end = None
@@ -495,8 +433,7 @@ def download_urls(url_list, download_dir, proxy=None):
 # 主流程
 # --------------------------------------------------------------------------- #
 def crawl(query, request_file=None, cookie=None, next_action=None,
-          x_deployment_id=None, proxy=None, translate=True,
-          translate_results=False, target_lang="中文"):
+          x_deployment_id=None, proxy=None, translate=True):
     query_original = query
 
     # 含中日韩字符时，调用项目 LLM 服务层翻译为英文检索词
@@ -548,19 +485,11 @@ def crawl(query, request_file=None, cookie=None, next_action=None,
     if not merged:
         raise SystemExit("未能从响应中解析出 docs 数据，可能 Cookie 已过期或接口有变动。")
     items = docs_to_items(merged)
-
-    if translate_results:
-        print(f"[translate-result] 正在将返回结果的 name/short_description/labels "
-              f"翻译为 {target_lang}…", flush=True)
-        items = translate_items(items, target_lang)
-
     return {
         "query_original": query_original,
         "query": query,
         "query_keywords": keywords,
         "translated": query != query_original,
-        "results_translated": bool(translate_results),
-        "target_lang": target_lang if translate_results else None,
         "count": len(items),
         "source": ENDPOINT,
         "items": items,
@@ -586,11 +515,6 @@ def main():
                         help="直接解析已保存的响应文件（跳过网络请求，用于离线调试）")
     parser.add_argument("--no-translate", dest="translate", action="store_false",
                         help="关闭中文→英文的 LLM 自动翻译（仅用英文原词检索）")
-    parser.add_argument("--translate-results", dest="translate_results", action="store_true",
-                        help="将返回结果中的 name/short_description/labels 调用 LLM 翻译"
-                             "（目标语言见 --target-lang，默认中文）")
-    parser.add_argument("--target-lang", dest="target_lang", default="中文",
-                        help="--translate-results 的目标语言（默认 中文）")
     # 下载相关
     parser.add_argument("--download", action="store_true",
                         help="爬取完成后，下载各营销片段下的音效音频")
@@ -623,23 +547,15 @@ def main():
             "query_original": args.query,
             "query": args.query,
             "translated": False,
-            "results_translated": False,
-            "target_lang": None,
             "count": len(obj.get("docs", [])),
             "source": ENDPOINT,
             "items": docs_to_items(obj.get("docs")),
         }
-        if args.translate_results:
-            print(f"[translate-result] 正在将返回结果的 name/short_description/labels "
-                  f"翻译为 {args.target_lang}…", flush=True)
-            result["items"] = translate_items(result["items"], args.target_lang)
-            result["results_translated"] = True
-            result["target_lang"] = args.target_lang
     else:
         if not args.request_file:
-            # 默认尝试脚本同目录下的请求信息文件
+            # 默认尝试脚本同目录下的精简 JSON 请求信息文件
             guess = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                 "11elevensound-effects.txt")
+                                 "elevenlabs_request.json")
             if os.path.isfile(guess):
                 args.request_file = guess
         result = crawl(
@@ -650,8 +566,6 @@ def main():
             x_deployment_id=args.x_deployment_id,
             proxy=args.proxy,
             translate=args.translate,
-            translate_results=args.translate_results,
-            target_lang=args.target_lang,
         )
 
     # 可选：下载音效

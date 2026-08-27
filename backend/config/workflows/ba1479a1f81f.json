@@ -180,7 +180,8 @@
           "translation_style": "网络短剧",
           "reflect_translate": "yes",
           "batch_char_limit": "2000",
-          "processing_language": "from_input"
+          "processing_language": "from_input",
+          "target_language": "from_input"
         },
         "status": "completed",
         "progress": 100,

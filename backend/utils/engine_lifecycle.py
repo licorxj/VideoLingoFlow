@@ -33,8 +33,14 @@ class IdleEngineRegistry:
         self._start_sweeper()
 
     def acquire(self, key: str, builder: Callable[[], object],
-                unloader: Optional[Callable[[object], None]] = None) -> object:
-        """获取引擎：不存在则用 builder 构建并注册，同时更新最后使用时间。"""
+                unloader: Optional[Callable[[object], None]] = None,
+                busy_check: Optional[Callable[[], bool]] = None) -> object:
+        """获取引擎：不存在则用 builder 构建并注册，同时更新最后使用时间。
+
+        busy_check：可选可调用对象，返回 True 时表示该引擎正忙（如模型加载/
+        推理进行中）。busy 引擎即使超过 idle_timeout 也不会被清扫线程卸载，
+        避免长耗时模型加载被误判为空闲而中途释放显存/触发重载。
+        """
         with self._lock:
             entry = self._entries.get(key)
             if entry is None:
@@ -43,6 +49,7 @@ class IdleEngineRegistry:
                     "engine": engine,
                     "last_used": time.monotonic(),
                     "unloader": unloader,
+                    "busy_check": busy_check,
                 }
                 self._entries[key] = entry
                 print(f"[{self._name}] 引擎 '{key}' 已加载"
@@ -87,11 +94,21 @@ class IdleEngineRegistry:
             print(f"[{self._name}] 卸载引擎 '{key}' 失败: {exc}")
         print(f"[{self._name}] 引擎 '{key}' 已卸载（归还内存/显存）")
 
+    def _is_busy(self, entry: dict) -> bool:
+        cb = entry.get("busy_check")
+        if cb is None:
+            return False
+        try:
+            return bool(cb())
+        except Exception:
+            return False
+
     def _sweep(self):
         with self._lock:
             now = time.monotonic()
             expired = [(k, e) for k, e in self._entries.items()
-                       if now - e["last_used"] >= self._idle_timeout]
+                       if now - e["last_used"] >= self._idle_timeout
+                       and not self._is_busy(e)]
             for k, _ in expired:
                 self._entries.pop(k)
         for key, entry in expired:

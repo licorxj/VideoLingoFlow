@@ -1,0 +1,300 @@
+{
+  "id": "f15ebb37b71b",
+  "name": "配音后期-AI音效",
+  "description": "调用智能体匹配音效以及背景音乐",
+  "nodes": [
+    {
+      "id": "node_1_1780590163157",
+      "type": "workflow",
+      "position": {
+        "x": -2310,
+        "y": -1095
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "subtitle",
+            "video"
+          ],
+          "videoPath": "M:\\视频下载\\西门子UG-NX-初学者教程-数控软件\\01-Unigraphics NX Co-ordinate System, CSYS for Beginners ｜｜ NX 2306 Tutorials.webm",
+          "source_language": "en",
+          "target_language": "zh",
+          "copyInputs": true,
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": ""
+        },
+        "status": "pending",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": "",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 549
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787848888692",
+      "type": "workflow",
+      "position": {
+        "x": -1680,
+        "y": -1020
+      },
+      "data": {
+        "nodeType": "srt_to_json",
+        "label": "SRT字幕转json",
+        "config": {},
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 123
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1787848937594",
+      "type": "workflow",
+      "position": {
+        "x": -1110,
+        "y": -1095
+      },
+      "data": {
+        "nodeType": "pi_agent",
+        "label": "小pi通用智能体",
+        "config": {
+          "inputCount": 1,
+          "outputCount": 2,
+          "skills": [
+            "chinaz-sound-effects"
+          ],
+          "mcps": [],
+          "docs_path": "Y:\\VideoLingoLc\\backend\\config\\agent\\docs\\capability-index.md",
+          "external_doc": "",
+          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：",
+          "output_items": [
+            {
+              "port": "输出1",
+              "type": "text",
+              "desc": ""
+            },
+            {
+              "port": "输出2",
+              "type": "json",
+              "desc": ""
+            }
+          ]
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 708
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787852708397",
+      "type": "workflow",
+      "position": {
+        "x": -1665,
+        "y": -390
+      },
+      "data": {
+        "nodeType": "extract_audio",
+        "label": "音频分离",
+        "config": {
+          "format": "auto"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 210
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1787852723621",
+      "type": "workflow",
+      "position": {
+        "x": -1140,
+        "y": -75
+      },
+      "data": {
+        "nodeType": "audio_asset_library",
+        "label": "音频素材库",
+        "config": {
+          "source": "be0ad3b74d5b459f99ecf96992b2a641.mp3"
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 387
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1787852934946",
+      "type": "workflow",
+      "position": {
+        "x": -315,
+        "y": -405
+      },
+      "data": {
+        "nodeType": "track_mix",
+        "label": "音轨混响",
+        "config": {
+          "duration_mode": "longest",
+          "main_volume": 1,
+          "main_fade_in": 0.3,
+          "main_fade_out": 0.3,
+          "bgm_volume": 0.3,
+          "bgm_fade_in": 1,
+          "bgm_fade_out": 1,
+          "bgm_loop": true,
+          "track3_volume": 0.5,
+          "track3_fade_in": 0.3,
+          "track3_fade_out": 0.3,
+          "track3_loop": false,
+          "track4_volume": 0.5,
+          "track4_fade_in": 0.3,
+          "track4_fade_out": 0.3,
+          "track4_loop": false,
+          "audio_format": "wav",
+          "audio_bitrate": "192"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 612
+      },
+      "selected": true,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1787848888692",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1780590163157out-subtitle-node_1_1787848888692in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787848888692",
+      "sourceHandle": "out-json",
+      "target": "node_2_1787848937594",
+      "targetHandle": "in-input_1",
+      "id": "xy-edge__node_1_1787848888692out-json-node_2_1787848937594in-input_1"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_1_1787852708397",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_1_1787852708397in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787852708397",
+      "sourceHandle": "out-audio",
+      "target": "node_2_1787852723621",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1787852708397out-audio-node_2_1787852723621in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787852708397",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1787852934946",
+      "targetHandle": "in-main_audio",
+      "id": "xy-edge__node_1_1787852708397out-audio-node_3_1787852934946in-main_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787848937594",
+      "sourceHandle": "out-output_1",
+      "target": "node_3_1787852934946",
+      "targetHandle": "in-bgm",
+      "id": "xy-edge__node_2_1787848937594out-output_1-node_3_1787852934946in-bgm"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787852723621",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1787852934946",
+      "targetHandle": "in-track3",
+      "id": "xy-edge__node_2_1787852723621out-audio-node_3_1787852934946in-track3"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-08-28T00:45:18",
+  "updatedAt": "2026-08-28T01:49:24",
+  "revision": 1
+}

@@ -22,13 +22,16 @@ import {
   Upload, Wrench, CheckCircle2, Loader2, XCircle, Clock, AlertTriangle, Play,
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
-  Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type,
+  Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
 import SubtitleEditorDialog from "./SubtitleEditorDialog";
 import { LcwrNodeControls, LcwrRegionSummary, LcwrWatermarkEditor } from "./LcwrWatermarkEditor";
 import { SubtitleFindEditor } from "./SubtitleFindEditor";
+import { ImageMaskEditor } from "./ImageMaskEditor";
+import { VideoGenNode } from "./VideoGenNode";
+import { AudioAssetLibraryNode } from "./AudioAssetLibraryNode";
 
 const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
@@ -1873,6 +1876,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const [jsonPreviewOpen, setJsonPreviewOpen] = useState(false);
   const [voiceSelectField, setVoiceSelectField] = useState<any>(null);
   const [showDesc, setShowDesc] = useState(false);
+  const [maskOpen, setMaskOpen] = useState(false);
   const [editingNote, setEditingNote] = useState(false);
   const [noteText, setNoteText] = useState(nd.note || "");
   const [jsonEditorOpen, setJsonEditorOpen] = useState(false);
@@ -1976,11 +1980,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
   // For preview nodes, get paths from upstream outputs or configs
   const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } =
-    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
+    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
 
   // 当前任务 id（调试任务 activeTaskId 或一般/批量任务 taskModeId），用于相对产物路径解析
   const storeActiveTaskId = useWorkflowStore((s) => s.activeTaskId);
   const previewTaskId = storeActiveTaskId || artifactTaskId;
+  const imageMaskSrc = useStableFileUrl(String(upstreamOutputs.image || nd.imagePath || ""), previewTaskId, upstreamRefreshKey);
   const currentWfId = useWorkflowStore((s) => s.currentWfId);
 
   const IconComp = ICON_MAP[nodeType.icon] || Wrench;
@@ -2376,6 +2381,87 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
               <FolderOpen className="w-3.5 h-3.5" /> 加载
             </button>
           </div>
+        </div>
+      )}
+      {/* 图片蒙版：卡片内显示输入图片并打开绘制弹窗 */}
+      {nodeType.id === "image_mask" && (
+        <div className="px-3 pb-3 pt-1 space-y-2">
+          <div className="rounded-md border overflow-hidden bg-black/40 flex items-center justify-center" style={{ minHeight: 120 }}>
+            {imageMaskSrc ? (
+              <img
+                src={imageMaskSrc}
+                alt="输入图片"
+                className="max-h-48 w-full object-contain"
+                onPointerDown={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <div className="text-[11px] text-muted-foreground/70 text-center py-6 px-3">
+                请连接上游图片输入
+              </div>
+            )}
+          </div>
+          <div className="flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => { e.stopPropagation(); setMaskOpen(true); }}
+              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+            >
+              <PenTool className="w-3.5 h-3.5" /> 绘制蒙版
+            </button>
+            <span className="text-[11px] text-muted-foreground">
+              笔 {(config.mask?.strokes?.length) || 0} · 框 {(config.mask?.rects?.length) || 0}
+            </span>
+          </div>
+          <ImageMaskEditor
+            open={maskOpen}
+            onOpenChange={setMaskOpen}
+            imagePath={upstreamOutputs.image || nd.imagePath || null}
+            taskId={previewTaskId}
+            refreshKey={upstreamRefreshKey}
+            mask={config.mask || { strokes: [], rects: [], color: "#ff3b30", alpha: 0.5 }}
+            onChange={(m) => handleConfigChange("mask", m)}
+          />
+        </div>
+      )}
+      {/* AI生视频：提示词前缀 + 接口/模型/参数级联 */}
+      {nodeType.id === "ai_video_gen" && (
+        <div className="px-3 pb-3 pt-1">
+          <VideoGenNode config={config} onChange={(k, v) => handleConfigChange(k, v)} />
+        </div>
+      )}
+      {/* 音频素材库：输入框 + 打开晴沐配音谷素材库按钮（嵌套弹窗） */}
+      {nodeType.id === "audio_asset_library" && (
+        <AudioAssetLibraryNode
+          config={config}
+          onChange={(k, v) => handleConfigChange(k, v)}
+        />
+      )}
+      {/* AI字幕纠错：卡片上设置字数上限与专有名词 */}
+      {nodeType.id === "ai_subtitle_correct" && (
+        <div className="px-3 pb-3 pt-1 space-y-2">
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-muted-foreground shrink-0">请求字数上限</label>
+            <input
+              type="number"
+              min={200}
+              step={100}
+              value={config.maxChars ?? "2000"}
+              placeholder="2000"
+              onChange={(e) => handleConfigChange("maxChars", e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="w-24 rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <span className="text-[11px] text-muted-foreground">字</span>
+          </div>
+          <input
+            type="text"
+            value={config.properNouns ?? ""}
+            placeholder="专有名词（逗号分隔，如 张三,OpenAI）"
+            onChange={(e) => handleConfigChange("properNouns", e.target.value)}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          />
         </div>
       )}
       {nodeType.id === "lcwr_watermark_removal" && (

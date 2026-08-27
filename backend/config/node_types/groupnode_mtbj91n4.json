@@ -1,0 +1,349 @@
+{
+  "id": "groupnode_mtbj91n4",
+  "name": "组合",
+  "version": "1.0.0",
+  "category": "group_node",
+  "description": "组合（组合节点）",
+  "icon": "Boxes",
+  "color": "#6366f1",
+  "inputs": [
+    {
+      "id": "gin_1",
+      "label": "ASR后处理 / 对齐音源",
+      "type": "audio"
+    },
+    {
+      "id": "gin_2",
+      "label": "ASR后处理 / 人声音源",
+      "type": "audio"
+    },
+    {
+      "id": "gin_3",
+      "label": "语音识别 (ASR) / ASR音源",
+      "type": "audio"
+    }
+  ],
+  "outputs": [],
+  "defaultConfig": {},
+  "configFields": [],
+  "isBuiltIn": false,
+  "execType": "",
+  "execCode": "",
+  "execFile": "",
+  "execTimeout": 300,
+  "kind": "group",
+  "groupDefinition": {
+    "version": 1,
+    "internalWorkflow": {
+      "nodes": [
+        {
+          "id": "node_1_1786046579815",
+          "type": "workflow",
+          "position": {
+            "x": 540,
+            "y": 405
+          },
+          "data": {
+            "nodeType": "sentence_preprocess",
+            "label": "断句预处理",
+            "config": {
+              "method": "punct",
+              "split_on_speaker": true,
+              "llm_max_chars": "2000",
+              "processing_language": "from_input"
+            },
+            "status": "pending",
+            "disableExecute": true,
+            "progress": 0,
+            "message": "",
+            "outputs": {},
+            "error": "",
+            "workbench_url": ""
+          },
+          "measured": {
+            "width": 420,
+            "height": 257
+          },
+          "selected": false,
+          "dragging": false
+        },
+        {
+          "id": "node_2_1787654223924",
+          "type": "workflow",
+          "position": {
+            "x": 555,
+            "y": 780
+          },
+          "data": {
+            "nodeType": "sentence_split",
+            "label": "句子分割",
+            "config": {
+              "processing_language": "auto",
+              "max_sentence_length": "15",
+              "use_llm_split": true,
+              "split_sentence_ends": true,
+              "split_clause_breaks": true,
+              "merge_min_duration": "0.1",
+              "merge_max_gap": "0.05",
+              "pause_split_threshold": "1.5",
+              "split_on_speaker": true,
+              "merge_short_enabled": true,
+              "merge_gap_enabled": false,
+              "pause_split_enabled": true
+            },
+            "status": "pending",
+            "disableExecute": false,
+            "progress": 0,
+            "message": "",
+            "outputs": {},
+            "error": "",
+            "workbench_url": ""
+          },
+          "measured": {
+            "width": 420,
+            "height": 666
+          },
+          "selected": false,
+          "dragging": false
+        },
+        {
+          "id": "node_2_1787215768626",
+          "type": "workflow",
+          "position": {
+            "x": 0,
+            "y": 645
+          },
+          "data": {
+            "nodeType": "asr_postprocess",
+            "label": "ASR后处理",
+            "config": {
+              "run_vad": true,
+              "run_alignment": true,
+              "run_diarization": false,
+              "force_rerun": true,
+              "vad_engine": "silero",
+              "vad_onset": 0.5,
+              "vad_offset": 0.363,
+              "alignment_engine": "whisperx",
+              "alignment_model": "",
+              "dtype": "",
+              "diarize_engine": "pyannote",
+              "diarize_model": "",
+              "num_speakers": "",
+              "min_speakers": "",
+              "max_speakers": ""
+            },
+            "status": "pending",
+            "disableExecute": false,
+            "progress": 0,
+            "message": "",
+            "outputs": {},
+            "error": "",
+            "workbench_url": "",
+            "logLines": [
+              "[Pipeline] all stages done",
+              "[ASR-PP] [5/6] pipeline returned, segments=220",
+              "[ASR-PP] [6/6] normalizing and clamping result...",
+              "[ASR-PP] [6/6] audio_duration=903.86",
+              "[ASR-PP] [6/6] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\asr_postprocessed_node_2_1787215768626.json",
+              "[ASR-PP] === run() END segments=220 ===",
+              "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+              "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_2_1787215768626_result.json, exiting 0"
+            ]
+          },
+          "measured": {
+            "width": 420,
+            "height": 571
+          },
+          "selected": false,
+          "dragging": false
+        },
+        {
+          "id": "node_1_1787828965709",
+          "type": "workflow",
+          "position": {
+            "x": 0,
+            "y": 45
+          },
+          "data": {
+            "nodeType": "asr",
+            "label": "语音识别 (ASR)",
+            "config": {
+              "engine": "moss",
+              "language": "auto",
+              "model": "",
+              "compute_type": "",
+              "batch_size": 0,
+              "word_timestamps": false,
+              "vad_onset": 0.5,
+              "vad_offset": 0.363,
+              "hotwords_enabled": false,
+              "hotwords": "",
+              "post_vad": false,
+              "post_alignment": false,
+              "post_diarization": false
+            },
+            "status": "pending",
+            "disableExecute": false,
+            "progress": 0,
+            "message": "",
+            "outputs": {},
+            "error": "",
+            "logLines": [
+              "[step_worker] step_inputs keys=['asr_audio']",
+              "[step_worker] node_config keys=['engine', 'language', 'model', 'compute_type', 'batch_size', 'word_timestamps', 'vad_onset', 'vad_offset', 'hotwords_enabled', 'hotwords', 'post_vad', 'post_alignment', 'post_diarization']",
+              "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5, kwargs=['callback', 'cancel_callback'])",
+              "[ASR] step_inputs keys: ['asr_audio'], values: {'asr_audio': 'output/transcoded_audio_n_msyu4zm55ofz.wav'}",
+              "[ASR] Using ASR audio: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\output/transcoded_audio_n_msyu4zm55ofz.wav",
+              "[ASR] Post-processing will use ASR audio: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\output/transcoded_audio_n_msyu4zm55ofz.wav",
+              "[ASR] engine=moss, max_duration=1200s, params={'model': 'openmoss/MOSS-Transcribe-Diarize', 'language': 'auto', 'use_itn': True, 'word_timestamps': False, 'diarize': True, 'num_speakers': 0, 'vad_options': {'vad_onset': 0.5, 'vad_offset': 0.363}}",
+              "[ASR] Audio duration: 903.9s"
+            ],
+            "workbench_url": ""
+          },
+          "measured": {
+            "width": 420,
+            "height": 564
+          },
+          "selected": false,
+          "dragging": false
+        },
+        {
+          "id": "node_1_1787830624387",
+          "type": "workflow",
+          "position": {
+            "x": 525,
+            "y": 0
+          },
+          "data": {
+            "nodeType": "ai_subtitle_correct",
+            "label": "AI字幕纠错",
+            "config": {
+              "maxChars": "5000",
+              "properNouns": ""
+            },
+            "status": "pending",
+            "disableExecute": false,
+            "progress": 0,
+            "message": "",
+            "outputs": {},
+            "error": "",
+            "workbench_url": ""
+          },
+          "measured": {
+            "width": 420,
+            "height": 347
+          },
+          "selected": false,
+          "dragging": false
+        }
+      ],
+      "edges": [
+        {
+          "type": "bezier",
+          "animated": true,
+          "style": {
+            "stroke": "#f472b6",
+            "strokeWidth": 2
+          },
+          "source": "node_1_1786046579815",
+          "sourceHandle": "out-subtitle",
+          "target": "node_2_1787654223924",
+          "targetHandle": "in-subtitle",
+          "id": "xy-edge__node_1_1786046579815out-subtitle-node_2_1787654223924in-subtitle",
+          "selected": false
+        },
+        {
+          "type": "bezier",
+          "animated": true,
+          "style": {
+            "stroke": "#34d399",
+            "strokeWidth": 2
+          },
+          "source": "node_1_1787828965709",
+          "sourceHandle": "out-subtitle",
+          "target": "node_1_1787830624387",
+          "targetHandle": "in-json",
+          "id": "xy-edge__node_1_1787828965709out-subtitle-node_1_1787830624387in-json",
+          "selected": false
+        },
+        {
+          "type": "bezier",
+          "animated": true,
+          "style": {
+            "stroke": "#f472b6",
+            "strokeWidth": 2
+          },
+          "source": "node_1_1787830624387",
+          "sourceHandle": "out-output",
+          "target": "node_2_1787215768626",
+          "targetHandle": "in-subtitle",
+          "id": "xy-edge__node_1_1787830624387out-output-node_2_1787215768626in-subtitle",
+          "selected": false
+        },
+        {
+          "type": "bezier",
+          "animated": true,
+          "style": {
+            "stroke": "#22d3ee",
+            "strokeWidth": 2
+          },
+          "source": "node_2_1787215768626",
+          "sourceHandle": "out-subtitle",
+          "target": "node_1_1786046579815",
+          "targetHandle": "in-json",
+          "id": "xy-edge__node_2_1787215768626out-subtitle-node_1_1786046579815in-json",
+          "selected": false
+        }
+      ]
+    },
+    "inputMappings": [
+      {
+        "exposedPortId": "gin_1",
+        "exposedLabel": "ASR后处理 / 对齐音源",
+        "targetNodeId": "node_2_1787215768626",
+        "targetPortId": "alignment_audio",
+        "type": "audio"
+      },
+      {
+        "exposedPortId": "gin_2",
+        "exposedLabel": "ASR后处理 / 人声音源",
+        "targetNodeId": "node_2_1787215768626",
+        "targetPortId": "vocal_audio",
+        "type": "audio"
+      },
+      {
+        "exposedPortId": "gin_3",
+        "exposedLabel": "语音识别 (ASR) / ASR音源",
+        "targetNodeId": "node_1_1787828965709",
+        "targetPortId": "asr_audio",
+        "type": "audio"
+      }
+    ],
+    "outputMappings": [],
+    "layout": {
+      "memberPositionsRelativeToGroup": {
+        "node_1_1786046579815": {
+          "x": 540,
+          "y": 405
+        },
+        "node_2_1787654223924": {
+          "x": 555,
+          "y": 780
+        },
+        "node_2_1787215768626": {
+          "x": 0,
+          "y": 645
+        },
+        "node_1_1787828965709": {
+          "x": 0,
+          "y": 45
+        },
+        "node_1_1787830624387": {
+          "x": 525,
+          "y": 0
+        }
+      }
+    }
+  }
+}

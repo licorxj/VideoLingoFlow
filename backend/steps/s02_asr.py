@@ -58,217 +58,16 @@ _DEFAULT_ENGINE = "whisperx_local"
 # ---------------------------------------------------------------------------
 # Audio splitting helpers
 # ---------------------------------------------------------------------------
-
-def _get_audio_duration(audio_path: str) -> float:
-    """Get audio duration in seconds using ffprobe."""
-    try:
-        cmd = [
-            "ffprobe", "-v", "error",
-            "-show_entries", "format=duration",
-            "-of", "default=noprint_wrappers=1:nokey=1",
-            audio_path,
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-        return float(result.stdout.strip())
-    except Exception:
-        return 0.0
-
-
-def _detect_silence(audio_path: str, start: float, end: float,
-                    threshold_db: float = -30.0, min_duration: float = 0.5) -> List[float]:
-    """Detect silence_end points in [start, end] using ffmpeg silencedetect.
-
-    Returns a list of timestamps (in seconds) where silence ends.
-    """
-    cmd = [
-        "ffmpeg", "-y", "-i", audio_path,
-        "-ss", str(start), "-to", str(end),
-        "-af", f"silencedetect=n={threshold_db}dB:d={min_duration}",
-        "-f", "null", "-",
-    ]
-    try:
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, encoding="utf-8")
-        stderr = proc.stderr
-    except Exception:
-        return []
-
-    silence_ends = []
-    for line in stderr.split("\n"):
-        if "silence_end" in line:
-            try:
-                val = float(line.split("silence_end: ")[1].split(" ")[0])
-                silence_ends.append(val)
-            except (IndexError, ValueError):
-                continue
-    return silence_ends
-
-
-def split_audio_at_silence(audio_path: str, max_duration: float,
-                           silence_win: float = 60.0) -> List[Tuple[float, float]]:
-    """Split audio into segments, cutting at silence boundaries.
-
-    Algorithm (matching original project logic):
-    1. Walk through audio in max_duration chunks.
-    2. For the last ~silence_win seconds of each chunk, search for silence.
-    3. If a silence point is found, cut there; otherwise cut at the boundary.
-    4. The remaining tail is a shorter final segment.
-
-    Parameters
-    ----------
-    audio_path : str     Path to audio file.
-    max_duration : float Max segment duration in seconds.
-    silence_win : float  Window (seconds) before max_duration to search for silence.
-
-    Returns
-    -------
-    List[Tuple[float, float]]  List of (start, end) in seconds.
-    """
-    duration = _get_audio_duration(audio_path)
-    if duration <= 0:
-        return [(0.0, 0.0)]
-
-    if duration <= max_duration:
-        return [(0.0, duration)]
-
-    segments: List[Tuple[float, float]] = []
-    pos = 0.0
-
-    while pos < duration:
-        remaining = duration - pos
-        if remaining <= max_duration:
-            segments.append((pos, duration))
-            break
-
-        # Search window: [pos + max_duration - win, pos + max_duration + win]
-        win_start = pos + max_duration - silence_win
-        win_end = min(pos + max_duration + silence_win, duration)
-
-        silence_points = _detect_silence(audio_path, win_start, win_end)
-
-        if silence_points:
-            # Find the first silence_end that is past the ideal cut point
-            ideal_cut = pos + max_duration
-            split_at = None
-            for t in silence_points:
-                if t > ideal_cut - silence_win and t <= ideal_cut + silence_win:
-                    split_at = t
-                    break
-                # Also accept the first one that is close enough
-                if t >= ideal_cut:
-                    split_at = t
-                    break
-            # Fallback: pick the closest to ideal_cut
-            if split_at is None and silence_points:
-                split_at = min(silence_points, key=lambda t: abs(t - ideal_cut))
-
-            if split_at is not None and win_start <= split_at <= win_end:
-                segments.append((pos, split_at))
-                pos = split_at
-                continue
-
-        # No good silence point found: cut at exact boundary
-        segments.append((pos, pos + max_duration))
-        pos += max_duration
-
-    return segments
-
-
-def _split_audio_file(audio_path: str, start: float, end: float,
-                      output_path: str) -> str:
-    """Extract a segment from audio file using ffmpeg."""
-    cmd = [
-        "ffmpeg", "-y", "-i", audio_path,
-        "-ss", str(start), "-to", str(end),
-        "-c", "copy",
-        output_path,
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-    if result.returncode != 0:
-        # Fallback: re-encode if copy fails
-        cmd = [
-            "ffmpeg", "-y", "-i", audio_path,
-            "-ss", str(start), "-to", str(end),
-            "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
-            output_path,
-        ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        if result.returncode != 0:
-            raise RuntimeError(f"Failed to split audio: {result.stderr[:300]}")
-    return output_path
-
-
-def _adjust_timestamps(result: dict, time_offset: float) -> dict:
-    """Offset all timestamps in an ASR result by time_offset seconds."""
-    if not result:
-        return result
-
-    for seg in result.get("segments", []):
-        if "start" in seg:
-            seg["start"] = round(seg["start"] + time_offset, 4)
-        if "end" in seg:
-            seg["end"] = round(seg["end"] + time_offset, 4)
-        for word in seg.get("words", []):
-            if "start" in word:
-                word["start"] = round(word["start"] + time_offset, 4)
-            if "end" in word:
-                word["end"] = round(word["end"] + time_offset, 4)
-
-    return result
-
-
-def _merge_results(results: List[dict]) -> dict:
-    """Merge multiple ASR results from sequential audio segments.
-
-    Combines segments, deduplicates speakers, and re-numbers segment IDs.
-    """
-    if not results:
-        return {"segments": [], "language": "auto"}
-
-    merged_segments: List[dict] = []
-    all_speakers: set = set()
-    detected_language = "auto"
-
-    for r in results:
-        lang = r.get("language", "auto")
-        if lang and lang != "auto":
-            detected_language = lang
-            break
-
-    for r in results:
-        # Collect speakers
-        for spk in r.get("speakers", []):
-            all_speakers.add(spk)
-
-        for seg in r.get("segments", []):
-            merged_segments.append(seg)
-
-    # Re-number segment IDs
-    for idx, seg in enumerate(merged_segments, start=1):
-        seg["id"] = idx
-
-    output: Dict[str, any] = {
-        "language": detected_language,
-        "segments": merged_segments,
-    }
-
-    # Include full text if present
-    full_text = " ".join(
-        seg.get("text", "") for seg in merged_segments
-    )
-    if full_text:
-        output["text"] = full_text.strip()
-
-    if all_speakers:
-        output["speakers"] = sorted(all_speakers)
-
-    # 保留引擎内部执行标志（各分段由同一引擎转录，全部分段都带标志时才保留，
-    # 避免长音频合并后丢失标志导致下游重复执行 VAD/对齐/说话人识别）
-    for flag in ("_vad_internally_executed", "_alignment_internally_executed",
-                 "_diarization_internally_executed"):
-        if all(r.get(flag) for r in results):
-            output[flag] = True
-
-    return output
+# 切分/切割/时间戳偏移/合并的通用实现已集中到 backend.asr.audio_split，
+# 此处仅做名称别名以保持向后兼容（如 s_asr_stages 仍引用 _get_audio_duration）。
+from backend.asr.audio_split import (  # noqa: F401
+    get_audio_duration as _get_audio_duration,
+    _detect_silence,
+    split_audio_at_silence,
+    cut_audio_segment as _split_audio_file,
+    adjust_timestamps as _adjust_timestamps,
+    merge_results as _merge_results,
+)
 
 
 def _clamp_result_to_duration(result: dict, duration: float) -> dict:
@@ -805,7 +604,11 @@ class S02ASR(BaseStep):
     def _run_real_asr(self, input_path: str, output_path: str,
                       callback: Optional[Callable] = None,
                       cancel_callback: Optional[Callable] = None) -> Optional[dict]:
-        """Resolve params, split audio if needed, transcribe, merge."""
+        """Resolve params and delegate transcription to run_asr.
+
+        run_asr 现已集中处理：当音频时长超过接口配置的 max_duration 时，自动按
+        静音边界安全切分、逐段推理、再重组装时间戳，因此本方法不再自行切分。
+        """
 
         task_dir = getattr(self, "_task_dir", "") or os.path.dirname(output_path)
 
@@ -830,41 +633,11 @@ class S02ASR(BaseStep):
 
         print(f"[ASR] engine={engine_id}, max_duration={max_duration}s, params={merged_params}")
 
-        # 6) Get audio duration and decide whether to split
+        # 6) Get audio duration (informational)
         audio_duration = _get_audio_duration(input_path)
         print(f"[ASR] Audio duration: {audio_duration:.1f}s")
 
-        needs_split = max_duration > 0 and audio_duration > max_duration
-
-        if not needs_split:
-            # --- Single-shot transcription ---
-            result = self._transcribe_single(
-                input_path, output_path, engine_id, merged_params, callback,
-                time_offset=0.0, progress_base=30, progress_range=60,
-                cancel_callback=cancel_callback,
-            )
-        else:
-            # --- Split and transcribe ---
-            result = self._transcribe_split(
-                input_path, output_path, audio_duration,
-                max_duration, engine_id, merged_params, callback,
-                cancel_callback=cancel_callback,
-            )
-
-        # 7) Apply post-processing if configured
-        if cancel_callback and cancel_callback():
-            from backend.control_plane.runtime import TaskCancelledError
-            raise TaskCancelledError("Cancelled by user")
-        result = self._apply_post_processing(result, input_path, engine_id, callback, cancel_callback)
-
-        return result
-
-    def _transcribe_single(self, input_path, output_path, engine_id,
-                           params, callback, *,
-                           time_offset=0.0, progress_base=30,
-                           progress_range=60,
-                           cancel_callback=None) -> dict:
-        """Transcribe a single audio file (no splitting)."""
+        # 7) Delegate split + transcribe + merge to run_asr (centralized)
         if cancel_callback and cancel_callback():
             from backend.control_plane.runtime import TaskCancelledError
             raise TaskCancelledError("Cancelled by user")
@@ -872,23 +645,28 @@ class S02ASR(BaseStep):
 
         def progress_cb(pct, msg):
             if callback:
-                callback(progress_base + int(pct * progress_range / 100), msg)
+                callback(30 + int(pct * 60 / 100), msg)
 
         result = run_asr(
             input_path=input_path,
             output_path=output_path,
             callback=progress_cb,
             engine_name=engine_id,
-            **params,
+            max_duration=max_duration,
+            **merged_params,
         )
 
-        # Save raw engine output for debugging
+        # 8) Save raw engine output for debugging
         self._save_raw_output(output_path, engine_id, result)
 
-        if time_offset > 0.0:
-            result = _adjust_timestamps(result, time_offset)
+        if cancel_callback and cancel_callback():
+            from backend.control_plane.runtime import TaskCancelledError
+            raise TaskCancelledError("Cancelled by user")
 
-        return _normalize_asr_result(result)
+        # 9) Apply post-processing if configured
+        result = self._apply_post_processing(result, input_path, engine_id, callback, cancel_callback)
+
+        return result
 
     @staticmethod
     def _save_raw_output(output_path: str, engine_id: str, result: dict):
@@ -902,98 +680,6 @@ class S02ASR(BaseStep):
             print(f"[ASR] Raw output saved: {raw_path}")
         except Exception as e:
             print(f"[ASR] Warning: failed to save raw output: {e}")
-
-    def _transcribe_split(self, input_path, output_path, audio_duration,
-                          max_duration, engine_id, params, callback,
-                          cancel_callback=None) -> dict:
-        """Split audio at silence boundaries, transcribe each segment, merge."""
-        silence_win = min(60.0, max_duration * 0.3)
-
-        if callback:
-            callback(5, f"Splitting audio ({audio_duration:.0f}s) into <= {max_duration}s segments...")
-
-        segments = split_audio_at_silence(input_path, max_duration, silence_win)
-        print(f"[ASR] Audio split into {len(segments)} segments: {segments}")
-
-        if callback:
-            callback(10, f"Audio split into {len(segments)} segments")
-
-        # Create temp dir for segment files
-        tmp_dir = tempfile.mkdtemp(prefix="asr_split_")
-        all_results: List[dict] = []
-
-        try:
-            for seg_idx, (start, end) in enumerate(segments):
-                # Cancel check between segments
-                if cancel_callback and cancel_callback():
-                    from backend.control_plane.runtime import TaskCancelledError
-                    raise TaskCancelledError("Cancelled by user")
-
-                seg_dur = end - start
-                print(f"[ASR] Segment {seg_idx+1}/{len(segments)}: {start:.1f}s - {end:.1f}s ({seg_dur:.1f}s)")
-
-                if callback:
-                    seg_pct_base = 10 + int(80 * seg_idx / len(segments))
-                    seg_pct_range = int(80 / len(segments))
-                    callback(seg_pct_base, f"Transcribing segment {seg_idx+1}/{len(segments)} ({start:.1f}s-{end:.1f}s)")
-
-                # Cut segment audio
-                seg_path = os.path.join(tmp_dir, f"seg_{seg_idx:04d}.wav")
-                _split_audio_file(input_path, start, end, seg_path)
-
-                # Transcribe segment
-                from backend.asr.asr_factory import run_asr
-
-                seg_output = os.path.join(tmp_dir, f"result_{seg_idx:04d}.json")
-
-                def seg_progress_cb(pct, msg, _idx=seg_idx, _base=seg_pct_base, _range=seg_pct_range):
-                    if callback:
-                        callback(_base + int(pct * _range / 100), msg)
-
-                result = run_asr(
-                    input_path=seg_path,
-                    output_path=seg_output,
-                    callback=seg_progress_cb,
-                    engine_name=engine_id,
-                    **params,
-                )
-
-                # Adjust timestamps by segment offset
-                _adjust_timestamps(result, start)
-                all_results.append(result)
-
-                # Clean up segment audio
-                if os.path.exists(seg_path):
-                    os.remove(seg_path)
-
-                # Free GPU memory between segments (prevent OOM on long audio)
-                gc.collect()
-                try:
-                    import torch as _torch
-                    if _torch.cuda.is_available():
-                        _torch.cuda.empty_cache()
-                except ImportError:
-                    pass
-
-            # Merge all results
-            if callback:
-                callback(90, "Merging transcription results...")
-
-            merged = _normalize_asr_result(_merge_results(all_results))
-
-            # Save merged result
-            os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-            with open(output_path, "w", encoding="utf-8") as f:
-                json.dump(merged, f, ensure_ascii=False, indent=2)
-
-            return merged
-
-        finally:
-            # Clean up temp dir
-            try:
-                shutil.rmtree(tmp_dir, ignore_errors=True)
-            except Exception:
-                pass
 
     # ── post-processing ──────────────────────────────────────────────
 

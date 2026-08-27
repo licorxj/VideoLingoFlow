@@ -64,7 +64,7 @@ def task_is_active(conn, task_id: str, project_id: str):
     return bool(row and row["status"] not in {"cancelled", "failed"})
 
 
-def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | None = None):
+def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | None = None, interface_id: str | None = None):
     update_task(task_id, "running", 0.1)
     try:
         with session() as conn:
@@ -88,7 +88,8 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
                 return
             conn.execute("UPDATE vf_sentences SET status = 'generating', error_message = NULL WHERE id = ? AND version = ?", (sentence_id, data["version"]))
         text = (data.get("edited_text") or data["text"]).strip()
-        interface_id = data.get("interface_id") or data.get("profile_interface_id") or data.get("default_interface_id") or "edge_tts"
+        # 显式传入的 interface_id 优先级最高，其次句子/声音档案/项目默认，最后回退 edge_tts
+        effective_interface_id = interface_id or data.get("interface_id") or data.get("profile_interface_id") or data.get("default_interface_id") or "edge_tts"
         voice_id = data.get("voice_id") or data.get("profile_voice_id") or data.get("default_voice_id")
         output_key = f"projects/{data['project_id']}/audio/{sentence_id}.wav"
         output_path = storage_root() / "temp" / f"{task_id}.wav"
@@ -102,7 +103,7 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
         else:
             params = json.loads(data.get("params_json") or "{}")
             ref_path = resolve_storage_key(data["reference_storage_key"]) if data.get("reference_storage_key") else None
-            engine = get_tts_engine(interface_id)
+            engine = get_tts_engine(effective_interface_id)
             succeeded = engine.synthesize(
                 text,
                 str(output_path),

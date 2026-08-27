@@ -116,7 +116,7 @@ function SentenceRowInner({
       onDrop={onDrop}
     >
       {/* 1. 拖拽手柄 */}
-      <td className="w-8 p-2">
+      <td className="w-8 px-1.5 py-1.5">
         <span
           draggable={draggable}
           onDragStart={onDragStart}
@@ -128,7 +128,7 @@ function SentenceRowInner({
       </td>
 
       {/* 2. 勾选框 */}
-      <td className="w-8 p-2">
+      <td className="w-8 px-1.5 py-1.5">
         <button
           type="button"
           onClick={onToggleSelect}
@@ -143,25 +143,25 @@ function SentenceRowInner({
       </td>
 
       {/* 3. 序号 */}
-      <td className="w-12 p-2 text-center">
+      <td className="w-12 px-1.5 py-1.5 text-center">
         <span className="font-mono text-xs text-muted-foreground min-w-[1.5rem] inline-block">
           {index + 1}
         </span>
       </td>
 
       {/* 4. 文本 */}
-      <td className="min-w-64 py-1.5 px-2">
+      <td className="min-w-64 px-1.5 py-1.5 text-left">
         <textarea
           defaultValue={sentence.edited_text || sentence.text}
           onChange={(e) => handleTextChange(e.target.value)}
           rows={1}
-          className="voice-input block w-full resize-none px-2 py-1 text-sm leading-snug"
-          style={{ minHeight: "1.5rem", maxHeight: "7rem", padding: "4px 8px" }}
+          className="voice-input block w-full resize-none !px-1.5 !py-0.5 text-sm leading-snug"
+          style={{ minHeight: "1.5rem", maxHeight: "7rem" }}
         />
       </td>
 
       {/* 5. 语速 */}
-      <td className="p-2">
+      <td className="px-1.5 py-1.5">
         <div className="flex flex-col items-center gap-0.5">
           <span className="text-[10px] text-muted-foreground">语速</span>
           <input
@@ -182,13 +182,13 @@ function SentenceRowInner({
       </td>
 
       {/* 6. 角色 */}
-      <td className="p-2">
+      <td className="w-[120px] px-1.5 py-1.5">
         <select
           value={sentence.character_id || ""}
           onChange={(e) =>
             onUpdate({ character_id: e.target.value || null })
           }
-          className="voice-input h-7 w-[80px] text-xs"
+          className="voice-input !h-7 !w-full !px-1.5 !py-0 text-sm"
         >
           <option value="">无角色</option>
           {characters.map((c) => (
@@ -200,11 +200,11 @@ function SentenceRowInner({
       </td>
 
       {/* 7. 情绪 */}
-      <td className="p-2">
+      <td className="w-[120px] px-1.5 py-1.5">
         <select
           value={sentence.emotion}
           onChange={(e) => onUpdate({ emotion: e.target.value })}
-          className="voice-input h-7 w-[80px] text-xs"
+          className="voice-input !h-7 !w-full !px-1.5 !py-0 text-sm"
         >
           {BUILT_IN_EMOTIONS.map((em) => (
             <option key={em} value={em}>
@@ -224,36 +224,48 @@ function SentenceRowInner({
       </td>
 
       {/* 8. 语气 */}
-      <td className="p-2">
+      <td className="w-[120px] px-1.5 py-1.5">
         <input
           type="text"
           defaultValue={sentence.tone_description || ""}
           onChange={(e) => handleToneChange(e.target.value)}
           placeholder="语气"
-          className="voice-input h-7 w-[80px] text-xs"
+          className="voice-input !h-7 !w-full !px-1.5 !py-0 text-sm"
         />
       </td>
 
-      {/* 9. 状态图标 */}
-      <td className="w-8 p-2 text-center">
+      {/* 9. 状态图标 - 已完成时显示为可点击的播放按钮 */}
+      <td className="w-9 px-1 py-1.5 text-center">
         {isPlaying ? (
           <button
             type="button"
             onClick={onPlay}
-            className="inline-flex items-center justify-center"
-            title="播放"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-primary hover:bg-primary/10"
+            title="停止播放"
           >
-            <Play className="h-4 w-4 animate-pulse text-primary" />
+            <Play className="h-4 w-4 animate-pulse" />
+          </button>
+        ) : sentence.status === "done" ? (
+          <button
+            type="button"
+            onClick={onPlay}
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full text-green-500 hover:bg-green-500/10"
+            title="播放已生成的配音"
+          >
+            <Play className="h-4 w-4" />
           </button>
         ) : (
-          <span title={sentence.error_message || sentence.status}>
+          <span
+            title={sentence.error_message || sentence.status}
+            className="inline-flex h-6 w-6 items-center justify-center"
+          >
             {statusIcon(sentence.status)}
           </span>
         )}
       </td>
 
       {/* 10. 重新生成 */}
-      <td className="w-8 p-2 text-center">
+      <td className="w-8 px-1.5 py-1.5 text-center">
         <button
           type="button"
           onClick={onRegenerate}
@@ -265,7 +277,7 @@ function SentenceRowInner({
       </td>
 
       {/* 11. 句后停顿 */}
-      <td className="p-2">
+      <td className="px-1.5 py-1.5">
         <div className="flex flex-col items-center gap-0.5">
           <input
             type="range"
@@ -287,7 +299,7 @@ function SentenceRowInner({
       </td>
 
       {/* 12. 添加按钮 */}
-      <td className="w-8 p-2 text-center">
+      <td className="w-8 px-1.5 py-1.5 text-center">
         <button
           type="button"
           onClick={onAddAfter}

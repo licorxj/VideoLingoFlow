@@ -30,22 +30,16 @@
           "var2": "",
           "var2Required": false
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\d142bf5f4b8d446dacfae0472c76b9ba\\cache\\input_video.mp4",
-          "languages": {
-            "source_language": "auto",
-            "target_language": "zh"
-          }
-        },
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": ""
       },
       "measured": {
         "width": 420,
-        "height": 523
+        "height": 465
       },
       "selected": false
     },
@@ -79,7 +73,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 441
+        "height": 471
       },
       "selected": false,
       "dragging": false
@@ -102,15 +96,15 @@
           "backgroundColor": "rgba(0,0,0,0.6)",
           "subtitlePosition": "bottom"
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
+        "status": "pending",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": ""
       },
       "measured": {
         "width": 420,
-        "height": 431
+        "height": 451
       },
       "selected": false,
       "dragging": false
@@ -131,17 +125,15 @@
           "normalize_video": false,
           "segment_duration": "30"
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "json": "cache/media_url_node_4_1787728666235.json"
-        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": ""
       },
       "measured": {
         "width": 420,
-        "height": 372
+        "height": 299
       },
       "selected": false,
       "dragging": false
@@ -161,15 +153,16 @@
           "resume_request_id": "",
           "wm_mode": "normal"
         },
-        "status": "running",
-        "progress": 88,
+        "status": "pending",
+        "progress": 0,
         "message": "",
         "outputs": {},
-        "error": ""
+        "error": "",
+        "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 325
+        "height": 370
       },
       "selected": false,
       "dragging": false
@@ -200,7 +193,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 168
+        "height": 208
       },
       "selected": false,
       "dragging": false
@@ -275,6 +268,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-26T15:20:44",
-  "updatedAt": "2026-08-26T15:34:49",
-  "revision": 4
+  "updatedAt": "2026-08-27T22:54:06",
+  "revision": 5
 }
