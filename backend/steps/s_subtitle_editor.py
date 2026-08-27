@@ -8,6 +8,7 @@
 """
 import json
 import os
+import shutil
 import uuid
 from typing import Callable, Optional
 
@@ -135,47 +136,68 @@ class S_SubtitleEditor(BaseStep):
 
         entries, ext, source_path = _load_subtitle_input(sub_input, task_dir)
 
-        # --- 未编辑：直接透传原文件（按原名） ---
-        if not edited:
-            if callback:
-                callback(100, "未进行编辑，透传原字幕")
-            if source_path:
-                return {"artifacts": [], "outputs": {"subtitle": source_path}}
-            output_dir = os.path.join(task_dir, "output")
-            os.makedirs(output_dir, exist_ok=True)
-            out_path = os.path.join(output_dir, f"subtitle_edit_{node_id}{ext}")
-            _save_entries(entries, out_path, ext)
-            rel = f"output/subtitle_edit_{node_id}{ext}"
-            return {"artifacts": [rel], "outputs": {"subtitle": rel}}
-
-        # --- 已编辑：解析并保存 ---
-        try:
-            edited_entries = _normalize_entries(json.loads(edited))
-        except (json.JSONDecodeError, ValueError) as exc:
-            raise ValueError("编辑后的字幕内容无效") from exc
-        if not edited_entries:
-            raise ValueError("编辑后的字幕内容为空")
-
-        if callback:
-            callback(60, "正在保存编辑后的字幕")
-
         output_dir = os.path.join(task_dir, "output")
         os.makedirs(output_dir, exist_ok=True)
-        if source_path and not enable_copy:
-            # 不建副本：直接覆盖原文件（保持原格式）
-            save_path = source_path
-            save_ext = ext
-        elif source_path:
-            base = os.path.splitext(os.path.basename(source_path))[0]
-            save_path = os.path.join(output_dir, f"{base}_{uuid.uuid4().hex[:8]}{ext}")
-            save_ext = ext
-        else:
+
+        # 解析前端弹窗保存的编辑结果（若有）
+        edited_entries = None
+        if edited:
+            try:
+                edited_entries = _normalize_entries(json.loads(edited))
+            except (json.JSONDecodeError, ValueError) as exc:
+                raise ValueError("编辑后的字幕内容无效") from exc
+            if not edited_entries:
+                edited_entries = None
+
+        if enable_copy:
+            # 创建副本：有编辑则副本含编辑内容，无编辑则原样复制传入的 srt 文件
+            if edited_entries:
+                if source_path and os.path.isfile(source_path):
+                    base = os.path.splitext(os.path.basename(source_path))[0]
+                    save_path = os.path.join(output_dir, f"{base}_{uuid.uuid4().hex[:8]}{ext}")
+                else:
+                    save_path = os.path.join(output_dir, f"subtitle_edit_{node_id}{ext}")
+                _save_entries(edited_entries, save_path, ext)
+                desc = "（含编辑内容）"
+            else:
+                if source_path and os.path.isfile(source_path):
+                    base = os.path.splitext(os.path.basename(source_path))[0]
+                    save_path = os.path.join(output_dir, f"{base}_{uuid.uuid4().hex[:8]}{ext}")
+                    shutil.copy2(source_path, save_path)
+                    desc = "（原样复制）"
+                else:
+                    save_path = os.path.join(output_dir, f"subtitle_edit_{node_id}{ext}")
+                    _save_entries(entries, save_path, ext)
+                    desc = ""
+            rel_path = os.path.relpath(save_path, task_dir).replace("\\", "/")
+            if callback:
+                callback(100, f"已创建字幕副本{desc}")
+            return {"artifacts": [rel_path], "outputs": {"subtitle": rel_path}}
+
+        # 不创建副本：透传输入文件；若有编辑则覆盖原文件（生成编辑后的字幕）
+        if edited_entries:
+            if source_path and os.path.isfile(source_path):
+                save_path = source_path  # 覆盖原文件
+                _save_entries(edited_entries, save_path, ext)
+                rel_path = save_path
+                if callback:
+                    callback(100, "已用编辑结果覆盖原字幕文件")
+                return {"artifacts": [rel_path], "outputs": {"subtitle": rel_path}}
             save_path = os.path.join(output_dir, f"subtitle_edit_{node_id}{ext}")
-            save_ext = ext
+            _save_entries(edited_entries, save_path, ext)
+            rel_path = os.path.relpath(save_path, task_dir).replace("\\", "/")
+            if callback:
+                callback(100, "已生成编辑后的字幕文件")
+            return {"artifacts": [rel_path], "outputs": {"subtitle": rel_path}}
 
-        _save_entries(edited_entries, save_path, save_ext)
-
-        rel_path = source_path if save_path == source_path else os.path.relpath(save_path, task_dir).replace("\\", "/")
+        # 无编辑且不创建副本：透传输入文件作为输出
+        if source_path and os.path.isfile(source_path):
+            if callback:
+                callback(100, "未进行编辑，透传原字幕")
+            return {"artifacts": [], "outputs": {"subtitle": source_path}}
+        save_path = os.path.join(output_dir, f"subtitle_edit_{node_id}{ext}")
+        _save_entries(entries, save_path, ext)
+        rel_path = os.path.relpath(save_path, task_dir).replace("\\", "/")
         if callback:
-            callback(100, f"已保存编辑结果到 {os.path.basename(rel_path)}")
+            callback(100, "未进行编辑，已保存内联文本")
         return {"artifacts": [rel_path], "outputs": {"subtitle": rel_path}}

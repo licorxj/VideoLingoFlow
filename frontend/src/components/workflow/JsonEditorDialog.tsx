@@ -10,6 +10,8 @@ interface Props {
   initialJson?: JsonValue;
   onClose: () => void;
   onSave: (data: JsonValue) => void;
+  // 保存后直接触发节点运行（写回文件），可选
+  onRun?: () => void;
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -193,7 +195,7 @@ function JsonTreeNode({ nodeKey, value, depth, onUpdate, onRemove }: {
   }
 }
 
-export default function JsonEditorDialog({ open, initialJson, onClose, onSave }: Props) {
+export default function JsonEditorDialog({ open, initialJson, onClose, onSave, onRun }: Props) {
   const [text, setText] = useState("");
   const [parseError, setParseError] = useState<string | null>(null);
   const [data, setData] = useState<JsonValue>({});
@@ -238,6 +240,8 @@ export default function JsonEditorDialog({ open, initialJson, onClose, onSave }:
     try {
       onSave(JSON.parse(text));
       onClose();
+      // 保存后立即触发节点运行，将编辑结果写回文件
+      onRun?.();
     } catch {
       setParseError("JSON 内容无效，无法保存");
     }

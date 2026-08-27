@@ -22,7 +22,7 @@ import {
   Upload, Wrench, CheckCircle2, Loader2, XCircle, Clock, AlertTriangle, Play,
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
-  Layers, Captions, SlidersHorizontal, RefreshCw, Eraser,
+  Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
@@ -34,7 +34,7 @@ const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
-  Eraser,
+  Eraser, Type,
 };
 
 /** 解析 SRT/VTT/JSON 字幕内容为 [{start, end, text}]（时间为秒），支持双语（原文/译文两行） */
@@ -1992,6 +1992,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const visibleOutputs = getVisibleOutputs(nodeType, config);
   const visibleInputs = getNodeInputs(nodeType, config);
   const isPiAgent = nodeType.id === "pi_agent";
+  const isDynamicPorts = isPiAgent || nodeType.id === "output_merge_list";
   const dedupedOutputEntries = (() => {
     const seen = new Set<string>();
     const rawOutputs = nd.outputs;
@@ -2243,7 +2244,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
       {/* Port Labels */}
       <div className="px-3 py-2 space-y-1">
-        {isPiAgent && (
+        {isDynamicPorts && (
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-semibold text-muted-foreground">输入</span>
             <button
@@ -2261,22 +2262,26 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
               title="减少输入端口"
             >−</button>
             <span className="text-[10px] text-muted-foreground">{visibleInputs.length}</span>
-            <span className="text-[10px] font-semibold text-muted-foreground ml-3">输出</span>
-            <button
-              type="button"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); const n = Math.min(Number(config.outputCount) || 2, 8); handleConfigChange("outputCount", n + 1); }}
-              className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-primary border border-primary/30 hover:bg-primary/10"
-              title="增加输出端口"
-            >+</button>
-            <button
-              type="button"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); const n = Math.max(Number(config.outputCount) || 2, 1); handleConfigChange("outputCount", n - 1); }}
-              className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-muted-foreground border border-border/50 hover:bg-muted"
-              title="减少输出端口"
-            >−</button>
-            <span className="text-[10px] text-muted-foreground">{visibleOutputs.length}</span>
+            {isPiAgent && (
+              <>
+                <span className="text-[10px] font-semibold text-muted-foreground ml-3">输出</span>
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); const n = Math.min(Number(config.outputCount) || 2, 8); handleConfigChange("outputCount", n + 1); }}
+                  className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-primary border border-primary/30 hover:bg-primary/10"
+                  title="增加输出端口"
+                >+</button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); const n = Math.max(Number(config.outputCount) || 2, 1); handleConfigChange("outputCount", n - 1); }}
+                  className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-muted-foreground border border-border/50 hover:bg-muted"
+                  title="减少输出端口"
+                >−</button>
+                <span className="text-[10px] text-muted-foreground">{visibleOutputs.length}</span>
+              </>
+            )}
           </div>
         )}
         {visibleInputs.length > 0 && (
@@ -2334,6 +2339,45 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           </div>
         )}
       </div>
+      {/* 文本输入框：卡片内大文本输入 */}
+      {nodeType.id === "text_input" && (
+        <div className="px-3 pb-3 pt-1">
+          <textarea
+            value={config.text ?? ""}
+            placeholder="在此输入文本…"
+            onChange={(e) => handleConfigChange("text", e.target.value)}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="w-full h-28 resize-y rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+          />
+        </div>
+      )}
+      {/* 文件加载：卡片内文件路径输入 + 加载按钮 */}
+      {nodeType.id === "file_load" && (
+        <div className="px-3 pb-3 pt-1">
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={config.filePath ?? ""}
+              placeholder="文件路径，或点击右侧按钮选择"
+              onChange={(e) => handleConfigChange("filePath", e.target.value)}
+              onPointerDown={(e) => e.stopPropagation()}
+              className="flex-1 min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={async (e) => {
+                e.stopPropagation();
+                const p = await nativeFileDialog({ title: "选择文件" });
+                if (p) handleConfigChange("filePath", p);
+              }}
+              className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0"
+            >
+              <FolderOpen className="w-3.5 h-3.5" /> 加载
+            </button>
+          </div>
+        </div>
+      )}
       {nodeType.id === "lcwr_watermark_removal" && (
         <LcwrNodeControls config={config} onConfigChange={handleConfigChange} />
       )}
@@ -2969,6 +3013,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           initialJson={editorInitialJson}
           onClose={() => setJsonEditorOpen(false)}
           onSave={(data) => handleConfigChange("edited_json", JSON.stringify(data, null, 2))}
+          onRun={() => nd.onExecuteNode?.(id)}
         />
       )}
 
@@ -2979,6 +3024,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           initialText={textEditorInitialText}
           onClose={() => setTextEditorOpen(false)}
           onSave={(text) => handleConfigChange("edited_text", text)}
+          onRun={() => nd.onExecuteNode?.(id)}
         />
       )}
 
@@ -2991,6 +3037,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           taskId={previewTaskId}
           onClose={() => setSubtitleEditorOpen(false)}
           onSave={(entries) => handleConfigChange("edited_subtitles", JSON.stringify(entries))}
+          onRun={() => nd.onExecuteNode?.(id)}
         />
       )}
     </div>

@@ -95,7 +95,12 @@ def split_text_by_ends(text: str, sentence_ends: set) -> List[str]:
     return chunks
 
 
-def split_text_by_clauses(text: str, clause_breaks: set, max_length: int) -> List[str]:
+def split_text_by_clauses(text: str, clause_breaks: set) -> List[str]:
+    """Split at clause-break punctuation (comma/semicolon/colon).
+
+    Runs whenever ``clause_breaks`` is non-empty, with NO length limit: every
+    clause break becomes its own sentence, mirroring sentence-end splitting.
+    """
     if not text:
         return []
 
@@ -110,24 +115,5 @@ def split_text_by_clauses(text: str, clause_breaks: set, max_length: int) -> Lis
             current = ""
     if current.strip():
         tokens.append(current)
-
-    chunks: List[str] = []
-    buf = ""
-    for tok in tokens:
-        if not buf:
-            buf = tok
-            continue
-        if len(buf) + len(tok) <= max_length:
-            buf += tok
-        else:
-            if len(tok) <= max_length * 0.2:
-                buf += tok
-                chunks.append(buf.strip())
-                buf = ""
-            else:
-                chunks.append(buf.strip())
-                buf = tok
-    if buf.strip():
-        chunks.append(buf.strip())
-    return chunks
+    return [t for t in tokens if t.strip()]
 

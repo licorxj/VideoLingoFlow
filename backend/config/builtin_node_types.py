@@ -62,6 +62,42 @@ BUILTIN_NODE_TYPES = [
         ],
     },
     {
+        "id": "text_input",
+        "name": "文本输入框",
+        "execution_domain": "thread",
+        "category": "io",
+        "description": "提供一个大文本输入框，将其内容作为文本输出给下游（不落盘）",
+        "icon": "Type",
+        "color": "#3b82f6",
+        "inputs": [
+            {"id": "any", "label": "输入", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "text", "label": "文本", "type": "text"},
+        ],
+        "defaultConfig": {
+            "text": "",
+        },
+    },
+    {
+        "id": "file_load",
+        "name": "文件加载",
+        "execution_domain": "thread",
+        "category": "io",
+        "description": "在卡片上选择或输入文件路径，输出该文件的绝对路径（不落盘）",
+        "icon": "FolderOpen",
+        "color": "#3b82f6",
+        "inputs": [
+            {"id": "any", "label": "输入", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "filepath", "label": "文件路径", "type": "filepath"},
+        ],
+        "defaultConfig": {
+            "filePath": "",
+        },
+    },
+    {
         "id": "path_to_title",
         "name": "路径转标题",
         "execution_domain": "thread",
@@ -2514,6 +2550,118 @@ BUILTIN_NODE_TYPES = [
                 "dependsOn": "audio_mode",
                 "dependsValue": "reencode",
                 "placeholder": "如 192k / 256k",
+            },
+        ],
+    },
+    {
+        "id": "audio_cut_by_subtitle",
+        "name": "按照字幕切割音频",
+        "execution_domain": "thread",
+        "category": "audio",
+        "description": "按 srt 字幕或句子 json 的时间轴切割音频，输出片段清单 json 与各音频片段",
+        "icon": "Scissors",
+        "color": "#22c55e",
+        "inputs": [
+            {"id": "audio", "label": "音频", "type": "audio", "required": True},
+            {"id": "srt", "label": "SRT字幕", "type": "subtitle"},
+            {"id": "json", "label": "句子JSON", "type": "json"},
+        ],
+        "outputs": [
+            {"id": "json", "label": "切割信息", "type": "json"},
+            {"id": "audio_segments", "label": "音频片段清单", "type": "audio_manifest"},
+        ],
+        "defaultConfig": {
+            "output_format": "wav",
+            "expand": 0.05,
+        },
+        "configFields": [
+            {
+                "key": "output_format",
+                "label": "输出格式",
+                "type": "select",
+                "options": [
+                    {"value": "wav", "label": "WAV (PCM)"},
+                    {"value": "mp3", "label": "MP3"},
+                    {"value": "flac", "label": "FLAC"},
+                    {"value": "m4a", "label": "M4A (AAC)"},
+                    {"value": "ogg", "label": "OGG (Vorbis)"},
+                ],
+                "description": "切割后音频片段的封装与编码格式",
+            },
+            {
+                "key": "expand",
+                "label": "切割点外扩(秒)",
+                "type": "number",
+                "description": "每段在首尾各外扩的秒数，避免裁掉首尾音节",
+            },
+        ],
+    },
+    {
+        "id": "video_cut_by_subtitle",
+        "name": "按字幕切割视频",
+        "execution_domain": "thread",
+        "category": "video",
+        "description": "按 srt 字幕或句子 json 的时间轴切割视频，输出片段清单 json 与各视频片段",
+        "icon": "Scissors",
+        "color": "#0ea5e9",
+        "inputs": [
+            {"id": "video", "label": "视频", "type": "video", "required": True},
+            {"id": "srt", "label": "SRT字幕", "type": "subtitle"},
+            {"id": "json", "label": "句子JSON", "type": "json"},
+        ],
+        "outputs": [
+            {"id": "json", "label": "切割信息", "type": "json"},
+            {"id": "video_segments", "label": "视频片段清单", "type": "json"},
+        ],
+        "defaultConfig": {
+            "output_format": "mp4",
+            "expand": 0.05,
+        },
+        "configFields": [
+            {
+                "key": "output_format",
+                "label": "输出格式",
+                "type": "select",
+                "options": [
+                    {"value": "mp4", "label": "MP4 (H.264/AAC)"},
+                    {"value": "mkv", "label": "MKV (H.264/AAC)"},
+                    {"value": "mov", "label": "MOV (H.264/AAC)"},
+                    {"value": "webm", "label": "WebM (VP9/Opus)"},
+                ],
+                "description": "切割后视频片段的封装与编码格式",
+            },
+            {
+                "key": "expand",
+                "label": "切割点外扩(秒)",
+                "type": "number",
+                "description": "每段在首尾各外扩的秒数，避免裁掉首尾画面",
+            },
+        ],
+    },
+    {
+        "id": "output_merge_list",
+        "name": "输出合并为列表",
+        "execution_domain": "thread",
+        "category": "utility",
+        "description": "将多个上游节点的输出（文本或路径）合并为列表格式 JSON，内存传递、不落盘；输入端口数量可在卡片上动态加减",
+        "icon": "ListOrdered",
+        "color": "#64748b",
+        "dynamicPorts": True,
+        "inputs": [],
+        "outputs": [
+            {"id": "json", "label": "列表JSON", "type": "json"},
+        ],
+        "defaultConfig": {
+            "inputCount": 2,
+        },
+        "configFields": [
+            {
+                "key": "inputCount",
+                "label": "输入端口数",
+                "type": "number",
+                "min": 1,
+                "max": 8,
+                "description": "通过节点卡片上的 + / - 控制（1~8）",
             },
         ],
     },

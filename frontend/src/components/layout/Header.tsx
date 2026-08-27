@@ -202,7 +202,7 @@ export default function Header({
         <img src="/brand-logo.png" alt="VideoLingoFlow" className="h-9 w-auto object-contain" />
         <div className="flex items-baseline gap-2">
           <h1 className="text-lg font-extrabold tracking-tight text-foreground">
-            VideoLingoFlow
+            VideoLingoFlow <span className="text-sm font-medium text-muted-foreground">（流连视听）</span>
           </h1>
           <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase tracking-widest">
             v2.0

@@ -24,6 +24,11 @@ import { PreviewSectionModal } from "./dubbing/dialogs/PreviewSectionModal";
 import { ExportedAudioModal } from "./dubbing/dialogs/ExportedAudioModal";
 import { EditOriginalModal } from "./dubbing/dialogs/EditOriginalModal";
 import { RuleChapterSplitModal } from "./dubbing/dialogs/RuleChapterSplitModal";
+import { AIChapterSplitModal } from "./dubbing/dialogs/AIChapterSplitModal";
+import { EngineSettingsModal } from "./dubbing/dialogs/EngineSettingsModal";
+import { ProcessChapterModal } from "./dubbing/dialogs/ProcessChapterModal";
+import { RuleSplitModal } from "./dubbing/dialogs/RuleSplitModal";
+import { BatchVoiceDesignDialog } from "./dubbing/dialogs/BatchVoiceDesignDialog";
 
 /* ══════════════════════════════════════════════════════════════════════
    Wrapper — provides DubbingProvider for all child components
@@ -78,6 +83,11 @@ function DubbingWorkspaceInner() {
     [shownSentences],
   );
 
+  const allText = useMemo(
+    () => sentences.map((s) => s.edited_text || s.text).join("\n"),
+    [sentences],
+  );
+
   /* ── Dialog open states ────────────────────────────────────────── */
   const [importTextOpen, setImportTextOpen] = useState(false);
   const [editOriginalOpen, setEditOriginalOpen] = useState(false);
@@ -93,6 +103,18 @@ function DubbingWorkspaceInner() {
   const [chapterExportOpen, setChapterExportOpen] = useState(false);
   const [ruleChapterSplitOpen, setRuleChapterSplitOpen] = useState(false);
   const [ruleSplitText, setRuleSplitText] = useState("");
+  const [aiChapterSplitOpen, setAiChapterSplitOpen] = useState(false);
+  const [engineSettingsOpen, setEngineSettingsOpen] = useState(false);
+  const [processChapterOpen, setProcessChapterOpen] = useState(false);
+  const [ruleSplitOpen, setRuleSplitOpen] = useState(false);
+  const [batchVoiceDesignOpen, setBatchVoiceDesignOpen] = useState(false);
+  const [processChapter, setProcessChapter] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [bindTargetCharacterId, setBindTargetCharacterId] = useState<
+    string | null
+  >(null);
 
   /* ── Local state for edit original modal ───────────────────────── */
   const [editChapterName, setEditChapterName] = useState("");
@@ -145,12 +167,26 @@ function DubbingWorkspaceInner() {
   );
 
   const handleAISplitChapters = useCallback(() => {
-    // Placeholder — AI split chapters feature
-    dispatch({
-      type: "SET_ERROR",
-      payload: "AI 分章节功能尚未实现",
-    });
-  }, [dispatch]);
+    setAiChapterSplitOpen(true);
+  }, []);
+
+  const handleApplyAIChapters = useCallback(
+    async (aiChapters: Array<{ title: string; text: string }>) => {
+      try {
+        await voiceForgeApi.batchCreateChapters(projectId, {
+          chapters: aiChapters.map((c) => ({
+            title: c.title,
+            text_content: c.text,
+          })),
+          delete_existing: true,
+        });
+        await load();
+      } catch {
+        dispatch({ type: "SET_ERROR", payload: "应用 AI 分章节失败" });
+      }
+    },
+    [projectId, load, dispatch],
+  );
 
   const handleCreateChapter = useCallback(
     async (title: string, _parentId?: string | null) => {
@@ -279,7 +315,7 @@ function DubbingWorkspaceInner() {
   );
 
   const handleEngineSettings = useCallback(() => {
-    // Placeholder — engine settings panel
+    setEngineSettingsOpen(true);
   }, []);
 
   /* ════════════════════════════════════════════════════════════════════
@@ -423,6 +459,75 @@ function DubbingWorkspaceInner() {
   const handleAIExtractCharacters = useCallback(
     () => setAiCharacterOpen(true),
     [],
+  );
+
+  const handleBindVoice = useCallback((character: { id: string }) => {
+    setBindTargetCharacterId(character.id);
+    setBindVoiceOpen(true);
+  }, []);
+
+  const handleBatchVoiceDesign = useCallback(() => {
+    setBatchVoiceDesignOpen(true);
+  }, []);
+
+  const handleBatchVoiceDesignSuccess = useCallback(() => {
+    load();
+  }, [load]);
+
+  const handleProcessChapter = useCallback(
+    (chapter: { id: string; title: string }) => {
+      dispatch({ type: "SET_CHAPTER", payload: chapter.id });
+      setProcessChapter({ id: chapter.id, name: chapter.title });
+      setProcessChapterOpen(true);
+    },
+    [dispatch],
+  );
+
+  const handleProcessRuleSplit = useCallback(() => {
+    if (!processChapter) return;
+    const text = sentences
+      .filter((s) => s.chapter_id === processChapter.id)
+      .map((s) => s.edited_text || s.text)
+      .join("\n");
+    setProcessChapterOpen(false);
+    setRuleSplitText(text);
+    setRuleSplitOpen(true);
+  }, [processChapter, sentences]);
+
+  const handleProcessAIDialogue = useCallback(() => {
+    setProcessChapterOpen(false);
+    setAiDialogueOpen(true);
+  }, []);
+
+  const handleApplyRuleSplit = useCallback(
+    async (splitSentences: string[]) => {
+      if (!processChapter) return;
+      dispatch({ type: "SET_BUSY", payload: "rule-split" });
+      try {
+        const chapterSentenceIds = sentences
+          .filter((s) => s.chapter_id === processChapter.id)
+          .map((s) => s.id);
+        if (chapterSentenceIds.length) {
+          await voiceForgeApi.deleteSentences(projectId, chapterSentenceIds);
+        }
+        await voiceForgeApi.deleteChapter(processChapter.id);
+        await voiceForgeApi.applyTextPlan(projectId, {
+          chapters: [
+            {
+              title: processChapter.name,
+              sentences: splitSentences.map((text) => ({ text })),
+            },
+          ],
+        });
+        setRuleSplitOpen(false);
+        await load();
+      } catch {
+        dispatch({ type: "SET_ERROR", payload: "规则断句失败" });
+      } finally {
+        dispatch({ type: "SET_BUSY", payload: "" });
+      }
+    },
+    [processChapter, sentences, projectId, load, dispatch],
   );
 
   /* ════════════════════════════════════════════════════════════════════
@@ -746,6 +851,13 @@ function DubbingWorkspaceInner() {
     [selectedChapterId, chapters],
   );
 
+  const currentEngineId = useMemo(() => {
+    const matched =
+      capabilities.find((c) => c.name === engine) ??
+      capabilities.find((c) => c.id === engine);
+    return matched?.id ?? engine;
+  }, [capabilities, engine]);
+
   /* ════════════════════════════════════════════════════════════════════
      Render
      ════════════════════════════════════════════════════════════════════ */
@@ -800,6 +912,7 @@ function DubbingWorkspaceInner() {
               onCreateChapter={handleCreateChapter}
               onDeleteChapter={handleDeleteChapter}
               onUpdateChapterText={handleUpdateChapterText}
+              onProcessChapter={handleProcessChapter}
               sentences={sentences}
             />
           }
@@ -856,6 +969,8 @@ function DubbingWorkspaceInner() {
                 onUpdateCharacter={handleUpdateCharacter}
                 onClearAll={handleClearAllCharacters}
                 onAIExtract={handleAIExtractCharacters}
+                onBindVoice={handleBindVoice}
+                onBatchVoiceDesign={handleBatchVoiceDesign}
               />
               <VoiceTree
                 voices={voices}
@@ -907,6 +1022,7 @@ function DubbingWorkspaceInner() {
       <AIDialogueModal
         open={aiDialogueOpen}
         onOpenChange={setAiDialogueOpen}
+        projectId={projectId}
         text={shownSentences
           .map((s) => s.edited_text || s.text)
           .join("\n")}
@@ -933,11 +1049,15 @@ function DubbingWorkspaceInner() {
 
       <BindVoiceModal
         open={bindVoiceOpen}
-        onOpenChange={setBindVoiceOpen}
+        onOpenChange={(v) => {
+          setBindVoiceOpen(v);
+          if (!v) setBindTargetCharacterId(null);
+        }}
         voices={voices}
         onBind={(voiceId) => {
-          // This is used from CharacterPanel's voice binding
-          // The character ID is handled by the BindVoiceModal
+          if (bindTargetCharacterId) {
+            handleBindVoiceApply(bindTargetCharacterId, voiceId);
+          }
         }}
       />
 
@@ -971,6 +1091,46 @@ function DubbingWorkspaceInner() {
         textContent={ruleSplitText}
         onClose={() => setRuleChapterSplitOpen(false)}
         onApply={handleApplyRuleChapters}
+      />
+
+      <AIChapterSplitModal
+        open={aiChapterSplitOpen}
+        onOpenChange={setAiChapterSplitOpen}
+        projectId={projectId}
+        textContent={allText}
+        onApply={handleApplyAIChapters}
+      />
+
+      <EngineSettingsModal
+        open={engineSettingsOpen}
+        onOpenChange={setEngineSettingsOpen}
+        currentEngine={currentEngineId}
+        onSaved={() => {
+          void load();
+        }}
+      />
+
+      <ProcessChapterModal
+        open={processChapterOpen}
+        onOpenChange={setProcessChapterOpen}
+        chapterName={processChapter?.name ?? ""}
+        onRuleSplit={handleProcessRuleSplit}
+        onAIDialogue={handleProcessAIDialogue}
+      />
+
+      <RuleSplitModal
+        open={ruleSplitOpen}
+        onOpenChange={setRuleSplitOpen}
+        textContent={ruleSplitText}
+        onApplySplit={handleApplyRuleSplit}
+      />
+
+      <BatchVoiceDesignDialog
+        open={batchVoiceDesignOpen}
+        onOpenChange={setBatchVoiceDesignOpen}
+        characters={characters}
+        capabilities={capabilities}
+        onSuccess={handleBatchVoiceDesignSuccess}
       />
     </div>
   );

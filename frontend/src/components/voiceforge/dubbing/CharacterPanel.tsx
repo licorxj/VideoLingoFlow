@@ -1,14 +1,5 @@
 import { useState } from "react";
-import {
-  Users,
-  Plus,
-  Pencil,
-  Trash2,
-  Bot,
-  X,
-  Check,
-  Sparkles,
-} from "lucide-react";
+import { Users, Plus, Trash2, X, Check, Sparkles, Wand2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CharacterCard } from "./CharacterCard";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -44,18 +36,11 @@ interface CharacterPanelProps {
   onUpdateCharacter: (id: string, data: Record<string, unknown>) => void;
   onClearAll: () => void;
   onAIExtract: () => void;
+  onBindVoice: (character: Character) => void;
+  onBatchVoiceDesign: () => void;
 }
 
 /* ── Gender / Type helpers ─────────────────────────────────────────── */
-
-const GENDER_MAP: Record<string, string> = {
-  male: "男",
-  female: "女",
-  narrator: "旁白",
-  protagonist: "主角",
-  supporting: "配角",
-  other: "其他",
-};
 
 function extractGender(type?: string): string | null {
   if (!type) return null;
@@ -63,20 +48,18 @@ function extractGender(type?: string): string | null {
   return null;
 }
 
-function typeLabel(type?: string): string | null {
-  if (!type) return null;
-  return GENDER_MAP[type] || type;
-}
-
 /* ── CharacterPanel Component ──────────────────────────────────────── */
 
 export function CharacterPanel({
   characters,
+  voices,
   onCreateCharacter,
   onDeleteCharacter,
   onUpdateCharacter,
   onClearAll,
   onAIExtract,
+  onBindVoice,
+  onBatchVoiceDesign,
 }: CharacterPanelProps) {
   const [addName, setAddName] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -137,20 +120,23 @@ export function CharacterPanel({
       </div>
 
       {/* Action buttons */}
-      <div className="flex gap-2 border-b border-border/60 px-3 py-2.5">
-        <Button
-          variant="ai-soft"
-          size="sm"
-          className="flex-1"
-          onClick={onAIExtract}
-        >
+      <div className="grid grid-cols-2 gap-2 border-b border-border/60 px-3 py-2.5">
+        <Button variant="ai-soft" size="sm" onClick={onAIExtract}>
           <Sparkles className="mr-1 h-3.5 w-3.5" />
           AI提取
         </Button>
         <Button
           variant="outline"
           size="sm"
-          className="flex-1"
+          onClick={onBatchVoiceDesign}
+          disabled={characters.length === 0}
+        >
+          <Wand2 className="mr-1 h-3.5 w-3.5" />
+          批量设计音色
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
           onClick={() => {
             setEditingId("__new__");
             setEditForm({
@@ -262,7 +248,6 @@ export function CharacterPanel({
           <div className="space-y-1">
             {characters.map((char) => {
               const isEditing = editingId === char.id;
-              const gender = extractGender(char.character_type);
               const bound = !!char.voice_profile_id;
 
               if (isEditing) {
@@ -384,66 +369,19 @@ export function CharacterPanel({
                 );
               }
 
+              const boundVoiceName = bound
+                ? voices.find((v) => v.id === char.voice_profile_id)?.display_name
+                : undefined;
+
               return (
-                <div
+                <CharacterCard
                   key={char.id}
-                  className="group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-accent/60"
-                >
-                  <span className="min-w-0 flex-1 truncate font-medium">
-                    {char.name}
-                  </span>
-
-                  {/* Gender badge */}
-                  {gender && (
-                    <span
-                      className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
-                        gender === "male" ? "gender-male" : "gender-female"
-                      }`}
-                    >
-                      {gender === "male" ? "男" : "女"}
-                    </span>
-                  )}
-
-                  {/* Type badge (non-gender types) */}
-                  {!gender && char.character_type && (
-                    <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                      {typeLabel(char.character_type)}
-                    </span>
-                  )}
-
-                  {/* Bound badge */}
-                  {bound && (
-                    <span className="shrink-0 rounded-full bg-success/15 px-1.5 py-0.5 text-[10px] font-medium text-success">
-                      已绑定
-                    </span>
-                  )}
-
-                  {/* Edit / Delete */}
-                  <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6"
-                      onClick={() => startEdit(char)}
-                      title="编辑"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="h-6 w-6 text-destructive"
-                      onClick={() => {
-                        if (confirm(`确认删除角色"${char.name}"？`)) {
-                          onDeleteCharacter(char.id);
-                        }
-                      }}
-                      title="删除"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                </div>
+                  character={char}
+                  boundVoiceName={boundVoiceName}
+                  onEdit={startEdit}
+                  onBindVoice={onBindVoice}
+                  onDelete={(c) => onDeleteCharacter(c.id)}
+                />
               );
             })}
           </div>

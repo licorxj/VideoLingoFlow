@@ -17,6 +17,13 @@ from typing import Callable, Optional, List, Dict
 from backend.steps.base_step import BaseStep, find_artifact
 from backend.config.config_manager import config
 from backend.utils import sentence_split_utils as split_utils
+from backend.utils.sentence_split_core import (
+    load_language_char_weights, sentence_gap, normalize_word_spans,
+    is_all_punctuation_or_whitespace, normalize_text_for_alignment_check,
+    has_multi_speaker, pre_split_at_terminals, fix_leading_punctuation,
+    split_chinese_by_chars, split_english_by_chars, distribute_timestamps_to_chunks,
+    salvage_json_response, build_smart_batches,
+)
 
 
 class S03SentenceSplit(BaseStep):
@@ -81,25 +88,6 @@ class S03SentenceSplit(BaseStep):
         if isinstance(val, bool):
             return val
         return str(val).strip().lower() in ("1", "true", "yes", "on")
-
-    @staticmethod
-    def _load_language_char_weights() -> Dict[str, float]:
-        """Load language character weights from config file.
-        Returns a dict mapping language code -> weight (relative to Chinese=1.0).
-        """
-        weights_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "config", "language_char_weights.json"
-        )
-        try:
-            with open(weights_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            weights = data.get("weights", {})
-            default_weight = data.get("default", 1.0)
-            weights["_default"] = default_weight
-            return weights
-        except Exception:
-            return {"_default": 1.0}
 
     def _get_effective_max_length(self, base_max_length: int, lang: str) -> int:
         """Calculate effective max sentence length based on language weight.
@@ -202,19 +190,6 @@ class S03SentenceSplit(BaseStep):
         puncts = self._load_language_puncts(lang).get("sentence_ends", set())
         return stripped[-1] in puncts
 
-    @staticmethod
-    def _sentence_gap(left: Dict, right: Dict) -> float:
-        """Return silence gap between adjacent sentences."""
-        try:
-            left_end = float(left.get("end", 0) or 0)
-        except (TypeError, ValueError):
-            left_end = 0.0
-        try:
-            right_start = float(right.get("start", left_end) or left_end)
-        except (TypeError, ValueError):
-            right_start = left_end
-        return right_start - left_end
-
     def _repair_abnormal_word_spans(
         self,
         words: List[Dict],
@@ -297,36 +272,6 @@ class S03SentenceSplit(BaseStep):
 
         return repaired
 
-    @staticmethod
-    def _normalize_word_spans(words: List[Dict], start_hint: float, end_hint: float) -> List[Dict]:
-        """Normalize word timestamps into a monotonic span within the sentence window."""
-        normalized = []
-        prev_end = float(start_hint or 0)
-        for word in words or []:
-            item = dict(word)
-            try:
-                start = float(item.get("start", prev_end))
-            except (TypeError, ValueError):
-                start = prev_end
-            try:
-                end = float(item.get("end", start))
-            except (TypeError, ValueError):
-                end = start
-
-            start = max(start, prev_end, float(start_hint or 0))
-            if end <= start:
-                end = start + 0.06
-            if end_hint and end > float(end_hint):
-                end = float(end_hint)
-            if end <= start:
-                end = start + 0.06
-
-            item["start"] = round(start, 4)
-            item["end"] = round(end, 4)
-            normalized.append(item)
-            prev_end = item["end"]
-        return normalized
-
     def _finalize_sentences(self, sentences: List[Dict], lang: str = "auto") -> List[Dict]:
         """Use sentence words as the source of truth for sentence timestamps."""
         finalized = []
@@ -380,20 +325,6 @@ class S03SentenceSplit(BaseStep):
             prev_end = item["end"]
 
         return self._merge_orphan_punctuation(finalized, lang=lang)
-
-    @staticmethod
-    def _is_all_punctuation_or_whitespace(text: str) -> bool:
-        """Return True when text consists entirely of punctuation/whitespace."""
-        import unicodedata
-        stripped = str(text or "").strip()
-        if not stripped:
-            return True
-        for ch in stripped:
-            cat = unicodedata.category(ch)
-            # Letters (L*), numbers (N*), and marks (M*) are content
-            if cat.startswith(("L", "N", "M")):
-                return False
-        return True
 
     def _merge_orphan_punctuation(
         self, sentences: List[Dict], lang: str = "auto"
@@ -595,28 +526,6 @@ class S03SentenceSplit(BaseStep):
         for idx, s in enumerate(result, start=1):
             s["id"] = idx
         return result
-
-    @staticmethod
-    def _normalize_text_for_alignment_check(text: str) -> str:
-        """Normalize text before comparing sentence text with joined word text.
-
-        Strips whitespace AND punctuation. The point of this check is to detect
-        semantic drift between the sentence text and the underlying word
-        sequence; punctuation legitimately differs (e.g. word lists rarely
-        include trailing "。" or ",") and must not be reported as a mismatch.
-        """
-        text = str(text or "")
-        text = text.replace("\u3000", " ")
-        # Remove Unicode punctuation categories: Po (other punct), Pe/Pd/Ps
-        # (bracket/dash), Pi/Pf (quotation marks), plus common CJK punct.
-        text = re.sub(
-            r"[\u3000-\u303f\u2000-\u206f\u2e00-\u2e7f"
-            r"。，！？；：、…—·•·,!?;:.\"'`"
-            r"()\[\]{}<>《》「」『』【】]",
-            "",
-            text,
-        )
-        return re.sub(r"\s+", "", text)
 
     def _validate_sentence_word_alignment(self, sentences: List[Dict]) -> List[Dict]:
         """Check for sentence text / word-sequence drift. Returns mismatch list (never raises)."""
@@ -923,25 +832,6 @@ class S03SentenceSplit(BaseStep):
 
     # ── merge short segments ─────────────────────────────────────────
 
-    def _has_multi_speaker(self, segments: List[Dict]) -> bool:
-        """Return True only when ASR actually carries speaker ids and there are >=2 distinct speakers.
-
-        If any segment has no speaker info, or all segments share the same speaker,
-        treat it as single-speaker content and skip speaker-based cutting.
-        """
-        speakers = set()
-        for seg in segments:
-            seg_speaker = seg.get("speaker")
-            if seg_speaker:
-                speakers.add(seg_speaker)
-            for w in seg.get("words", []) or []:
-                ws = w.get("speaker")
-                if ws:
-                    speakers.add(ws)
-        # Filter out empty/None placeholders
-        speakers = {s for s in speakers if s not in (None, "", "null", "None")}
-        return len(speakers) >= 2
-
     def _split_by_speaker(self, segments: List[Dict],
                             min_duration: float = 1.0,
                             max_gap: float = 0.5) -> List[Dict]:
@@ -1128,9 +1018,8 @@ class S03SentenceSplit(BaseStep):
         return split_utils.split_text_by_ends(text, sentence_ends)
 
     @staticmethod
-    def _split_text_by_clauses(text: str, clause_breaks: set,
-                                max_length: int) -> List[str]:
-        return split_utils.split_text_by_clauses(text, clause_breaks, max_length)
+    def _split_text_by_clauses(text: str, clause_breaks: set) -> List[str]:
+        return split_utils.split_text_by_clauses(text, clause_breaks)
 
     def _split_by_punctuation(self, sentences: List[Dict],
                             all_words: List[Dict],
@@ -1169,9 +1058,9 @@ class S03SentenceSplit(BaseStep):
 
             final_text_chunks: List[str] = []
             for chunk in phase1_chunks:
-                if len(chunk) > max_length and clause_breaks:
+                if clause_breaks:
                     final_text_chunks.extend(
-                        self._split_text_by_clauses(chunk, clause_breaks, max_length)
+                        self._split_text_by_clauses(chunk, clause_breaks)
                     )
                 else:
                     final_text_chunks.append(chunk)
@@ -1353,77 +1242,6 @@ Return ONLY the JSON array, no explanation.""".format(
         except Exception as e:
             print(f"[Split] Strict single-sentence LLM call failed: {e}")
             return None
-
-    @staticmethod
-    def _salvage_json_response(content: str):
-        """尝试从非 JSON 纯文本响应中抢救 JSON 对象/数组。
-
-        部分模型/路由会忽略 response_format(json_object) 并返回纯文本，
-        此时 json_repair.loads 会把无 JSON 结构的文本"宽容地"解析成空字符串，
-        导致下游拿到 str 而不是 dict。这里先剥掉 markdown 代码块围栏，
-        再提取最外层 {..} / [..] 块用标准 json 解析，失败再交给 json_repair。
-        返回解析结果（dict/list）或 None。
-        """
-        if not isinstance(content, str) or not content.strip():
-            return None
-        text = re.sub(r"^```(?:json)?\s*|\s*```$", "", content.strip(), flags=re.IGNORECASE).strip()
-        for open_ch, close_ch in (("{", "}"), ("[", "]")):
-            start = text.find(open_ch)
-            if start < 0:
-                continue
-            depth = 0
-            end = -1
-            for i in range(start, len(text)):
-                if text[i] == open_ch:
-                    depth += 1
-                elif text[i] == close_ch:
-                    depth -= 1
-                    if depth == 0:
-                        end = i
-                        break
-            if end < 0:
-                continue
-            block = text[start:end + 1]
-            try:
-                import json as _json
-                return _json.loads(block)
-            except Exception:
-                try:
-                    import json_repair
-                    return json_repair.loads(block)
-                except Exception:
-                    continue
-        return None
-
-    def _build_smart_batches(
-        self,
-        to_split: List[tuple],
-        max_chars: int = 12000,
-    ) -> List[List[tuple]]:
-        """Group sentences into batches so that total text chars per batch
-        stays under *max_chars*.  Each batch is a list of (orig_idx, sent) tuples.
-        A single sentence that alone exceeds max_chars gets its own batch."""
-        batches: List[List[tuple]] = []
-        current: List[tuple] = []
-        current_chars = 0
-
-        for item in to_split:
-            idx, sent = item
-            text_len = len(sent.get("text", ""))
-
-            # If adding this sentence would overflow, close current batch first
-            if current and current_chars + text_len > max_chars:
-                batches.append(current)
-                current = []
-                current_chars = 0
-
-            current.append(item)
-            current_chars += text_len
-
-        if current:
-            batches.append(current)
-
-        return batches
 
     def _build_split_prompt(self, batch: List[tuple], max_length: int) -> dict:
         """Build the LLM prompt for a single batch of sentences."""
@@ -1663,27 +1481,6 @@ Return ONLY the JSON array, no explanation.""".format(
 
         return updates
 
-    @staticmethod
-    def _pre_split_at_terminals(text: str, terminals: set) -> List[str]:
-        """Split text at sentence-terminal punctuation, keeping the punctuation
-        attached to its preceding segment.
-
-        '找男人。再有来女人嘛。' -> ['找男人。', '再有来女人嘛。']
-        """
-        if not text:
-            return [text]
-
-        segments = []
-        current = ""
-        for ch in text:
-            current += ch
-            if ch in terminals:
-                segments.append(current)
-                current = ""
-        if current:
-            segments.append(current)
-        return segments if segments else [text]
-
     def _force_split_by_chars(
         self,
         sentences: List[Dict],
@@ -1720,165 +1517,6 @@ Return ONLY the JSON array, no explanation.""".format(
                 else:
                     chunks = self._split_english_by_chars(segment_text, max_length)
                 result.extend(self._distribute_timestamps_to_chunks(sent, chunks))
-
-        return result
-
-    def _split_chinese_by_chars(
-        self, text: str, max_length: int, has_jieba: bool = True
-    ) -> List[str]:
-        """Split Chinese text at word boundaries using jieba."""
-        if has_jieba:
-            import jieba
-            words = list(jieba.cut(text))
-        else:
-            # Fallback: treat each character as a word
-            words = list(text)
-
-        chunks = []
-        current = ""
-        for word in words:
-            if len(current) + len(word) > max_length and current:
-                chunks.append(current)
-                current = word
-            else:
-                current += word
-        if current:
-            chunks.append(current)
-
-        return self._fix_leading_punctuation(chunks)
-
-    @staticmethod
-    def _fix_leading_punctuation(chunks: List[str]) -> List[str]:
-        """Move leading punctuation marks to the end of the preceding chunk.
-
-        Handles cases like: ["春天到了", "，万物复苏"] -> ["春天到了，", "万物复苏"]
-        Also merges punctuation-only chunks into the preceding chunk.
-        """
-        if not chunks or len(chunks) < 2:
-            return chunks
-
-        # Common punctuation (CJK + Western) that should follow the preceding sentence
-        punct_chars = set(
-            '。！？，、；：…～~'  # CJK
-            '.!?,;:'               # Western
-            '。！？'               # CJK full-width (redundant safety)
-            '、；：'               # more CJK
-        )
-        # Quotation marks and brackets should NOT be moved
-        keep_as_is = set('"\'"\'「」『』（）()【】[]{}<>《》')
-
-        result = list(chunks)
-
-        i = 1
-        while i < len(result):
-            text = result[i]
-            # Find leading punctuation characters
-            punct_prefix = ""
-            for ch in text:
-                if ch in keep_as_is:
-                    break  # Stop at quotes/brackets — they start a new phrase
-                if ch in punct_chars:
-                    punct_prefix += ch
-                elif not ch.isalnum() and not ch.isspace() and ch not in keep_as_is:
-                    # Other non-alphanumeric chars (e.g., ellipsis, tilde)
-                    punct_prefix += ch
-                else:
-                    break
-
-            if punct_prefix:
-                # Move leading punctuation to the end of previous chunk
-                result[i - 1] = result[i - 1] + punct_prefix
-                remainder = text[len(punct_prefix):]
-                if remainder.strip():
-                    result[i] = remainder
-                else:
-                    # The entire chunk was punctuation — merge and remove
-                    result.pop(i)
-                    continue
-            i += 1
-
-        # Filter out empty chunks
-        return [c for c in result if c.strip()]
-
-    def _split_english_by_chars(self, text: str, max_length: int) -> List[str]:
-        """Split English text at word boundaries (spaces)."""
-        words = text.split()
-        chunks = []
-        current = []
-        current_len = 0
-
-        for word in words:
-            word_len = len(word) + (1 if current else 0)  # +1 for space
-            if current_len + word_len > max_length and current:
-                chunks.append(" ".join(current))
-                current = [word]
-                current_len = len(word)
-            else:
-                current.append(word)
-                current_len += word_len
-
-        if current:
-            chunks.append(" ".join(current))
-
-        return self._fix_leading_punctuation(chunks)
-
-    def _distribute_timestamps_to_chunks(
-        self, original_sent: Dict, chunks: List[str]
-    ) -> List[Dict]:
-        """Distribute timestamps from original sentence to split chunks."""
-        words = original_sent.get("words", [])
-        start = original_sent.get("start", 0)
-        end = original_sent.get("end", 0)
-
-        if not chunks:
-            return [original_sent]
-
-        if not words:
-            # No word-level data, distribute evenly by char count
-            total_chars = sum(len(c) for c in chunks)
-            current_time = start
-            result = []
-            for chunk in chunks:
-                chunk_duration = (len(chunk) / total_chars) * (end - start) if total_chars > 0 else 0
-                result.append({
-                    "text": chunk,
-                    "start": round(current_time, 4),
-                    "end": round(current_time + chunk_duration, 4),
-                    "words": [],
-                })
-                current_time += chunk_duration
-            return result
-
-        # Distribute using word timestamps
-        result = []
-        word_idx = 0
-        for chunk in chunks:
-            chunk_clean = re.sub(r"\s+", "", chunk)
-            matched_words = []
-            pos = 0
-
-            while word_idx < len(words) and pos < len(chunk_clean):
-                word_text = re.sub(r"\s+", "", str(words[word_idx].get("word", "")))
-                if chunk_clean.startswith(word_text, pos):
-                    matched_words.append(words[word_idx])
-                    pos += len(word_text)
-                    word_idx += 1
-                else:
-                    break
-
-            if matched_words:
-                chunk_start = float(matched_words[0].get("start", start))
-                chunk_end = float(matched_words[-1].get("end", end))
-            else:
-                chunk_start = start
-                chunk_end = end
-
-            result.append({
-                "text": chunk,
-                "start": round(chunk_start, 4),
-                "end": round(chunk_end, 4),
-                "words": matched_words,
-            })
 
         return result
 
@@ -2160,3 +1798,21 @@ Return ONLY the JSON array, no explanation.""".format(
                 "text": f"cache/sentences_text{node_suffix}.txt",
             },
         }
+
+
+# Bind reusable pure helpers (extracted to backend.utils.sentence_split_core) back
+# onto the class as staticmethods so the existing self._xxx call sites keep working
+# unchanged.
+S03SentenceSplit._load_language_char_weights = staticmethod(load_language_char_weights)
+S03SentenceSplit._sentence_gap = staticmethod(sentence_gap)
+S03SentenceSplit._normalize_word_spans = staticmethod(normalize_word_spans)
+S03SentenceSplit._is_all_punctuation_or_whitespace = staticmethod(is_all_punctuation_or_whitespace)
+S03SentenceSplit._normalize_text_for_alignment_check = staticmethod(normalize_text_for_alignment_check)
+S03SentenceSplit._has_multi_speaker = staticmethod(has_multi_speaker)
+S03SentenceSplit._salvage_json_response = staticmethod(salvage_json_response)
+S03SentenceSplit._build_smart_batches = staticmethod(build_smart_batches)
+S03SentenceSplit._pre_split_at_terminals = staticmethod(pre_split_at_terminals)
+S03SentenceSplit._fix_leading_punctuation = staticmethod(fix_leading_punctuation)
+S03SentenceSplit._split_chinese_by_chars = staticmethod(split_chinese_by_chars)
+S03SentenceSplit._split_english_by_chars = staticmethod(split_english_by_chars)
+S03SentenceSplit._distribute_timestamps_to_chunks = staticmethod(distribute_timestamps_to_chunks)

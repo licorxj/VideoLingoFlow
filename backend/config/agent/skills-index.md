@@ -19,6 +19,7 @@ All paths are relative to `PROJECT_ROOT`.
 
 - Built-in agent knowledge documents: `backend/config/agent/*.md`.
 - Project-specific installed skills: `backend/config/agent/skills/`.
+  - ElevenLabs 音效爬虫与下载: `backend/config/agent/skills/elevenlabs-sound-effects/SKILL.md` — 对接 ElevenLabs 音效库搜索接口，抓取营销片段详情/URL，支持中文 LLM 翻译与音效下载。
 - User-installed skills are scanned from: `%USERPROFILE%/.claude/skills`, `%USERPROFILE%/.codex/skills`, `%USERPROFILE%/.trae/skills`, `%USERPROFILE%/.agents/skills`, `%USERPROFILE%/.agent/skills`.
 - Project-specific MCP definitions: `backend/config/agent/mcp/`.
 - User-installed MCP definitions are scanned from: `%USERPROFILE%/.claude/mcps`, `%USERPROFILE%/.trae/mcps`, `%USERPROFILE%/.agents/mcps`, `%USERPROFILE%/.agent/mcps`.

@@ -1,7 +1,7 @@
 {
   "id": "048ead64e0b2",
   "name": "QMHub测试",
-  "description": "",
+  "description": "视频去水印和邮箱发送测试",
   "nodes": [
     {
       "id": "node_1_1787440128190",
@@ -46,7 +46,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 502
+        "height": 563
       },
       "selected": false,
       "dragging": false
@@ -79,7 +79,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 358
+        "height": 398
       },
       "selected": false,
       "dragging": false
@@ -99,17 +99,20 @@
           "resume_request_id": "",
           "wm_mode": "normal"
         },
-        "status": "failed",
-        "progress": 0,
-        "message": "去水印任务失败（状态: failed）: 视频需要过剪映",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "cache/watermark_removed_node_1_1787441400717.mp4",
+          "json": "cache/watermark_removed_node_1_1787441400717.json"
+        },
         "error": "去水印任务失败（状态: failed）: 视频需要过剪映",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 419
+        "height": 499
       }
     },
     {
@@ -127,27 +130,29 @@
           "target_email": "727909969@qq.com",
           "prefix_content": "测试转发："
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "cache/qm_mail_node_2_1787441427517.json"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 436
+        "height": 585
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
       "id": "node_3_1787441435430",
       "type": "workflow",
       "position": {
-        "x": 885,
-        "y": -870
+        "x": 810,
+        "y": -885
       },
       "data": {
         "nodeType": "json_to_text",
@@ -156,16 +161,18 @@
           "mode": "full",
           "key_expr": ""
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\d26088fcb2984e0c91d6d199511909ed\\output\\json2text_node_3_1787441435430.txt"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 187
+        "height": 308
       },
       "selected": false,
       "dragging": false
@@ -197,7 +204,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 420
+        "height": 477
       },
       "selected": false
     },
@@ -205,8 +212,8 @@
       "id": "node_2_1787546739837",
       "type": "workflow",
       "position": {
-        "x": 360,
-        "y": -150
+        "x": 795,
+        "y": -105
       },
       "data": {
         "nodeType": "video_preview",
@@ -228,9 +235,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 160
+        "height": 401
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     }
   ],
@@ -316,6 +323,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-23T07:09:20",
-  "updatedAt": "2026-08-26T21:15:06",
-  "revision": 11
+  "updatedAt": "2026-08-27T08:50:25",
+  "revision": 12
 }

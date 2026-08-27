@@ -17,3 +17,8 @@ set "GPU_SERVICE_LANE_IDLE_TIMEOUT=600"
 rem Shortened idle timeout (seconds) applied automatically when free VRAM < 2x headroom.
 set "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT=60"
 set "GPU_SERVICE_JOB_TIMEOUT=3600"
+
+rem Chromium 调用路径：指向随仓库分发的 CloakBrowser 隐匿 Chromium（chrome.exe）。
+rem 浏览器启动（Playwright 等）据此使用指定的 Chromium 可执行文件。
+set "CHROMIUM_EXECUTABLE_PATH=thirdparty\cloakbrowser\chrome.exe"
+set "CHROMEDRIVER_EXECUTABLE_PATH=thirdparty\cloakbrowser\chromedriver.exe"

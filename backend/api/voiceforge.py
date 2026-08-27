@@ -8,8 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, File, Form, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi import APIRouter, File, Form, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, RedirectResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from urllib.parse import quote
 
@@ -1594,6 +1594,10 @@ def stream_asset(asset_id: str):
         asset = asset_service.get_asset(conn, asset_id)
         if not asset:
             raise HTTPException(404, "素材不存在")
+    # 远程 URL 素材：直接走在线代理（避免 Windows 上 Path 把 URL 反斜杠化导致 startswith 失效）
+    external = (asset.get("external_path") or "").strip()
+    if external.startswith(("http://", "https://")):
+        return RedirectResponse(f"/api/voiceforge/assets/online/proxy?url={quote(external, safe='')}")
     path = asset_service.resolve_asset_path(asset)
     if not path.exists():
         raise HTTPException(404, "素材文件不存在")
@@ -1607,6 +1611,217 @@ def delete_asset(asset_id: str):
         if not deleted:
             raise HTTPException(404, "素材不存在")
     return {"success": True}
+
+
+# ---------------------------------------------------------------------------
+# 在线素材（远程素材源：搜索 / 试听代理 / 入库）
+# ---------------------------------------------------------------------------
+
+ONLINE_SOURCE_HOSTS = (
+    "elevenlabs.io",
+    "elevenlabs.com",
+    "storage.googleapis.com",
+    "chinaz.com",
+    "chinaz.net",
+    "sc.chinaz.com",
+    "downsc.chinaz.net",
+)
+
+
+class OnlineSearchRequest(BaseModel):
+    keyword: str = ""
+    source: str = "elevenlabs"
+    category_url: str = ""
+
+
+class OnlineImportRequest(BaseModel):
+    name: str
+    asset_type: str
+    source_url: str
+    source_site: str = "elevenlabs"
+    source_id: str = ""
+    category: str = ""
+    tags: list = Field(default_factory=list)
+    description: str = ""
+    download: bool = False
+
+
+@router.post("/assets/online/search")
+def online_assets_search(data: OnlineSearchRequest):
+    """按素材源检索在线素材，统一返回 {items:[{title, sounds:[OnlineSoundItem]}]}。"""
+    if data.source == "chinaz":
+        return {"items": _chinaz_search(data.keyword or "", data.category_url or "")}
+    keyword = (data.keyword or "").strip()
+    if not keyword:
+        return {"items": []}
+    try:
+        from backend.crawlers import elevenlabs_sound_effects
+    except ImportError:
+        raise HTTPException(500, "未找到在线素材爬虫模块")
+    # 复用爬虫默认请求信息文件（脚本同目录下的精简 JSON）
+    default_request_file = os.path.join(
+        os.path.dirname(os.path.abspath(elevenlabs_sound_effects.__file__)),
+        "elevenlabs_request.json",
+    )
+    request_file = default_request_file if os.path.isfile(default_request_file) else None
+    try:
+        result = elevenlabs_sound_effects.crawl(keyword, request_file=request_file)
+    except (Exception, SystemExit) as error:
+        raise HTTPException(
+            502, f"在线素材搜索失败：{error}（请先在 backend/crawlers 提供浏览器导出的请求信息文件，"
+            "或配置 cookie / next-action 等请求头）"
+        )
+    return {"items": result.get("items", [])}
+
+
+@router.get("/assets/online/chinaz/categories")
+def online_assets_chinaz_categories():
+    """返回站长之家的全部筛选标签（name + 子 url）。"""
+    try:
+        from backend.crawlers import chinaz_sound_effects as cz
+    except ImportError:
+        raise HTTPException(500, "未找到站长之家爬虫模块")
+    try:
+        tags = cz.get_categories()
+    except Exception as error:
+        raise HTTPException(502, f"站长之家分类获取失败：{error}")
+    return {"tags": tags}
+
+
+def _chinaz_search(keyword: str, category_url: str):
+    """站长之家检索：分类列表（带预览/标签）或关键词搜索（逐条取详情补全音频地址与标签）。"""
+    from backend.crawlers import chinaz_sound_effects as cz
+
+    sounds: list = []
+    if category_url:
+        try:
+            items = cz.get_audio_list(category_url, max_pages=2)
+        except Exception as error:
+            raise HTTPException(502, f"站长之家分类列表获取失败：{error}")
+        for it in items:
+            labels = [t.get("name") for t in (it.get("tags") or []) if t.get("name")]
+            sounds.append({
+                "name": it.get("name") or "未命名素材",
+                "short_description": "",
+                "audio_url": it.get("preview_url") or "",
+                "id": it.get("detail_url") or it.get("name") or "",
+                "labels": labels,
+            })
+    elif keyword:
+        try:
+            raw = cz.search(keyword)
+        except Exception as error:
+            raise HTTPException(502, f"站长之家搜索失败：{error}")
+        for r in raw[:16]:
+            du = r.get("detail_url")
+            labels, audio_url = [], ""
+            if du:
+                try:
+                    det = cz.get_audio_detail(du)
+                    audio_url = det.get("download_url") or ""
+                    labels = [t for t in (det.get("tags") or []) if t]
+                except Exception:
+                    pass
+            sounds.append({
+                "name": r.get("name") or "未命名素材",
+                "short_description": "",
+                "audio_url": audio_url,
+                "id": du or r.get("name") or "",
+                "labels": labels,
+            })
+    return [{"title": "站长之家", "sounds": sounds}]
+
+
+@router.post("/assets/online/import")
+def online_assets_import(data: OnlineImportRequest):
+    """保存在线素材：download=False 仅记录源 URL；download=True 先下载再入库。"""
+    source_url = (data.source_url or "").strip()
+    if not source_url:
+        raise HTTPException(400, "缺少素材源 URL")
+    if data.download:
+        asset_id = uuid.uuid4().hex
+        try:
+            storage_key, file_name, file_size, mime_type, duration = asset_service.download_online_audio(
+                source_url, asset_id, data.asset_type or "sfx"
+            )
+        except Exception as error:
+            raise HTTPException(502, f"下载在线素材失败：{error}")
+        with session() as conn:
+            asset = asset_service.create_online_asset(
+                conn, data.name, data.asset_type, source_url,
+                category=data.category, tags=data.tags, description=data.description,
+                source_site=data.source_site, source_id=data.source_id,
+                file_size=file_size, storage_key=storage_key, file_name=file_name,
+                mime_type=mime_type, duration=duration, downloaded=True,
+            )
+        return {"asset": asset, "downloaded": True}
+    with session() as conn:
+        asset = asset_service.create_online_asset(
+            conn, data.name, data.asset_type, source_url,
+            category=data.category, tags=data.tags, description=data.description,
+            source_site=data.source_site, source_id=data.source_id,
+        )
+    return {"asset": asset, "downloaded": False}
+
+
+@router.get("/assets/online/proxy")
+def online_assets_proxy(url: str, request: Request):
+    """透传远程音频（Range 支持），解决跨域与进度条拖动问题。
+
+    仅允许白名单主机，避免 SSRF。
+    """
+    from urllib.parse import urlparse
+
+    import httpx
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise HTTPException(400, "非法源地址")
+    host = parsed.hostname.lower()
+    if not any(host == h or host.endswith("." + h) for h in ONLINE_SOURCE_HOSTS):
+        raise HTTPException(403, "素材源不在允许的主机列表内")
+    range_header = request.headers.get("range")
+    user_agent = request.headers.get("user-agent")
+    upstream_headers = {}
+    if range_header:
+        upstream_headers["Range"] = range_header
+    if user_agent:
+        upstream_headers["User-Agent"] = user_agent
+    client = httpx.Client(timeout=60, follow_redirects=True)
+    try:
+        upstream_request = client.build_request("GET", url, headers=upstream_headers)
+        response = client.send(upstream_request, stream=True)
+    except Exception as error:
+        client.close()
+        raise HTTPException(502, f"代理素材失败：{error}")
+    status_code = response.status_code
+    content_type = response.headers.get("content-type", "audio/mpeg")
+    content_length = response.headers.get("content-length")
+    accept_ranges = response.headers.get("accept-ranges", "bytes")
+    out_headers = {
+        "Content-Type": content_type,
+        "Accept-Ranges": accept_ranges,
+        "Cache-Control": "public, max-age=3600",
+    }
+    if content_length:
+        out_headers["Content-Length"] = content_length
+    if "content-range" in response.headers:
+        out_headers["Content-Range"] = response.headers["content-range"]
+
+    def iter_bytes():
+        try:
+            for chunk in response.iter_bytes(chunk_size=64 * 1024):
+                yield chunk
+        finally:
+            response.close()
+            client.close()
+
+    return StreamingResponse(
+        iter_bytes(),
+        status_code=status_code,
+        headers=out_headers,
+        media_type=content_type,
+    )
 
 
 @router.get("/projects/{project_id}/exports/srt")

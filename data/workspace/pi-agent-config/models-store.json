@@ -103,66 +103,6 @@
         "maxTokens": 16384
       },
       {
-        "id": "meta/llama-3.1-70b-instruct",
-        "name": "Llama 3.1 70b Instruct",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 128000,
-        "maxTokens": 4096
-      },
-      {
-        "id": "meta/llama-3.1-8b-instruct",
-        "name": "Llama 3.1 8B Instruct",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 16000,
-        "maxTokens": 4096
-      },
-      {
         "id": "meta/llama-3.2-11b-vision-instruct",
         "name": "Llama 3.2 11b Vision Instruct",
         "api": "openai-completions",
@@ -223,36 +163,6 @@
         },
         "contextWindow": 128000,
         "maxTokens": 8192
-      },
-      {
-        "id": "meta/llama-3.3-70b-instruct",
-        "name": "Llama 3.3 70b Instruct",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 128000,
-        "maxTokens": 4096
       },
       {
         "id": "meta/muse-glimmer-30b",
@@ -470,67 +380,6 @@
         "maxTokens": 8192
       },
       {
-        "id": "nvidia/llama-3.1-nemotron-nano-8b-v1",
-        "name": "Llama 3.1 Nemotron Nano 8B v1",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 16384
-      },
-      {
-        "id": "nvidia/llama-3.1-nemotron-nano-vl-8b-v1",
-        "name": "Llama 3.1 Nemotron Nano VL 8B v1",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 32768,
-        "maxTokens": 16384
-      },
-      {
         "id": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
         "name": "Llama 3.1 Nemotron Ultra 253B",
         "api": "openai-completions",
@@ -559,66 +408,6 @@
         },
         "contextWindow": 128000,
         "maxTokens": 16384
-      },
-      {
-        "id": "nvidia/llama-3.3-nemotron-super-49b-v1",
-        "name": "Llama 3.3 Nemotron Super 49B v1",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 65536
-      },
-      {
-        "id": "nvidia/llama-3.3-nemotron-super-49b-v1.5",
-        "name": "Llama 3.3 Nemotron Super 49B v1.5",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 65536
       },
       {
         "id": "nvidia/nemotron-3-nano-30b-a3b",
@@ -772,67 +561,6 @@
         "maxTokens": 262144
       },
       {
-        "id": "nvidia/nemotron-nano-12b-v2-vl",
-        "name": "Nemotron Nano 12B v2 VL",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 128000,
-        "maxTokens": 128000
-      },
-      {
-        "id": "nvidia/nvidia-nemotron-nano-9b-v2",
-        "name": "nvidia-nemotron-nano-9b-v2",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 131072
-      },
-      {
         "id": "openai/gpt-oss-120b",
         "name": "GPT-OSS-120B",
         "api": "openai-completions",
@@ -952,42 +680,11 @@
         },
         "contextWindow": 256000,
         "maxTokens": 16384
-      },
-      {
-        "id": "thinkingmachines/inkling",
-        "name": "Inkling",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 1048576,
-        "maxTokens": 16384
       }
     ],
-    "checkedAt": 1787605742655,
-    "lastModified": 1787571270000,
-    "etag": "W/\"5ae29592f0ce3621df5c54e12bbc0609\""
+    "checkedAt": 1787761239254,
+    "lastModified": 1787740206000,
+    "etag": "W/\"6c2203ef05886759f9dad33bb2f1d3cc\""
   },
   "xiaomi": {
     "models": [
@@ -1062,7 +759,7 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1787605742684,
+    "checkedAt": 1787791778956,
     "lastModified": 1787571286000,
     "etag": "W/\"3db76cd3404affdf755b2efc443b74c3\""
   },
@@ -1570,7 +1267,7 @@
         }
       }
     ],
-    "checkedAt": 1787605742743,
+    "checkedAt": 1787791783512,
     "lastModified": 1787571256000,
     "etag": "W/\"83d2a70407d3c5b76d5db4ef8ffb647d\""
   },
@@ -2489,17 +2186,17 @@
           "image"
         ],
         "cost": {
-          "input": 5,
-          "output": 30,
-          "cacheRead": 0.5,
-          "cacheWrite": 6.25,
+          "input": 4,
+          "output": 20,
+          "cacheRead": 0.4,
+          "cacheWrite": 5,
           "tiers": [
             {
               "inputTokensAbove": 272000,
-              "input": 10,
-              "output": 45,
-              "cacheRead": 1,
-              "cacheWrite": 12.5
+              "input": 8,
+              "output": 30,
+              "cacheRead": 0.8,
+              "cacheWrite": 10
             }
           ]
         },
@@ -2791,9 +2488,9 @@
         }
       }
     ],
-    "checkedAt": 1787605742753,
-    "lastModified": 1787571271000,
-    "etag": "W/\"7ac97151d0d133dd97e299dd4cb1662c\""
+    "checkedAt": 1787791779022,
+    "lastModified": 1787740207000,
+    "etag": "W/\"de4430a471bcb862d1abf6d6e78f60c2\""
   },
   "huggingface": {
     "models": [
@@ -3396,6 +3093,38 @@
         },
         "contextWindow": 262144,
         "maxTokens": 131072,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": null,
+          "xhigh": "xhigh",
+          "max": null
+        }
+      },
+      {
+        "id": "Qwen/Qwen3.8-27B",
+        "name": "Qwen3.8 27B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.4,
+          "output": 3,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 32768,
         "thinkingLevelMap": {
           "off": null,
           "minimal": null,
@@ -4419,9 +4148,9 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1787605742744,
-    "lastModified": 1787571260000,
-    "etag": "W/\"7392529195e177ec4070a98949207564\""
+    "checkedAt": 1787791778970,
+    "lastModified": 1787740196000,
+    "etag": "W/\"c1911dc3e852daede2d261d43e37162d\""
   },
   "anthropic": {
     "models": [
@@ -4796,7 +4525,7 @@
         }
       }
     ],
-    "checkedAt": 1787605742848,
+    "checkedAt": 1787791784228,
     "lastModified": 1787571244000,
     "etag": "W/\"f6c149c048a0e6e85e35ce0a72c1d4ec\""
   }
