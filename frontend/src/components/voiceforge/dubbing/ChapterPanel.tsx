@@ -8,6 +8,7 @@ import {
   FileEdit,
   Bot,
   SplitSquareVertical,
+  Wrench,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ interface ChapterPanelProps {
   onCreateChapter: (title: string, parentId?: string | null) => void;
   onDeleteChapter: (id: string) => void;
   onUpdateChapterText: (id: string, text: string) => Promise<void>;
+  onProcessChapter: (chapter: Chapter) => void;
   sentences: VoiceForgeSentence[];
 }
 
@@ -47,6 +49,7 @@ export function ChapterPanel({
   onCreateChapter,
   onDeleteChapter,
   onUpdateChapterText,
+  onProcessChapter,
   sentences,
 }: ChapterPanelProps) {
   const [addChapterOpen, setAddChapterOpen] = useState(false);
@@ -106,6 +109,18 @@ export function ChapterPanel({
             </span>
           )}
           <div className="flex shrink-0 gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6"
+              onClick={(e) => {
+                e.stopPropagation();
+                onProcessChapter(chapter);
+              }}
+              title="处理章节"
+            >
+              <Wrench className="h-3.5 w-3.5" />
+            </Button>
             <Button
               size="icon"
               variant="ghost"

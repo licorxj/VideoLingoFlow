@@ -17,6 +17,8 @@ interface Props {
   taskId?: string;
   onClose: () => void;
   onSave: (entries: SubtitleEntry[]) => void;
+  // 保存后直接触发节点运行（写回字幕文件），可选
+  onRun?: () => void;
 }
 
 function stableFileUrl(path?: string, taskId?: string): string {
@@ -35,7 +37,7 @@ function formatTime(sec: number): string {
   return h > 0 ? `${h}:${String(m % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}` : `${m}:${String(s % 60).padStart(2, "0")}`;
 }
 
-export default function SubtitleEditorDialog({ open, initialEntries, initialVideo, taskId, onClose, onSave }: Props) {
+export default function SubtitleEditorDialog({ open, initialEntries, initialVideo, taskId, onClose, onSave, onRun }: Props) {
   const [entries, setEntries] = useState<SubtitleEntry[]>([]);
   const [videoUrl, setVideoUrl] = useState("");
   const [currentTime, setCurrentTime] = useState(0);
@@ -319,7 +321,7 @@ export default function SubtitleEditorDialog({ open, initialEntries, initialVide
               取消
             </button>
             <button
-              onClick={() => { onSave(entries); onClose(); }}
+              onClick={() => { onSave(entries); onClose(); onRun?.(); }}
               className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90"
             >
               保存到节点

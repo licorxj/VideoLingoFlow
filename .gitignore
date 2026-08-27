@@ -166,6 +166,7 @@ patch_*.js
 run_validation.*
 tepss07_*
 backend/_tmp_*.py
+backend/crawlers/elevenlabs_request.json
 frontend/src/components/settings/*.trae-tmp
 net_check.py
 download_moss.py

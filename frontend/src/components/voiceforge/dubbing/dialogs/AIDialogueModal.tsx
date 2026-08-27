@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Bot, Loader2, Mic, BookOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,12 +9,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { voiceForgeApi } from "@/api/voiceforge";
 
 type ModeTab = "dialogue" | "narration";
 
 interface AIDialogueModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  projectId: string;
   text: string;
   characterNames: string[];
   emotionTags: Array<{ id: string; name: string }>;
@@ -54,6 +56,7 @@ interface DialogueResult {
 export function AIDialogueModal({
   open,
   onOpenChange,
+  projectId,
   text: sourceText,
   characterNames,
   emotionTags,
@@ -66,25 +69,51 @@ export function AIDialogueModal({
   const [inputText, setInputText] = useState(sourceText);
   const [results, setResults] = useState<DialogueResult[]>([]);
   const [extracting, setExtracting] = useState(false);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (open) {
+      setInputText(sourceText);
+      setResults([]);
+      setError("");
+    }
+  }, [open, sourceText]);
 
   const handleExtract = async () => {
     if (!inputText.trim()) return;
     setExtracting(true);
+    setError("");
     try {
-      // Mock — in production call API
-      await new Promise((r) => setTimeout(r, 2000));
-      const lines = inputText.split("\n").filter((l) => l.trim());
-      const mock: DialogueResult[] = lines.map((line, i) => ({
-        speaker: characterNames[i % characterNames.length] || "旁白",
-        text: line.trim(),
-        emotion: emotionTags[i % emotionTags.length]?.name || "中性",
-        tone_description:
-          mode === "narration"
-            ? customStyle || narrationStyle
-            : "",
-        selected: true,
-      }));
-      setResults(mock);
+      const res = await voiceForgeApi.aiDialoguePreview(projectId, {
+        text: inputText,
+        character_names: characterNames,
+        narration_mode: mode === "narration",
+        narration_style:
+          mode === "narration" ? customStyle || narrationStyle : "标准播音腔",
+      });
+      const sentences: Array<{
+        speaker?: string;
+        text?: string;
+        emotion?: string;
+        tone_description?: string;
+      }> = res.data?.sentences ?? [];
+      const parsed: DialogueResult[] = sentences
+        .filter((s) => (s.text ?? "").trim())
+        .map((s) => ({
+          speaker: s.speaker || "旁白",
+          text: (s.text ?? "").trim(),
+          emotion: s.emotion || "neutral",
+          tone_description: s.tone_description || "",
+          selected: true,
+        }));
+      if (parsed.length === 0) {
+        setError("AI 未提取到可用对话");
+      }
+      setResults(parsed);
+    } catch (err: unknown) {
+      const detail =
+        (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
+      setError(typeof detail === "string" ? detail : "AI 对话提取失败");
     } finally {
       setExtracting(false);
     }
@@ -224,6 +253,8 @@ export function AIDialogueModal({
             className="voice-input min-h-28 resize-y"
           />
         </div>
+
+        {error && <div className="text-xs text-destructive">{error}</div>}
 
         {/* Extract button */}
         <Button

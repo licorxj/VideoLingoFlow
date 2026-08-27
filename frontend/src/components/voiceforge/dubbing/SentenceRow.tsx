@@ -150,13 +150,13 @@ function SentenceRowInner({
       </td>
 
       {/* 4. 文本 */}
-      <td className="min-w-64 p-2">
+      <td className="min-w-64 py-1.5 px-2">
         <textarea
           defaultValue={sentence.edited_text || sentence.text}
           onChange={(e) => handleTextChange(e.target.value)}
           rows={1}
-          className="voice-input w-full resize-none text-sm leading-snug"
-          style={{ minHeight: "1.75rem", maxHeight: "5rem" }}
+          className="voice-input block w-full resize-none px-2 py-1 text-sm leading-snug"
+          style={{ minHeight: "1.5rem", maxHeight: "7rem", padding: "4px 8px" }}
         />
       </td>
 

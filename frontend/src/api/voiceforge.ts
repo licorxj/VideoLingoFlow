@@ -132,6 +132,25 @@ export type VoiceForgeAssetCategory = {
 
 export type VoiceForgeAssetTag = { id: string; name: string; usage_count: number };
 
+export type OnlineSoundItem = {
+  name: string;
+  short_description: string;
+  audio_url: string;
+  id: string;
+  labels: string[];
+};
+
+export type OnlineAssetItem = {
+  title: string;
+  slug?: string;
+  page_url?: string;
+  hero_cover_url?: string;
+  question?: string;
+  meta?: Record<string, unknown>;
+  generation_suggestions?: string[];
+  sounds: OnlineSoundItem[];
+};
+
 export type AssetListResult = {
   assets: VoiceForgeAsset[];
   total: number;
@@ -227,6 +246,17 @@ export const voiceForgeApi = {
   fileDialog: (data: { type?: string; title?: string; filetypes?: Array<[string, string]>; multiple?: boolean }) => client.post<{ paths: string[]; path?: string; cancelled: boolean }>("/api/files/native-dialog", data),
   scanAudio: (path: string, recursive = false) => client.post<{ files: Array<{ name: string; path: string; size: number }> }>("/api/files/scan-audio", { path, recursive }),
   fileStreamUrl: (path: string) => `/api/files/stream?path=${encodeURIComponent(path)}`,
+  onlineSearch: (params: { keyword?: string; source?: string; categoryUrl?: string }) =>
+    client.post<{ items: OnlineAssetItem[] }>("/api/voiceforge/assets/online/search", {
+      keyword: params.keyword || "", source: params.source || "elevenlabs", category_url: params.categoryUrl || "",
+    }),
+  onlineCategories: () =>
+    client.get<{ tags: { name: string; url: string }[] }>("/api/voiceforge/assets/online/chinaz/categories"),
+  onlineImport: (data: {
+    name: string; asset_type: string; source_url: string; source_site?: string; source_id?: string;
+    category?: string; tags?: string[]; description?: string; download?: boolean;
+  }) => client.post<{ asset: VoiceForgeAsset; downloaded: boolean }>("/api/voiceforge/assets/online/import", data),
+  onlineProxyUrl: (url: string) => `/api/voiceforge/assets/online/proxy?url=${encodeURIComponent(url)}`,
   srtUrl: (projectId: string) => `/api/voiceforge/projects/${projectId}/exports/srt`,
   audioZipUrl: (projectId: string) => `/api/voiceforge/projects/${projectId}/exports/audio-zip`,
   sentenceAudioUrl: (sentenceId: string) => `/api/voiceforge/sentences/${sentenceId}/audio`,

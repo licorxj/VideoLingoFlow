@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, FolderOpen, FolderPlus, Music2, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, FolderOpen, FolderPlus, Globe, Music2, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { AssetListResult, VoiceForgeAsset, VoiceForgeAssetTag, voiceForgeApi } from "@/api/voiceforge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -12,6 +12,7 @@ import { AssetFilter, AssetFilters } from "./AssetFilter";
 import { AssetAddDialog } from "./AssetAddDialog";
 import { AssetCategoryManager } from "./AssetCategoryManager";
 import { ASSET_TYPE_LABELS, ASSET_TYPE_ORDER } from "./meta";
+import OnlineAssetsModal from "./OnlineAssetsModal";
 
 const PAGE_SIZE = 12;
 
@@ -33,6 +34,7 @@ export function AssetLibrary() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [addOpen, setAddOpen] = useState(false);
+  const [onlineOpen, setOnlineOpen] = useState(false);
   const [catOpen, setCatOpen] = useState(false);
   const [editing, setEditing] = useState<VoiceForgeAsset | null>(null);
   const debounceRef = useRef<number | null>(null);
@@ -175,9 +177,15 @@ export function AssetLibrary() {
               <Plus className="mr-1.5 h-4 w-4" />
               添加素材
             </Button>
+            <Button variant="secondary" onClick={() => setOnlineOpen(true)}>
+              <Globe className="mr-1.5 h-4 w-4" />
+              在线素材
+            </Button>
           </>
         }
       />
+
+      <OnlineAssetsModal open={onlineOpen} onOpenChange={setOnlineOpen} onImported={() => void load(page, filters, activeType)} />
 
       <div className="flex gap-1 border-b border-border/60">
         {ASSET_TYPE_ORDER.map((type) => {

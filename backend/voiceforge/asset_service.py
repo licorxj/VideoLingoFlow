@@ -9,7 +9,7 @@ from pathlib import Path
 from fastapi import HTTPException
 
 from backend.voiceforge.database import row_to_dict, session
-from backend.voiceforge.storage import ALLOWED_AUDIO_EXTENSIONS, resolve_storage_key
+from backend.voiceforge.storage import ALLOWED_AUDIO_EXTENSIONS, resolve_storage_key, safe_file_name
 
 
 def _path_key(path):
@@ -74,6 +74,76 @@ def resolve_asset_path(asset_row):
 def get_asset(conn, asset_id: str):
     row = conn.execute("SELECT * FROM vf_assets WHERE id = ?", (asset_id,)).fetchone()
     return row_to_dict(row) if row else None
+
+
+def create_online_asset(
+    conn,
+    name: str,
+    asset_type: str,
+    source_url: str,
+    category: str = "",
+    tags: list = None,
+    description: str = "",
+    source_site: str = "",
+    source_id: str = "",
+    file_size: int = 0,
+    storage_key: str = None,
+    file_name: str = None,
+    mime_type: str = None,
+    duration: float = None,
+    downloaded: bool = False,
+):
+    """保存在线素材。
+
+    - 仅记录源 URL（不下载）：``downloaded=False``，``external_path`` 设为 ``source_url``。
+    - 已下载到本地 storage：``downloaded=True``，``external_path`` 留空，让本地存储键生效。
+    """
+    asset_id = uuid.uuid4().hex
+    if not storage_key:
+        storage_key = f"online/{asset_id}"
+    if not file_name:
+        file_name = safe_file_name(name or source_url, "online-audio.mp3")
+    tags_json = json.dumps(tags or [])
+    external_path = "" if downloaded else source_url
+    path_key = storage_key if downloaded else (source_url or storage_key)
+    conn.execute(
+        "INSERT INTO vf_assets "
+        "(id, name, asset_type, category, tags_json, storage_key, file_name, file_size, mime_type, duration, description, external_path, path_key, legacy_import_batch_id, legacy_source_id) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            asset_id, name, asset_type, category, tags_json, storage_key, file_name, file_size,
+            mime_type, duration, description, external_path, path_key,
+            source_site or None, source_id or None,
+        ),
+    )
+    return get_asset(conn, asset_id)
+
+
+def download_online_audio(source_url: str, asset_id: str, category: str = "sfx"):
+    """把远程音频下载到 voiceforge 存储，返回 (storage_key, file_name, file_size, mime_type, duration)。"""
+    import httpx
+
+    from backend.voiceforge.services import audio_duration
+
+    suffix = Path(source_url.split("?")[0]).suffix.lower()
+    if suffix not in ALLOWED_AUDIO_EXTENSIONS:
+        suffix = ".mp3"
+    storage_key = f"{category}/{asset_id}{suffix}"
+    destination = resolve_storage_key(storage_key)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    with httpx.stream("GET", source_url, timeout=60, follow_redirects=True) as response:
+        response.raise_for_status()
+        with destination.open("wb") as output:
+            for chunk in response.iter_bytes(1024 * 1024):
+                output.write(chunk)
+    file_size = destination.stat().st_size
+    mime_type = mimetypes.guess_type(destination.name)[0] or "audio/mpeg"
+    duration = None
+    try:
+        duration = audio_duration(destination)
+    except Exception:
+        duration = None
+    return storage_key, destination.name, file_size, mime_type, duration
 
 
 def list_assets(

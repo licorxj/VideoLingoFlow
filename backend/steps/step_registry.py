@@ -7,6 +7,7 @@ from backend.steps.s01_download import S01Download
 from backend.steps.s02_asr import S02ASR
 from backend.steps.s_asr_stages import S_ASRRecognize, S_ASRPostProcess
 from backend.steps.s_audio_denoise import StepAudioDenoise
+from backend.steps.s_audio_cut_by_subtitle import StepAudioCutBySubtitle
 from backend.steps.s_aigc_comfyui import S_AIGC_ComfyUI
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
@@ -38,6 +39,8 @@ from backend.steps.s_pi_agent import S_PiAgent
 from backend.steps.s_imagegen import S_ImageGen
 from backend.steps.s_video_frame_extract import S_VideoFrameExtract
 from backend.steps.s_video_transcode import S_VideoTranscode
+from backend.steps.s_video_cut_by_subtitle import StepVideoCutBySubtitle
+from backend.steps.s_merge_outputs_to_list import StepMergeOutputsToList
 from backend.steps.s_subtitle_position_search import S_SubtitlePositionSearch
 from backend.steps.s_subtitle_recognition import S_SubtitleRecognition
 from backend.steps.s_video_publish import S_VideoPublish
@@ -58,6 +61,8 @@ from backend.steps.s_qm_virtual_mailbox import S_QmVirtualMailbox
 from backend.steps.passthrough_step import PassthroughStep
 from backend.steps.s_archive import S_ArchiveArtifacts
 from backend.steps.s_ai_punctuate import S_AiPunctuate
+from backend.steps.s_text_input import StepTextInput
+from backend.steps.s_file_load import StepFileLoad
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -131,6 +136,12 @@ _STEPS = {
     "video_frame_extract": S_VideoFrameExtract(),
     "s_video_transcode": S_VideoTranscode(),
     "video_transcode": S_VideoTranscode(),
+    "s_audio_cut_by_subtitle": StepAudioCutBySubtitle(),
+    "audio_cut_by_subtitle": StepAudioCutBySubtitle(),
+    "s_video_cut_by_subtitle": StepVideoCutBySubtitle(),
+    "video_cut_by_subtitle": StepVideoCutBySubtitle(),
+    "s_output_merge_list": StepMergeOutputsToList(),
+    "output_merge_list": StepMergeOutputsToList(),
     "s_subtitle_position_search": S_SubtitlePositionSearch(),
     "subtitle_position_search": S_SubtitlePositionSearch(),
     "s_subtitle_recognition": S_SubtitleRecognition(),
@@ -167,6 +178,10 @@ _STEPS = {
     "qm_virtual_mailbox": S_QmVirtualMailbox(),
     "archive_artifacts": S_ArchiveArtifacts(),
     "ai_punctuate": S_AiPunctuate(),
+    "s_text_input": StepTextInput(),
+    "text_input": StepTextInput(),
+    "s_file_load": StepFileLoad(),
+    "file_load": StepFileLoad(),
 }
 
 

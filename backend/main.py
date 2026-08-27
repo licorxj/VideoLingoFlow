@@ -19,7 +19,7 @@ from starlette.background import BackgroundTask
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Scope, Receive, Send
 
-from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail
+from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail
 from backend.control_plane import runtime_flags
 from backend.utils.observability import correlation_id
 
@@ -177,6 +177,7 @@ app.include_router(tts_interfaces.router, prefix="/api/tts-interfaces", tags=["t
 app.include_router(tts_interfaces.voice_router, prefix="/api/tts-voices", tags=["tts-voices"])
 app.include_router(asr_interfaces.router, prefix="/api/asr-interfaces", tags=["asr-interfaces"])
 app.include_router(imagegen_interfaces.router, prefix="/api/imagegen-interfaces", tags=["imagegen-interfaces"])
+app.include_router(videogen_interfaces.router, prefix="/api/videogen-interfaces", tags=["videogen-interfaces"])
 app.include_router(separation_interfaces.router, prefix="/api/separation-interfaces", tags=["separation-interfaces"])
 app.include_router(ocr_interfaces.router, prefix="/api/ocr-interfaces", tags=["ocr-interfaces"])
 app.include_router(publish.router, prefix="/api/publish", tags=["publish"])

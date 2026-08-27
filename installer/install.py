@@ -436,6 +436,13 @@ def write_runtime_value(path: Path, key: str, value: str) -> None:
     path.write_text("\n".join(output).rstrip() + "\n", encoding="utf-8")
 
 
+def configure_chromium_path(local_env: Path) -> None:
+    """确保 .runtime/local_env.bat 写入 CloakBrowser 的 Chromium 调用路径。"""
+    write_runtime_value(local_env, "CHROMIUM_EXECUTABLE_PATH", r"thirdparty\cloakbrowser\chrome.exe")
+    write_runtime_value(local_env, "CHROMEDRIVER_EXECUTABLE_PATH", r"thirdparty\cloakbrowser\chromedriver.exe")
+    ok("已写入 CloakBrowser 的 Chromium 调用路径")
+
+
 def configure_gpu_service(local_env: Path) -> None:
     values = {}
     for line in local_env.read_text(encoding="utf-8", errors="replace").splitlines():
@@ -548,6 +555,7 @@ def bootstrap_config() -> None:
         else:
             warn(".runtime/local_env.bat 缺失且无模板（管理器会自动使用内置默认值）")
             return
+    configure_chromium_path(local_env)
     configure_gpu_service(local_env)
 
 

@@ -8,6 +8,8 @@ interface Props {
   initialText?: string;
   onClose: () => void;
   onSave: (text: string) => void;
+  // 保存后直接触发节点运行（写回文件），可选
+  onRun?: () => void;
 }
 
 /** 构造正则（带 g 标志）；非法时返回 null */
@@ -19,7 +21,7 @@ function buildRegex(pattern: string): RegExp | null {
   }
 }
 
-export default function TextEditorDialog({ open, initialText, onClose, onSave }: Props) {
+export default function TextEditorDialog({ open, initialText, onClose, onSave, onRun }: Props) {
   const [text, setText] = useState("");
   const [findText, setFindText] = useState("");
   const [replaceText, setReplaceText] = useState("");
@@ -213,7 +215,7 @@ export default function TextEditorDialog({ open, initialText, onClose, onSave }:
               取消
             </button>
             <button
-              onClick={() => { onSave(text); onClose(); }}
+              onClick={() => { onSave(text); onClose(); onRun?.(); }}
               className="px-3 py-1.5 text-xs rounded-md bg-primary text-primary-foreground hover:opacity-90"
             >
               保存到节点

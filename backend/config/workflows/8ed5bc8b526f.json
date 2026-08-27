@@ -1,7 +1,7 @@
 {
   "id": "8ed5bc8b526f",
-  "name": "OCR识别字幕",
-  "description": "OCR技术快速识别视频画面上的硬字幕",
+  "name": "OCR识别生字幕",
+  "description": "OCR技术快速识别视频画面上的硬字幕，可以自动识别，也可以框选位置，只适应于视频上有硬字幕的视频，可以配合asr后处理模块进一步生成单字时间戳。",
   "nodes": [
     {
       "id": "node_1_1787018588772",
@@ -17,13 +17,13 @@
           "selectedTypes": [
             "video"
           ],
-          "videoPath": "X:/PCTMoveData/Videos/下载/开源minimax h3 一键复刻爆款视频 skill 公开了 [BV1hZM16zEvo].mp4",
+          "videoPath": "X:/PCTMoveData/Videos/测试.mp4",
           "audioPath": "",
           "subtitlePath": "",
           "url": "",
           "filePath": "",
-          "source_language": "en",
-          "target_language": "zh",
+          "source_language": "zh",
+          "target_language": "en",
           "copyInputs": true,
           "var1": "",
           "var1Required": false,
@@ -35,10 +35,10 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "video": "X:/PCTMoveData/Videos/下载/开源minimax h3 一键复刻爆款视频 skill 公开了 [BV1hZM16zEvo].mp4",
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\09c5f2544c15477b9feb3bf051ff1c79\\cache\\input_video.mp4",
           "languages": {
-            "source_language": "en",
-            "target_language": "zh"
+            "source_language": "zh",
+            "target_language": "en"
           }
         },
         "error": "",
@@ -46,17 +46,17 @@
       },
       "measured": {
         "width": 420,
-        "height": 498
+        "height": 563
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
       "id": "node_2_1787018613496",
       "type": "workflow",
       "position": {
-        "x": -2070,
-        "y": -2895
+        "x": -1620,
+        "y": -2940
       },
       "data": {
         "nodeType": "video_preview",
@@ -80,106 +80,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 420
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_3_1787018665742",
-      "type": "workflow",
-      "position": {
-        "x": -2070,
-        "y": -2340
-      },
-      "data": {
-        "nodeType": "subtitle_position_search",
-        "label": "视频字幕位置查找",
-        "config": {
-          "model": "rapidocr",
-          "direction": "horizontal",
-          "position": "ratio",
-          "position_ratio": "0.6-0.9",
-          "frame_interval": 20,
-          "clean_cache": true,
-          "ocr_version": "PP-OCRv6",
-          "model_type": "tiny",
-          "position_mode": "ocr",
-          "manual_box": null
-        },
-        "status": "failed",
-        "disableExecute": false,
-        "progress": 0,
-        "message": "抽帧裁剪后无可用图片",
-        "outputs": {},
-        "error": "抽帧裁剪后无可用图片",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 572
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_4_1787018735302",
-      "type": "workflow",
-      "position": {
-        "x": -1530,
-        "y": -2880
-      },
-      "data": {
-        "nodeType": "image_preview",
-        "label": "图片预览器",
-        "config": {
-          "fit": "contain"
-        },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": "",
-        "disableExecute": false,
-        "note": "字幕位置识别",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 229
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_1_1787026263575",
-      "type": "workflow",
-      "position": {
-        "x": -1380,
-        "y": -2340
-      },
-      "data": {
-        "nodeType": "subtitle_recognition",
-        "label": "OCR字幕识别",
-        "config": {
-          "model": "rapidocr",
-          "initial_interval": 20,
-          "boundary_precision_ms": 100,
-          "tilt_threshold_deg": 3,
-          "ocr_version": "PP-OCRv6",
-          "model_type": "small"
-        },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": "",
-        "workbench_url": "",
-        "disableExecute": false
-      },
-      "measured": {
-        "width": 420,
-        "height": 300
+        "height": 477
       },
       "selected": false,
       "dragging": false
@@ -188,8 +89,8 @@
       "id": "node_2_1787026400765",
       "type": "workflow",
       "position": {
-        "x": -870,
-        "y": -2250
+        "x": -705,
+        "y": -2385
       },
       "data": {
         "nodeType": "subtitle_gen",
@@ -199,16 +100,18 @@
           "filter_punctuation": false,
           "punctuation_replace_mode": "space"
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "original": "output/subtitles_node_2_1787026400765.srt"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 210
+        "height": 334
       },
       "selected": false,
       "dragging": false
@@ -217,8 +120,8 @@
       "id": "n_msy5eaeziq0a",
       "type": "workflow",
       "position": {
-        "x": -180,
-        "y": -2850
+        "x": -975,
+        "y": -2940
       },
       "data": {
         "nodeType": "video_preview",
@@ -231,9 +134,9 @@
           "backgroundColor": "rgba(0,0,0,0.6)",
           "subtitlePosition": "bottom"
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
         "outputs": {},
         "error": "",
         "disableExecute": false,
@@ -242,7 +145,155 @@
       },
       "measured": {
         "width": 420,
-        "height": 396
+        "height": 453
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787770375309",
+      "type": "workflow",
+      "position": {
+        "x": -180,
+        "y": -2415
+      },
+      "data": {
+        "nodeType": "subtitle_editor",
+        "label": "字幕编辑",
+        "config": {
+          "enable_copy": true,
+          "edited_subtitles": "[{\"start\":0,\"end\":1.29,\"text\":\"哎兄弟们\"},{\"start\":1.332,\"end\":2.915,\"text\":\"今天又接了一个咨询\"},{\"start\":3.165,\"end\":6.831,\"text\":\"超 一线城市土著大佬失恋了\"},{\"start\":6.998,\"end\":9.416,\"text\":\"真的给我打电话的时候就差没哭了\"},{\"start\":9.457,\"end\":11.624,\"text\":\"我发现很多40岁的有钱男人啊\"},{\"start\":13.582,\"end\":14.749,\"text\":\"我个人觉得\"},{\"start\":14.789,\"end\":18.082,\"text\":\"40来岁的男人是最适合谈恋爱的年纪\"},{\"start\":18.291,\"end\":19.082,\"text\":\"你想想看\"},{\"start\":19.123,\"end\":19.916,\"text\":\"这个阶段啊\"},{\"start\":19.957,\"end\":20.233,\"text\":\"能有事业的\"}]"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "Y:\\VideoLingoLc\\control_plane_workspaces\\09c5f2544c15477b9feb3bf051ff1c79\\output/subtitles_node_2_1787026400765.srt"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 340
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787771463721",
+      "type": "workflow",
+      "position": {
+        "x": -195,
+        "y": -2715
+      },
+      "data": {
+        "nodeType": "run_wait",
+        "label": "运行等待",
+        "config": {
+          "enabled": false,
+          "wait_seconds": 60
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output": "output/subtitles_node_2_1787026400765_67bae253.srt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 270
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_6_1787790443408",
+      "type": "workflow",
+      "position": {
+        "x": -1740,
+        "y": -2250
+      },
+      "data": {
+        "nodeType": "subtitle_position_search",
+        "label": "OCR字幕查找",
+        "config": {
+          "model": "",
+          "ocr_version": "",
+          "model_type": "",
+          "custom_model_name": "",
+          "position_mode": "ocr",
+          "manual_box": {},
+          "skip_head_sec": 0,
+          "skip_tail_sec": 0,
+          "direction": "horizontal",
+          "position": "ratio",
+          "position_ratio": "0.6-0.8",
+          "frame_interval": 20,
+          "clean_cache": true
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 539
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_7_1787790450610",
+      "type": "workflow",
+      "position": {
+        "x": -1200,
+        "y": -2145
+      },
+      "data": {
+        "nodeType": "subtitle_recognition",
+        "label": "OCR字幕识别",
+        "config": {
+          "model": "",
+          "ocr_version": "",
+          "model_type": "",
+          "custom_model_name": "",
+          "initial_interval": 20,
+          "boundary_precision_ms": 200,
+          "tilt_threshold_deg": 8
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 338
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_8_1787790483305",
+      "type": "workflow",
+      "position": {
+        "x": -1170,
+        "y": -1560
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "note": "字幕位置预览"
+      },
+      "measured": {
+        "width": 420,
+        "height": 261
       },
       "selected": false,
       "dragging": false
@@ -271,74 +322,23 @@
       },
       "source": "node_1_1787018588772",
       "sourceHandle": "out-video",
-      "target": "node_3_1787018665742",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1787018588772out-video-node_3_1787018665742in-video"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
-      },
-      "source": "node_3_1787018665742",
-      "sourceHandle": "out-image",
-      "target": "node_4_1787018735302",
-      "targetHandle": "in-image",
-      "id": "xy-edge__node_3_1787018665742out-image-node_4_1787018735302in-image"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787018588772",
-      "sourceHandle": "out-video",
-      "target": "node_1_1787026263575",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1787018588772out-video-node_1_1787026263575in-video"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
-      },
-      "source": "node_3_1787018665742",
-      "sourceHandle": "out-json",
-      "target": "node_1_1787026263575",
-      "targetHandle": "in-json",
-      "id": "xy-edge__node_3_1787018665742out-json-node_1_1787026263575in-json"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787026263575",
-      "sourceHandle": "out-subtitle",
-      "target": "node_2_1787026400765",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1787026263575out-subtitle-node_2_1787026400765in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787018588772",
-      "sourceHandle": "out-video",
       "target": "n_msy5eaeziq0a",
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1787018588772out-video-n_msy5eaeziq0ain-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787770375309",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1787771463721",
+      "targetHandle": "in-input",
+      "id": "xy-edge__node_1_1787770375309out-subtitle-node_1_1787771463721in-input",
+      "selected": false
     },
     {
       "type": "bezier",
@@ -349,13 +349,93 @@
       },
       "source": "node_2_1787026400765",
       "sourceHandle": "out-original",
+      "target": "node_1_1787770375309",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_2_1787026400765out-original-node_1_1787770375309in-subtitle",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787771463721",
+      "sourceHandle": "out-output",
       "target": "n_msy5eaeziq0a",
       "targetHandle": "in-original",
-      "id": "xy-edge__node_2_1787026400765out-original-n_msy5eaeziq0ain-original"
+      "id": "xy-edge__node_1_1787771463721out-output-n_msy5eaeziq0ain-original",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787018588772",
+      "sourceHandle": "out-video",
+      "target": "node_6_1787790443408",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787018588772out-video-node_6_1787790443408in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_6_1787790443408",
+      "sourceHandle": "out-image",
+      "target": "node_8_1787790483305",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_6_1787790443408out-image-node_8_1787790483305in-image"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_6_1787790443408",
+      "sourceHandle": "out-json",
+      "target": "node_7_1787790450610",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_6_1787790443408out-json-node_7_1787790450610in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787018588772",
+      "sourceHandle": "out-video",
+      "target": "node_7_1787790450610",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787018588772out-video-node_7_1787790450610in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_7_1787790450610",
+      "sourceHandle": "out-subtitle",
+      "target": "node_2_1787026400765",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_7_1787790450610out-subtitle-node_2_1787026400765in-subtitle"
     }
   ],
   "type": "user",
   "createdAt": "2026-08-18T10:03:44",
-  "updatedAt": "2026-08-26T16:17:21",
-  "revision": 18
+  "updatedAt": "2026-08-27T08:29:05",
+  "revision": 28
 }
