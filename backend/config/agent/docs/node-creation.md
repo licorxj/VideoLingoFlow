@@ -1,202 +1,232 @@
 # 节点创建（Node Creation）
 
-本文件指导 agent 如何**新增一个工作流节点（node）**。节点是工作流的能力单元，分两类：
-1. **内置节点**：代码内置的 `S_*` Step（绝大多数能力），需同时改前端展示定义与后端 Step 映射；
-2. **自定义节点**：运行时从 `backend/config/node_types/<node_type>.json` 加载，无需写 Python Step，按 `execType` 执行脚本。
+本章说明如何为 VideoLingoFlow 新增一个**节点（node）**。节点分两类：
 
-> 本文档基于 `backend/config/builtin_node_types.py`、`backend/steps/step_registry.py`、`backend/steps/base_step.py`、`backend/control_plane/custom_node_runtime.py`、`frontend/src/components/workflow/*` 的**当前实现**。节点总数随版本增长（当前约 57 个），不要硬编码旧数字。
+1. **内置节点（built-in）**：在仓库源码里定义（前端展示元数据 + 后端 Step 实现），需改代码并重启后端。
+2. **自定义节点（custom）**：通过 `POST/PUT /api/node-types` 写入 `backend/config/node_types/<id>.json`，无需改源码、无需重启，运行时由 `control_plane/custom_node_runtime.py` 执行。
+
+两类节点都复用同一套**节点类型定义**驱动前端编辑器的连线、配置项与运行。
 
 ---
 
-## A. 内置节点
+## A. 内置节点类型定义
 
-### A.1 必须改的两处（缺一不可）
+### A.1 入口文件
 
-| 文件 | 作用 | 不写后果 |
-|---|---|---|
-| `backend/config/builtin_node_types.py` | 节点的**展示元数据**：名称、分类、图标、输入/输出、表单字段、执行域 | 前端看不到 / 表单缺失 |
-| `backend/steps/step_registry.py` | 把节点 id 映射到具体的 `S_*` Step 类（`register_step(id, StepClass, {category, ...})`） | 运行报 "未注册节点" / 节点无法执行 |
+`backend/config/builtin_node_types.py` 维护一个 Python 列表 `BUILTIN_NODE_TYPES`，每个元素是一个 dict。该文件还提供：
 
-> 前端节点核心是**通用**的（`NodeManager.tsx` 用 `node_def` 动态渲染表单与端口），**通常不需要**为内置节点单独写 React 组件——除非你要给它专属 UI（见 A.4）。
+- `get_builtin_node_types() -> list[dict]`：返回全部节点类型（前端 `GET /api/node-types` 数据源之一）。
+- `get_builtin_node_type(node_id) -> dict | None`
+- `is_builtin_node_type_deleted(node_id) -> bool`：内置节点被软删除后返回 True（隐藏但保留历史引用）。
 
-### A.2 在 `builtin_node_types.py` 增加定义
-
-每个节点是一个 dict，关键字段：
+### A.2 字段规范
 
 ```python
 {
-    "id": "my_node",                 # 唯一标识，须与 step_registry 的注册 id 一致
-    "name": "我的节点",              # 前端显示名
-    "category": "ai",                # 分类（见下方分类枚举）
-    "description": "做什么",
-    "icon": "🛠️",                    # 展示图标
-    "execution_domain": "thread",    # "thread" 或 "process"（无 "gpu" 域；GPU 交服务层）
-    "inputs": [
-        {"name": "text", "type": "text", "required": True},
+    "id": "srt_to_json",                       # 节点类型唯一 id（字符串）
+    "name": "SRT 字幕转 JSON",                 # 展示名
+    "execution_domain": "thread",              # 见 A.4
+    "category": "tools",                       # 分组 key（见文件顶部 CATEGORIES）
+    "description": "把 SRT 字幕转成 ASR 结果格式 JSON",
+    "icon": "...",                             # 前端图标标识
+    "color": "...",                            # 前端卡片主题色
+    "inputs": [                                # 输入端口（用 id，不是 name）
+        {"id": "subtitle", "label": "字幕", "type": "subtitle", "required": True},
     ],
-    "outputs": [
-        {"name": "result", "type": "text"},
+    "outputs": [                               # 输出端口
+        {"id": "json", "label": "ASR JSON", "type": "filepath"},
     ],
-    "form_schema": [                 # 前端表单字段
-        {"key": "model", "label": "模型", "type": "text", "default": "gpt-4o"},
+    "defaultConfig": {                         # 默认配置（key 与 configFields 对应）
+        "target_fps": 30,
+    },
+    "configFields": [                          # 前端设置面板
+        {
+            "key": "target_fps",
+            "label": "目标帧率",
+            "type": "number",                  # text/number/slider/select/toggle/textarea 等
+            "default": 30,
+            "min": 1, "max": 60, "step": 1,
+        },
+        {
+            "key": "mode",
+            "label": "模式",
+            "type": "select",
+            "options": [                       # select 用 options
+                {"label": "最长时长", "value": "longest"},
+                {"label": "主音轨为准", "value": "main"},
+            ],
+            "default": "longest",
+        },
     ],
-    "default_config": {},            # 默认配置
-    "is_frontend_only": False,       # True=仅前端预览（如 video_preview/image_preview）
-    "supported_extensions": [],      # 若处理文件，声明扩展名
 }
 ```
 
-**category 枚举（常用）**：`video` / `audio` / `speech` / `text` / `ai` / `subtitle` / `translate` / `agent` / `workflow` / `io` / `tool` / `publish`。
+**命名要点（易错点）：**
+- 输入/输出端口用 `id`（如 `"subtitle"`），不要写成 `name`。
+- 设置面板用 `configFields`，默认值放 `defaultConfig`（不是 `default_config` / `form_schema`）。
+- 端口 `type` 用受控类型（`filepath` / `subtitle` / `audio` / `text` / `json` / `video` 等），同类型端口才能连线。
 
-### A.3 实现 Step 并注册
+### A.3 后端 Step 实现
 
-Step 继承 `backend/steps/base_step.py:BaseStep`，标准三步（`_pre_execute` / `_execute` / `_post_execute`，由 `execute()` 串联）：
-
-```python
-from backend.steps.base_step import BaseStep, StepContext, StepResult
-
-class S_MyNode(BaseStep):
-    @property
-    def name(self) -> str:
-        return "我的节点"
-
-    def _pre_execute(self, ctx: StepContext) -> None:
-        # 校验输入/配置，缺失则 raise ValueError
-        ...
-
-    def _execute(self, ctx: StepContext) -> StepResult:
-        # 1. 读输入：ctx.inputs["text"]、ctx.node_inputs
-        # 2. 业务处理（可调用 ctx 提供的 model/tts/asr 客户端）
-        # 3. 产物落盘：写 file_path，并用 self.find_artifact 或约定 {base}_{node_id}{ext}
-        # 4. 返回：
-        return StepResult(
-            success=True,
-            outputs={"result": "..."},
-            artifacts=[{"file_path": str(p), "kind": "json", "base_name": "my_out"}],
-            progress=100,
-        )
-
-    def _post_execute(self, ctx: StepContext, result: StepResult) -> None:
-        # 可选：清理/汇总
-        ...
-```
-
-注册（`step_registry.py`）：
+Step 写在 `backend/steps/s_*.py`，继承 `backend/steps/base_step.py::BaseStep`。
 
 ```python
-from backend.steps.s_my_node import S_MyNode
-register_step("my_node", S_MyNode, {"category": "ai"})
+# backend/steps/s_srt_to_json.py
+import os, json
+from backend.steps.base_step import BaseStep
+from backend.utils.srt_to_json import parse_srt
+
+
+class S_SrtToJson(BaseStep):
+    step_id = "srt_to_json"                    # 仅用于日志
+
+    def check_artifact(self, task_dir):        # 产物是否已完成
+        node_id = getattr(self, "_node_id", "")
+        name = f"srt_to_json_{node_id}.json" if node_id else "srt_to_json.json"
+        return os.path.isfile(os.path.join(task_dir, "cache", name))
+
+    def validate_inputs(self, task_dir):       # 上游输入是否就绪
+        raw = (getattr(self, "_step_inputs", {}) or {}).get("subtitle")
+        if isinstance(raw, list):
+            raw = raw[0] if raw else None
+        path = raw if isinstance(raw, str) else None
+        return bool(path) and os.path.isfile(path)
+
+    def run(self, task_dir, callback=None, cancel_callback=None):
+        node_id = getattr(self, "_node_id", "")
+        cache_dir = os.path.join(task_dir, "cache")
+        os.makedirs(cache_dir, exist_ok=True)
+
+        raw = (getattr(self, "_step_inputs", {}) or {}).get("subtitle")
+        if isinstance(raw, list):
+            raw = raw[0] if raw else None
+        srt_path = raw if isinstance(raw, str) else None
+        if not srt_path or not os.path.isfile(srt_path):
+            raise ValueError("SRT 转 JSON 失败：未提供有效的字幕文件路径")
+
+        if callback:
+            callback(10, f"读取 SRT：{os.path.basename(srt_path)}")
+        with open(srt_path, "r", encoding="utf-8") as f:
+            entries = parse_srt(f.read())
+
+        segments = [...]                       # 解析为 segments
+        asr_result = {"language": "und", "text": " ".join(...), "segments": segments}
+
+        out_name = f"srt_to_json_{node_id}.json" if node_id else "srt_to_json.json"
+        out_path = os.path.join(cache_dir, out_name)
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(asr_result, f, ensure_ascii=False, indent=2)
+
+        if callback:
+            callback(100, f"完成：{len(segments)} 条字幕")
+        return {
+            "artifacts": [os.path.join("cache", out_name)],
+            "outputs": {"json": os.path.join("cache", out_name)},
+        }
 ```
 
-**BaseStep 提供给子类的常用能力**（见 `base_step.py`）：
-- `self.find_artifact(directory, base_name)`：按 `{base}_{node_id}{ext}` 反查文件；
-- `self.log_progress(percent, message)`：上报进度（推前端）；
-- 文件读写工具 `read_*_file(path)` / `write_*_file(path, content)`（text/json/srt/str）；
-- `ctx.inputs` / `ctx.node_inputs` / `ctx.node_config` / `ctx.workspace`（任务目录）；
-- 业务客户端（`ctx.models` / TTS 等），按需通过 `step_base` 提供的工厂获取。
+**BaseStep 接口要点：**
+- 方法名是 `check_artifact` / `validate_inputs` / `run`（没有 `_pre_execute` / `_execute` / `_post_execute`）。
+- 没有 `StepContext` / `StepResult` 对象。`run` 直接接收 `task_dir`（字符串），返回普通 dict。
+- 运行时在调用 `run` 前注入三个实例属性（见 `control_plane/step_worker.py`）：
+  - `self._node_id`：节点实例唯一 id（用于产物文件名后缀）。
+  - `self._step_config`：节点 `data.config`。
+  - `self._step_inputs`：连线解析后的输入，键为输入端口 `id`，值为文件路径字符串或列表。
+- 进度上报：在 `run` 内调用 `callback(percent: int, message: str)`（若非 None）。
+- 协作取消：按需调用 `cancel_callback()`（若提供），返回 True 表示已取消。
+- 产物命名约定：`{base}_{node_id}{ext}`（如 `asr_result_a1b2c3.json`）。读取用模块级函数 `find_artifact(directory, base_name)` 反查（见 `file-management.md`），不要硬编码完整文件名。
+- `BaseStep` 另提供 `rollback(task_dir)` / `clear_artifact(task_dir)`（按 `artifacts` 清理）与 `_all_exist(task_dir, files)`。
 
-### A.4 何时需要专属前端组件
+### A.4 execution_domain（执行域）
 
-多数内置节点用通用渲染即可。**仅当**需自定义交互（如可视化编辑器 `json_visual_editor`、`text_editor`、`subtitle_editor`）时，在 `frontend/src/components/workflow/NodeManager.tsx` 用 `TEMPLATE_NODE_COMPONENTS` 注册该 node_type 的专属组件。新增专属组件后，确保它正确读写节点 `config` 并把结果写回 `outputs`。
+- `thread`：在线程池内执行（绝大多数节点）。
+- `process`：在独立子进程执行（`control_plane/step_worker.py` 以 `python -m ...` 启动），用于重型/长时推理以释放 GIL、隔离崩溃。
+- `llm`：以 LLM 调用方式执行（部分 LLM 类节点）。
+
+GPU 计算**不是**一个执行域。GPU 类节点（`asr` / `vocal_separation` / `track_separation`）仍声明为 `process` 或 `thread`，运行时根据 `GPU_SERVICE_MANAGED_NODE_TYPES` 决定交给 GPU 服务层显存 lane（见 `gpu-service.md`）。
+
+### A.5 注册 Step
+
+当前注册表在 `backend/steps/step_registry.py`：模块级 dict `_STEPS`，把 step id 映射到**实例化后的 Step 对象**。控制平面执行时通过 `get_step_instance(step_id)` 取实例（`step_worker.py`、`workflow_runtime.py` 都走它）。
+
+```python
+# backend/steps/step_registry.py 的 _STEPS 末尾追加：
+from backend.steps.s_srt_to_json import S_SrtToJson
+
+_STEPS = {
+    # ... 既有条目 ...
+    "s_srt_to_json": S_SrtToJson(),    # 历史 sNN_* 风格 key（兼容）
+    "srt_to_json": S_SrtToJson(),      # 与节点类型 id 一致的主 key（必加）
+}
+```
+
+必须同时加上 `s_<name>` 与 `<node_type_id>` 两个 key（前者兼容旧引用，后者是节点连线实际使用的）。完成后前端即可连线运行该节点。
+
+`backend/engine/thread_scheduler.py` 里另有一份遗留的 `BUILTIN_STEP_REGISTRY`（节点 id → (module, class)），服务于旧的 ThreadScheduler 线程池路径；控制平面执行路径不需要改它，新增节点只改 `step_registry._STEPS` 即可。
 
 ---
 
-## B. 自定义节点（无需写 Step）
+## B. 自定义节点（无需改源码）
 
-运行时从磁盘加载定义，由 `backend/control_plane/custom_node_runtime.py` 在**独立子进程**执行。
+通过节点类型 REST API 写入 `backend/config/node_types/<id>.json`：
 
-### B.1 定义文件位置
+- `POST /api/node-types`：新建。
+- `PUT /api/node-types/{id}`：更新。
+- `DELETE /api/node-types/{id}`：删除自定义节点（内置节点删除会写隐藏记录，可能使引用它的工作流失效）。
 
-`backend/config/node_types/<node_type>.json`
-
-### B.2 定义结构
+请求体（节选）：
 
 ```json
 {
   "id": "my_custom_node",
   "name": "我的自定义节点",
-  "category": "tool",
-  "icon": "🧩",
+  "isBuiltIn": false,
   "execution_domain": "process",
-  "inputs":  [{"name": "text", "type": "text", "required": true}],
-  "outputs": [{"name": "result", "type": "text"}],
-  "form_schema": [{"key": "model", "label": "模型", "type": "text", "default": "gpt-4o"}],
-  "execType": "python",             // "python" | "shell" | "node"
-  "execCode": "produced['result'] = inputs['text']",   // 内联代码
-  "codeDir": "",                    // 入口文件相对根（execFile 模式）
-  "execFile": ""                    // 入口文件（替代 execCode）
+  "category": "tools",
+  "inputs":  [{"id": "in",  "label": "输入", "type": "filepath", "required": true}],
+  "outputs": [{"id": "out", "label": "输出", "type": "filepath"}],
+  "defaultConfig": {},
+  "configFields": [{"key": "cmd", "label": "命令", "type": "text"}],
+  "execType": "python",
+  "execCode": "import os, json\nprint(json.dumps({'outputs': {'out': ...}}))",
+  "execFile": ""
 }
 ```
 
-### B.3 执行环境（运行时注入的环境变量）
+`execType` 取值（`control_plane/custom_node_runtime.py`）：
+- `python`：执行内联 `execCode`，或运行 `execFile` 指向的脚本。
+- `shell`：执行 `execCode` 里的 shell 命令。
+- `llm`：按 `execCode` 作为提示词发起 LLM 调用。
 
-`custom_node_runtime.run_custom_node` 会为子进程注入：
-
-- `TASK_DIR`：任务目录
-- `CACHE_DIR`：缓存目录
-- `NODE_ID`：当前节点 id
-- `NODE_CONFIG_JSON`：节点配置（JSON 字符串）
-- `STEP_INPUTS_JSON`：上游输入（JSON 字符串）
-- `OUTPUTS_JSON_PATH`：要求把结果 dict 写入此路径（`{"outputs": {...}, "artifacts": [...]}`）
-
-**Python 内联模板**（运行时自动包裹）：
-
-```python
-import json, os
-task_dir = os.environ['TASK_DIR']
-cache_dir = os.environ['CACHE_DIR']
-node_id = os.environ['NODE_ID']
-node_config = json.loads(os.environ['NODE_CONFIG_JSON'])
-step_inputs = json.loads(os.environ['STEP_INPUTS_JSON'])
-config = node_config
-inputs = step_inputs
-produced = {}
-# <你的 execCode 写这里，向 produced 赋值>
-with open(os.environ['OUTPUTS_JSON_PATH'], 'w', encoding='utf-8') as _f:
-    json.dump(produced, _f, ensure_ascii=False)
-```
-
-> **shell / node** 类型也支持：shell 直接用 `command`；node 类似 python。详见 `custom_node_runtime.py`。
-
-### B.4 自定义 vs 内置的选择
-
-- 简单脚本/外部工具封装 → **自定义节点**（改 JSON 即可，无需重启后端注册）；
-- 需要复用内部客户端（asr/tts/models）、复杂 UI、或被其它内置节点依赖 → **内置节点**。
+运行时机：自定义节点在执行工作流时由控制平面派发到 Celery worker，再经 `custom_node_runtime.run_custom_node(...)` 在子进程里执行，与内置节点走同一套产物/进度/取消机制。
 
 ---
 
-## C. 资源与并发登记（重要）
+## C. 资源令牌注册（并发控制）
 
-如果新节点消耗 GPU / TTS 等本地稀缺资源，务必在 `backend/control_plane/workflow_runtime.py` 登记，否则会破坏统一限流：
+节点若需占用受限本地资源（GPU / TTS / IO 并发），在 `backend/control_plane/workflow_runtime.py` 维护：
 
-- `RESOURCE_BY_NODE_TYPE`：加 `"my_gpu_node": "gpu"` 或 `"my_tts_node": "tts"`；
-- 若交由 GPU 服务层调度：`GPU_SERVICE_MANAGED_NODE_TYPES` 加入该节点 id（见 `gpu-service.md`）；
-- 纯网络/API 节点：无需登记资源，反而会进入 `RESOURCE_FREE_NODE_TYPES` 允许并发。
+- `RESOURCE_BY_NODE_TYPE`：节点类型 → 资源令牌名（`gpu` / `tts` / `io`）。
+- `RESOURCE_FREE_NODE_TYPES`：纯网络/API 节点，不占本地计算令牌，可高并发。
+- `GPU_SERVICE_MANAGED_NODE_TYPES`：启用 GPU 服务后，这些节点改由 GPU 服务层调度显存 lane，worker 侧不再扣 `gpu` 令牌（避免双重限流）。
+- `GPU_SERVICE_LANE`：GPU 服务的 lane 名。
 
----
-
-## D. 新节点接入 Checklist
-
-- [ ] `builtin_node_types.py` 增加节点定义（id 唯一、category 合法、io 与表单完整）
-- [ ] `step_registry.py` 用 `register_step` 映射 `S_*` 类
-- [ ] `S_*` 继承 `BaseStep`，实现 `_pre_execute`/`_execute`/`_post_execute`
-- [ ] 输入缺失时 `_pre_execute` 抛 `ValueError`（前端显示校验错误）
-- [ ] 产物用 `{base}_{node_id}{ext}` 命名或用 `find_artifact` 反查
-- [ ] 进度用 `log_progress` 上报
-- [ ] 若耗 GPU/TTS：登记 `RESOURCE_BY_NODE_TYPE` 与（可选）`GPU_SERVICE_MANAGED_NODE_TYPES`
-- [ ] 若需专属 UI：在 `NodeManager.tsx: TEMPLATE_NODE_COMPONENTS` 注册
-- [ ] 自定义节点：写 `backend/config/node_types/<id>.json`，确认 `execType` 与 `OUTPUTS_JSON_PATH` 写入格式
-- [ ] 跑一个最小工作流验证（`task-execution.md`），`read_lints` 无错
+新增 GPU 类节点时按上面约定登记，无需改调度主流程。
 
 ---
 
-## E. 常见新增节点示例（当前版本已存在，供参考命名风格）
+## D. 新增内置节点 Checklist
 
-- 智能体：`agent`（pi_agent）
-- 媒体获取：`media_to_url`、`platform_download`
-- 字幕处理：`subtitle_theme`（主题）、`reorder_subtitles`（重排）、`subtitle_position_search`、`subtitle_recognition`
-- 控制流：`run_wait`（运行等待）、`condition`、`loop`、`merge`、`delay`
-- 发布：`publish`、`social_publish`、`xiaopai_publish`
-- 去水印：`lcwr_watermark_removal`、`online_watermark_removal`
+1. 在 `builtin_node_types.py` 的 `BUILTIN_NODE_TYPES` 追加节点定义 dict：端口用 `id`（不是 `name`）；`configFields` 描述设置项；默认值放 `defaultConfig`；选对 `execution_domain`（thread/process/llm）与 `category`。
+2. 在 `backend/steps/` 新建 `s_<name>.py`，子类化 `BaseStep`，实现 `step_id` / `check_artifact` / `validate_inputs` / `run`。`run(self, task_dir, callback=None, cancel_callback=None)` 通过 `self._step_inputs` / `self._step_config` / `self._node_id` 取运行时数据；产物写入 `os.path.join(task_dir, "cache", ...)`，文件名带 `_<node_id>` 后缀，用 `find_artifact` 反查；返回 `{"artifacts": [...], "outputs": {...}}`。
+3. 在 `step_registry.py` 的 `_STEPS` 注册两个 key：`"s_<name>"` 与 `"<node_type_id>"`。
+4. 若占受限资源，在 `workflow_runtime.py` 的 `RESOURCE_BY_NODE_TYPE` 等登记表补充。
+5. 重启后端（manager 守护），前端 `GET /api/node-types` 会带出新节点，可拖拽连线执行。
 
-命名风格：小写 + 下划线，动词/名词组合，与既有节点一致。
+---
+
+## E. 前端资源位置
+
+- 工作流编辑器：`frontend/src/components/workflow/`（`WorkflowNode.tsx`、`NodeManager.tsx`、画布等）。
+- 节点类型元数据的客户端封装：`frontend/src/api/` 下对应 `node-types` 的 client。
+- 节点卡片的分类、端口、设置项完全由 `GET /api/node-types` 返回的 `configFields` / `inputs` / `outputs` 渲染，无需单独改前端即可让新节点出现。

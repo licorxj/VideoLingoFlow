@@ -4,7 +4,6 @@ import { resolve } from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/social/',
   plugins: [vue()],
   resolve: {
     alias: {
@@ -20,7 +19,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    open: false,
+    open: true,
     proxy: {
       '/login': {
         target: 'http://localhost:5409',

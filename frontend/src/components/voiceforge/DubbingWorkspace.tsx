@@ -308,7 +308,7 @@ function DubbingWorkspaceInner() {
       try {
         if (state.project) {
           await voiceForgeApi.updateProject(projectId, {
-            default_interface_id: value || null,
+            default_interface_id: value || undefined,
             version: state.project.version,
           });
         }

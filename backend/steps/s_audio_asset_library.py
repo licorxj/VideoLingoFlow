@@ -65,10 +65,49 @@ class S_AudioAssetLibrary(BaseStep):
         # 本地路径
         if os.path.exists(source):
             return source, None, None
+        # voiceforge 本地素材库：复制出的内容形如 be0ad3b74d5b459f99ecf96992b2a641.mp3，
+        # 本质是存储键基名 / 文件名 / id，并非可直接访问的绝对路径，需回查 vf_assets 还原真实位置。
+        vf = self._resolve_voiceforge_asset(source)
+        if vf and (re.match(r"^https?://", vf, re.I) or os.path.exists(vf)):
+            return vf, None, None
         raise ValueError(
             "无法识别该素材库ID。在线素材（如 ElevenLabs）请复制其素材「链接」(audio_url) 而非ID；"
-            "chinaZ 素材的ID即详情页链接，可被直接识别。"
+            "chinaZ 素材的ID即详情页链接，可被直接识别；"
+            "晴沐配音谷本地素材请复制卡片上的「路径」(external_path) 或素材库ID。"
         )
+
+    @staticmethod
+    def _resolve_voiceforge_asset(ref: str):
+        """按素材 id / 文件名 / storage_key 在 voiceforge 素材库中定位真实路径。
+
+        本地素材库复制出的内容形如 ``be0ad3b74d5b459f99ecf96992b2a641.mp3``，它本质是素材
+        存储键的基名（或 id + 扩展名），并非可直接访问的绝对路径，因此需要回查 ``vf_assets``
+        表并用 ``storage_key`` 还原真实位置。在线素材（未下载）会回退为源 URL 供下载。
+        """
+        from backend.voiceforge.database import session, row_to_dict
+        from backend.voiceforge.asset_service import resolve_asset_path
+
+        norm = (ref or "").strip()
+        if not norm:
+            return None
+        stem = os.path.splitext(norm)[0]  # 去掉扩展名后也可匹配素材 id
+        try:
+            with session() as conn:
+                row = conn.execute(
+                    "SELECT * FROM vf_assets WHERE id = ? OR file_name = ? OR storage_key = ? "
+                    "OR storage_key LIKE ? OR external_path = ? OR external_path LIKE ? LIMIT 1",
+                    (norm, norm, norm, f"%/{norm}", norm, f"%/{norm}"),
+                ).fetchone()
+                if not row and stem:
+                    row = conn.execute(
+                        "SELECT * FROM vf_assets WHERE id = ? LIMIT 1", (stem,)
+                    ).fetchone()
+                if not row:
+                    return None
+                return str(resolve_asset_path(row_to_dict(row)))
+        except Exception:
+            # voiceforge 未初始化或查询失败时不影响其它来源解析
+            return None
 
     def _target_path(self, task_path: Path, dl_url: str, base_name, ext_hint):
         ext = None

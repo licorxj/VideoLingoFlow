@@ -48,6 +48,14 @@
     "homepage": "https://platform.xiaomimimo.com?ref=HKEQ8J"
   },
   {
+    "name": "QMtokenhub",
+    "protocol": "openai",
+    "base_url": "http://tokenhub.licorxj.online/v1",
+    "description": "晴沐智坊上线的api整合平台,以收集高性价比羊毛为使命,支持多种模型,有免费额度,",
+    "icon_keyword": "晴沐智坊",
+    "homepage": "http://tokenhub.licorxj.online"
+  },
+  {
     "name": "Moonshot (Kimi)",
     "protocol": "openai",
     "base_url": "https://api.moonshot.cn/v1",

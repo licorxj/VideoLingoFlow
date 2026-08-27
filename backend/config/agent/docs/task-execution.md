@@ -1,163 +1,131 @@
 # 任务执行（Task Execution）
 
-指导 agent 如何在本机启动 VideoLingoFlow（中文：流连视听）、创建并运行一个工作流任务、监控其进度、以及理解任务在磁盘上的组织方式。
+本章说明如何启动系统、创建/运行/监控任务，以及任务在磁盘上的真实布局。
 
-> 本文档基于 `backend/manager.py`、`backend/main.py`、`backend/engine/task_recorder.py`、`backend/control_plane/workflow_runtime.py` 的**当前实现**。
+> 所有路径相对 `PROJECT_ROOT`（即 `Y:\VideoLingoLc`）。
 
 ---
 
-## 1. 启动系统（关键）
+## 1. 启动系统
 
-系统由 **`backend/manager.py`** 统一编排。不要单独 `python backend/main.py` —— 那样缺少 Redis、Celery、GPU 服务、Social/Cutia/LLM-Router，绝大多数任务无法完成。
-
-### 1.1 推荐启动入口
+系统**不是**单进程 FastAPI 服务，而是由 `backend/manager.py` 统一编排的**多进程套件**。直接 `python backend/main.py` 只会启动主后端，缺 Redis / Celery / GPU 服务，任务基本都会失败。
 
 ```bash
-# Windows（双击或命令行）
-backend.bat
-
-# 等价于手动启动 manager（默认端口 manager=18001, backend=11001）
-python backend/manager.py
-python backend/manager.py 18001 11001   # 自定义端口
+backend.bat                 # Windows 双击
+# 或
+python backend/manager.py            # 默认 manager=18001, backend=11001
+python backend/manager.py 18001 11001
 ```
 
-`manager.py` 会按依赖顺序：
-1. 准备 venv 环境与 PATH（包括 CUDA / torch lib 的精细处理）；
-2. 启动 **Redis**（6379，项目自带 `redis-server.exe`）；
-3. 若 `GPU_SERVICE_ENABLED=1`，启动 **GPU 服务层**（`backend/gpu_service/manager.py`）；
-4. 启动 **Celery worker**（`backend/control_plane/celery_runtime.py`，队列见 capability-index）；
-5. 启动 **主后端 uvicorn**（`backend.main:app`，端口 **11001**）；
-6. 按需启动 social / cutia / llm-router / social-mcp；
-7. 进入看门狗循环，异常退出自动重启。
+`manager.py` 负责：准备 venv（`venv312`）、启动 Redis（6379）、按需启动 GPU 服务、启动 Celery worker（`control_plane_worker`、`voiceforge_worker`）、启动主后端 uvicorn（11001），并按需启动 social / cutia / llm-router，且维持看门狗自动重启。
 
-### 1.2 端口速查
+### 1.1 关键服务与端口
 
-| 服务 | 端口 |
-|---|---|
-| Manager 控制面 | **18001**（`/manager/*` HTTP） |
-| 主后端 API / WebSocket | **11001**（`/api/*`、`/ws`） |
-| Redis | 6379 |
-| LLM Router | 8800 |
-| Cutia | 4100 |
-| Social 后端 / 前端 / MCP | 5409 / 5173 / 5410 |
-
-前端 dev server（Vite）通过代理把 `/api`、`/ws` 指向 **11001**。
-
-### 1.3 Manager 控制接口（HTTP，端口 18001）
-
-`manager.py` 暴露进程管控端点（用于重启/停止某个服务）：
-
-- `GET /manager/status`：所有子进程状态
-- `POST /manager/restart-gpu-service` / `start-gpu-service` / `stop-gpu-service`
-- `POST /manager/restart-backend` / `stop-backend` 等
-
-agent 在"改完代码需要重启后端"时，应调用这些接口或重启 manager，而非手动 kill。
+| 服务 | 入口 | 端口 |
+|---|---|---|
+| Manager | `backend/manager.py` | 18001 |
+| 主后端（业务 API） | `backend/main.py` | 11001 |
+| Redis（Celery broker / GPU 协调） | `redis-server.exe` | 6379 |
+| Celery Worker（控制平面） | `backend/control_plane/celery_runtime.py` | broker Redis 6379 |
+| GPU 服务（可选） | `backend/gpu_service/manager.py` | 无独立端口（经 Redis 协调） |
+| 前端 dev | `frontend/`（Vite） | 代理 `/api`→11001、`/ws`→11001 |
 
 ---
 
 ## 2. 创建并运行任务
 
-### 2.1 通过 API 运行
+### 2.1 运行入口
 
-主后端（`main.py`）提供任务运行接口（具体路径以 `backend/main.py` 与 `backend/api/control_plane.py` 为准，常见为 `POST /api/run-task`）。请求体约含：
+通过工作流相关端点触发运行：
 
-```json
-{
-  "workflow_id": "<工作流模板 id 或 JSON>",
-  "task_name": "demo",
-  "inputs": { "video_url": "..." }
-}
+- `POST /api/workflows/{wf_id}/execute`：运行整条工作流。
+- `POST /api/workflows/{wf_id}/execute-node`：从指定节点往后执行。
+- `POST /api/workflows/{wf_id}/spawn-task`：派生独立执行任务。
+- `POST /api/workflows/{wf_id}/debug-task`：调试运行。
+
+这些端点都调用 `backend/control_plane/workflow_runtime.py::submit_workflow`，由控制平面落地执行（见 `workflow-orchestration.md` 第 3 节）。
+
+任务状态查询：
+
+- `GET /api/tasks`：任务列表。
+- `GET /api/tasks/{task_id}`：单个任务详情（节点状态、进度、产物）。
+- `POST /api/tasks/{task_id}/cancel`：取消。
+
+### 2.2 状态机
+
+节点/任务状态由 `backend/control_plane/runtime.py` 中的状态机管理：
+
+```
+pending → running → success
+                 → failed
+                 → cancelled
+                 → timeout
 ```
 
-返回 `task_id`。随后可通过：
-- `GET /api/tasks/<task_id>` 查询状态（`backend/engine/task_recorder.py:get_task`）
-- `GET /api/tasks` 列出全部任务（`list_tasks`，按 `created_at` 倒序）
-- `DELETE /api/tasks/<task_id>` 删除（同时 `shutil.rmtree` 任务目录）
-- WebSocket `/ws` 实时进度（节点 percent/status 推送）
+`transition()` / `queue_for()` / `ResourceTokens` 控制状态流转与并发（见 2.3）。
 
-### 2.2 任务状态机
+### 2.3 并发模型
 
-任务与节点状态由 `backend/control_plane/runtime.py` 管理（`transition`/`InvalidTransition`/`ResourceLimitError`/`TaskCancelledError`/`TaskTimeoutError`）。节点级状态含：`pending → running → success / failed / cancelled / timeout`。
+并发由两层决定：
 
-取消任务：`ThreadScheduler.request_cancel(task_id)` 会设置取消标志并 `terminate()` 子进程；GPU 服务层的任务则通过 cancel key 中止。
+1. **Celery worker 进程数**：`control_plane_worker` / `voiceforge_worker` 的并发配置，决定同时能跑多少个 Celery 任务。
+2. **资源令牌（ResourceTokens）**：在 `workflow_runtime.py` 中按节点类型分配 `gpu` / `tts` / `io` 令牌，限制同类资源并发：
+   - `RESOURCE_BY_NODE_TYPE`：`asr`/`vocal_separation`/`track_separation` → `gpu`；`tts`/`dub_task` → `tts`。
+   - `RESOURCE_FREE_NODE_TYPES`：纯网络/API 节点（如 `llm_request`、`platform_download`）不占本地计算令牌，可高并发。
+   - `GPU_SERVICE_MANAGED_NODE_TYPES`：启用 GPU 服务后，ASR/分离类走 GPU lane，worker 侧不再扣 `gpu` 令牌（避免双重限流）。
 
-### 2.3 并发与资源
-
-- 线程池 `max_workers=3`（可在 `thread_scheduler.py` 调整）；
-- GPU 类节点受 GPU 服务层 lane 限制；
-- TTS 类节点受 `tts` 资源令牌限制；
-- 网络/API 类节点（`RESOURCE_FREE_NODE_TYPES`）不占用本地计算令牌，可多任务并发。
+`backend/engine/thread_scheduler.py` 的 `ThreadScheduler` 属于遗留路径，新建能力无需改动。
 
 ---
 
-## 3. 任务在磁盘上的组织
+## 3. 磁盘布局（真实工作区）
 
-任务目录由 `backend/engine/task_recorder.py` 创建与管理。
-
-### 3.1 目录结构
+当前控制平面执行路径的工作区：
 
 ```
-tasks/
-  <task_id>/                # task_id = uuid4().hex[:12]
-    task.json               # 任务元数据 + 各节点状态（TaskRecorder 读写）
-    cache/                  # 中间产物
-    output/                 # 最终产物
+control_plane_workspaces/            # 根目录由 CONTROL_PLANE_WORKSPACE_ROOT 控制
+  <task_id>/                         # task_id 来自 SQLite 任务记录
+    task.json                        # 任务元数据 + 各节点状态（兼容副本）
+    cache/                          # 中间产物（节点间传递）
+    output/                         # 最终交付物
 ```
 
-- `TASKS_ROOT` = 仓库根下的 `tasks/`
-- `create_task_dir()` 生成 12 位 hex id，并预建 `cache/`、`output/`
+- `task_dir` 会作为 `BaseStep.run(task_dir, ...)` 的第一个参数传入，节点应在 `cache/` 写中间产物、`output/` 写结果，不要写到仓库根或其它全局位置，避免多任务互相污染。
+- 任务/节点状态同时持久化在 SQLite（`data/control-plane.db`，Alembic 迁移），`task.json` 是供读取/排查的兼容副本。
 
-### 3.2 task.json 字段
+### 3.1 产物命名约定
 
-`task.json` 由 `TaskRecorder` 维护，关键结构：
+节点输出文件名遵循：
 
-```json
-{
-  "task_id": "abc123...",
-  "task_name": "demo",
-  "status": "running",          // 顶层任务状态
-  "created_at": "2026-08-23T10:00:00",
-  "updated_at": "2026-08-23T10:05:00",
-  "steps": {                    // 各节点（step）状态
-    "<node_id>": {
-      "status": "success",
-      "percent": 100,
-      "message": "...",
-      "started_at": "...",
-      "finished_at": "..."
-    }
-  }
-}
+```
+<base_name>_<node_id>.<ext>
 ```
 
-`TaskRecorder` 方法：`read()` / `write()` / `update_step(step_id, updates)` / `update_status(status)`。
+例如 `asr` 节点（node_id=`a1b2c3`）输出 `asr_result_a1b2c3.json`。
 
-### 3.3 产物文件命名约定
+**读取时不要硬编码完整文件名**，用模块级函数反查：
 
-步骤输出文件名遵循 `{base}_{node_id}{ext}`（如 `asr_result_abc123.json`）。读取时用 `backend/steps/base_step.py:find_artifact(directory, base_name)` 反查（忽略 `_<node_id>` 后缀，多匹配取首个，无后缀优先）。**agent 读写产物应优先用 `find_artifact` 而非硬编码文件名**。详见 `file-management.md`。
+```python
+from backend.steps.base_step import find_artifact
+path = find_artifact(os.path.join(task_dir, "cache"), "asr_result.json")
+```
+
+`find_artifact(directory, base_name)`：在 `directory` 中找以 `<base_name>` 开头、后缀匹配的文件，忽略中间的 `_<node_id>`；多匹配取首个，无后缀的优先。详见 `file-management.md`。
 
 ---
 
-## 4. Agent 常见操作清单
+## 4. 监控与排查
 
-| 目标 | 做法 |
-|---|---|
-| 启动系统 | 运行 `backend.bat` 或 `python backend/manager.py` |
-| 重启后端（改代码后） | 调 `POST /manager/restart-backend` 或重启 manager |
-| 重启 GPU 服务 | `POST /manager/restart-gpu-service` |
-| 查看任务列表 | `GET /api/tasks` 或 `list_tasks()` |
-| 查看某任务详情 | `GET /api/tasks/<id>` 或 `get_task(id)` |
-| 删除任务 | `DELETE /api/tasks/<id>` 或 `delete_task(id)` |
-| 取消运行中任务 | 经 API 触发 `ThreadScheduler.request_cancel` |
-| 读任务产物 | `find_artifact(task_dir, "asr_result.json")` |
-| 排查失败 | 看 `task.json` 的 `steps.<node>.message` + `logs/` |
+- **WebSocket**：`/ws/tasks/{task_id}` 实时推送节点进度/日志。
+- **日志**：`logs/`；子进程内 `print()` 经 `step_worker` 的日志转发（`@LOG@`/`@PROGRESS@` 协议）回传到任务事件流，便于排查"卡住"问题。
+- **取消**：`POST /api/tasks/{task_id}/cancel`，父线程创建取消标记文件，子进程协作退出（不回调的步骤由父线程 kill 进程树兜底）。
 
 ---
 
-## 5. 易错点
+## 5. Agent 执行红线
 
-1. **端口用错**：业务 API 是 11001，不是 8000；Manager 是 18001。
-2. **单独起 main.py**：缺 Redis/Celery/GPU 服务，任务会卡在 pending 或报错。
-3. **直接改 task.json 后未重启**：任务状态在内存与 DB 中都有，手动编辑磁盘文件不一定生效，应通过 API/运行时接口。
-4. **文件名硬编码**：节点 id 拼接在产物名里，必须用 `find_artifact` 反查。
-5. **GPU 双重限流**：启用 GPU 服务后，ASR/分离类节点不应再扣 worker 侧 gpu 令牌（运行时已按 `GPU_SERVICE_MANAGED_NODE_TYPES` 处理）。
+1. **不要**用 `python backend/main.py` 单启来验证任务——缺依赖会失败，走 `manager.py` 或 `*.bat`。
+2. 调用业务 API 用 **11001**；调用 Manager 用 **18001**；不要假设 8000。
+3. 任务工作区是 `control_plane_workspaces/<task_id>/`，产物进 `cache/`/`output/`，不要写仓库根或全局临时目录。
+4. 文件名带 `_<node_id>` 后缀，一律用 `find_artifact` 反查。
+5. 改完节点/Step 后做 `read_lints` / 类型检查；新增模型落 `_model_cache/` 并登记 `models-store.json`（见 `file-management.md`）。

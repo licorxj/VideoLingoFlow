@@ -2165,17 +2165,6 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           <div className="text-sm font-bold truncate">{nd.label || nodeType.name}</div>
           <div className="text-xs text-muted-foreground truncate">{(nodeType.description || "").slice(0, 25)}</div>
         </div>
-        {nodeType.id === "lcwr_watermark_removal" && (
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setLcwrPreviewOpen(true); }}
-            className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium text-sky-700 dark:text-sky-300 bg-sky-500/10 hover:bg-sky-500/20 transition-colors"
-            title="打开预览设置"
-          >
-            <Eye className="w-3 h-3" />
-            打开预览设置
-          </button>
-        )}
         {nodeType.id !== "input" && (
           <div className="relative">
             <button
@@ -2373,7 +2362,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
               onPointerDown={(e) => e.stopPropagation()}
               onClick={async (e) => {
                 e.stopPropagation();
-                const p = await nativeFileDialog({ title: "选择文件" });
+                const p = await nativeFileDialog("file", "选择文件");
                 if (p) handleConfigChange("filePath", p);
               }}
               className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0"

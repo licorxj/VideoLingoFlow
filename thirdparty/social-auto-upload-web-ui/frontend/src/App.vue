@@ -130,11 +130,14 @@ const navItems = [
   { path: '/image-publish', icon: Picture, title: '图集发布' },
   { path: '/drafts', icon: Document, title: '草稿箱' },
   { path: '/publish-history', icon: Clock, title: '发布历史' },
-  { path: '/changelog', icon: Notebook, title: '更新日志' }
+  { path: '/changelog', icon: Notebook, title: '更新日志' },
+  { path: '/author', icon: UserFilled, title: '关于作者' },
+  { path: '/feedback', icon: ChatDotRound, title: '一键反馈' }
 ]
 
-// 底部区：系统设置
+// 底部区：赞助作者（醒目版）+ 系统设置
 const bottomItems = [
+  { path: '/sponsor', icon: Coffee, title: '赞助作者', _isSponsor: true },
   { path: '/settings', icon: Setting, title: '系统设置' }
 ]
 
