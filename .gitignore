@@ -111,7 +111,12 @@ data/*
 data/workspace/*
 !data/workspace/pi-agent-config/
 !data/workspace/pi-install-staging/
-data/workspace/pi-agent-config/auth.json
+!data/workspace/.agents/
+!data/workspace/.claude/
+!data/workspace/skills-lock.json
+!data/workspace/query_history.py
+!data/workspace/check_running_tasks.py
+!data/workspace/_check_tasks_tmp.py
 /backend/data/
 # 例外：QM-LocalRouter 的 backend/data 预设（含 app.db 预设设置）需随仓库分享
 !thirdparty/QM-LocalRouter/backend/data/
@@ -167,7 +172,6 @@ patch_*.js
 run_validation.*
 tepss07_*
 backend/_tmp_*.py
-backend/crawlers/elevenlabs_request.json
 frontend/src/components/settings/*.trae-tmp
 net_check.py
 download_moss.py
