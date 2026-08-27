@@ -1,0 +1,102 @@
+{
+  "id": "hyperframe_render",
+  "name": "HyperFrames 渲染",
+  "version": "1.0.0",
+  "category": "ai_gen",
+  "description": "使用 HyperFrames CLI 将 HTML 合成脚本渲染为 MP4 视频",
+  "icon": "Film",
+  "color": "#8b5cf6",
+  "inputs": [
+    {
+      "id": "html_content",
+      "label": "HTML 内容",
+      "type": "text",
+      "required": true
+    },
+    {
+      "id": "html_file",
+      "label": "HTML 文件路径",
+      "type": "filepath",
+      "required": false
+    }
+  ],
+  "outputs": [
+    {
+      "id": "video",
+      "label": "渲染视频",
+      "type": "video"
+    },
+    {
+      "id": "json",
+      "label": "渲染结果",
+      "type": "json"
+    },
+    {
+      "id": "text",
+      "label": "输出信息",
+      "type": "text"
+    }
+  ],
+  "defaultConfig": {
+    "output_format": "mp4",
+    "width": 1920,
+    "height": 1080,
+    "fps": 30,
+    "quality": "high"
+  },
+  "configFields": [
+    {
+      "key": "output_format",
+      "label": "输出格式",
+      "type": "select",
+      "options": [
+        {"value": "mp4", "label": "MP4"},
+        {"value": "webm", "label": "WebM"},
+        {"value": "mov", "label": "MOV"}
+      ]
+    },
+    {
+      "key": "width",
+      "label": "视频宽度",
+      "type": "number",
+      "min": 320,
+      "max": 3840,
+      "step": 10
+    },
+    {
+      "key": "height",
+      "label": "视频高度",
+      "type": "number",
+      "min": 240,
+      "max": 2160,
+      "step": 10
+    },
+    {
+      "key": "fps",
+      "label": "帧率",
+      "type": "select",
+      "options": [
+        {"value": 24, "label": "24 fps"},
+        {"value": 30, "label": "30 fps"},
+        {"value": 60, "label": "60 fps"}
+      ]
+    },
+    {
+      "key": "quality",
+      "label": "渲染质量",
+      "type": "select",
+      "options": [
+        {"value": "low", "label": "低 (快速)"},
+        {"value": "medium", "label": "中"},
+        {"value": "high", "label": "高 (推荐)"},
+        {"value": "ultra", "label": "超高 (慢速)"}
+      ]
+    }
+  ],
+  "execType": "python",
+  "execCode": "import json\nimport os\nimport subprocess\nimport tempfile\nfrom pathlib import Path\n\n# Get inputs\nhtml_content = inputs.get('html_content', '')\nhtml_file = inputs.get('html_file', '')\n\n# Get config\noutput_format = config.get('output_format', 'mp4')\nwidth = config.get('width', 1920)\nheight = config.get('height', 1080)\nfps = config.get('fps', 30)\nquality = config.get('quality', 'high')\n\n# Quality presets\nquality_map = {\n    'low': {'bitrate': '2M', 'preset': 'ultrafast'},\n    'medium': {'bitrate': '5M', 'preset': 'fast'},\n    'high': {'bitrate': '10M', 'preset': 'medium'},\n    'ultra': {'bitrate': '20M', 'preset': 'slow'}\n}\nquality_settings = quality_map.get(quality, quality_map['high'])\n\n# Create temp directory for HyperFrames files\ntemp_dir = Path(cache_dir) / 'hyperframe_temp'\ntemp_dir.mkdir(exist_ok=True)\n\n# Save HTML content\nhtml_path = temp_dir / 'composition.html'\nif html_file and os.path.exists(html_file):\n    with open(html_file, 'r', encoding='utf-8') as f:\n        html_content = f.read()\n\nwith open(html_path, 'w', encoding='utf-8') as f:\n    f.write(html_content)\n\n# Output video path\noutput_video = Path(cache_dir) / f'hyperframe_output.{output_format}'\n\n# Build HyperFrames render command\ntry:\n    # Try using HyperFrames CLI\n    cmd = [\n        'npx', 'hyperframes', 'render',\n        str(html_path),\n        '--output', str(output_video),\n        '--width', str(width),\n        '--height', str(height),\n        '--fps', str(fps),\n        '--format', output_format\n    ]\n    \n    result = subprocess.run(\n        cmd,\n        capture_output=True,\n        text=True,\n        timeout=300,\n        cwd=task_dir\n    )\n    \n    if result.returncode != 0:\n        # Fallback: try alternative command\n        cmd = [\n            'npx', '@anthropic-ai/hyperframes', 'render',\n            str(html_path),\n            '--output', str(output_video)\n        ]\n        result = subprocess.run(\n            cmd,\n            capture_output=True,\n            text=True,\n            timeout=300,\n            cwd=task_dir\n        )\n    \n    if result.returncode == 0 and output_video.exists():\n        produced['video'] = str(output_video)\n        produced['text'] = f'Rendered successfully: {output_video}'\n        produced['json'] = json.dumps({\n            'success': True,\n            'output': str(output_video),\n            'width': width,\n            'height': height,\n            'fps': fps,\n            'format': output_format\n        }, ensure_ascii=False)\n    else:\n        error_msg = result.stderr or result.stdout or 'Unknown error'\n        produced['text'] = f'Render failed: {error_msg}'\n        produced['json'] = json.dumps({\n            'success': False,\n            'error': error_msg,\n            'html_path': str(html_path)\n        }, ensure_ascii=False)\n        \nexcept FileNotFoundError:\n    produced['text'] = 'HyperFrames CLI not found. Please install: npm install -g @anthropic-ai/hyperframes'\n    produced['json'] = json.dumps({\n        'success': False,\n        'error': 'HyperFrames CLI not installed',\n        'html_path': str(html_path),\n        'install_command': 'npm install -g @anthropic-ai/hyperframes'\n    }, ensure_ascii=False)\nexcept subprocess.TimeoutExpired:\n    produced['text'] = 'Render timeout (300s). Try reducing video length or complexity.'\n    produced['json'] = json.dumps({\n        'success': False,\n        'error': 'Timeout after 300s',\n        'html_path': str(html_path)\n    }, ensure_ascii=False)\nexcept Exception as e:\n    produced['text'] = f'Render error: {str(e)}'\n    produced['json'] = json.dumps({\n        'success': False,\n        'error': str(e),\n        'html_path': str(html_path)\n    }, ensure_ascii=False)\n",
+  "execFile": "",
+  "execTimeout": 600,
+  "isBuiltIn": false,
+  "kind": "custom"
+}
