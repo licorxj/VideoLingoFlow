@@ -54,14 +54,20 @@ def _run_asr(rc, job_id: str, engine_name: str, params: dict) -> dict:
         _progress(rc, job_id, pct, msg)
 
     engine = get_asr_engine(engine_name)
-    return engine.transcribe(
-        params["input_path"],
-        params["output_path"],
-        callback=cb,
-        model=params.get("model"),
-        language=params.get("language"),
-        **params.get("engine_params", {}),
-    )
+    # 模型加载/推理期间标记为 busy，避免 IdleEngineRegistry 的 5s 空闲清扫线程
+    # 在加载途中误卸载引擎（moss 等大模型加载远超过空闲阈值）
+    engine._busy = True
+    try:
+        return engine.transcribe(
+            params["input_path"],
+            params["output_path"],
+            callback=cb,
+            model=params.get("model"),
+            language=params.get("language"),
+            **params.get("engine_params", {}),
+        )
+    finally:
+        engine._busy = False
 
 
 def _run_separation(rc, job_id: str, iface_id: str, params: dict) -> dict:

@@ -42,7 +42,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 523
+        "height": 563
       },
       "selected": false,
       "dragging": false
@@ -76,7 +76,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 289
+        "height": 308
       },
       "selected": false,
       "dragging": false
@@ -97,16 +97,18 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/summarize_result_node_1_1780948332813.json"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false,
         "logLines": [
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
-          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=29788",
+          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=35128",
           "[step_worker] step instance created: S04Summarize",
           "[step_worker] step_inputs keys=['text', 'language']",
           "[step_worker] node_config keys=['audioPath', 'videoPath', 'subtitlePath', 'url']",
@@ -117,7 +119,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 278
+        "height": 398
       },
       "selected": false,
       "dragging": false
@@ -126,8 +128,8 @@
       "id": "node_1_1780954897405",
       "type": "workflow",
       "position": {
-        "x": 735,
-        "y": -1245
+        "x": 720,
+        "y": -945
       },
       "data": {
         "nodeType": "translate",
@@ -142,7 +144,7 @@
           "processing_language": "from_input",
           "target_language": "from_input"
         },
-        "status": "pending",
+        "status": "cancelled",
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -150,19 +152,19 @@
         "workbench_url": "",
         "disableExecute": false,
         "logLines": [
-          "[Translate] Retry success for [101] faithful: '创建之后，如果你想编辑它，只需双击此处，可以更改方向，移动它或修改任意基准坐标系。但请记住：无论何时...'",
-          "[Translate] Retry success for [102] faithful: '希望你们已经理解了所有不同类型的坐标系。...'",
-          "[Translate] Retry success for [103] faithful: '如果你有任何疑问，请在下方评论区留言，我会尽力解答。...'",
-          "[Translate] Retry success for [104] faithful: '谢谢大家。...'",
-          "[Translate] Retrying 1 empty faithful translations: [100]",
-          "[Translate] Retry success for [100] faithful: 'X轴的平面就是这个...'",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780954897405_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780954897405_result.json, exiting 0",
+          "[step_worker] start node_type=translate node_id=node_1_1780954897405 pid=33968",
+          "[step_worker] step instance created: S05Translate",
+          "[step_worker] step_inputs keys=['summary', 'subtitle', 'language', 'prompt_template']",
+          "[step_worker] node_config keys=['translation_style', 'reflect_translate', 'audioPath', 'videoPath', 'subtitlePath', 'url', 'processing_language', 'target_language']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5, kwargs=['callback'])",
+          "[Translate] Languages: en -> zh, reflect=True, batch_limit=3000, reflect_batch_limit=1500"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 372
+        "height": 401
       },
       "selected": false,
       "dragging": false
@@ -194,7 +196,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 219
+        "height": 236
       },
       "selected": false,
       "dragging": false
@@ -226,7 +228,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 431
+        "height": 477
       },
       "selected": false,
       "dragging": false
@@ -235,8 +237,8 @@
       "id": "node_1_1781645240103",
       "type": "workflow",
       "position": {
-        "x": 2055,
-        "y": -1380
+        "x": 1965,
+        "y": -1755
       },
       "data": {
         "nodeType": "tts",
@@ -269,9 +271,9 @@
         "workbench_url": "",
         "logLines": [
           "[S09] 分析变速倍数",
-          "  - 需要变速: 32 段",
-          "  - 超出最大变速(1.25x): 8 段",
-          "[S09] 最终溢出段数: 8",
+          "  - 需要变速: 45 段",
+          "  - 超出最大变速(1.25x): 28 段",
+          "[S09] 最终溢出段数: 28",
           "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\dub_task_node_1_1781709944783.json",
           "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\dub_task_node_1_1781709944783.csv",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
@@ -280,7 +282,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 422
+        "height": 456
       },
       "selected": false,
       "dragging": false
@@ -315,7 +317,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 210
+        "height": 223
       },
       "selected": false,
       "dragging": false
@@ -324,8 +326,8 @@
       "id": "node_1_1781810867151",
       "type": "workflow",
       "position": {
-        "x": 1800,
-        "y": -720
+        "x": 1965,
+        "y": -1110
       },
       "data": {
         "nodeType": "merge_audio",
@@ -352,7 +354,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 486
+        "height": 520
       },
       "selected": false,
       "dragging": false
@@ -361,7 +363,7 @@
       "id": "node_1_1781939413425",
       "type": "workflow",
       "position": {
-        "x": 2430,
+        "x": 2895,
         "y": -720
       },
       "data": {
@@ -390,7 +392,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 518
+        "height": 554
       },
       "selected": false,
       "dragging": false
@@ -427,7 +429,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 436
+        "height": 466
       },
       "selected": false,
       "dragging": false
@@ -464,7 +466,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 168
+        "height": 208
       },
       "selected": false,
       "dragging": false
@@ -474,7 +476,7 @@
       "type": "workflow",
       "position": {
         "x": -810,
-        "y": -540
+        "y": -465
       },
       "data": {
         "nodeType": "llm_request",
@@ -501,9 +503,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 437
+        "height": 474
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
@@ -543,7 +545,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 489
+        "height": 528
       },
       "selected": false,
       "dragging": false
@@ -575,7 +577,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 241
+        "height": 261
       },
       "selected": false,
       "dragging": false
@@ -610,7 +612,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 279
+        "height": 299
       },
       "selected": false,
       "dragging": false
@@ -620,7 +622,7 @@
       "type": "workflow",
       "position": {
         "x": 0,
-        "y": -165
+        "y": -75
       },
       "data": {
         "nodeType": "cover",
@@ -650,7 +652,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 342
+        "height": 369
       },
       "selected": false,
       "dragging": false
@@ -698,7 +700,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 670
+        "height": 748
       },
       "selected": false,
       "dragging": false
@@ -735,7 +737,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 437
+        "height": 474
       },
       "selected": false,
       "dragging": false
@@ -744,8 +746,8 @@
       "id": "node_1_1783320818226",
       "type": "workflow",
       "position": {
-        "x": -1410,
-        "y": -330
+        "x": -1440,
+        "y": -60
       },
       "data": {
         "nodeType": "translate_task_name",
@@ -767,7 +769,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 161
+        "height": 172
       },
       "selected": false,
       "dragging": false
@@ -799,7 +801,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 195
+        "height": 210
       },
       "selected": false,
       "dragging": false
@@ -833,38 +835,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 313
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_1_1786046579815",
-      "type": "workflow",
-      "position": {
-        "x": 105,
-        "y": -1485
-      },
-      "data": {
-        "nodeType": "sentence_preprocess",
-        "label": "断句预处理",
-        "config": {
-          "method": "punct",
-          "split_on_speaker": true,
-          "llm_max_chars": "2000",
-          "processing_language": "from_input"
-        },
-        "status": "pending",
-        "disableExecute": true,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 338
+        "height": 337
       },
       "selected": false,
       "dragging": false
@@ -898,7 +869,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 408
+        "height": 435
       },
       "selected": false,
       "dragging": false
@@ -907,8 +878,8 @@
       "id": "n_msyu4zm55ofz",
       "type": "workflow",
       "position": {
-        "x": -975,
-        "y": -1785
+        "x": -960,
+        "y": -1800
       },
       "data": {
         "nodeType": "audio_transcode",
@@ -932,46 +903,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 408
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_2_1787654223924",
-      "type": "workflow",
-      "position": {
-        "x": 120,
-        "y": -1005
-      },
-      "data": {
-        "nodeType": "sentence_split",
-        "label": "句子分割",
-        "config": {
-          "processing_language": "from_input",
-          "max_sentence_length": "25",
-          "use_llm_split": true,
-          "split_sentence_ends": true,
-          "split_clause_breaks": true,
-          "merge_min_duration": "0.1",
-          "merge_max_gap": "0.1",
-          "pause_split_threshold": "1.5",
-          "split_on_speaker": true,
-          "merge_short_enabled": true,
-          "merge_gap_enabled": false,
-          "pause_split_enabled": true
-        },
-        "status": "pending",
-        "disableExecute": false,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 123
+        "height": 435
       },
       "selected": false,
       "dragging": false
@@ -1005,82 +937,474 @@
       },
       "measured": {
         "width": 420,
-        "height": 457
+        "height": 486
       },
       "selected": false,
       "dragging": false
     },
     {
-      "id": "node_1_1787718696126",
+      "id": "n_mtbix66cius1",
       "type": "workflow",
       "position": {
-        "x": 90,
-        "y": -1875
+        "x": 2700,
+        "y": -1560
+      },
+      "selected": false,
+      "data": {
+        "kind": "group",
+        "nodeType": "groupnode_mtbj9s8i",
+        "label": "asr组合",
+        "config": {},
+        "status": "pending",
+        "groupMeta": {
+          "version": 1,
+          "internalWorkflow": {
+            "nodes": [
+              {
+                "id": "node_1_1786046579815",
+                "type": "workflow",
+                "position": {
+                  "x": 540,
+                  "y": 405
+                },
+                "data": {
+                  "nodeType": "sentence_preprocess",
+                  "label": "断句预处理",
+                  "config": {
+                    "method": "punct",
+                    "split_on_speaker": true,
+                    "llm_max_chars": "2000",
+                    "processing_language": "from_input"
+                  },
+                  "status": "pending",
+                  "disableExecute": true,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 257
+                },
+                "selected": false,
+                "dragging": false
+              },
+              {
+                "id": "node_2_1787654223924",
+                "type": "workflow",
+                "position": {
+                  "x": 555,
+                  "y": 780
+                },
+                "data": {
+                  "nodeType": "sentence_split",
+                  "label": "句子分割",
+                  "config": {
+                    "processing_language": "auto",
+                    "max_sentence_length": "15",
+                    "use_llm_split": true,
+                    "split_sentence_ends": true,
+                    "split_clause_breaks": true,
+                    "merge_min_duration": "0.1",
+                    "merge_max_gap": "0.05",
+                    "pause_split_threshold": "1.5",
+                    "split_on_speaker": true,
+                    "merge_short_enabled": true,
+                    "merge_gap_enabled": false,
+                    "pause_split_enabled": true
+                  },
+                  "status": "pending",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 666
+                },
+                "selected": false,
+                "dragging": false
+              },
+              {
+                "id": "node_2_1787215768626",
+                "type": "workflow",
+                "position": {
+                  "x": 0,
+                  "y": 645
+                },
+                "data": {
+                  "nodeType": "asr_postprocess",
+                  "label": "ASR后处理",
+                  "config": {
+                    "run_vad": true,
+                    "run_alignment": true,
+                    "run_diarization": false,
+                    "force_rerun": true,
+                    "vad_engine": "silero",
+                    "vad_onset": 0.5,
+                    "vad_offset": 0.363,
+                    "alignment_engine": "whisperx",
+                    "alignment_model": "",
+                    "dtype": "",
+                    "diarize_engine": "pyannote",
+                    "diarize_model": "",
+                    "num_speakers": "",
+                    "min_speakers": "",
+                    "max_speakers": ""
+                  },
+                  "status": "pending",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "workbench_url": "",
+                  "logLines": [
+                    "[Pipeline] all stages done",
+                    "[ASR-PP] [5/6] pipeline returned, segments=220",
+                    "[ASR-PP] [6/6] normalizing and clamping result...",
+                    "[ASR-PP] [6/6] audio_duration=903.86",
+                    "[ASR-PP] [6/6] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\asr_postprocessed_node_2_1787215768626.json",
+                    "[ASR-PP] === run() END segments=220 ===",
+                    "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+                    "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_2_1787215768626_result.json, exiting 0"
+                  ]
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 571
+                },
+                "selected": false,
+                "dragging": false
+              },
+              {
+                "id": "node_1_1787828965709",
+                "type": "workflow",
+                "position": {
+                  "x": 0,
+                  "y": 45
+                },
+                "data": {
+                  "nodeType": "asr",
+                  "label": "语音识别 (ASR)",
+                  "config": {
+                    "engine": "mimo_asr",
+                    "language": "auto",
+                    "model": "",
+                    "compute_type": "",
+                    "batch_size": 0,
+                    "word_timestamps": false,
+                    "vad_onset": 0.5,
+                    "vad_offset": 0.363,
+                    "hotwords_enabled": false,
+                    "hotwords": "",
+                    "post_vad": false,
+                    "post_alignment": false,
+                    "post_diarization": false
+                  },
+                  "status": "pending",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "logLines": [
+                    "[step_worker] step_inputs keys=['asr_audio']",
+                    "[step_worker] node_config keys=['engine', 'language', 'model', 'compute_type', 'batch_size', 'word_timestamps', 'vad_onset', 'vad_offset', 'hotwords_enabled', 'hotwords', 'post_vad', 'post_alignment', 'post_diarization']",
+                    "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5, kwargs=['callback', 'cancel_callback'])",
+                    "[ASR] step_inputs keys: ['asr_audio'], values: {'asr_audio': 'output/transcoded_audio_n_msyu4zm55ofz.wav'}",
+                    "[ASR] Using ASR audio: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\output/transcoded_audio_n_msyu4zm55ofz.wav",
+                    "[ASR] Post-processing will use ASR audio: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\output/transcoded_audio_n_msyu4zm55ofz.wav",
+                    "[ASR] engine=moss, max_duration=1200s, params={'model': 'openmoss/MOSS-Transcribe-Diarize', 'language': 'auto', 'use_itn': True, 'word_timestamps': False, 'diarize': True, 'num_speakers': 0, 'vad_options': {'vad_onset': 0.5, 'vad_offset': 0.363}}",
+                    "[ASR] Audio duration: 903.9s"
+                  ],
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 564
+                },
+                "selected": false,
+                "dragging": false
+              },
+              {
+                "id": "node_1_1787830624387",
+                "type": "workflow",
+                "position": {
+                  "x": 525,
+                  "y": 0
+                },
+                "data": {
+                  "nodeType": "ai_subtitle_correct",
+                  "label": "AI字幕纠错",
+                  "config": {
+                    "maxChars": "5000",
+                    "properNouns": ""
+                  },
+                  "status": "pending",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 347
+                },
+                "selected": false,
+                "dragging": false
+              }
+            ],
+            "edges": [
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#f472b6",
+                  "strokeWidth": 2
+                },
+                "source": "node_1_1786046579815",
+                "sourceHandle": "out-subtitle",
+                "target": "node_2_1787654223924",
+                "targetHandle": "in-subtitle",
+                "id": "xy-edge__node_1_1786046579815out-subtitle-node_2_1787654223924in-subtitle",
+                "selected": false
+              },
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#34d399",
+                  "strokeWidth": 2
+                },
+                "source": "node_1_1787828965709",
+                "sourceHandle": "out-subtitle",
+                "target": "node_1_1787830624387",
+                "targetHandle": "in-json",
+                "id": "xy-edge__node_1_1787828965709out-subtitle-node_1_1787830624387in-json",
+                "selected": false
+              },
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#f472b6",
+                  "strokeWidth": 2
+                },
+                "source": "node_1_1787830624387",
+                "sourceHandle": "out-output",
+                "target": "node_2_1787215768626",
+                "targetHandle": "in-subtitle",
+                "id": "xy-edge__node_1_1787830624387out-output-node_2_1787215768626in-subtitle",
+                "selected": false
+              },
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#22d3ee",
+                  "strokeWidth": 2
+                },
+                "source": "node_2_1787215768626",
+                "sourceHandle": "out-subtitle",
+                "target": "node_1_1786046579815",
+                "targetHandle": "in-json",
+                "id": "xy-edge__node_2_1787215768626out-subtitle-node_1_1786046579815in-json",
+                "selected": false
+              }
+            ]
+          },
+          "inputMappings": [
+            {
+              "exposedPortId": "gin_1",
+              "exposedLabel": "ASR后处理 / 对齐音源",
+              "targetNodeId": "node_2_1787215768626",
+              "targetPortId": "alignment_audio",
+              "type": "audio"
+            },
+            {
+              "exposedPortId": "gin_2",
+              "exposedLabel": "ASR后处理 / 人声音源",
+              "targetNodeId": "node_2_1787215768626",
+              "targetPortId": "vocal_audio",
+              "type": "audio"
+            },
+            {
+              "exposedPortId": "gin_3",
+              "exposedLabel": "语音识别 (ASR) / ASR音源",
+              "targetNodeId": "node_1_1787828965709",
+              "targetPortId": "asr_audio",
+              "type": "audio"
+            }
+          ],
+          "outputMappings": [
+            {
+              "exposedPortId": "gout_1",
+              "exposedLabel": "句子分割 / 句子文本",
+              "internalNodeId": "node_2_1787654223924",
+              "internalPortId": "text",
+              "type": "text",
+              "enabled": true
+            },
+            {
+              "exposedPortId": "gout_2",
+              "exposedLabel": "句子分割 / 分割结果JSON",
+              "internalNodeId": "node_2_1787654223924",
+              "internalPortId": "subtitle",
+              "type": "json",
+              "enabled": true
+            }
+          ],
+          "layout": {
+            "memberPositionsRelativeToGroup": {
+              "node_1_1786046579815": {
+                "x": 540,
+                "y": 405
+              },
+              "node_2_1787654223924": {
+                "x": 555,
+                "y": 780
+              },
+              "node_2_1787215768626": {
+                "x": 0,
+                "y": 645
+              },
+              "node_1_1787828965709": {
+                "x": 0,
+                "y": 45
+              },
+              "node_1_1787830624387": {
+                "x": 525,
+                "y": 0
+              }
+            }
+          },
+          "groupId": "group_mtbiwq0o_5ggg",
+          "name": "asr组合",
+          "savedNodeTypeId": "groupnode_mtbj9s8i"
+        },
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 440,
+        "height": 543
+      },
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787835358621",
+      "type": "workflow",
+      "position": {
+        "x": 3330,
+        "y": -1260
       },
       "data": {
-        "nodeType": "ai_punctuate",
-        "label": "AI标点补全",
+        "nodeType": "subtitle_gen",
+        "label": "字幕生成",
         "config": {
-          "maxChars": "3000",
-          "langSource": "from_asr",
-          "manualLang": ""
+          "file_prefix": "dub_",
+          "filter_punctuation": true,
+          "punctuation_replace_mode": "space"
         },
         "status": "pending",
+        "disableExecute": false,
+        "note": "切割后的配套字幕",
         "progress": 0,
         "message": "",
         "outputs": {},
         "error": "",
-        "workbench_url": "",
-        "disableExecute": false
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 123
+        "height": 299
       },
       "selected": false,
       "dragging": false
     },
     {
-      "id": "node_1_1787215647939",
+      "id": "node_1_1786046579815",
       "type": "workflow",
       "position": {
-        "x": -435,
-        "y": -1785
+        "x": 150,
+        "y": -1350
       },
       "data": {
-        "nodeType": "asr_recognize",
-        "label": "ASR识别",
+        "nodeType": "sentence_preprocess",
+        "label": "断句预处理",
         "config": {
-          "engine": "moss",
-          "language": "auto",
-          "model": "openmoss/MOSS-Transcribe-Diarize",
-          "compute_type": "",
-          "batch_size": 0,
-          "word_timestamps": false,
-          "hotwords_enabled": false,
-          "hotwords": ""
+          "method": "punct",
+          "split_on_speaker": true,
+          "llm_max_chars": "2000",
+          "processing_language": "from_input"
         },
-        "status": "cancelled",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result.json",
+          "word_index": "cache/word_index.json"
+        },
         "error": "",
-        "disableExecute": false,
-        "workbench_url": "",
-        "logLines": [
-          "[ASR] Audio split into 4 segments: [(0.0, 274.442187), (274.442187, 517.817937), (517.817937, 758.499063), (758.499063, 903.8735)]",
-          "[ASR] Segment 1/4: 0.0s - 274.4s (274.4s)",
-          "[ASR] Segment 2/4: 274.4s - 517.8s (243.4s)",
-          "[ASR] Segment 3/4: 517.8s - 758.5s (240.7s)",
-          "[ASR] Segment 4/4: 758.5s - 903.9s (145.4s)",
-          "[ASR Recognize] Post-processing skipped (recognition-only node)",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1787215647939_result.json, exiting 0"
-        ]
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 353
+        "height": 492
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1787654223924",
+      "type": "workflow",
+      "position": {
+        "x": 135,
+        "y": -825
+      },
+      "data": {
+        "nodeType": "sentence_split",
+        "label": "句子分割",
+        "config": {
+          "processing_language": "from_input",
+          "max_sentence_length": "25",
+          "use_llm_split": true,
+          "split_sentence_ends": true,
+          "split_clause_breaks": true,
+          "merge_min_duration": "0.1",
+          "merge_max_gap": "0.05",
+          "pause_split_threshold": "1.5",
+          "split_on_speaker": true,
+          "merge_short_enabled": true,
+          "merge_gap_enabled": false,
+          "pause_split_enabled": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/sentences_node_2_1787654223924.json",
+          "text": "cache/sentences_text_node_2_1787654223924.txt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 670
       },
       "selected": false,
       "dragging": false
@@ -1089,8 +1413,8 @@
       "id": "node_2_1787215768626",
       "type": "workflow",
       "position": {
-        "x": -420,
-        "y": -1365
+        "x": -375,
+        "y": -1170
       },
       "data": {
         "nodeType": "asr_postprocess",
@@ -1112,27 +1436,133 @@
           "min_speakers": "",
           "max_speakers": ""
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_postprocessed_node_2_1787215768626.json"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
           "[Pipeline] all stages done",
-          "[ASR-PP] [5/6] pipeline returned, segments=220",
+          "[ASR-PP] [5/6] pipeline returned, segments=65",
           "[ASR-PP] [6/6] normalizing and clamping result...",
           "[ASR-PP] [6/6] audio_duration=903.86",
           "[ASR-PP] [6/6] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\asr_postprocessed_node_2_1787215768626.json",
-          "[ASR-PP] === run() END segments=220 ===",
+          "[ASR-PP] === run() END segments=65 ===",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_2_1787215768626_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 447
+        "height": 576
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787828965709",
+      "type": "workflow",
+      "position": {
+        "x": -345,
+        "y": -1800
+      },
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "mimo_asr",
+          "language": "auto",
+          "model": "",
+          "compute_type": "",
+          "batch_size": 0,
+          "word_timestamps": false,
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": "",
+          "post_vad": false,
+          "post_alignment": false,
+          "post_diarization": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_1_1787828965709.json"
+        },
+        "error": "",
+        "logLines": [
+          "[ASR PostProcess] diarization_enabled=False, diarization_engine=pyannote",
+          "[ASR PostProcess] VAD was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Alignment was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Diarization was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
+          "[ASR PostProcess] No post-processing needed, returning original result",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1787828965709_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 551
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787830624387",
+      "type": "workflow",
+      "position": {
+        "x": 135,
+        "y": -1785
+      },
+      "data": {
+        "nodeType": "ai_subtitle_correct",
+        "label": "AI字幕纠错",
+        "config": {
+          "maxChars": "5000",
+          "properNouns": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output": "output/asr_corrected_node_1_1787830624387.json",
+          "text": "output/asr_corrected_node_1_1787830624387.txt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 351
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_5_1787845484222",
+      "type": "workflow",
+      "position": {
+        "x": 750,
+        "y": -1215
+      },
+      "data": {
+        "nodeType": "asr_result_validate",
+        "label": "ASR结果校验",
+        "config": {},
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 132
       },
       "selected": false,
       "dragging": false
@@ -1154,32 +1584,6 @@
     },
     {
       "type": "smoothstep",
-      "style": {
-        "stroke": "#10b981",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781810867151",
-      "sourceHandle": "out-audio",
-      "target": "node_1_1781939413425",
-      "targetHandle": "in-dub",
-      "id": "xy-edge__node_1_1781810867151out-audio-node_1_1781939413425in-dub"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781810867151",
-      "sourceHandle": "out-video_adjusted",
-      "target": "node_1_1781939413425",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1781810867151out-video_adjusted-node_1_1781939413425in-video"
-    },
-    {
-      "type": "smoothstep",
       "animated": false,
       "style": {
         "stroke": "#3b82f6",
@@ -1191,21 +1595,6 @@
       "target": "node_2_1781987851660",
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1781939413425out-video-node_2_1781987851660in-video",
-      "selected": false
-    },
-    {
-      "type": "smoothstep",
-      "animated": false,
-      "style": {
-        "stroke": "#f59e0b",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781810867151",
-      "sourceHandle": "out-dub_bilingual_srt",
-      "target": "node_2_1781987851660",
-      "targetHandle": "in-bilingual",
-      "id": "xy-edge__node_1_1781810867151out-dub_bilingual_srt-node_2_1781987851660in-bilingual",
       "selected": false
     },
     {
@@ -1313,19 +1702,6 @@
       "target": "node_2_1783321957415",
       "targetHandle": "in-input",
       "id": "xy-edge__node_1_1782725550457out-result-node_2_1783321957415in-input"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#f59e0b",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781810867151",
-      "sourceHandle": "out-dub_srt",
-      "target": "node_1_1781939413425",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1781810867151out-dub_srt-node_1_1781939413425in-subtitle"
     },
     {
       "type": "smoothstep",
@@ -1542,45 +1918,6 @@
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1787654223924",
-      "sourceHandle": "out-text",
-      "target": "node_1_1780948332813",
-      "targetHandle": "in-text",
-      "id": "xy-edge__node_2_1787654223924out-text-node_1_1780948332813in-text"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1786046579815",
-      "sourceHandle": "out-subtitle",
-      "target": "node_2_1787654223924",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1786046579815out-subtitle-node_2_1787654223924in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1787654223924",
-      "sourceHandle": "out-subtitle",
-      "target": "node_1_1780954897405",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_2_1787654223924out-subtitle-node_1_1780954897405in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
         "stroke": "#facc15",
         "strokeWidth": 2
       },
@@ -1608,27 +1945,93 @@
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#60a5fa",
+        "stroke": "#facc15",
         "strokeWidth": 2
       },
-      "source": "node_1_1787718696126",
-      "sourceHandle": "out-output",
-      "target": "node_1_1786046579815",
-      "targetHandle": "in-json",
-      "id": "xy-edge__node_1_1787718696126out-output-node_1_1786046579815in-json"
+      "source": "node_1_1781810867151",
+      "sourceHandle": "out-audio",
+      "target": "n_mtbix66cius1",
+      "targetHandle": "in-gin_1",
+      "id": "xy-edge__node_1_1781810867151out-audio-n_mtbix66cius1in-gin_1"
     },
     {
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#fb923c",
+        "stroke": "#6366f1",
         "strokeWidth": 2
       },
-      "source": "node_1_1787215647939",
-      "sourceHandle": "out-subtitle",
-      "target": "node_2_1787215768626",
+      "source": "node_1_1781810867151",
+      "sourceHandle": "out-audio",
+      "target": "n_mtbix66cius1",
+      "targetHandle": "in-gin_2",
+      "id": "xy-edge__node_1_1781810867151out-audio-n_mtbix66cius1in-gin_2"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781810867151",
+      "sourceHandle": "out-audio",
+      "target": "n_mtbix66cius1",
+      "targetHandle": "in-gin_3",
+      "id": "xy-edge__node_1_1781810867151out-audio-n_mtbix66cius1in-gin_3"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "n_mtbix66cius1",
+      "sourceHandle": "out-gout_2",
+      "target": "node_1_1787835358621",
       "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1787215647939out-subtitle-node_2_1787215768626in-subtitle",
+      "id": "xy-edge__n_mtbix66cius1out-gout_2-node_1_1787835358621in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787835358621",
+      "sourceHandle": "out-original",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1787835358621out-original-node_1_1781939413425in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1786046579815",
+      "sourceHandle": "out-subtitle",
+      "target": "node_2_1787654223924",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1786046579815out-subtitle-node_2_1787654223924in-subtitle",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787828965709",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1787830624387",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1787828965709out-subtitle-node_1_1787830624387in-json",
       "selected": false
     },
     {
@@ -1638,11 +2041,25 @@
         "stroke": "#f472b6",
         "strokeWidth": 2
       },
-      "source": "n_msyu4zm55ofz",
-      "sourceHandle": "out-audio",
-      "target": "node_1_1787215647939",
-      "targetHandle": "in-asr_audio",
-      "id": "xy-edge__n_msyu4zm55ofzout-audio-node_1_1787215647939in-asr_audio",
+      "source": "node_1_1787830624387",
+      "sourceHandle": "out-output",
+      "target": "node_2_1787215768626",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1787830624387out-output-node_2_1787215768626in-subtitle",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787215768626",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1786046579815",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_2_1787215768626out-subtitle-node_1_1786046579815in-json",
       "selected": false
     },
     {
@@ -1677,19 +2094,72 @@
       "type": "bezier",
       "animated": true,
       "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "n_msyu4zm55ofz",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1787828965709",
+      "targetHandle": "in-asr_audio",
+      "id": "xy-edge__n_msyu4zm55ofzout-audio-node_1_1787828965709in-asr_audio",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787654223924",
+      "sourceHandle": "out-text",
+      "target": "node_1_1780948332813",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_2_1787654223924out-text-node_1_1780948332813in-text",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
         "stroke": "#f472b6",
         "strokeWidth": 2
       },
-      "source": "node_2_1787215768626",
+      "source": "node_2_1787654223924",
       "sourceHandle": "out-subtitle",
-      "target": "node_1_1787718696126",
+      "target": "node_5_1787845484222",
       "targetHandle": "in-json",
-      "id": "xy-edge__group_mt9n4o5v_jmkvout-gout_1-node_1_1787718696126in-json",
-      "selected": false
+      "id": "xy-edge__node_2_1787654223924out-subtitle-node_5_1787845484222in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_5_1787845484222",
+      "sourceHandle": "out-json",
+      "target": "node_1_1780954897405",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_5_1787845484222out-json-node_1_1780954897405in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787654223924",
+      "sourceHandle": "out-text",
+      "target": "node_1_1782422054967",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_2_1787654223924out-text-node_1_1782422054967in-text"
     }
   ],
   "type": "user",
   "createdAt": "2026-08-19T05:28:27",
-  "updatedAt": "2026-08-27T10:13:00",
-  "revision": 26
+  "updatedAt": "2026-08-27T23:51:02",
+  "revision": 46
 }

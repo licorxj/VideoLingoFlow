@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, Save, Download, Search, Music2, X, ChevronDown, Tag, XCircle } from "lucide-react";
+import { Loader2, Save, Download, Search, Music2, X, ChevronDown, Tag, XCircle, Copy, Check, Library } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -68,12 +68,14 @@ function SoundCard({
   onToggle,
   categories,
   onSaved,
+  onPick,
 }: {
   sound: OnlineSoundItem;
   selected: boolean;
   onToggle: () => void;
   categories: Category[];
   onSaved: (download: boolean) => void;
+  onPick?: (v: { url: string; id: string }) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -90,10 +92,57 @@ function SoundCard({
   );
   const [draft, setDraft] = useState<SaveDraft>(preset);
   const [downloading, setDownloading] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [copiedId, setCopiedId] = useState(false);
 
   useEffect(() => { setDraft(preset); }, [preset]);
 
   const proxyUrl = voiceForgeApi.onlineProxyUrl(sound.audio_url);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(sound.audio_url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1500);
+    } catch {
+      // 剪贴板 API 被拒时降级到 textarea + execCommand
+      const ta = document.createElement("textarea");
+      ta.value = sound.audio_url;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+        setCopied(true);
+        window.setTimeout(() => setCopied(false), 1500);
+      } finally {
+        document.body.removeChild(ta);
+      }
+    }
+  };
+
+  const handleCopyId = async () => {
+    try {
+      await navigator.clipboard.writeText(sound.id);
+      setCopiedId(true);
+      window.setTimeout(() => setCopiedId(false), 1500);
+    } catch {
+      const ta = document.createElement("textarea");
+      ta.value = sound.id;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand("copy");
+        setCopiedId(true);
+        window.setTimeout(() => setCopiedId(false), 1500);
+      } finally {
+        document.body.removeChild(ta);
+      }
+    }
+  };
 
   const submit = async (download: boolean) => {
     setSaving(true);
@@ -145,15 +194,72 @@ function SoundCard({
       <audio className="mt-2 h-8 w-full" controls preload="metadata" src={proxyUrl} />
 
       {!expanded ? (
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          <Button size="sm" variant="outline" onClick={() => setExpanded(true)}>
-            <Save className="mr-1 size-3.5" />保存URL
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setExpanded(true)}>
-            <Download className="mr-1 size-3.5" />下载入库
-          </Button>
-        </div>
+        onPick ? (
+          <div className="mt-2 grid grid-cols-3 gap-1.5">
+            <Button size="sm" variant="outline" onClick={handleCopy} title="复制素材链接">
+              {copied ? (
+                <>
+                  <Check className="mr-1 size-3.5" />
+                  已复制
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-1 size-3.5" />
+                  复制链接
+                </>
+              )}
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleCopyId} title="复制素材ID">
+              {copiedId ? (
+                <>
+                  <Check className="mr-1 size-3.5" />
+                  已复制
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-1 size-3.5" />
+                  复制ID
+                </>
+              )}
+            </Button>
+            <Button size="sm" variant="default" onClick={() => onPick({ url: sound.audio_url, id: sound.id })} title="插入到节点">
+              <Library className="mr-1 size-3.5" />
+              插入
+            </Button>
+          </div>
+        ) : (
+          <div className="mt-2 space-y-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button size="sm" variant="outline" onClick={() => setExpanded(true)}>
+                <Save className="mr-1 size-3.5" />保存URL
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setExpanded(true)}>
+                <Download className="mr-1 size-3.5" />下载入库
+              </Button>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={handleCopy}
+              title="复制素材原始链接"
+            >
+              {copied ? (
+                <>
+                  <Check className="mr-1 size-3.5" />
+                  已复制
+                </>
+              ) : (
+                <>
+                  <Copy className="mr-1 size-3.5" />
+                  复制链接
+                </>
+              )}
+            </Button>
+          </div>
+        )
       ) : (
+        !onPick && (
         <div className="mt-2 space-y-2 rounded-md border bg-muted/40 p-2">
           <div className="space-y-1">
             <Label className="text-xs">名称</Label>
@@ -231,6 +337,7 @@ function SoundCard({
             </Button>
           </div>
         </div>
+        )
       )}
     </div>
   );
@@ -334,11 +441,12 @@ function ChinazTagPicker({
 }
 
 export default function OnlineAssetsModal({
-  open, onOpenChange, onImported,
+  open, onOpenChange, onImported, onPick,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onImported?: () => void;
+  onPick?: (v: { url: string; id: string }) => void;
 }) {
   const [activeTab, setActiveTab] = useState(SOURCE_TABS[0].id);
   const [keyword, setKeyword] = useState("");
@@ -613,6 +721,7 @@ export default function OnlineAssetsModal({
                           onToggle={() => toggleKey(sound.audio_url)}
                           categories={categories}
                           onSaved={handleSaved}
+                          onPick={onPick}
                         />
                       ))}
                     </div>

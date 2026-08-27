@@ -98,6 +98,57 @@ BUILTIN_NODE_TYPES = [
         },
     },
     {
+        "id": "image_mask",
+        "name": "图片蒙版",
+        "execution_domain": "thread",
+        "category": "ai_gen",
+        "description": "上游输入图片，在卡片上用画笔/矩形绘制蒙版，后端合成蒙版图并输出蒙版合成图与黑白蒙版",
+        "icon": "Image",
+        "color": "#ec4899",
+        "inputs": [
+            {"id": "image", "label": "图片", "type": "image", "required": False},
+        ],
+        "outputs": [
+            {"id": "image", "label": "蒙版合成图", "type": "image"},
+            {"id": "mask", "label": "蒙版", "type": "image"},
+        ],
+        "defaultConfig": {
+            "mask": {"strokes": [], "rects": [], "color": "#ff3b30", "alpha": 0.5},
+        },
+    },
+    {
+        "id": "ai_video_gen",
+        "name": "AI生视频",
+        "execution_domain": "thread",
+        "category": "ai_gen",
+        "description": "根据提示词（文本或txt）、图片/图片列表、音频，调用视频生成接口生成视频；提示词前缀会拼接到连线提示词前",
+        "icon": "Film",
+        "color": "#a855f7",
+        "inputs": [
+            {"id": "prompt", "label": "提示词", "type": "text", "required": False},
+            {"id": "images", "label": "图片/图片列表", "type": "image", "required": False},
+            {"id": "audio", "label": "音频", "type": "audio", "required": False},
+        ],
+        "outputs": [
+            {"id": "videos", "label": "视频", "type": "video"},
+            {"id": "video", "label": "视频(首个)", "type": "video"},
+        ],
+        "defaultConfig": {
+            "prompt_prefix": "",
+            "interface": "",
+            "model": "",
+            "mode": "",
+            "resolution": "720P",
+            "duration": 5,
+            "num_videos": 1,
+            "sound": "on",
+            "negative_prompt": "",
+            "output_prefix": "video",
+            "optimize_prompt": True,
+            "poll_timeout": 1800,
+        },
+    },
+    {
         "id": "path_to_title",
         "name": "路径转标题",
         "execution_domain": "thread",
@@ -239,6 +290,26 @@ BUILTIN_NODE_TYPES = [
                 "dependsOn": "langSource", "dependsValue": "manual", "colSpan": "half",
             },
         ],
+    },
+    {
+        "id": "ai_subtitle_correct",
+        "name": "AI字幕纠错",
+        "execution_domain": "llm",
+        "category": "ai_gen",
+        "description": "读取 ASR JSON，按字数上限切分后请求 LLM（vlf-02）修复识别错误、去除空格并修正标点；专有名词可辅助识别。prompt 可在 Prompt 工程中修改。",
+        "icon": "Sparkles",
+        "color": "#10b981",
+        "inputs": [
+            {"id": "json", "label": "ASR JSON", "type": "json", "required": False, "color": "#6366f1"},
+        ],
+        "outputs": [
+            {"id": "output", "label": "ASR JSON", "type": "json", "color": "#6366f1"},
+            {"id": "text", "label": "纠错全文TXT", "type": "text", "color": "#8b5cf6"},
+        ],
+        "defaultConfig": {
+            "maxChars": "2000",
+            "properNouns": "",
+        },
     },
     {
         "id": "platform_download",
@@ -486,6 +557,35 @@ BUILTIN_NODE_TYPES = [
         ],
     },
     {
+        "id": "audio_asset_library",
+        "name": "音频素材库",
+        "execution_domain": "process",
+        "category": "audio",
+        "description": "从 URL、本地路径或晴沐配音谷在线素材库ID获取音频素材，自动下载/复制并重命名到当前工作文件夹。",
+        "icon": "Music",
+        "color": "#a855f7",
+        "inputs": [
+            {"id": "any", "label": "来源", "type": "any", "required": False}
+        ],
+        "outputs": [
+            {"id": "audio", "label": "音频文件", "type": "audio"},
+            {"id": "path", "label": "文件路径", "type": "filepath"}
+        ],
+        "defaultConfig": {
+            "source": ""
+        },
+        "configFields": [
+            {
+                "key": "source",
+                "label": "素材来源",
+                "type": "text",
+                "placeholder": "URL / 本地路径 / 配音谷素材库ID",
+                "rows": 2,
+                "description": "支持：1) 素材直链(http/https)；2) 本地文件或文件夹绝对路径；3) 晴沐配音谷在线素材库ID（chinaZ 详情页链接可直接识别，ElevenLabs 等请复制素材链接）。"
+            }
+        ]
+    },
+    {
         "id": "asr_postprocess",
         "name": "ASR后处理",
         "execution_domain": "process",
@@ -660,6 +760,23 @@ BUILTIN_NODE_TYPES = [
             {"key": "split_on_speaker", "label": "多人会话切割", "type": "checkbox", "hint": "仅当 JSON 输入含多说话人信息时生效"},
             {"key": "llm_max_chars", "label": "LLM请求字数上限", "type": "text", "placeholder": "默认 5000，留空使用全局LLM字数限制"},
         ],
+    },
+    {
+        "id": "asr_result_validate",
+        "name": "ASR结果校验",
+        "execution_domain": "thread",
+        "category": "translation",
+        "description": "校验 ASR JSON 中 text / segments / words 的一致性：先校验 text 与压平 segments（去标点空格后顺序匹配），再校验压平 segments 与压平 words。校验通过则原样透传输出，不通过则抛出错误并指明错误点。",
+        "icon": "ShieldCheck",
+        "color": "#10b981",
+        "inputs": [
+            {"id": "json", "label": "ASR结果JSON", "type": "json", "required": True}
+        ],
+        "outputs": [
+            {"id": "json", "label": "ASR结果JSON(透传)", "type": "json", "color": "#10b981"}
+        ],
+        "defaultConfig": {},
+        "configFields": []
     },
     {
         "id": "summarize",
@@ -977,6 +1094,73 @@ BUILTIN_NODE_TYPES = [
             {"key": "silence_interval", "label": "片段间静音间隔(秒)", "type": "number", "defaultValue": 0.5, "min": 0, "max": 10, "step": 0.1,
              "description": "相邻配音片段之间插入的静音时长"},
         ],
+    },
+    {
+        "id": "track_mix",
+        "name": "音轨混响",
+        "execution_domain": "thread",
+        "category": "audio",
+        "description": "将最多四路音频（主音轨、背景音乐、音轨3、音轨4）按设置的响度、淡入淡出与循环混合后输出。总时长支持「最长」或「以主音轨为准」两种模式。主音轨固定不循环，其余音轨可循环以填充总时长。",
+        "icon": "AudioLines",
+        "color": "#10b981",
+        "inputs": [
+            {"id": "main_audio", "label": "主音轨", "type": "audio", "required": True},
+            {"id": "bgm", "label": "背景音乐", "type": "audio"},
+            {"id": "track3", "label": "音轨3", "type": "audio"},
+            {"id": "track4", "label": "音轨4", "type": "audio"}
+        ],
+        "outputs": [
+            {"id": "audio", "label": "混音结果", "type": "audio", "color": "#10b981"}
+        ],
+        "defaultConfig": {
+            "duration_mode": "longest",
+            "main_volume": 1.0,
+            "main_fade_in": 0.3,
+            "main_fade_out": 0.3,
+            "bgm_volume": 0.3,
+            "bgm_fade_in": 1.0,
+            "bgm_fade_out": 1.0,
+            "bgm_loop": True,
+            "track3_volume": 0.5,
+            "track3_fade_in": 0.3,
+            "track3_fade_out": 0.3,
+            "track3_loop": False,
+            "track4_volume": 0.5,
+            "track4_fade_in": 0.3,
+            "track4_fade_out": 0.3,
+            "track4_loop": False,
+            "audio_format": "wav",
+            "audio_bitrate": "192"
+        },
+        "configFields": [
+            {"key": "duration_mode", "label": "总时长模式", "type": "select", "colSpan": "full",
+             "options": [
+                {"label": "最长（以最长音轨为准）", "value": "longest"},
+                {"label": "以主音轨为准", "value": "main"}
+             ], "description": "输出音频总时长：最长=与最长的输入音轨等长；主音轨=仅与主音轨等长"},
+            {"key": "main_volume", "label": "主音轨·响度", "type": "slider", "colSpan": "third", "min": 0, "max": 2, "step": 0.05, "defaultValue": 1.0, "description": "主音轨音量增益（1.0=原始）"},
+            {"key": "main_fade_in", "label": "主音轨·淡入(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.3},
+            {"key": "main_fade_out", "label": "主音轨·淡出(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.3},
+            {"key": "bgm_volume", "label": "背景音乐·响度", "type": "slider", "colSpan": "third", "min": 0, "max": 2, "step": 0.05, "defaultValue": 0.3},
+            {"key": "bgm_fade_in", "label": "背景音乐·淡入(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 1.0},
+            {"key": "bgm_fade_out", "label": "背景音乐·淡出(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 1.0},
+            {"key": "bgm_loop", "label": "背景音乐·循环", "type": "toggle", "colSpan": "third", "defaultValue": True, "description": "时长不足时循环播放以填充总时长"},
+            {"key": "track3_volume", "label": "音轨3·响度", "type": "slider", "colSpan": "third", "min": 0, "max": 2, "step": 0.05, "defaultValue": 0.5},
+            {"key": "track3_fade_in", "label": "音轨3·淡入(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.3},
+            {"key": "track3_fade_out", "label": "音轨3·淡出(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.3},
+            {"key": "track3_loop", "label": "音轨3·循环", "type": "toggle", "colSpan": "third", "defaultValue": False},
+            {"key": "track4_volume", "label": "音轨4·响度", "type": "slider", "colSpan": "third", "min": 0, "max": 2, "step": 0.05, "defaultValue": 0.5},
+            {"key": "track4_fade_in", "label": "音轨4·淡入(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.3},
+            {"key": "track4_fade_out", "label": "音轨4·淡出(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.3},
+            {"key": "track4_loop", "label": "音轨4·循环", "type": "toggle", "colSpan": "third", "defaultValue": False},
+            {"key": "audio_format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
+                {"label": "WAV (无损)", "value": "wav"},
+                {"label": "MP3", "value": "mp3"},
+                {"label": "FLAC (无损压缩)", "value": "flac"}
+            ], "description": "混音输出格式，默认 WAV"},
+            {"key": "audio_bitrate", "label": "MP3码率(kbps)", "type": "text", "colSpan": "half", "placeholder": "默认 192",
+             "description": "仅 MP3 生效，WAV/FLAC 忽略"}
+        ]
     },
     {
         "id": "merge_dub_video",
@@ -1672,6 +1856,23 @@ BUILTIN_NODE_TYPES = [
             {"key": "custom_value", "label": "自定义输入值", "type": "text",
              "placeholder": "输入要设置的值"},
         ],
+    },
+    {
+        "id": "srt_to_json",
+        "name": "SRT字幕转json",
+        "execution_domain": "thread",
+        "category": "utility",
+        "description": "将 SRT 字幕转换为 ASR 结果格式 JSON（包含 text 与 segments，不生成词级时间戳 words），可直接接入 ASR 结果校验、预处理等下游节点。输入为「字幕」类型，可连线「字幕生成」等字幕节点的输出（默认输出 .srt）。",
+        "icon": "Subtitles",
+        "color": "#f97316",
+        "inputs": [
+            {"id": "subtitle", "label": "字幕", "type": "subtitle", "required": True}
+        ],
+        "outputs": [
+            {"id": "json", "label": "ASR结果JSON", "type": "json", "color": "#f97316"}
+        ],
+        "defaultConfig": {},
+        "configFields": []
     },
     {
         "id": "json_visual_editor",

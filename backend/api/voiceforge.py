@@ -117,6 +117,7 @@ class BulkSentenceUpdate(BaseModel):
 class SynthesisRequest(BaseModel):
     sentence_ids: list[str] = Field(default_factory=list, max_length=500)
     retry_failed: bool = False
+    interface_id: Optional[str] = None
 
 
 class TextPreviewRequest(BaseModel):
@@ -908,10 +909,13 @@ def import_project_content(
 
 
 @router.post("/sentences/{sentence_id}/synthesize")
-def synthesize(sentence_id: str):
+def synthesize(sentence_id: str, interface_id: str = Query(None)):
     with session() as conn:
         sentence = _one(conn, "SELECT project_id, version FROM vf_sentences WHERE id = ?", (sentence_id,), "句子不存在")
-    task_id, created = create_task(sentence["project_id"], "synthesize_sentence", {"sentence_id": sentence_id, "sentence_version": sentence["version"]}, idempotency_key=f"synthesis:{sentence_id}:{sentence['version']}")
+    task_kwargs: dict = {"sentence_id": sentence_id, "sentence_version": sentence["version"]}
+    if interface_id:
+        task_kwargs["interface_id"] = interface_id
+    task_id, created = create_task(sentence["project_id"], "synthesize_sentence", task_kwargs, idempotency_key=f"synthesis:{sentence_id}:{sentence['version']}{(':' + interface_id) if interface_id else ''}")
     if created:
         celery_task_id = dispatch(task_id)
         if celery_task_id:
@@ -938,7 +942,10 @@ def synthesize_project(project_id: str, data: SynthesisRequest):
     created_tasks = []
     existing_tasks = []
     for sentence in sentences:
-        task_id, created = create_task(project_id, "synthesize_sentence", {"sentence_id": sentence["id"], "sentence_version": sentence["version"]}, idempotency_key=f"synthesis:{sentence['id']}:{sentence['version']}")
+        task_kwargs: dict = {"sentence_id": sentence["id"], "sentence_version": sentence["version"]}
+        if data.interface_id:
+            task_kwargs["interface_id"] = data.interface_id
+        task_id, created = create_task(project_id, "synthesize_sentence", task_kwargs, idempotency_key=f"synthesis:{sentence['id']}:{sentence['version']}{(':' + data.interface_id) if data.interface_id else ''}")
         if created:
             celery_task_id = dispatch(task_id)
             if celery_task_id:

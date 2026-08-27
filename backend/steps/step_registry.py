@@ -11,6 +11,9 @@ from backend.steps.s_audio_cut_by_subtitle import StepAudioCutBySubtitle
 from backend.steps.s_aigc_comfyui import S_AIGC_ComfyUI
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
+from backend.steps.s_asr_result_validate import S_ASRResultValidate
+from backend.steps.s_srt_to_json import S_SrtToJson
+from backend.steps.s_track_mix import S_TrackMix
 from backend.steps.s04_summarize import S04Summarize
 from backend.steps.s05_translate import S05Translate
 from backend.steps.s06_subtitle_gen import S06SubtitleGen
@@ -61,8 +64,12 @@ from backend.steps.s_qm_virtual_mailbox import S_QmVirtualMailbox
 from backend.steps.passthrough_step import PassthroughStep
 from backend.steps.s_archive import S_ArchiveArtifacts
 from backend.steps.s_ai_punctuate import S_AiPunctuate
+from backend.steps.s_ai_subtitle_correct import S_AiSubtitleCorrect
 from backend.steps.s_text_input import StepTextInput
 from backend.steps.s_file_load import StepFileLoad
+from backend.steps.s_image_mask import S_ImageMask
+from backend.steps.s_ai_videogen import S_AiVideoGen
+from backend.steps.s_audio_asset_library import S_AudioAssetLibrary
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -81,6 +88,12 @@ _STEPS = {
     "sentence_split": S03SentenceSplit(),
     "s_sentence_preprocess": S_SentencePreprocess(),
     "sentence_preprocess": S_SentencePreprocess(),
+    "s_asr_result_validate": S_ASRResultValidate(),
+    "asr_result_validate": S_ASRResultValidate(),
+    "s_srt_to_json": S_SrtToJson(),
+    "srt_to_json": S_SrtToJson(),
+    "s_track_mix": S_TrackMix(),
+    "track_mix": S_TrackMix(),
     "s04_summarize": S04Summarize(),
     "summarize": S04Summarize(),
     "s05_translate": S05Translate(),
@@ -178,10 +191,18 @@ _STEPS = {
     "qm_virtual_mailbox": S_QmVirtualMailbox(),
     "archive_artifacts": S_ArchiveArtifacts(),
     "ai_punctuate": S_AiPunctuate(),
+    "ai_subtitle_correct": S_AiSubtitleCorrect(),
+    "s_ai_subtitle_correct": S_AiSubtitleCorrect(),
     "s_text_input": StepTextInput(),
     "text_input": StepTextInput(),
     "s_file_load": StepFileLoad(),
     "file_load": StepFileLoad(),
+    "s_image_mask": S_ImageMask(),
+    "image_mask": S_ImageMask(),
+    "s_ai_videogen": S_AiVideoGen(),
+    "ai_video_gen": S_AiVideoGen(),
+    "s_audio_asset_library": S_AudioAssetLibrary(),
+    "audio_asset_library": S_AudioAssetLibrary(),
 }
 
 

@@ -23,7 +23,7 @@ function errorText(error: any, fallback: string) {
   return error?.message || fallback;
 }
 
-export function AssetLibrary() {
+export function AssetLibrary({ embedded = false }: { embedded?: boolean }) {
   const [activeType, setActiveType] = useState("bgm");
   const [result, setResult] = useState<AssetListResult>({ assets: [], total: 0, page: 1, page_size: PAGE_SIZE, type_counts: {} });
   const [categories, setCategories] = useState<any[]>([]);
@@ -151,42 +151,29 @@ export function AssetLibrary() {
     await load(page, filters, activeType);
   };
 
-  return (
-    <PageBackground tone="voiceforge" className="mx-auto max-w-7xl space-y-5 p-1">
-      <PageHeader
-        icon={Music2}
-        title="素材库"
-        detail="仅记录本地路径，不复制文件 · 不含视频时间线"
-        hideTitle
-        back={{ to: "/voiceforge", label: "配音谷" }}
-        breadcrumbs={[
-          { label: "晴沐配音谷", to: "/voiceforge" },
-          { label: "素材库" },
-        ]}
-        actions={
-          <>
-            <Button variant="outline" onClick={() => setCatOpen(true)}>
-              <FolderPlus className="mr-1.5 h-4 w-4" />
-              分类管理
-            </Button>
-            <Button variant="outline" onClick={() => void load(page, filters, activeType)}>
-              <RefreshCw className="mr-1.5 h-4 w-4" />
-              刷新
-            </Button>
-            <Button onClick={() => setAddOpen(true)}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              添加素材
-            </Button>
-            <Button variant="secondary" onClick={() => setOnlineOpen(true)}>
-              <Globe className="mr-1.5 h-4 w-4" />
-              在线素材
-            </Button>
-          </>
-        }
-      />
+  const toolbar = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button variant="outline" onClick={() => setCatOpen(true)}>
+        <FolderPlus className="mr-1.5 h-4 w-4" />
+        分类管理
+      </Button>
+      <Button variant="outline" onClick={() => void load(page, filters, activeType)}>
+        <RefreshCw className="mr-1.5 h-4 w-4" />
+        刷新
+      </Button>
+      <Button onClick={() => setAddOpen(true)}>
+        <Plus className="mr-1.5 h-4 w-4" />
+        添加素材
+      </Button>
+      <Button variant="secondary" onClick={() => setOnlineOpen(true)}>
+        <Globe className="mr-1.5 h-4 w-4" />
+        在线素材
+      </Button>
+    </div>
+  );
 
-      <OnlineAssetsModal open={onlineOpen} onOpenChange={setOnlineOpen} onImported={() => void load(page, filters, activeType)} />
-
+  const body = (
+    <>
       <div className="flex gap-1 border-b border-border/60">
         {ASSET_TYPE_ORDER.map((type) => {
           const isActive = type === activeType;
@@ -320,6 +307,35 @@ export function AssetLibrary() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </>
+  );
+
+  if (embedded) {
+    return (
+      <div className="space-y-4">
+        {toolbar}
+        <OnlineAssetsModal open={onlineOpen} onOpenChange={setOnlineOpen} onImported={() => void load(page, filters, activeType)} />
+        {body}
+      </div>
+    );
+  }
+
+  return (
+    <PageBackground tone="voiceforge" className="mx-auto max-w-7xl space-y-5 p-1">
+      <PageHeader
+        icon={Music2}
+        title="素材库"
+        detail="仅记录本地路径，不复制文件 · 不含视频时间线"
+        hideTitle
+        back={{ to: "/voiceforge", label: "配音谷" }}
+        breadcrumbs={[
+          { label: "晴沐配音谷", to: "/voiceforge" },
+          { label: "素材库" },
+        ]}
+        actions={toolbar}
+      />
+      <OnlineAssetsModal open={onlineOpen} onOpenChange={setOnlineOpen} onImported={() => void load(page, filters, activeType)} />
+      {body}
     </PageBackground>
   );
 }

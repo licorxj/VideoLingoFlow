@@ -1,0 +1,386 @@
+{
+  "interfaces": [
+    {
+      "id": "wuli_video",
+      "name": "呜哩创作平台 (Wuli) 视频",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "呜哩创作平台（Wuli）开放平台视频生成接口，支持文生视频、图生视频、首尾帧生视频、参考视频生视频，异步任务轮询模式。",
+      "api_source_url": "https://wuli.art/generate?openRegisterModal=true&inviteCode=WL-WULIGVKDM8GQ",
+      "model_docs_url": "https://alidocs.dingtalk.com/i/nodes/vy20BglGWOxjGpq0CGEZ3L1RVA7depqY",
+      "balance": null,
+      "config": {
+        "api_url": "https://platform.wuli.art",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.videogen.sdk.wuli_video_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "",
+        "default_model": "可灵 3.0",
+        "model_options": [
+          "通义万相 2.7",
+          "Happy Horse 1.1",
+          "Happy Horse 1.0",
+          "通义万相 2.2 Turbo",
+          "通义万相 2.6 Flash",
+          "通义万相 2.6",
+          "可灵 3.0 Omni",
+          "可灵 O1",
+          "可灵 3.0",
+          "可灵 2.6",
+          "可灵 2.5 Turbo",
+          "Seedance 1.5 Pro",
+          "Seedance 1.0 Pro",
+          "MiniMax Hailuo 2.3",
+          "MiniMax Hailuo 2.3 Fast"
+        ],
+        "model_metadata": {
+          "通义万相 2.7": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 3,
+            "supports_audio": false,
+            "default_audio": "model_default"
+          },
+          "Happy Horse 1.1": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "autovideo"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 1,
+            "max_ref_videos": 0,
+            "supports_audio": true,
+            "default_audio": "on"
+          },
+          "Happy Horse 1.0": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "autovideo"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 1,
+            "max_ref_videos": 1,
+            "supports_audio": true,
+            "default_audio": "on"
+          },
+          "通义万相 2.2 Turbo": {
+            "modes": [
+              "txt2video",
+              "img2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P"
+            ],
+            "durations": [
+              5
+            ],
+            "max_ref_images": 1,
+            "max_ref_videos": 0,
+            "supports_audio": false,
+            "default_audio": "off"
+          },
+          "通义万相 2.6 Flash": {
+            "modes": [
+              "img2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 1,
+            "max_ref_videos": 0,
+            "supports_audio": false,
+            "default_audio": "on"
+          },
+          "通义万相 2.6": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "autovideo"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 3,
+            "supports_audio": true,
+            "default_audio": "model_default"
+          },
+          "可灵 3.0 Omni": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 7,
+            "max_ref_videos": 1,
+            "supports_audio": true,
+            "default_audio": "keep_original"
+          },
+          "可灵 O1": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 7,
+            "max_ref_videos": 1,
+            "supports_audio": true,
+            "default_audio": "keep_original"
+          },
+          "可灵 3.0": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "supports_audio": true,
+            "default_audio": "on"
+          },
+          "可灵 2.6": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "supports_audio": true,
+            "default_audio": "on"
+          },
+          "可灵 2.5 Turbo": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "supports_audio": true,
+            "default_audio": "on"
+          },
+          "Seedance 1.5 Pro": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "480P",
+              "720P"
+            ],
+            "durations": [
+              5,
+              10,
+              12
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "supports_audio": true,
+            "default_audio": "on"
+          },
+          "Seedance 1.0 Pro": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "supports_audio": true,
+            "default_audio": "on"
+          },
+          "MiniMax Hailuo 2.3": {
+            "modes": [
+              "txt2video",
+              "img2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "768P",
+              "1080P"
+            ],
+            "durations": [
+              6,
+              10
+            ],
+            "max_ref_images": 1,
+            "max_ref_videos": 0,
+            "supports_audio": false,
+            "default_audio": "off"
+          },
+          "MiniMax Hailuo 2.3 Fast": {
+            "modes": [
+              "img2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "768P",
+              "1080P"
+            ],
+            "durations": [
+              6,
+              10
+            ],
+            "max_ref_images": 1,
+            "max_ref_videos": 0,
+            "supports_audio": false,
+            "default_audio": "off"
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "flf2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "autovideo": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "sound",
+            "default": "",
+            "description": "声音开关：on 开启 / off 关闭 / keep_original 保留原声（留空按模型默认）"
+          },
+          {
+            "key": "optimize_prompt",
+            "default": "true",
+            "description": "是否启用平台智能改写 prompt（默认开启）"
+          },
+          {
+            "key": "poll_timeout",
+            "default": "1200",
+            "description": "任务轮询超时时间（秒）"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 1200,
+        "sdk_extra_args": {}
+      }
+    }
+  ]
+}

@@ -18,7 +18,6 @@
 import json
 import os
 import re
-import shutil
 from typing import Callable, Dict, List, Optional, Tuple
 
 from backend.steps.base_step import BaseStep
@@ -37,7 +36,9 @@ class S_SentencePreprocess(BaseStep):
     artifacts = ["cache/asr_result.json", "cache/word_index.json"]
 
     def check_artifact(self, task_dir: str) -> bool:
-        return os.path.exists(os.path.join(task_dir, "cache", "asr_result.json"))
+        node_id = getattr(self, "_node_id", "") or ""
+        name = f"asr_result_{node_id}.json" if node_id else "asr_result.json"
+        return os.path.exists(os.path.join(task_dir, "cache", name))
 
     def validate_inputs(self, task_dir: str) -> bool:
         step_inputs = getattr(self, "_step_inputs", {}) or {}
@@ -406,63 +407,33 @@ class S_SentencePreprocess(BaseStep):
                 idx += 1
         return index
 
-    def _align_sentence_to_words(self, text: str, word_list: List[dict],
-                                 cursor: List[int]) -> Tuple[List[dict], float, float]:
-        """字符子序列匹配句子文本到词表，从 cursor 处开始顺序消费，避免跨句复用。
+    def _align_sentences(self, segs: List[dict], full_text: str,
+                         word_index: dict, asr_data: dict) -> List[dict]:
+        """用全局字符锚点 + 插值重建每句时间轴（见 backend/utils/time_align.py）。
 
-        返回 (matched_words, start, end)；无匹配返回 ([], 0, 0)，cursor 不前进。
+        替代旧的逐句子序列贪心匹配，避免稀疏词时间戳下的跨句抢词与游标漂移。
         """
-        clean = re.sub(r"\s+", "", text).lower()
-        if not clean:
-            return [], 0.0, 0.0
-
-        matched = []
-        last_matched_idx = -1
-        pos = 0
-        i = cursor[0]
-        while i < len(word_list):
-            w = word_list[i]
-            w_clean = re.sub(r"\s+", "", str(w.get("word", ""))).lower()
-            if not w_clean:
-                i += 1
-                continue
-            match = True
-            temp = pos
-            for ch in w_clean:
-                found = False
-                while temp < len(clean):
-                    if clean[temp] == ch:
-                        temp += 1
-                        found = True
-                        break
-                    temp += 1
-                if not found:
-                    match = False
-                    break
-            if match:
-                matched.append(w)
-                pos = temp
-                last_matched_idx = i
-                i += 1
-                if pos >= len(clean):
-                    break
-            else:
-                i += 1
-
-        if not matched:
-            return [], 0.0, 0.0
-
-        cursor[0] = last_matched_idx + 1  # 只消费到最后一个匹配词之后，跳过词留给后续句子
-        try:
-            start = float(matched[0].get("start") or 0)
-            end = float(matched[-1].get("end") or start)
-        except (TypeError, ValueError):
-            start, end = 0.0, 0.0
-        return matched, round(start, 4), round(end, 4)
+        from backend.utils.time_align import SentenceTimeAligner
+        word_list = list(word_index.values())
+        aligner = SentenceTimeAligner(
+            full_text, word_list, segments=asr_data.get("segments"))
+        out = []
+        for idx, s in enumerate(segs, start=1):
+            matched, start, end = aligner.align_next(s["text"])
+            out.append({
+                "id": idx,
+                "text": s["text"],
+                "speaker": s.get("speaker", ""),
+                "start": float(start or 0.0),
+                "end": float(end or 0.0),
+                "words": matched,
+            })
+        return out
 
     # ── 主流程（需求2-5） ─────────────────────────────────────────
 
     def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
+        node_id = getattr(self, "_node_id", "") or ""
         if callback:
             callback(5, "加载输入与参数检查...")
 
@@ -544,24 +515,14 @@ class S_SentencePreprocess(BaseStep):
                 if callback:
                     callback(70, "重建句子级时间戳...")
                 word_index = self._build_word_index(asr_data)
-                word_index_path = os.path.join(task_dir, "cache", "word_index.json")
+                word_index_path = os.path.join(
+                    task_dir, "cache",
+                    f"word_index_{node_id}.json" if node_id else "word_index.json")
                 os.makedirs(os.path.dirname(word_index_path), exist_ok=True)
                 with open(word_index_path, "w", encoding="utf-8") as f:
                     json.dump(word_index, f, ensure_ascii=False, indent=2)
 
-                word_list = list(word_index.values())
-                cursor = [0]
-                segments_out = []
-                for idx, s in enumerate(segs, start=1):
-                    matched, start, end = self._align_sentence_to_words(s["text"], word_list, cursor)
-                    segments_out.append({
-                        "id": idx,
-                        "text": s["text"],
-                        "speaker": s.get("speaker", ""),
-                        "start": start,
-                        "end": end,
-                        "words": matched,
-                    })
+                segments_out = self._align_sentences(segs, full_text, word_index, asr_data)
             else:
                 word_index_path = None
                 segments_out = [
@@ -571,12 +532,11 @@ class S_SentencePreprocess(BaseStep):
 
             output = {"language": lang, "text": full_text, "segments": segments_out}
 
-        # 保存输出：固定输出名为 cache/asr_result.json（与 ASR 节点同名，作为下游时间点查询标准）
-        main_path = os.path.join(task_dir, "cache", "asr_result.json")
+        # 保存输出：文件名带节点 id 后缀（cache/asr_result_{node_id}.json），
+        # 与 ASR 节点产物区分，避免相互覆盖；下游通过输入端口或 find_artifact 读取。
+        main_name = f"asr_result_{node_id}.json" if node_id else "asr_result.json"
+        main_path = os.path.join(task_dir, "cache", main_name)
         os.makedirs(os.path.dirname(main_path), exist_ok=True)
-        # 覆盖前将原文件以 .backup 后缀备份，避免丢失原始 ASR 结果
-        if os.path.exists(main_path):
-            shutil.copy2(main_path, main_path + ".backup")
         with open(main_path, "w", encoding="utf-8") as f:
             json.dump(output, f, ensure_ascii=False, indent=2)
 
@@ -584,8 +544,8 @@ class S_SentencePreprocess(BaseStep):
         if callback:
             callback(100, f"断句预处理完成：{seg_count} 个句子")
 
-        artifacts = ["cache/asr_result.json"]
-        outputs = {"subtitle": "cache/asr_result.json"}
+        artifacts = [os.path.join("cache", main_name)]
+        outputs = {"subtitle": os.path.join("cache", main_name)}
         if word_index_path:
             artifacts.append("cache/word_index.json")
             outputs["word_index"] = "cache/word_index.json"

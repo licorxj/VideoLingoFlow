@@ -263,19 +263,6 @@ class S09TTS(BaseStep):
         print(f"[TTS] 引擎能力验证通过: {engine_id} 支持 {mode}")
         return True
 
-    def _can_use_controllable_clone(self, engine_id: str) -> bool:
-        """检测引擎是否支持 controllable_clone 模式"""
-        try:
-            from backend.tts.tts_interface_manager import get_tts_interface_manager
-            manager = get_tts_interface_manager()
-            iface = manager.get(engine_id)
-            if not iface:
-                return False
-            modes = iface.get("config", {}).get("modes", {})
-            return modes.get("controllable_clone", {}).get("enabled", False)
-        except Exception:
-            return False
-
     @staticmethod
     def _is_untimed(segments: List[Dict]) -> bool:
         """判断是否为「无时间戳」的一般文本配音模式。
@@ -1024,13 +1011,10 @@ class S09TTS(BaseStep):
                 if os.path.exists(audio_file):
                     os.remove(audio_file)
 
-                # 调速时切换到指令克隆模式，利用引擎的指令控制能力
-                speed_config = dict(tts_config)
-                if self._can_use_controllable_clone(tts_config["engine"]):
-                    speed_config["mode"] = "controllable_clone"
-                    print(f"  [{idx}] 调速模式: 切换到指令克隆 (controllable_clone)")
-
-                success = self._try_real_tts(seg, speed_config, audio_file, task_dir, ref_map, speed=speed_factor)
+                # 调速时不切换模式，保持原模式，仅把 speed 传给引擎，
+                # 由服务层（build_request_params）按模式做变速容差处理
+                # （克隆模式无原生语速时自动对参考音频做 ffmpeg atempo 变速）
+                success = self._try_real_tts(seg, tts_config, audio_file, task_dir, ref_map, speed=speed_factor)
                 if success:
                     # 更新 real_duration
                     real_dur = self._get_audio_duration(audio_file)
@@ -1200,13 +1184,8 @@ class S09TTS(BaseStep):
                 if os.path.exists(audio_file):
                     os.remove(audio_file)
 
-                # 缩减后重配也切换到指令克隆模式
-                retts_config = dict(tts_config)
-                if self._can_use_controllable_clone(tts_config["engine"]):
-                    retts_config["mode"] = "controllable_clone"
-                    print(f"    [{idx}] 缩减重配: 切换到指令克隆 (controllable_clone)")
-
-                success = self._try_real_tts(seg, retts_config, audio_file, task_dir, ref_map)
+                # 缩减后重配保持原模式（不切换），变速容差交由服务层处理
+                success = self._try_real_tts(seg, tts_config, audio_file, task_dir, ref_map)
                 if success:
                     real_dur = self._get_audio_duration(audio_file)
                     if real_dur > 0:

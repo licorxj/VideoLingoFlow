@@ -539,6 +539,7 @@ def bootstrap_config() -> None:
         (ROOT / "backend" / "config" / "asr_interfaces.json", ROOT / "backend" / "config" / "asr_interfaces.json.temp"),
         (ROOT / "backend" / "config" / "tts_interfaces.json", ROOT / "backend" / "config" / "tts_interfaces.json.temp"),
         (ROOT / "backend" / "config" / "imagegen_interfaces.json", ROOT / "backend" / "config" / "imagegen_interfaces.json.temp"),
+        (ROOT / "backend" / "config" / "videogen_interfaces.json", ROOT / "backend" / "config" / "videogen_interfaces.json.temp"),
     ]:
         if not target.exists() and temp_src.exists():
             shutil.copy2(temp_src, target)

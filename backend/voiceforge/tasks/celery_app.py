@@ -43,7 +43,7 @@ def _run_task(task_id: str):
     import json
     payload = json.loads(task["input_json"])
     if task["task_type"] == "synthesize_sentence":
-        synthesize_sentence(payload["sentence_id"], task_id, payload.get("sentence_version"))
+        synthesize_sentence(payload["sentence_id"], task_id, payload.get("sentence_version"), payload.get("interface_id"))
     elif task["task_type"] == "merge_project_audio":
         merge_project_audio(payload["project_id"], task_id, payload.get("chapter_id"), payload.get("format", "wav"), payload.get("gap_seconds", 0))
     elif task["task_type"] == "export_srt":
