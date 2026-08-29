@@ -56,6 +56,8 @@ from backend.steps.s_json_visual_editor import S_JsonVisualEditor
 from backend.steps.s_text_editor import S_TextEditor
 from backend.steps.s_subtitle_editor import S_SubtitleEditor
 from backend.steps.s_video_split import S_VideoSplit
+from backend.steps.s_video_region_crop import S_VideoRegionCrop
+from backend.steps.s_video_region_composite import S_VideoRegionComposite
 from backend.steps.s_cutia import S_Cutia
 from backend.steps.s_lcwr_watermark_removal import S_LcwrWatermarkRemoval
 from backend.steps.s_media_to_url import S_MediaToUrl
@@ -179,6 +181,10 @@ _STEPS = {
     "subtitle_editor": S_SubtitleEditor(),
     "s_video_split": S_VideoSplit(),
     "video_split": S_VideoSplit(),
+    "s_video_region_crop": S_VideoRegionCrop(),
+    "video_region_crop": S_VideoRegionCrop(),
+    "s_video_region_composite": S_VideoRegionComposite(),
+    "video_region_composite": S_VideoRegionComposite(),
     "s_cutia": S_Cutia(),
     "cutia": S_Cutia(),
     "s_lcwr_watermark_removal": S_LcwrWatermarkRemoval(),

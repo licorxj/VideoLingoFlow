@@ -580,6 +580,79 @@
         "timeout": 600,
         "sdk_extra_args": {}
       }
+    },
+    {
+      "id": "doubao_seedream_openai",
+      "name": "豆包 Seedream (OpenAI 兼容)",
+      "type": "openai_compatible",
+      "builtin": true,
+      "enabled": false,
+      "description": "火山方舟 Doubao Seedream 系列，遵循 OpenAI 图像生成接口规范（client.images.generate）。支持文生图/图生图，response_format 控制返回 url 或 b64_json，img2img 参考图通过 image 字段传递。",
+      "api_source_url": "https://console.volcengine.com/ark/region:cn-beijing/apikey",
+      "model_docs_url": "https://www.volcengine.com/docs/82379/1430752",
+      "balance": null,
+      "config": {
+        "api_url": "https://ark.cn-beijing.volces.com/api/v3",
+        "api_key": "",
+        "default_model": "doubao-seedream-5-0-pro-260628",
+        "model_options": [
+          "doubao-seedream-5-0-pro-260628",
+          "doubao-seedream-5-0-260629",
+          "doubao-seedream-4-0-250828",
+          "doubao-seedream-3-0-250715"
+        ],
+        "model_metadata": {
+          "doubao-seedream-5-0-pro-260628": {
+            "modes": ["t2i", "i2i"],
+            "price": "",
+            "resolutions": ["1K", "2K", "4K"],
+            "aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+          },
+          "doubao-seedream-5-0-260629": {
+            "modes": ["t2i", "i2i"],
+            "price": "",
+            "resolutions": ["1K", "2K", "4K"],
+            "aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+          },
+          "doubao-seedream-4-0-250828": {
+            "modes": ["t2i", "i2i"],
+            "price": "",
+            "resolutions": ["1K", "2K", "4K"],
+            "aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+          },
+          "doubao-seedream-3-0-250715": {
+            "modes": ["t2i", "i2i"],
+            "price": "",
+            "resolutions": ["1K", "2K"],
+            "aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "response_format": "url",
+        "output_format": "png",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2img": {
+            "enabled": true,
+            "endpoint": "/images/generations"
+          },
+          "img2img": {
+            "enabled": true,
+            "endpoint": "/images/generations"
+          }
+        },
+        "custom_params": [
+          {
+            "key": "watermark",
+            "default": "false",
+            "description": "是否添加水印（Seedream 专属，等同 extra_body.watermark）"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 180,
+        "sdk_extra_args": {}
+      }
     }
   ]
 }

@@ -284,7 +284,13 @@ def analyze_project(project_id: str):
         raise ValueError("项目没有可分析文本")
     if len(source) > 100000:
         raise ValueError("项目文本超过分析上限")
-    prompt = "分析以下配音文本，返回 JSON，包含 summary 字符串和 characters 数组。characters 每项包含 name、character_type、note。\n" + source
+    prompt = (
+        "分析以下配音文本，返回 JSON，包含 summary 字符串和 characters 数组。"
+        "characters 每项包含：name（角色名）、character_type（narrator 或 character）、"
+        "gender（性别，如 男/女/未知）、age_range（年龄段，如 青年/中年）、"
+        "personality（性格与人设，简短）、voice_design_desc（声音设计描述，如 沉稳男声/甜美女声）、note（备注）。\n"
+        + source
+    )
     response = LLMClient().chat("voiceforge_script_analysis", prompt, response_json=True)
     return response
 

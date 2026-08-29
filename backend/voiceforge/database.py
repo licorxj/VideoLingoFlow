@@ -79,7 +79,10 @@ CREATE TABLE IF NOT EXISTS vf_voices (
 );
 CREATE TABLE IF NOT EXISTS vf_characters (
     id TEXT PRIMARY KEY, project_id TEXT NOT NULL REFERENCES vf_projects(id) ON DELETE CASCADE,
-    name TEXT NOT NULL, character_type TEXT NOT NULL DEFAULT 'narrator', voice_profile_id TEXT REFERENCES vf_voices(id) ON DELETE SET NULL,
+    name TEXT NOT NULL, character_type TEXT NOT NULL DEFAULT 'narrator',
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    voice_profile_id TEXT REFERENCES vf_voices(id) ON DELETE SET NULL,
+    gender TEXT, age_range TEXT, personality TEXT, voice_design_desc TEXT,
     language TEXT NOT NULL DEFAULT 'zh-CN', note TEXT NOT NULL DEFAULT '', legacy_source_id TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP, updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -204,6 +207,17 @@ def initialize_database():
                 conn.execute("ALTER TABLE vf_chapters ADD COLUMN level INTEGER NOT NULL DEFAULT 1")
             if "char_count" not in chapter_columns:
                 conn.execute("ALTER TABLE vf_chapters ADD COLUMN char_count INTEGER NOT NULL DEFAULT 0")
+            # Characters: align with LcVoiceForgeaApp project_characters (role def / binding / batch design)
+            character_columns = {row["name"] for row in conn.execute("PRAGMA table_info(vf_characters)").fetchall()}
+            for name, definition in {
+                "sort_order": "INTEGER NOT NULL DEFAULT 0",
+                "gender": "TEXT",
+                "age_range": "TEXT",
+                "personality": "TEXT",
+                "voice_design_desc": "TEXT",
+            }.items():
+                if name not in character_columns:
+                    conn.execute(f"ALTER TABLE vf_characters ADD COLUMN {name} {definition}")
 
 
 BUILTIN_CATEGORIES = {

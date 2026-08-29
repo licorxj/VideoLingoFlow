@@ -2000,6 +2000,122 @@ BUILTIN_NODE_TYPES = [
         ],
     },
     {
+        "id": "video_region_crop",
+        "name": "视频截取区域",
+        "execution_domain": "thread",
+        "category": "video",
+        "description": "从大分辨率视频中截取指定区域与时段，输出局部视频与坐标 JSON，供「视频区域贴片」节点贴回原视频做局部处理。",
+        "icon": "Crop",
+        "color": "#a855f7",
+        "inputs": [
+            {"id": "video", "label": "视频", "type": "video", "required": True},
+        ],
+        "outputs": [
+            {"id": "video", "label": "截取区域视频", "type": "video"},
+            {"id": "json", "label": "截取坐标", "type": "json"},
+        ],
+        "defaultConfig": {
+            "crop_size": "1280x760",
+            "crop_width": 512,
+            "crop_height": 512,
+            "crop_position": "center",
+            "start_time": 0,
+            "end_mode": "absolute",
+            "end_time": "",
+            "end_countdown": 10,
+        },
+        "configFields": [
+            {
+                "key": "crop_size", "label": "切取区域大小", "type": "select",
+                "options": [
+                    {"value": "512x512", "label": "512 × 512"},
+                    {"value": "1280x760", "label": "1280 × 760"},
+                    {"value": "1920x1080", "label": "1920 × 1080"},
+                    {"value": "custom", "label": "自定义(手动输入)"},
+                ],
+                "default": "1280x760",
+            },
+            {
+                "key": "crop_width", "label": "区域宽度(像素)", "type": "number",
+                "dependsOn": "crop_size", "dependsValue": "custom", "colSpan": "half", "min": 1,
+            },
+            {
+                "key": "crop_height", "label": "区域高度(像素)", "type": "number",
+                "dependsOn": "crop_size", "dependsValue": "custom", "colSpan": "half", "min": 1,
+            },
+            {
+                "key": "crop_position", "label": "截取区域位置", "type": "select",
+                "options": [
+                    {"value": "top-left", "label": "左上"},
+                    {"value": "top-center", "label": "中上"},
+                    {"value": "top-right", "label": "右上"},
+                    {"value": "middle-left", "label": "左中"},
+                    {"value": "center", "label": "居中"},
+                    {"value": "middle-right", "label": "右中"},
+                    {"value": "bottom-left", "label": "左下"},
+                    {"value": "bottom-center", "label": "中下"},
+                    {"value": "bottom-right", "label": "右下"},
+                ],
+                "default": "center",
+            },
+            {
+                "key": "start_time", "label": "开始时间(秒)", "type": "number",
+                "default": 0, "min": 0, "colSpan": "half",
+            },
+            {
+                "key": "end_mode", "label": "结束时间方式", "type": "select",
+                "options": [
+                    {"value": "absolute", "label": "顺数(绝对结束时间)"},
+                    {"value": "countdown", "label": "倒数(距结尾时长)"},
+                ],
+                "default": "absolute", "colSpan": "half",
+            },
+            {
+                "key": "end_time", "label": "结束时间(秒)", "type": "number",
+                "dependsOn": "end_mode", "dependsValue": "absolute", "colSpan": "half", "min": 0,
+            },
+            {
+                "key": "end_countdown", "label": "倒数时长(秒)", "type": "number",
+                "dependsOn": "end_mode", "dependsValue": "countdown", "colSpan": "half", "min": 0,
+            },
+        ],
+    },
+    {
+        "id": "video_region_composite",
+        "name": "视频区域贴片",
+        "execution_domain": "thread",
+        "category": "video",
+        "description": "将「视频截取区域」产出的局部视频按坐标贴回主视频。贴片大于区域时自动缩放，主/贴片编码不一致时统一重编码后贴合。",
+        "icon": "Layers",
+        "color": "#a855f7",
+        "inputs": [
+            {"id": "main_video", "label": "主视频", "type": "video", "required": True},
+            {"id": "patch_video", "label": "贴片视频", "type": "video", "required": True},
+            {"id": "patch_json", "label": "贴片坐标", "type": "json", "required": True},
+        ],
+        "outputs": [
+            {"id": "video", "label": "贴合后视频", "type": "video"},
+        ],
+        "defaultConfig": {
+            "time_source": "from_json",
+            "manual_start": 0,
+        },
+        "configFields": [
+            {
+                "key": "time_source", "label": "贴合时间段来源", "type": "select",
+                "options": [
+                    {"value": "from_json", "label": "来自上游配置json"},
+                    {"value": "manual", "label": "自由输入起始点"},
+                ],
+                "default": "from_json",
+            },
+            {
+                "key": "manual_start", "label": "起始点(秒)", "type": "number",
+                "dependsOn": "time_source", "dependsValue": "manual", "colSpan": "half", "min": 0,
+            },
+        ],
+    },
+    {
         "id": "file_rename",
         "name": "文件改名",
         "execution_domain": "thread",
