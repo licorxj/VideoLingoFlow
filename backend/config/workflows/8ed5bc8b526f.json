@@ -46,7 +46,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 563
+        "height": 564
       },
       "selected": false,
       "dragging": false
@@ -80,7 +80,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 477
+        "height": 470
       },
       "selected": false,
       "dragging": false
@@ -89,8 +89,8 @@
       "id": "node_2_1787026400765",
       "type": "workflow",
       "position": {
-        "x": -705,
-        "y": -2385
+        "x": -120,
+        "y": -1860
       },
       "data": {
         "nodeType": "subtitle_gen",
@@ -111,7 +111,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 334
+        "height": 335
       },
       "selected": false,
       "dragging": false
@@ -145,7 +145,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 453
+        "height": 446
       },
       "selected": false,
       "dragging": false
@@ -154,8 +154,8 @@
       "id": "node_1_1787770375309",
       "type": "workflow",
       "position": {
-        "x": -180,
-        "y": -2415
+        "x": -165,
+        "y": -2295
       },
       "data": {
         "nodeType": "subtitle_editor",
@@ -206,7 +206,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 270
+        "height": 271
       },
       "selected": false,
       "dragging": false
@@ -241,7 +241,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 539
+        "height": 542
       },
       "selected": false,
       "dragging": false
@@ -250,8 +250,8 @@
       "id": "node_7_1787790450610",
       "type": "workflow",
       "position": {
-        "x": -1200,
-        "y": -2145
+        "x": -1275,
+        "y": -2235
       },
       "data": {
         "nodeType": "subtitle_recognition",
@@ -269,7 +269,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 338
+        "height": 341
       },
       "selected": false,
       "dragging": false
@@ -278,8 +278,8 @@
       "id": "node_8_1787790483305",
       "type": "workflow",
       "position": {
-        "x": -1170,
-        "y": -1560
+        "x": -1230,
+        "y": -1845
       },
       "data": {
         "nodeType": "image_preview",
@@ -293,7 +293,119 @@
       },
       "measured": {
         "width": 420,
-        "height": 261
+        "height": 263
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1788004387272",
+      "type": "workflow",
+      "position": {
+        "x": -660,
+        "y": -1935
+      },
+      "data": {
+        "nodeType": "asr_postprocess",
+        "label": "ASR后处理",
+        "config": {
+          "run_vad": true,
+          "run_alignment": true,
+          "run_diarization": false,
+          "force_rerun": false,
+          "vad_engine": "",
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "alignment_engine": "",
+          "alignment_model": "",
+          "dtype": "",
+          "diarize_engine": "",
+          "diarize_model": "",
+          "num_speakers": "",
+          "min_speakers": "",
+          "max_speakers": "",
+          "run_punctuation": false,
+          "punc_engine": ""
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 482
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1788004582706",
+      "type": "workflow",
+      "position": {
+        "x": -1725,
+        "y": -1560
+      },
+      "data": {
+        "nodeType": "extract_audio",
+        "label": "音频分离",
+        "config": {
+          "format": "auto"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 213
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_4_1788004607361",
+      "type": "workflow",
+      "position": {
+        "x": -1740,
+        "y": -1320
+      },
+      "data": {
+        "nodeType": "audio_transcode",
+        "label": "音频质量转码",
+        "config": {
+          "format": "wav",
+          "sample_rate": "16000",
+          "bit_depth": "16",
+          "channels": "1",
+          "bitrate": ""
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 342
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_6_1788004634319",
+      "type": "workflow",
+      "position": {
+        "x": -1170,
+        "y": -1380
+      },
+      "data": {
+        "nodeType": "vocal_separation",
+        "label": "人声分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_ft",
+          "format": "wav"
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 341
       },
       "selected": false,
       "dragging": false
@@ -424,18 +536,96 @@
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#facc15",
+        "stroke": "#22d3ee",
         "strokeWidth": 2
       },
       "source": "node_7_1787790450610",
       "sourceHandle": "out-subtitle",
+      "target": "node_1_1788004387272",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_7_1787790450610out-subtitle-node_1_1788004387272in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788004387272",
+      "sourceHandle": "out-subtitle",
       "target": "node_2_1787026400765",
       "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_7_1787790450610out-subtitle-node_2_1787026400765in-subtitle"
+      "id": "xy-edge__node_1_1788004387272out-subtitle-node_2_1787026400765in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787018588772",
+      "sourceHandle": "out-video",
+      "target": "node_3_1788004582706",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1787018588772out-video-node_3_1788004582706in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788004582706",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1788004607361",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1788004582706out-audio-node_4_1788004607361in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_4_1788004607361",
+      "sourceHandle": "out-audio",
+      "target": "node_6_1788004634319",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_4_1788004607361out-audio-node_6_1788004634319in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_4_1788004607361",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1788004387272",
+      "targetHandle": "in-asr_audio",
+      "id": "xy-edge__node_4_1788004607361out-audio-node_1_1788004387272in-asr_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_6_1788004634319",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1788004387272",
+      "targetHandle": "in-vocal_audio",
+      "id": "xy-edge__node_6_1788004634319out-audio-node_1_1788004387272in-vocal_audio"
     }
   ],
   "type": "user",
   "createdAt": "2026-08-18T10:03:44",
-  "updatedAt": "2026-08-27T08:29:05",
-  "revision": 28
+  "updatedAt": "2026-08-29T20:28:01",
+  "revision": 29
 }

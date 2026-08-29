@@ -18,6 +18,10 @@
 
 > 这使它不只是一个「视频工具」，而是一个可以承载任何 AI 工作流的**创作操作系统**。
 
+下面是工作台的部分界面预览：
+
+![关于](docs/images/about.png)
+
 ---
 
 ## 核心能力
@@ -28,6 +32,8 @@
 
 - **自定义节点**：按「节点定义 + 执行步骤 + 规则校验 + 注册」四件套即可新增节点，字段级规则校验、端口语义连线、节点产物落盘规范全部内置约定。
 - 工作流可保存、复用、批量重跑；节点级产物管理与清理由控制平面自动完成。
+
+![工作流编排画布](docs/images/flows.png)
 
 ### 2. 能力接口，随意自定义增加
 
@@ -52,6 +58,8 @@
 
 - **批量工作台**：一次导入多条素材，多任务并行调度，限流与失败重试；
 - **任务生命周期管理**：由控制平面（FastAPI + SQLite + Redis/Celery）统一调度，支持资源队列（GPU / TTS / LLM / IO）限流、健康检查、Prometheus 指标、备份恢复。
+
+![批量工作台](docs/images/批量工作台.png)
 
 ---
 
@@ -257,6 +265,8 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 - **局域网协作**：复制 `.runtime/local_env.bat.template` 为 `local_env.bat`，设 `VIDEOLINGO_LAN_MODE=1` 后重启 Manager，API 与 Manager 监听 `0.0.0.0`（仅限可信局域网）。
 - **远程协作**：在「多人协作」页开启远程模式（配 Cloudflare Tunnel 后公网域名可访问），默认关闭时公网请求被 `RemoteAccessGuard` 拦截。
 - **模型缓存**：统一放 `_model_cache/`；`HF_ENDPOINT` 默认 `https://hf-mirror.com`。
+
+![全局设置](docs/images/setting.png)
 - **备份恢复**：Manager 停止后，`python scripts/control_plane_backup.py backup/restore`（详见 `deploy/README.md`）。
 - **Docker 集群部署**（PostgreSQL + Redis + MinIO + Nginx）：见 `deploy/README.md`，数据库迁移唯一入口 `alembic upgrade head`。
 

@@ -18,6 +18,10 @@ Traditional automation tools hard-code features, require code changes to extend,
 
 > That is why this is not just a "video tool" — it is a **creation operating system** that can host any AI workflow.
 
+Here are a few previews of the workbench UI:
+
+![About](docs/images/about.png)
+
 ---
 
 ## Core Capabilities
@@ -28,6 +32,8 @@ A visual DAG canvas built on `@xyflow/react` ships with **40+ built-in nodes** c
 
 - **Custom nodes**: add a node with the "definition + execution step + rule validation + registration" four-piece convention. Field-level validation, semantic port wiring, and artifact layout rules are all built in.
 - Workflows can be saved, reused, and re-run in batch; node-level artifact management and cleanup are handled automatically by the control plane.
+
+![Workflow canvas](docs/images/flows.png)
 
 ### 2. Capability Interfaces — Add Any, Freely
 
@@ -52,6 +58,8 @@ The framework implements Agents as **built-in node types** (`pi_agent` general a
 
 - **Batch workbench**: import multiple assets at once, run tasks in parallel with rate limiting and failure retries;
 - **Lifecycle management**: orchestrated by the control plane (FastAPI + SQLite + Redis/Celery) with resource queues (GPU / TTS / LLM / IO), health checks, Prometheus metrics, and backup/restore.
+
+![Batch workbench](docs/images/批量工作台.png)
 
 ---
 
@@ -257,6 +265,8 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 - **LAN collaboration**: copy `.runtime/local_env.bat.template` to `local_env.bat`, set `VIDEOLINGO_LAN_MODE=1`, and restart Manager. API and Manager then listen on `0.0.0.0` (trusted LAN only).
 - **Remote collaboration**: enable Remote mode on the "Collaboration" page (public domain via Cloudflare Tunnel). Off by default — public requests are blocked by `RemoteAccessGuard`.
 - **Model cache**: stored under `_model_cache/`; `HF_ENDPOINT` defaults to `https://hf-mirror.com`.
+
+![Global settings](docs/images/setting.png)
 - **Backup/restore**: after stopping Manager, `python scripts/control_plane_backup.py backup/restore` (see `deploy/README.md`).
 - **Docker cluster deployment** (PostgreSQL + Redis + MinIO + Nginx): see `deploy/README.md`; the only DB migration entry is `alembic upgrade head`.
 
