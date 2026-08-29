@@ -301,7 +301,9 @@ def ensure_cloakbrowser(force: bool) -> Path | None:
                 last_err = e
                 warn(f"下载失败（{url}）: {e}")
         if last_err:
-            fail(f"CloakBrowser 下载失败: {last_err}")
+            warn(f"CloakBrowser 下载失败: {last_err}")
+            warn("跳过 CloakBrowser：不影响主程序安装，相关节点运行时会提示缺少浏览器")
+            return None
         verify_sha256(archive, urls[0].rsplit("/", 1)[0], archive_name)
         extract_archive(archive, target_dir)
     finally:
@@ -313,7 +315,8 @@ def ensure_cloakbrowser(force: bool) -> Path | None:
         if found:
             target_bin = found[0]
         else:
-            fail(f"CloakBrowser 解压后未找到浏览器二进制: {target_bin}")
+            warn(f"CloakBrowser 解压后未找到浏览器二进制: {target_bin}")
+            return None
     if not is_windows():
         os.chmod(target_bin, 0o755)
     ok(f"CloakBrowser 就绪: {target_bin}")
@@ -380,13 +383,51 @@ def ensure_social(force: bool) -> None:
 # ---------------------------------------------------------------------------
 # 3. QM-LocalRouter
 # ---------------------------------------------------------------------------
+def _qm_venv_python():
+    """QM-LocalRouter 独立虚拟环境的 python（不存在则返回 None）。"""
+    qm_venv = THIRDPARTY / "QM-LocalRouter" / "backend" / "venv"
+    for p in (qm_venv / "Scripts" / "python.exe", qm_venv / "bin" / "python"):
+        if p.exists():
+            return p
+    return None
+
+
 def ensure_qm_router(force: bool) -> None:
+    """QM-LocalRouter：使用独立虚拟环境（不污染主 venv312），并完成数据库初始化。"""
     print("\n[3/4] QM-LocalRouter")
     base = THIRDPARTY / "QM-LocalRouter"
     if not base.exists():
         warn("目录不存在，跳过")
         return
-    ensure_backend_pip(base / "backend" / "requirements.txt", "QM-LocalRouter 后端")
+    backend_dir = base / "backend"
+    qm_venv = backend_dir / "venv"
+    venv_py = qm_venv / ("Scripts/python.exe" if is_windows() else "bin/python")
+
+    # 1. 创建独立虚拟环境（用共享 venv / 当前 python 引导）
+    if not venv_py.exists():
+        bootstrap = venv_python() or sys.executable
+        log("为 QM-LocalRouter 创建独立虚拟环境（避免污染主 venv312）...")
+        run([bootstrap, "-m", "venv", str(qm_venv)], check=False)
+
+    if venv_py.exists():
+        # 2. 依赖装入独立环境
+        pip_exe = qm_venv / ("Scripts/pip.exe" if is_windows() else "bin/pip")
+        req = backend_dir / "requirements.txt"
+        if req.exists():
+            run([str(pip_exe), "install", "-r", str(req), "-q"], check=False)
+            ok("QM-LocalRouter 后端依赖已安装（独立 venv）")
+        # 3. 数据库初始化（复用上游脚本，用独立环境执行）
+        init_script = base / "scripts" / "init_db.py"
+        if init_script.exists():
+            log("初始化 QM-LocalRouter 数据库...")
+            run([str(venv_py), str(init_script)], cwd=str(base), check=False)
+            ok("QM-LocalRouter 数据库初始化完成")
+        else:
+            warn("未找到 scripts/init_db.py，跳过数据库初始化")
+    else:
+        warn("独立虚拟环境创建失败，回退共享 venv（依赖将装入主环境）")
+        ensure_backend_pip(backend_dir / "requirements.txt", "QM-LocalRouter 后端")
+
     ensure_npm_frontend(base / "frontend", force, "QM-LocalRouter 前端")
 
 
@@ -461,21 +502,26 @@ def ensure_bun(force: bool) -> str | None:
     return str(bun_exe)
 
 
-def ensure_cutia(force: bool) -> None:
+def ensure_cutia(force: bool) -> bool:
+    """安装 cutia 依赖；上游分发缺失 / bun 不可用时标记为跳过，不影响整体安装。"""
     print("\n[4/5] cutia（bun 运行）")
     base = THIRDPARTY / "cutia"
     if not base.exists():
-        warn("目录不存在，跳过")
-        return
+        warn("cutia 目录不存在（上游未提供该 workspace），跳过")
+        return False
     bun = ensure_bun(force)
     if not bun:
         warn("bun 不可用，跳过 cutia 依赖安装")
-        return
+        return False
     if not (base / "node_modules").exists() or force:
         log("执行 bun install（cutia 为 bun workspace）...")
-        run([bun, "install"], cwd=str(base))
+        result = run([bun, "install"], cwd=str(base), check=False)
+        if result.returncode != 0:
+            warn("cutia 依赖安装失败（上游 workspace 可能缺失），标记为跳过")
+            return False
     # cutia 以开发服务器模式运行（bun run dev:web），无需生产构建
     ok("cutia 依赖就绪（开发服务器模式，无需构建产物）")
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -544,8 +590,8 @@ def main() -> int:
         ensure_qm_router(args.force)
         results.append(("QM-LocalRouter", "OK"))
     if not args.skip_cutia:
-        ensure_cutia(args.force)
-        results.append(("cutia", "OK"))
+        cutia_ok = ensure_cutia(args.force)
+        results.append(("cutia", "OK" if cutia_ok else "跳过"))
     if not args.skip_pi:
         ensure_pi(args.force)
         results.append(("pi", "OK"))

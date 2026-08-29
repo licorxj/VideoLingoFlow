@@ -96,6 +96,20 @@ class BSRoformerSeparation(SeparationBase):
             raise ValueError(f"Unknown BS-Roformer model: {use_model}. "
                              f"Available: {[m.slug for m in MODEL_REGISTRY.list()]}")
 
+        # A De-Reverb model only removes reverb from the input; it does NOT
+        # separate vocals from background, which this node requires. Reject it
+        # early with a clear message instead of failing later with a confusing
+        # "incomplete artifacts" error.
+        if getattr(entry, "category", "") == "dereverb":
+            raise ValueError(
+                f"模型 “{entry.name}” 是去混响(De-Reverb)模型，只输出去混响后的音频，"
+                f"不会把人声与伴奏分离。人声分离节点需要能同时输出 vocals 与 "
+                f"background（或 other/accompaniment）的模型，例如 "
+                f"“BS Roformer | Vocals Revive V3e by Unwa”"
+                f"（slug: roformer-model-bs-roformer-vocals-revive-v3e-by-unwa）。"
+                f"请在节点配置的 model 中改选人声分离模型。"
+            )
+
         model_cache = self._model_cache
         model_cache.mkdir(parents=True, exist_ok=True)
 
@@ -160,6 +174,22 @@ class BSRoformerSeparation(SeparationBase):
             mix = mix[:, None]  # (samples,) -> (samples, 1)
         if mix.shape[1] > 2:
             mix = mix[:, :2]  # downmix to stereo
+
+        # Keep a mono reference of the original input so we can derive a
+        # background track (= input - vocals) for single-stem models that only
+        # output a `vocals` stem (e.g. Vocals Revive V3e).
+        raw_mix = mix.mean(axis=1, keepdims=True).astype(np.float32)  # (samples, 1)
+
+        # BS-Roformer asserts that the input channel count matches its `stereo`
+        # flag: a stereo-trained model (stereo=True) expects 2 channels, a mono
+        # model expects 1. A mismatch raises an AssertionError and triggers the
+        # FFmpeg fallback. Adapt the input to satisfy the model's expectation.
+        want_stereo = bool(getattr(model, "stereo", False))
+        if want_stereo and mix.shape[1] == 1:
+            mix = np.repeat(mix, 2, axis=1)  # mono -> stereo
+        elif not want_stereo and mix.shape[1] == 2:
+            mix = mix.mean(axis=1, keepdims=True)  # stereo -> mono
+
         # demix_track has chunk-alignment issues with non-standard STFT configs
         # (hop_length != 512). Use direct model inference instead.
         mix_t = torch.from_numpy(mix.T).unsqueeze(0).to(device)  # (1, ch, samples)
@@ -187,7 +217,12 @@ class BSRoformerSeparation(SeparationBase):
             sources_dict = {}
             for i in range(num_stems):
                 stem_name = instruments[i] if i < len(instruments) else f"stem_{i}"
-                sources_dict[stem_name] = raw_out[i].T  # (ch, samples) -> (samples, ch)
+                src = raw_out[i].T  # (ch, samples) -> (samples, ch)
+                # Downmix to mono so downstream steps (which expect mono) behave
+                # consistently, even when a stereo-trained model emitted 2 channels.
+                if src.shape[1] > 1:
+                    src = src.mean(axis=1, keepdims=True)
+                sources_dict[stem_name] = src
 
         except Exception as e:
             print(f"[BS-Roformer] Inference failed: {e}", flush=True)
@@ -234,11 +269,17 @@ class BSRoformerSeparation(SeparationBase):
             for src_name, src_data in sources_dict.items():
                 if src_name != vocals_key:
                     bg_audio = (src_data.copy() if bg_audio is None else bg_audio + src_data)
-            if bg_audio is not None:
-                bg_path = os.path.join(roformer_out, "background.wav")
-                sf.write(bg_path, bg_audio.T, sr)
-            else:
-                bg_path = None
+            if bg_audio is None:
+                # Single-stem model (only vocals): derive background = input - vocals
+                vocals_data = sources_dict.get(vocals_key)
+                if vocals_data is not None and raw_mix is not None:
+                    n = min(raw_mix.shape[0], vocals_data.shape[0])
+                    bg_audio = raw_mix[:n] - vocals_data[:n]
+                if bg_audio is not None:
+                    bg_path = os.path.join(roformer_out, "background.wav")
+                    sf.write(bg_path, np.asarray(bg_audio, dtype=np.float32).T, sr)
+                else:
+                    bg_path = None
 
         if callback:
             callback(80, "Moving output files...")

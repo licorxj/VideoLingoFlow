@@ -99,7 +99,7 @@ submit_workflow(wf_id, ...)
        thread 域  → 直接调用 Step（同进程线程）
        process 域 → 启动子进程 python -m backend.control_plane.step_worker
   → step_worker 用 get_step_instance(node_type) 取 BaseStep 实例，
-      注入 _node_id/_step_config/_step_inputs，调用 run(task_dir, callback, cancel_callback)
+      注入 _node_id/_node_config/_step_inputs，调用 run(task_dir, callback, cancel_callback)
   → 产物写入 control_plane_workspaces/<task_id>/{cache,output}
   → 进度经 /ws/tasks/{task_id} 实时推回前端
 ```

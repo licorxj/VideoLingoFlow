@@ -85,7 +85,6 @@ def setup_env() -> bool:
             "APP_VERSION=1.0.0\n"
             f"HOST=127.0.0.1\n"
             f"BACKEND_PORT=12002\n"
-            f"DATABASE_URL=sqlite+aiosqlite:///{DATA_DIR}/app.db\n"
             f"LOG_RETENTION_DAYS=30\n"
             f"DEFAULT_TIMEOUT=120\n"
             f"DEFAULT_RETRY_COUNT=2\n",

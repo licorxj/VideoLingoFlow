@@ -24,7 +24,8 @@ class StepTextInput(BaseStep):
         return True
 
     def run(self, task_dir, callback=None, cancel_callback=None):
-        text = (self.config.get("text", "") or "").strip()
+        node_config = getattr(self, "_node_config", {}) or {}
+        text = (node_config.get("text", "") or "").strip()
         if callback:
             try:
                 callback(100, f"已输出文本（{len(text)} 字）")

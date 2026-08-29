@@ -184,29 +184,50 @@ class ImageGenInterfaceManager:
             return self._build_sdk_params(cfg, prompt, output_dir, **kwargs)
 
     def _build_openai_params(self, cfg, prompt, output_dir, **kwargs):
-        """Build parameters for OpenAI-compatible API."""
+        """Build parameters for OpenAI-compatible image generation API.
+
+        Mirrors the OpenAI SDK `client.images.generate(...)` contract:
+        prompt / model / size / n / response_format / output_format, plus
+        img2img via the `image` field. Endpoint-specific extras go through
+        `custom_params` (equivalent to the SDK's `extra_body`).
+        """
         body = {
             "prompt": prompt,
             "model": kwargs.get("model") or cfg.get("default_model", ""),
             "n": kwargs.get("num_images", 1),
         }
 
-        # Map resolution and aspect_ratio to size
-        resolution = kwargs.get("resolution", "1K")
-        aspect_ratio = kwargs.get("aspect_ratio", "1:1")
-        size = self._resolve_size(resolution, aspect_ratio)
-        if size:
-            body["size"] = size
+        # size: pass resolution verbatim ("1K"/"2K"/"4K" for most compatible
+        # endpoints such as Doubao/Seedream; standard OpenAI uses pixel enums
+        # like "1024x1024"). An explicit `size` in cfg/custom_params overrides.
+        size = kwargs.get("size") or cfg.get("size") or kwargs.get("resolution", "1K")
+        body["size"] = size
+
+        # aspect_ratio: many compatible endpoints (e.g. Doubao) accept this as
+        # a standalone field rather than baking it into size.
+        aspect_ratio = kwargs.get("aspect_ratio")
+        if aspect_ratio:
+            body["aspect_ratio"] = aspect_ratio
+
+        # Standard OpenAI fields: response_format (url | b64_json), output_format.
+        body["response_format"] = (
+            kwargs.get("response_format") or cfg.get("response_format", "url")
+        )
+        output_format = kwargs.get("output_format") or cfg.get("output_format")
+        if output_format:
+            body["output_format"] = output_format
 
         # Negative prompt if supported
         negative_prompt = kwargs.get("negative_prompt", "")
         if negative_prompt:
             body["negative_prompt"] = negative_prompt
 
-        # Reference images for img2img
-        ref_images = kwargs.get("ref_images", [])
+        # img2img: standard OpenAI uses the `image` field (url or base64),
+        # which the SDK would place under extra_body. Send the first ref as a
+        # scalar, or the whole list when multiple are provided.
+        ref_images = kwargs.get("ref_images") or []
         if ref_images:
-            body["ref_images"] = ref_images
+            body["image"] = ref_images[0] if len(ref_images) == 1 else ref_images
 
         # API key and URL
         api_url = cfg.get("api_url", "")
@@ -221,7 +242,8 @@ class ImageGenInterfaceManager:
 
         url = (api_url.rstrip("/") + endpoint) if endpoint else api_url
 
-        # Custom params
+        # Custom params (endpoint-specific extras, e.g. watermark). Do not
+        # override the standard fields already set above.
         for cp in cfg.get("custom_params", []):
             key = cp.get("key", "")
             default = cp.get("default", "")

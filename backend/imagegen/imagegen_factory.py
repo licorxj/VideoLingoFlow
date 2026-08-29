@@ -90,8 +90,49 @@ class GenericImageGen(ImageGenBase):
             traceback.print_exc()
             return []
 
+    _IMG_MAGIC = (
+        (b"\x89PNG\r\n\x1a\n", "png"),
+        (b"\xff\xd8\xff", "jpg"),
+        (b"RIFF", "webp"),  # 需二次校验 WEBP，见下方
+        (b"GIF87a", "gif"),
+        (b"GIF89a", "gif"),
+    )
+
+    @classmethod
+    def _guess_ext_from_bytes(cls, raw: bytes) -> str:
+        for magic, ext in cls._IMG_MAGIC:
+            if raw[: len(magic)] == magic:
+                if ext == "webp" and raw[8:12] != b"WEBP":
+                    continue
+                return ext
+        return "png"
+
+    @staticmethod
+    def _collect_items(data: dict):
+        """Extract (kind, payload) pairs from a JSON response.
+
+        kind is "url" or "b64"; payload is the url string or base64 string.
+        Supports OpenAI style `data[].url|b64_json` and `images[]` nesting.
+        """
+        items = []
+        for key in ("data", "images", "results"):
+            arr = data.get(key)
+            if not isinstance(arr, list):
+                continue
+            for item in arr:
+                if isinstance(item, str):
+                    items.append(("url", item))
+                elif isinstance(item, dict):
+                    if item.get("url"):
+                        items.append(("url", item["url"]))
+                    elif item.get("b64_json"):
+                        items.append(("b64", item["b64_json"]))
+            if items:
+                break
+        return items
+
     def _save_response(self, resp, output_dir):
-        """Save response images. Supports direct binary or JSON with URLs."""
+        """Save response images. Supports direct binary, JSON with URLs, or base64."""
         saved = []
         content_type = resp.headers.get("content-type", "")
 
@@ -107,31 +148,33 @@ class GenericImageGen(ImageGenBase):
         # JSON response with URLs or base64
         try:
             data = resp.json()
-            urls = []
+            items = self._collect_items(data)
 
-            # OpenAI style: data[].url
-            if "data" in data and isinstance(data["data"], list):
-                for i, item in enumerate(data["data"]):
-                    url = item.get("url", "")
-                    if url:
-                        urls.append((i, url))
-
-            for i, url in urls:
+            for i, (kind, payload) in enumerate(items):
                 try:
-                    img_resp = requests.get(url, timeout=60)
-                    if img_resp.status_code == 200:
+                    if kind == "url":
+                        img_resp = requests.get(payload, timeout=60)
+                        if img_resp.status_code != 200:
+                            print(f"Download image {i} failed: HTTP {img_resp.status_code}")
+                            continue
                         ext = "png"
                         ct = img_resp.headers.get("content-type", "")
                         if "jpeg" in ct or "jpg" in ct:
                             ext = "jpg"
                         elif "webp" in ct:
                             ext = "webp"
-                        filepath = os.path.join(output_dir, f"output_{i}.{ext}")
-                        with open(filepath, "wb") as f:
-                            f.write(img_resp.content)
-                        saved.append(filepath)
+                        raw = img_resp.content
+                    else:  # b64_json
+                        import base64
+                        raw = base64.b64decode(payload)
+                        ext = self._guess_ext_from_bytes(raw)
+
+                    filepath = os.path.join(output_dir, f"output_{i}.{ext}")
+                    with open(filepath, "wb") as f:
+                        f.write(raw)
+                    saved.append(filepath)
                 except Exception as dl_e:
-                    print(f"Download image {i} failed: {dl_e}")
+                    print(f"Save image {i} failed: {dl_e}")
 
         except ValueError:
             pass

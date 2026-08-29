@@ -1,0 +1,50 @@
+# 换行符策略（注意：后面的规则覆盖前面的，所以兜底规则必须放最前）
+#
+#   1. 默认：所有文本文件在仓库与工作区都使用 LF
+#   2. 二进制文件显式声明，避免被误判为文本而做换行转换
+#   3. Windows 批处理（.bat/.cmd）例外：工作区使用 CRLF
+#   4. Shell 脚本（.sh）显式声明 LF，防止 core.autocrlf=true 把它检出成 CRLF
+#
+# 背景：本机 core.autocrlf=true 时，Git 会把所有文本文件在 Windows 检出成 CRLF，
+#   这会让 .sh 脚本带上 CR，在 Linux/macOS 报 bash: $'\r': command not found；
+#   而 .bat 在 LF 下又容易触发 cmd.exe 解析异常。用 eol= 显式指定可覆盖本地配置。
+
+# ---- 1. 兜底：文本文件统一 LF（覆盖 core.autocrlf=true）----
+* text=auto eol=lf
+
+# ---- 2. 二进制：不做任何换行转换 ----
+*.7z    binary
+*.zip   binary
+*.gz    binary
+*.whl   binary
+*.exe   binary
+*.dll   binary
+*.pyd   binary
+*.so    binary
+*.dylib binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.mp3   binary
+*.mp4   binary
+*.wav   binary
+*.db    binary
+*.npz   binary
+*.pt    binary
+*.pth   binary
+*.onnx  binary
+*.ttf   binary
+*.woff  binary
+*.woff2 binary
+
+# ---- 3. Windows 批处理例外：工作区必须为 CRLF ----
+# cmd.exe 对 goto/call 标签、if(...) 块、文件末尾无换行等边缘场景，
+# 在 LF 下容易解析异常（双击闪退 / 找不到批处理标签）
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# ---- 4. Shell 脚本：工作区必须为 LF ----
+*.sh text eol=lf

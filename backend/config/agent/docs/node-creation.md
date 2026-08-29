@@ -130,7 +130,7 @@ class S_SrtToJson(BaseStep):
 - 没有 `StepContext` / `StepResult` 对象。`run` 直接接收 `task_dir`（字符串），返回普通 dict。
 - 运行时在调用 `run` 前注入三个实例属性（见 `control_plane/step_worker.py`）：
   - `self._node_id`：节点实例唯一 id（用于产物文件名后缀）。
-  - `self._step_config`：节点 `data.config`。
+  - `self._node_config`：节点 `data.config`（`BaseStep` 未预设默认值，用 `getattr(self, "_node_config", {}) or {}` 安全读取）。
   - `self._step_inputs`：连线解析后的输入，键为输入端口 `id`，值为文件路径字符串或列表。
 - 进度上报：在 `run` 内调用 `callback(percent: int, message: str)`（若非 None）。
 - 协作取消：按需调用 `cancel_callback()`（若提供），返回 True 表示已取消。
@@ -218,7 +218,7 @@ _STEPS = {
 ## D. 新增内置节点 Checklist
 
 1. 在 `builtin_node_types.py` 的 `BUILTIN_NODE_TYPES` 追加节点定义 dict：端口用 `id`（不是 `name`）；`configFields` 描述设置项；默认值放 `defaultConfig`；选对 `execution_domain`（thread/process/llm）与 `category`。
-2. 在 `backend/steps/` 新建 `s_<name>.py`，子类化 `BaseStep`，实现 `step_id` / `check_artifact` / `validate_inputs` / `run`。`run(self, task_dir, callback=None, cancel_callback=None)` 通过 `self._step_inputs` / `self._step_config` / `self._node_id` 取运行时数据；产物写入 `os.path.join(task_dir, "cache", ...)`，文件名带 `_<node_id>` 后缀，用 `find_artifact` 反查；返回 `{"artifacts": [...], "outputs": {...}}`。
+2. 在 `backend/steps/` 新建 `s_<name>.py`，子类化 `BaseStep`，实现 `step_id` / `check_artifact` / `validate_inputs` / `run`。`run(self, task_dir, callback=None, cancel_callback=None)` 通过 `self._step_inputs` / `self._node_config` / `self._node_id` 取运行时数据（均用 `getattr(..., {}) or {}` 安全读取）；产物写入 `os.path.join(task_dir, "cache", ...)`，文件名带 `_<node_id>` 后缀，用 `find_artifact` 反查；返回 `{"artifacts": [...], "outputs": {...}}`。
 3. 在 `step_registry.py` 的 `_STEPS` 注册两个 key：`"s_<name>"` 与 `"<node_type_id>"`。
 4. 若占受限资源，在 `workflow_runtime.py` 的 `RESOURCE_BY_NODE_TYPE` 等登记表补充。
 5. 重启后端（manager 守护），前端 `GET /api/node-types` 会带出新节点，可拖拽连线执行。

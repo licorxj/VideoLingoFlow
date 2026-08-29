@@ -28,6 +28,8 @@ const DEFAULT_CONFIG: ImageGenInterfaceConfig = {
   model_metadata: {},
   model_list_url: "",
   model_list_key: "",
+  response_format: "url",
+  output_format: "",
   balance_endpoint: "",
   modes: {
     txt2img: { enabled: true, endpoint: "" },
@@ -250,6 +252,19 @@ export default function ImageGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
           <div>
             <label className={labelCls}>API Key</label>
             <input className={cn(inputCls, "mt-1.5")} type="password" value={config.api_key || ""} onChange={(e) => updateConfig({ api_key: e.target.value })} />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className={labelCls}>Response Format</label>
+              <select className={cn(inputCls, "mt-1.5")} value={config.response_format || "url"} onChange={(e) => updateConfig({ response_format: e.target.value })}>
+                <option value="url">url</option>
+                <option value="b64_json">b64_json</option>
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Output Format</label>
+              <input className={cn(inputCls, "mt-1.5")} value={config.output_format || ""} onChange={(e) => updateConfig({ output_format: e.target.value })} placeholder="png / jpg / webp" />
+            </div>
           </div>
         </div>
       )}
