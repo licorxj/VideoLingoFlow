@@ -52,6 +52,7 @@ export default function PiAssistantWindow({ visible = true, onClose, onMinimize,
   const eventSourcesRef = useRef<Partial<Record<AssistantKind, EventSource>>>({});
   const thinkingRef = useRef("");
   const lastSeqRef = useRef(0);
+  const lastDiagRef = useRef(0);
   const dragRef = useRef<{ offsetX: number; offsetY: number; width: number; height: number } | null>(null);
   const resizeRef = useRef<{ left: number; bottom: number } | null>(null);
   const current = ASSISTANTS.find((item) => item.id === assistant) ?? ASSISTANTS[0];
@@ -153,7 +154,23 @@ export default function PiAssistantWindow({ visible = true, onClose, onMinimize,
         });
       }
     });
-    source.onerror = () => setStatus("事件连接中断");
+    source.onerror = () => {
+      // EventSource 会自动重连。先向后端询问真实诊断原因，避免只显示笼统的「事件连接中断」。
+      const now = Date.now();
+      if (now - lastDiagRef.current > 8000) {
+        lastDiagRef.current = now;
+        piRpcApi.getDiagnostics().then(({ data }) => {
+          if (data && data.status && data.status !== "available") {
+            setBusy(false);
+            setStatus(data.message || "Pi 事件连接中断");
+          } else {
+            setStatus("Pi 事件连接中断，正在重连…");
+          }
+        }).catch(() => setStatus("Pi 事件连接中断"));
+      } else {
+        setStatus("Pi 事件连接中断，正在重连…");
+      }
+    };
   }, [commitThinking]);
 
   useEffect(() => {

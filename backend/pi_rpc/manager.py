@@ -3,6 +3,7 @@ import json
 import os
 import re
 import shutil
+import subprocess
 import time
 import uuid
 from pathlib import Path
@@ -33,6 +34,18 @@ def _find_node_executable() -> Path:
         if candidate and Path(candidate).is_file():
             return Path(candidate)
     return Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "nodejs" / "node.exe"
+
+
+def _find_node_modules(start: Path) -> Path | None:
+    """向上查找包含 node_modules 的最近目录（用于解析 Pi CLI 的依赖）。"""
+    current = start
+    while True:
+        candidate = current / "node_modules"
+        if candidate.is_dir():
+            return candidate
+        if current.parent == current:
+            return None
+        current = current.parent
 
 
 # 全局默认人设（第一优先级，代码固定，不可通过前端修改）。
@@ -74,19 +87,71 @@ class PiSessionManager:
         return config.get(f"pi.{key}", default)
 
     def runtime(self) -> dict[str, Any]:
+        """返回 Pi 运行环境的轻量诊断（不启动子进程）。
+
+        状态取值：disabled / missing_runtime / incompatible_runtime /
+        missing_dependencies / available。message 给出可操作的中文原因。
+        """
         root = self._root()
         node = str(self._config("node_path", "") or os.getenv("VIDEOLINGO_PI_NODE_PATH", ""))
         cli = str(self._config("cli_path", "") or os.getenv("VIDEOLINGO_PI_CLI_PATH", ""))
         node_path = Path(node) if node else _find_node_executable()
         cli_path = Path(cli) if cli else root / "thirdparty" / "pi" / "packages" / "coding-agent" / "dist" / "cli.js"
         enabled = bool(self._config("enabled", True))
-        return {
-            "enabled": enabled,
-            "status": "disabled" if not enabled else "available" if node_path.is_file() and cli_path.is_file() else "missing_runtime",
-            "node_path": str(node_path),
-            "cli_path": str(cli_path),
-            "session_count": len(self._sessions),
-        }
+        checks: dict[str, Any] = {}
+        if not enabled:
+            return {"enabled": False, "status": "disabled", "message": "Pi 智能助手已禁用（pi.enabled=false）", "checks": checks, "node_path": str(node_path), "cli_path": str(cli_path), "session_count": len(self._sessions)}
+        if not node_path.is_file():
+            return {"enabled": True, "status": "missing_runtime", "message": f"未找到 Node 可执行文件：{node_path}", "checks": {"node": False}, "node_path": str(node_path), "cli_path": str(cli_path), "session_count": len(self._sessions)}
+        if not cli_path.is_file():
+            return {"enabled": True, "status": "missing_runtime", "message": f"未找到 Pi CLI：{cli_path}", "checks": {"node": True, "cli": False}, "node_path": str(node_path), "cli_path": str(cli_path), "session_count": len(self._sessions)}
+        node_version = ""
+        node_ok = True
+        try:
+            out = subprocess.run([str(node_path), "--version"], capture_output=True, text=True, timeout=10)
+            node_version = (out.stdout or out.stderr).strip()
+            match = re.search(r"v(\d+)\.(\d+)\.", node_version)
+            if match:
+                node_ok = (int(match.group(1)), int(match.group(2))) >= (22, 19)
+        except Exception:
+            node_ok = False
+        if not node_ok:
+            return {"enabled": True, "status": "incompatible_runtime", "message": f"Node 版本过低（{node_version or '未知'}），Pi 需要 Node >= 22.19", "checks": {"node": True, "cli": True, "node_version": False}, "node_version": node_version, "node_path": str(node_path), "cli_path": str(cli_path), "session_count": len(self._sessions)}
+        node_modules = _find_node_modules(cli_path)
+        if not node_modules:
+            return {"enabled": True, "status": "missing_dependencies", "message": "Pi 依赖未安装：请在 thirdparty\\pi 目录执行 npm install（或重新运行 start-prod.bat / start-local-prod.bat 自动安装）", "checks": {"node": True, "cli": True, "node_version": True, "dependencies": False}, "node_path": str(node_path), "cli_path": str(cli_path), "session_count": len(self._sessions)}
+        return {"enabled": True, "status": "available", "message": "Pi 运行环境正常", "checks": {"node": True, "cli": True, "node_version": True, "dependencies": True}, "node_version": node_version, "node_path": str(node_path), "cli_path": str(cli_path), "session_count": len(self._sessions)}
+
+    def diagnose(self) -> dict[str, Any]:
+        """在 runtime() 基础上，真实启动一次 Pi CLI 以捕获实际的启动错误。"""
+        info = self.runtime()
+        if info["status"] != "available":
+            return info
+        node_path = Path(info["node_path"])
+        cli_path = Path(info["cli_path"])
+        node_modules = _find_node_modules(cli_path)
+        launch_ok = False
+        launch_error = ""
+        try:
+            out = subprocess.run(
+                [str(node_path), str(cli_path), "--version"],
+                capture_output=True,
+                text=True,
+                timeout=30,
+                cwd=str(node_modules.parent) if node_modules else None,
+            )
+            if out.returncode == 0:
+                launch_ok = True
+            else:
+                launch_error = (out.stderr or out.stdout).strip()[:800]
+        except subprocess.TimeoutExpired:
+            launch_ok = True
+        except Exception as exc:
+            launch_error = str(exc)[:800]
+        checks = {**info.get("checks", {}), "launch": launch_ok}
+        if not launch_ok:
+            return {**info, "status": "launch_failed", "message": f"Pi CLI 启动失败：{launch_error}", "checks": checks, "launch_error": launch_error}
+        return {**info, "checks": checks}
 
     def _allowed_root(self, cwd: str) -> Path:
         root = self._root().resolve()
@@ -637,7 +702,7 @@ class PiSessionManager:
             if not runtime["enabled"]:
                 raise PiRpcError("Pi is disabled")
             if runtime["status"] != "available":
-                raise PiRpcError("Pi runtime is unavailable")
+                raise PiRpcError(runtime.get("message") or "Pi runtime is unavailable")
             if len(self._sessions) >= int(self._config("max_sessions", 3) or 3):
                 raise PiRpcError("Pi session limit reached")
             root = self._root()
@@ -742,7 +807,7 @@ class PiSessionManager:
         if not runtime["enabled"]:
             raise PiRpcError("Pi is disabled")
         if runtime["status"] != "available":
-            raise PiRpcError("Pi runtime is unavailable")
+            raise PiRpcError(runtime.get("message") or "Pi runtime is unavailable")
         root = self._root()
         default_cwd = root / "data" / "workspace"
         safe_cwd = self._allowed_root(cwd or str(default_cwd if default_cwd.is_dir() else root))

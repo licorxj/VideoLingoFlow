@@ -65,6 +65,16 @@ async def pi_health() -> dict[str, Any]:
     return get_pi_manager().status()
 
 
+@router.get("/runtime")
+async def pi_runtime() -> dict[str, Any]:
+    return get_pi_manager().runtime()
+
+
+@router.get("/diagnostics")
+async def pi_diagnostics() -> dict[str, Any]:
+    return get_pi_manager().diagnose()
+
+
 @router.get("/settings")
 async def get_agent_settings() -> dict[str, Any]:
     return get_pi_manager().settings()

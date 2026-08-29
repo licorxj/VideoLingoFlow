@@ -1,0 +1,1988 @@
+{
+  "id": "634834ca8d1b",
+  "name": "标准示例-视频翻译-配音-封面-发布",
+  "description": "输入视频，翻译得到双语视频、译文配音视频、封面设计、发布到平台或者发布到草稿。节点按需删减、参数可以根据视频类型调优",
+  "nodes": [
+    {
+      "id": "node_1_1780590163157",
+      "type": "workflow",
+      "position": {
+        "x": -1935,
+        "y": -1185
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "M:/翻译商单/加越南语英文/We-Will-Love-Again改  Love Me Again（54集）/05.mp4",
+          "source_language": "en",
+          "target_language": "zh",
+          "copyInputs": true,
+          "filePath": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "en",
+            "target_language": "zh"
+          }
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 565
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1780650299385",
+      "type": "workflow",
+      "position": {
+        "x": -1365,
+        "y": -1050
+      },
+      "data": {
+        "nodeType": "extract_audio",
+        "label": "音频分离",
+        "config": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/extracted_audio_node_1_1780650299385.m4a"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 309
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1780807148463",
+      "type": "workflow",
+      "position": {
+        "x": 690,
+        "y": -1020
+      },
+      "data": {
+        "nodeType": "sentence_split",
+        "label": "句子分割",
+        "config": {
+          "use_llm_split": true,
+          "merge_min_duration": "0.1",
+          "max_sentence_length": "18",
+          "merge_max_gap": "0.2",
+          "split_on_speaker": true,
+          "pause_split_threshold": "2",
+          "split_sentence_ends": true,
+          "split_clause_breaks": true,
+          "processing_language": "from_input",
+          "merge_gap_enabled": false,
+          "merge_short_enabled": true,
+          "pause_split_enabled": true
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/sentences_node_2_1780807148463.json",
+          "text": "cache/sentences_text_node_2_1780807148463.txt"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 672
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1780948332813",
+      "type": "workflow",
+      "position": {
+        "x": 1200,
+        "y": -945
+      },
+      "data": {
+        "nodeType": "summarize",
+        "label": "内容总结",
+        "config": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/summarize_result_node_1_1780948332813.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
+          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=2196",
+          "[step_worker] step instance created: S04Summarize",
+          "[step_worker] step_inputs keys=['text', 'language']",
+          "[step_worker] node_config keys=(empty)",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1780948332813_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 400
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1780954897405",
+      "type": "workflow",
+      "position": {
+        "x": 1860,
+        "y": -1320
+      },
+      "data": {
+        "nodeType": "translate",
+        "label": "逐句翻译",
+        "config": {
+          "translation_style": "忠于原文",
+          "reflect_translate": "yes",
+          "processing_language": "from_input",
+          "target_language": "from_input"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/translation_direct_node_1_1780954897405_zh.json",
+          "reflect": "cache/translation_reflect_node_1_1780954897405_zh.json"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] start node_type=translate node_id=node_1_1780954897405 pid=43476",
+          "[step_worker] step instance created: S05Translate",
+          "[step_worker] step_inputs keys=['summary', 'subtitle', 'language', 'prompt_template']",
+          "[step_worker] node_config keys=['translation_style', 'reflect_translate', 'processing_language', 'target_language']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e, kwargs=['callback'])",
+          "[Translate] Languages: en -> zh, reflect=True, batch_limit=3000, reflect_batch_limit=1500",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1780954897405_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 530
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1781200299298",
+      "type": "workflow",
+      "position": {
+        "x": 2415,
+        "y": -975
+      },
+      "data": {
+        "nodeType": "subtitle_gen",
+        "label": "字幕生成",
+        "config": {
+          "file_prefix": "tran_"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "output/tran_subtitles_node_1_1781200299298.srt",
+          "original": "output/tran_subtitles_original_node_1_1781200299298.srt",
+          "bilingual": "output/tran_subtitles_bilingual_node_1_1781200299298.srt"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 398
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1781207780159",
+      "type": "workflow",
+      "position": {
+        "x": 1890,
+        "y": -660
+      },
+      "data": {
+        "nodeType": "merge_sub_video",
+        "label": "字幕烧录",
+        "config": {
+          "preset_id": "中-英-英下-001",
+          "bgm_volume": 0.85,
+          "fade_in": 0.5,
+          "fade_out": 0.5
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_with_subs_node_2_1781207780159.mp4"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 653
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1781212794939",
+      "type": "workflow",
+      "position": {
+        "x": -1935,
+        "y": -300
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "原视频展示"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 478
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1781362046659",
+      "type": "workflow",
+      "position": {
+        "x": 3075,
+        "y": 45
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom",
+          "title": "翻译后视频"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 478
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1781645240103",
+      "type": "workflow",
+      "position": {
+        "x": 2985,
+        "y": -1230
+      },
+      "data": {
+        "nodeType": "tts",
+        "label": "语音合成 (TTS)",
+        "config": {
+          "tts_engine": "confucius4_tts",
+          "tts_mode": [
+            "clone"
+          ],
+          "clone_source": "per_segment",
+          "voice_design_role_1_desc": "中年、女性、高音叫卖",
+          "speed_regenerate": true,
+          "ai_subtitle_reduction": true,
+          "speed_rounds": 1,
+          "ai_rounds": 1,
+          "overwrite_generate": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[S09] 分析变速倍数",
+          "  - 需要变速: 10 段",
+          "  - 超出最大变速(1.35x): 1 段",
+          "[S09] 最终溢出段数: 1",
+          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\dub_task_node_1_1781709944783.json",
+          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\dub_task_node_1_1781709944783.csv",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 582
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1781709944783",
+      "type": "workflow",
+      "position": {
+        "x": 2430,
+        "y": -1350
+      },
+      "data": {
+        "nodeType": "dub_task",
+        "label": "生成配音任务",
+        "config": {
+          "ai_read_tone": true,
+          "normalize_chinese_read_text": false,
+          "ai_dialect_colloquial": false,
+          "dialect_name": "四川话"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 354
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1781810867151",
+      "type": "workflow",
+      "position": {
+        "x": 3705,
+        "y": -1140
+      },
+      "data": {
+        "nodeType": "merge_audio",
+        "label": "音频合并",
+        "config": {
+          "video_speed_adjust": false,
+          "speed_min": "1",
+          "speed_max": "1.35",
+          "gap_threshold": "0.5",
+          "fast_limit": "1.5"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 521
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1781939413425",
+      "type": "workflow",
+      "position": {
+        "x": 4185,
+        "y": -975
+      },
+      "data": {
+        "nodeType": "merge_sub_video",
+        "label": "字幕烧录",
+        "config": {
+          "video_quality": "copy",
+          "bgm_volume": 0.65,
+          "dub_volume": 0.8,
+          "fade_in": 0.5,
+          "fade_out": 0.5,
+          "preset_id": "单语-白-半透底",
+          "mute_original": true
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 553
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1781973904798",
+      "type": "workflow",
+      "position": {
+        "x": -315,
+        "y": -885
+      },
+      "data": {
+        "nodeType": "vocal_separation",
+        "label": "人声分离",
+        "config": {
+          "method": "demucs",
+          "format": "wav",
+          "model": "htdemucs_ft"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/vocals_node_2_1781973904798.wav",
+          "background": "output/background_node_2_1781973904798.wav"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] start node_type=vocal_separation node_id=node_2_1781973904798 pid=38020",
+          "[step_worker] step instance created: StepVocalSeparation",
+          "[step_worker] step_inputs keys=['audio']",
+          "[step_worker] node_config keys=['method', 'format', 'model']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e, kwargs=['callback', 'cancel_callback'])",
+          "[VocalSeparation] Using upstream audio: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\output/transcoded_audio_node_2_1788016301322.wav",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs', 'output_vocals', 'output_background']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_2_1781973904798_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 466
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1781987851660",
+      "type": "workflow",
+      "position": {
+        "x": 3900,
+        "y": 75
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "配音后视频",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 209
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1782422054967",
+      "type": "workflow",
+      "position": {
+        "x": -1380,
+        "y": -105
+      },
+      "data": {
+        "nodeType": "llm_request",
+        "label": "通用LLM请求",
+        "config": {
+          "model": "",
+          "system_prompt": "你是一个短视频内容总结和标题撰写的大师，根据我输入的短视频文案和对话内容，帮我总结全文，并提炼出优质的标题和副标题，要求如下：\n1：主标题(tittle)精练概括全文主题；副标题(hook)抛出视频钩子；总结(summary)为全文的总结说明，用于短视频的简介，需要兼顾概述和亮点展示。\n2：字数限制：主标题不多于8个字，副标题不多于12字，总结不多于500字。\n3：严格按照json格式输出，输出json中包含key：tittle、hook、summary",
+          "user_prompt": "输出语言：{target_language}\n输入的视频文案：\n##\n{input_text}\n##",
+          "temperature": 0.8,
+          "response_json": true,
+          "log_request": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "result": "output/LLM_node_1_1782422054967.json",
+          "text": "{\n  \"tittle\": \"科技收购娱乐公司\",\n  \"hook\": \"收购背后的野心\",\n  \"summary\": \"视频中，科技公司高管Mr. Preston在独家采访后，与助手Aaron讨论收购Crazy Maple Studios的计划。当Aaron质疑科技公司为何投资娱乐公司时，Mr. Preston透露他不仅计划投资，更是要收购该工作室，甚至不惜拆分。这段对话揭示了商业世界中的战略扩张、野心决策以及潜在冲突，展现了收购案背后的复杂动机和风险。\"\n}"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "S01：Mr. Preston,",
+          "S01：there's a nice little bar just a couple blocks down.",
+          "S01：Can I buy you a drink?",
+          "S02：Um, oh. I have an important meeting coming up tomorrow,",
+          "S02：actually.",
+          "S02：But how ab",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1782422054967_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 605
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1782501714759",
+      "type": "workflow",
+      "position": {
+        "x": -690,
+        "y": 375
+      },
+      "data": {
+        "nodeType": "cover",
+        "label": "AI封面设计",
+        "config": {
+          "custom_title_enabled": false,
+          "custom_title": "",
+          "custom_subtitle_enabled": false,
+          "custom_subtitle": "",
+          "design_mode": [
+            "ai_design"
+          ],
+          "ai_prompt": "你是一位专业的短视频封面设计师和文生图提示词专家。请根据以下视频内容信息，设计一张吸引人的短视频封面画面，并输出详细的文生图提示词。\n\n要求：\n1. 画面风格：适合短视频平台的视觉风格，色彩鲜明、对比强烈，具有视觉冲击力\n2. 标题字体：主标题使用粗体的毛笔手写体，笔触飘逸，添加少量的粒子消散效果。副标题可以使用更正式的机器字体，字体风格与内容主题匹配。\n3. 标题颜色：根据画面整体色调选择高对比度的颜色，确保可读性。\n4. 标题位置：主标题居中，可横版也可竖版，副标题在主标题下方或者侧面，不遮挡画面主体\n5. 背景融合：标题文字与图片元素自然融合，标题文字可使用阴影、描边增强可读性，\n6. 画面构图：简洁大气，留出标题空间，主体突出\n\n请直接输出文生图提示词（中文），不需要额外解释。提示词应包含画面描述、风格、色调、构图、文字排版等完整信息。提示词使用##包裹。",
+          "custom_prompt": "A visually striking short video cover image, cinematic style, vibrant colors, bold composition. Main title \"{title}\" displayed prominently in large bold white text with dark shadow, centered upper area. Subtitle \"{subtitle}\" in smaller elegant font below the main title. Dynamic background with rich textures and depth of field, professional digital art quality, 4K resolution."
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "prompt": "output/cover_prompt_node_1_1782501714759.txt",
+          "text": "A dramatic cover image for a short video, featuring a high-contrast scene with a tech executive in a sleek suit and an assistant in a modern office setting, symbolizing the acquisition of Crazy Maple Studios. The background splits between cold blue digital circuits and warm red entertainment icons like film reels and game controllers, emphasizing the clash and fusion of industries. Bold, centered text \"Tech Acquisition of Entertainment Company\" at the top in large, white font with a dark outline, and smaller subtitle \"The Ambition Behind the Acquisition\" below in a complementary color. Vibrant colors, sharp focus on the characters' determined expressions, cinematic lighting, suitable for a video thumbnail."
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 472
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1782507205161",
+      "type": "workflow",
+      "position": {
+        "x": 30,
+        "y": 540
+      },
+      "data": {
+        "nodeType": "image_gen",
+        "label": "AI生图",
+        "config": {
+          "mode": "txt2img",
+          "interface": "bailian",
+          "model": "wan2.7-image",
+          "resolution": "2K",
+          "aspect_ratio": "9:16",
+          "num_images": 1,
+          "custom_prompt_enabled": false,
+          "custom_prompt": "",
+          "output_prefix": "cover_gen_3x4"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": "['output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png']",
+          "text": "output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png"
+        },
+        "error": "",
+        "note": "竖图封面",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1782507205161_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=39048",
+          "[step_worker] step instance created: S_ImageGen",
+          "[step_worker] step_inputs keys=['text']",
+          "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1782507205161_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 658
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1782509281196",
+      "type": "workflow",
+      "position": {
+        "x": 870,
+        "y": 465
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 434
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1782640383627",
+      "type": "workflow",
+      "position": {
+        "x": -1365,
+        "y": -660
+      },
+      "data": {
+        "nodeType": "video_frame_extract",
+        "label": "视频抽帧",
+        "config": {
+          "video_source": "input_node",
+          "time_point": "6",
+          "time_mode": "positive",
+          "avoid_subtitles": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "image": "cache/key_frame_node_1_1782640383627.png"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 400
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1782640528572",
+      "type": "workflow",
+      "position": {
+        "x": -675,
+        "y": -180
+      },
+      "data": {
+        "nodeType": "cover",
+        "label": "AI封面设计",
+        "config": {
+          "custom_title_enabled": false,
+          "custom_title": "",
+          "custom_subtitle_enabled": false,
+          "custom_subtitle": "",
+          "design_mode": [
+            "custom_prompt"
+          ],
+          "ai_prompt": "你是一位专业的短视频封面设计师和文生图提示词专家。请根据以下视频内容信息，设计一张吸引人的短视频封面画面，并输出详细的文生图提示词。\n\n要求：\n1. 画面风格：适合短视频平台的视觉风格，色彩鲜明、对比强烈，具有视觉冲击力\n2. 标题字体：主标题使用粗体大字，醒目突出，字体风格与内容主题匹配\n3. 标题颜色：根据画面整体色调选择高对比度的颜色，确保可读性\n4. 标题位置：主标题居中或偏上，副标题在主标题下方，不遮挡画面主体\n5. 背景融合：标题与背景自然融合，可使用阴影、描边或半透明底色增强可读性\n6. 画面构图：简洁大气，留出标题空间，主体突出\n\n请直接输出文生图提示词（英文），不需要额外解释。提示词应包含画面描述、风格、色调、构图、文字排版等完整信息。",
+          "custom_prompt": "任务：\n1：首先，去除画面上的文字水印，保持画面纯净无文字元素；\n2：为画面加上标题和副标题，制作为电影海报；\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“{title}” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“{subtitle}” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "prompt": "output/cover_prompt_node_2_1782640528572.txt",
+          "text": "任务：\n1：首先，去除画面上的文字水印，保持画面纯净无文字元素；\n2：为画面加上标题和副标题，制作为电影海报；\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“科技收购娱乐公司” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“收购背后的野心” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 500
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1782641542678",
+      "type": "workflow",
+      "position": {
+        "x": 30,
+        "y": -135
+      },
+      "data": {
+        "nodeType": "image_gen",
+        "label": "AI生图",
+        "config": {
+          "mode": [
+            "img2img"
+          ],
+          "interface": "bailian",
+          "model": "qwen-image-edit-max",
+          "resolution": "2K",
+          "aspect_ratio": "16:9",
+          "num_images": 1,
+          "custom_prompt_enabled": false,
+          "custom_prompt": "",
+          "output_prefix": "cover_gen_byfram"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": "['output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png']",
+          "text": "output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png"
+        },
+        "error": "",
+        "note": "横图封面",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_3_1782641542678_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=47092",
+          "[step_worker] step instance created: S_ImageGen",
+          "[step_worker] step_inputs keys=['image', 'text']",
+          "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_3_1782641542678_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 658
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_5_1782654274362",
+      "type": "workflow",
+      "position": {
+        "x": 870,
+        "y": -15
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 434
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1782672877872",
+      "type": "workflow",
+      "position": {
+        "x": 4395,
+        "y": 675
+      },
+      "data": {
+        "nodeType": "video_publish",
+        "label": "视频发布",
+        "config": {
+          "platform": "3",
+          "account_id": "",
+          "title": "",
+          "description": "",
+          "tags": "",
+          "is_draft": false,
+          "schedule_enabled": false,
+          "schedule_time": "",
+          "publish_mode": "local_draft",
+          "account_ids": [
+            "2",
+            "3",
+            "4",
+            "5"
+          ],
+          "is_original": true
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "note": "发布平台",
+        "workbench_url": "",
+        "logLines": [
+          "[Publish] Upload OK: id=7a238a36-91d3-4125-baa7-e7f12e1be8c9, stored_path=materials/2026/08/30/7a238a36-91d3-4125-baa7-e7f12e1be8c9.png",
+          "[Publish] cover_landscape material obj: id=7a238a36-91d3-4125-baa7-e7f12e1be8c9, stored_path=materials/2026/08/30/7a238a36-91d3-4125-baa7-e7f12e1be8c9.png",
+          "[Publish] Uploading material: cover_gen_3x4_1_gen_image_node_1_1782507205161.png (7.6 MB)",
+          "[Publish] Upload OK: id=f57c8561-2424-4ada-8e2e-8e64b6d286cf, stored_path=materials/2026/08/30/f57c8561-2424-4ada-8e2e-8e64b6d286cf.png",
+          "[Publish] cover_portrait material obj: id=f57c8561-2424-4ada-8e2e-8e64b6d286cf, stored_path=materials/2026/08/30/f57c8561-2424-4ada-8e2e-8e64b6d286cf.png",
+          "[Publish] Creating draft: title='08', accounts=[2, 3, 4, 5], video=OK, cover_l=OK, cover_p=OK",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1782672877872_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 747
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1782725550457",
+      "type": "workflow",
+      "position": {
+        "x": -1050,
+        "y": 960
+      },
+      "data": {
+        "nodeType": "llm_request",
+        "label": "通用LLM请求",
+        "config": {
+          "model": "",
+          "system_prompt": "你是一个小红书平台视频标题和描述撰写大师，根据我输入的需要发布的视频的信息，帮我撰写专业而有极具心引力的视频标题、视频介绍、关联标签：\n##要求：\n1：标题能抛出视频的闪光点或者矛盾点，能直观表述视频所展现的核心，也能为观众抛出极具诱惑的钩子；\n2：视频描述表达视频的核心卖点和简练的观点；\n3：关联标签为视频所属类型的剪短标签，总结3~6个即可；\n4：字数限制：标题不多于25个字，描述不多于150字，单个标签不多于5字。\n3：严格按照json格式输出，输出json中包含key：tittle、description、tags",
+          "user_prompt": "输出语言：{target_language}\n视频信息：\n##\n{input_json}\n##",
+          "temperature": 0.7,
+          "response_json": true,
+          "log_request": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "result": "output/LLM_node_1_1782725550457.json",
+          "text": "{\n  \"tittle\": \"科技巨头欲收购娱乐公司：野心背后的真相\",\n  \"description\": \"视频通过科技公司高管与助手的对话，揭示收购Crazy Maple Studios的计划，展现商业世界中的战略扩张、野心决策及潜在冲突。核心卖点是收购内幕与动机剖析，观点简练为：科技与娱乐融合背后的高风险博弈。\",\n  \"tags\": [\n    \"科技\",\n    \"商业\",\n    \"收购\",\n    \"娱乐\",\n    \"战略\",\n    \"野心\"\n  ]\n}"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "{",
+          "  \"tittle\": \"科技收购娱乐公司\",",
+          "  \"hook\": \"收购背后的野心\",",
+          "  \"summary\": \"视频中，科技公司高管Mr. Preston在独家采访后，与助手Aaron讨论收购Crazy Maple Studios的计划。当Aaron质疑科技公司为何投资娱乐公司时，Mr. Preston透露他不仅计划投资，更是要收购该工作室，甚至不惜拆分。这段对话揭示了商业世界中的战略扩张、野心决策以及潜在冲突，展现了收购案背后的复杂动机和风险。\"",
+          "}",
+          "##",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1782725550457_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 605
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1783320818226",
+      "type": "workflow",
+      "position": {
+        "x": -1380,
+        "y": -1365
+      },
+      "data": {
+        "nodeType": "translate_task_name",
+        "label": "翻译项目名称",
+        "config": {
+          "replace_task_name": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/task_name.txt",
+          "translated": "08"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 303
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1783321957415",
+      "type": "workflow",
+      "position": {
+        "x": -525,
+        "y": 1305
+      },
+      "data": {
+        "nodeType": "resolve_path",
+        "label": "取文件路径",
+        "config": {
+          "relative_path": "cache\\task_name.txt"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output": "Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\task_name.txt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 311
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_8_1783325677193",
+      "type": "workflow",
+      "position": {
+        "x": 465,
+        "y": 1140
+      },
+      "data": {
+        "nodeType": "json_editor",
+        "label": "JSON编辑",
+        "config": {
+          "key_expr": "tittle",
+          "value_source": "auto",
+          "custom_value": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\output/LLM_node_1_1782725550457.json"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 437
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1788016251850",
+      "type": "workflow",
+      "position": {
+        "x": -840,
+        "y": -1395
+      },
+      "data": {
+        "nodeType": "audio_transcode",
+        "label": "音频质量转码",
+        "config": {
+          "format": "wav",
+          "sample_rate": "44100",
+          "bit_depth": "16",
+          "channels": "1",
+          "bitrate": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/transcoded_audio_node_2_1788016301322.wav"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 433
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1788016301322",
+      "type": "workflow",
+      "position": {
+        "x": -855,
+        "y": -945
+      },
+      "data": {
+        "nodeType": "audio_transcode",
+        "label": "音频质量转码",
+        "config": {
+          "format": "wav",
+          "sample_rate": "16000",
+          "bit_depth": "",
+          "channels": "1",
+          "bitrate": "192"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/transcoded_audio_node_2_1788016301322.wav"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 433
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1788016399619",
+      "type": "workflow",
+      "position": {
+        "x": -285,
+        "y": -1515
+      },
+      "data": {
+        "nodeType": "asr_recognize",
+        "label": "ASR识别",
+        "config": {
+          "engine": "moss",
+          "language": "auto",
+          "model": "",
+          "compute_type": "",
+          "batch_size": 0,
+          "word_timestamps": true,
+          "hotwords_enabled": false,
+          "hotwords": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_3_1788016399619.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[ASR] Using ASR audio: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\output/transcoded_audio_node_2_1788016301322.wav",
+          "[ASR] Post-processing will use vocal audio: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\output/vocals_node_2_1781973904798.wav",
+          "[ASR] engine=moss, max_duration=600s, params={'use_itn': True, 'num_speakers': 0, 'model': 'openmoss/MOSS-Transcribe-Diarize', 'language': 'auto', 'word_timestamps': True, 'diarize': True}",
+          "[ASR] Audio duration: 58.5s",
+          "[ASR] Raw output saved: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\asr_raw_moss.json",
+          "[ASR Recognize] Post-processing skipped (recognition-only node)",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_3_1788016399619_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 480
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_4_1788016449667",
+      "type": "workflow",
+      "position": {
+        "x": 225,
+        "y": -1395
+      },
+      "data": {
+        "nodeType": "asr_postprocess",
+        "label": "ASR后处理",
+        "config": {
+          "run_vad": true,
+          "run_alignment": true,
+          "run_diarization": true,
+          "force_rerun": false,
+          "vad_engine": "",
+          "vad_onset": "0.3",
+          "vad_offset": 0.363,
+          "alignment_engine": "",
+          "alignment_model": "",
+          "dtype": "",
+          "diarize_engine": "pyannote",
+          "diarize_model": "",
+          "num_speakers": "",
+          "min_speakers": "",
+          "max_speakers": "",
+          "run_punctuation": false,
+          "punc_engine": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_postprocessed_node_4_1788016449667.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[ASR-PP] [4/6] resolved language='en'",
+          "[ASR-PP] [5/6] no stages to run, skipping pipeline",
+          "[ASR-PP] [6/6] normalizing and clamping result...",
+          "[ASR-PP] [6/6] audio_duration=58.467891",
+          "[ASR-PP] [6/6] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\asr_postprocessed_node_4_1788016449667.json",
+          "[ASR-PP] === run() END segments=17 ===",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_4_1788016449667_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 765
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_7_1788016739886",
+      "type": "workflow",
+      "position": {
+        "x": 690,
+        "y": -1515
+      },
+      "data": {
+        "nodeType": "sentence_preprocess",
+        "label": "断句预处理",
+        "config": {
+          "processing_language": "from_input",
+          "method": "ai",
+          "split_on_speaker": true,
+          "llm_max_chars": 5000
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache\\asr_result_node_7_1788016739886.json",
+          "word_index": "cache/word_index.json"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 491
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_8_1788016850229",
+      "type": "workflow",
+      "position": {
+        "x": 1200,
+        "y": -1245
+      },
+      "data": {
+        "nodeType": "asr_result_validate",
+        "label": "ASR结果校验",
+        "config": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "cache\\asr_result_node_8_1788016850229.json"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 232
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_9_1788017295074",
+      "type": "workflow",
+      "position": {
+        "x": 3000,
+        "y": -510
+      },
+      "data": {
+        "nodeType": "audio_denoise",
+        "label": "声音降噪",
+        "config": {
+          "method": "ffmpeg",
+          "noise_reduction_level": 0.6,
+          "highpass_freq": "120",
+          "lowpass_freq": "10000",
+          "output_format": "wav",
+          "custom_command": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/denoised_audio_node_9_1788017295074.wav"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 484
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_1_1780650299385",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_1_1780650299385in-video"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780948332813",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1780954897405",
+      "targetHandle": "in-summary",
+      "id": "xy-edge__node_1_1780948332813out-subtitle-node_1_1780954897405in-summary"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_2_1781207780159",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_2_1781207780159in-video",
+      "selected": false
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_3_1781212794939",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_3_1781212794939in-video"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781207780159",
+      "sourceHandle": "out-video",
+      "target": "node_2_1781362046659",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_2_1781207780159out-video-node_2_1781362046659in-video"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780954897405",
+      "sourceHandle": "out-reflect",
+      "target": "node_1_1781709944783",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1780954897405out-reflect-node_1_1781709944783in-subtitle",
+      "selected": false
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781709944783",
+      "sourceHandle": "out-pandas",
+      "target": "node_1_1781645240103",
+      "targetHandle": "in-pandas",
+      "id": "xy-edge__node_1_1781709944783out-pandas-node_1_1781645240103in-pandas"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781810867151",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-dub",
+      "id": "xy-edge__node_1_1781810867151out-audio-node_1_1781939413425in-dub",
+      "selected": false
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781810867151",
+      "sourceHandle": "out-video_adjusted",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1781810867151out-video_adjusted-node_1_1781939413425in-video"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781939413425",
+      "sourceHandle": "out-video",
+      "target": "node_2_1781987851660",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1781939413425out-video-node_2_1781987851660in-video",
+      "selected": false
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782501714759",
+      "sourceHandle": "out-prompt",
+      "target": "node_1_1782507205161",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_1_1782501714759out-prompt-node_1_1782507205161in-text"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782507205161",
+      "sourceHandle": "out-text",
+      "target": "node_1_1782509281196",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_1_1782507205161out-text-node_1_1782509281196in-image"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782422054967",
+      "sourceHandle": "out-result",
+      "target": "node_2_1782640528572",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1782422054967out-result-node_2_1782640528572in-json"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782640383627",
+      "sourceHandle": "out-image",
+      "target": "node_3_1782641542678",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_1_1782640383627out-image-node_3_1782641542678in-image",
+      "selected": false
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1782640528572",
+      "sourceHandle": "out-prompt",
+      "target": "node_3_1782641542678",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_2_1782640528572out-prompt-node_3_1782641542678in-text",
+      "selected": false
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1782641542678",
+      "sourceHandle": "out-text",
+      "target": "node_5_1782654274362",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_3_1782641542678out-text-node_5_1782654274362in-image"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_1_1782640383627",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_1_1782640383627in-video"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781939413425",
+      "sourceHandle": "out-video",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1781939413425out-video-node_1_1782672877872in-video"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782422054967",
+      "sourceHandle": "out-result",
+      "target": "node_1_1782725550457",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1782422054967out-result-node_1_1782725550457in-json"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782422054967",
+      "sourceHandle": "out-result",
+      "target": "node_1_1782501714759",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1782422054967out-result-node_1_1782501714759in-json"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780954897405",
+      "sourceHandle": "out-reflect",
+      "target": "node_1_1781200299298",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1780954897405out-reflect-node_1_1781200299298in-subtitle"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1782641542678",
+      "sourceHandle": "out-text",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-cover_landscape",
+      "id": "xy-edge__node_3_1782641542678out-text-node_1_1782672877872in-cover_landscape"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782507205161",
+      "sourceHandle": "out-text",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-cover_portrait",
+      "id": "xy-edge__node_1_1782507205161out-text-node_1_1782672877872in-cover_portrait",
+      "selected": false
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_1_1783320818226",
+      "targetHandle": "in-input",
+      "id": "xy-edge__node_1_1780590163157out-video-node_1_1783320818226in-input"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782725550457",
+      "sourceHandle": "out-result",
+      "target": "node_2_1783321957415",
+      "targetHandle": "in-input",
+      "id": "xy-edge__node_1_1782725550457out-result-node_2_1783321957415in-input"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781810867151",
+      "sourceHandle": "out-dub_srt",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1781810867151out-dub_srt-node_1_1781939413425in-subtitle"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1783321957415",
+      "sourceHandle": "out-output",
+      "target": "node_8_1783325677193",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_2_1783321957415out-output-node_8_1783325677193in-text"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782725550457",
+      "sourceHandle": "out-result",
+      "target": "node_8_1783325677193",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1782725550457out-result-node_8_1783325677193in-json"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_8_1783325677193",
+      "sourceHandle": "out-json",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_8_1783325677193out-json-node_1_1782672877872in-json"
+    },
+    {
+      "type": "smoothstep",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_1_1781810867151",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1780590163157out-video-node_1_1781810867151in-video",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780650299385",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1788016251850",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_1_1780650299385out-audio-node_1_1788016251850in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788016251850",
+      "sourceHandle": "out-audio",
+      "target": "node_2_1781973904798",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_1_1788016251850out-audio-node_2_1781973904798in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780650299385",
+      "sourceHandle": "out-audio",
+      "target": "node_2_1788016301322",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_1_1780650299385out-audio-node_2_1788016301322in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1788016301322",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1788016399619",
+      "targetHandle": "in-asr_audio",
+      "id": "xy-edge__node_2_1788016301322out-audio-node_3_1788016399619in-asr_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781973904798",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1788016399619",
+      "targetHandle": "in-vocal_audio",
+      "id": "xy-edge__node_2_1781973904798out-audio-node_3_1788016399619in-vocal_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1780807148463",
+      "sourceHandle": "out-text",
+      "target": "node_1_1782422054967",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_2_1780807148463out-text-node_1_1782422054967in-text"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_7_1788016739886",
+      "sourceHandle": "out-subtitle",
+      "target": "node_2_1780807148463",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_7_1788016739886out-subtitle-node_2_1780807148463in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1780807148463",
+      "sourceHandle": "out-subtitle",
+      "target": "node_8_1788016850229",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_2_1780807148463out-subtitle-node_8_1788016850229in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1780807148463",
+      "sourceHandle": "out-text",
+      "target": "node_1_1780948332813",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_2_1780807148463out-text-node_1_1780948332813in-text"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_8_1788016850229",
+      "sourceHandle": "out-json",
+      "target": "node_1_1780954897405",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_8_1788016850229out-json-node_1_1780954897405in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781200299298",
+      "sourceHandle": "out-bilingual",
+      "target": "node_2_1781207780159",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1781200299298out-bilingual-node_2_1781207780159in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781973904798",
+      "sourceHandle": "out-background",
+      "target": "node_9_1788017295074",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_2_1781973904798out-background-node_9_1788017295074in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_9_1788017295074",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_9_1788017295074out-audio-node_1_1781939413425in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781645240103",
+      "sourceHandle": "out-text",
+      "target": "node_1_1781810867151",
+      "targetHandle": "in-audio_manifest",
+      "id": "xy-edge__node_1_1781645240103out-text-node_1_1781810867151in-audio_manifest"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781973904798",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1781645240103",
+      "targetHandle": "in-source_audio",
+      "id": "xy-edge__node_2_1781973904798out-audio-node_1_1781645240103in-source_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781973904798",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1788016449667",
+      "targetHandle": "in-asr_audio",
+      "id": "xy-edge__node_2_1781973904798out-audio-node_4_1788016449667in-asr_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781973904798",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1788016449667",
+      "targetHandle": "in-vocal_audio",
+      "id": "xy-edge__node_2_1781973904798out-audio-node_4_1788016449667in-vocal_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1781973904798",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1788016449667",
+      "targetHandle": "in-alignment_audio",
+      "id": "xy-edge__node_2_1781973904798out-audio-node_4_1788016449667in-alignment_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788016399619",
+      "sourceHandle": "out-subtitle",
+      "target": "node_4_1788016449667",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_3_1788016399619out-subtitle-node_4_1788016449667in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_4_1788016449667",
+      "sourceHandle": "out-subtitle",
+      "target": "node_7_1788016739886",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_4_1788016449667out-subtitle-node_7_1788016739886in-json"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-08-29T23:26:31",
+  "updatedAt": "2026-08-30T06:58:58",
+  "revision": 17
+}

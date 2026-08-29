@@ -1,12 +1,12 @@
 {
   "primary": {
-    "fontName": "Microsoft YaHei",
-    "fontSize": 48,
+    "fontName": "STSong",
+    "fontSize": 68,
     "primaryColour": "&H00FFFFFF",
     "secondaryColour": "&HCEFFFFFF",
     "outlineColour": "&H00000000",
     "backColour": "&HC5000000",
-    "bold": false,
+    "bold": true,
     "italic": false,
     "underline": false,
     "strikeout": false,

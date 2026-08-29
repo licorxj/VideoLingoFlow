@@ -174,4 +174,24 @@ export const piRpcApi = {
     }>("/api/pi/settings/install", { kind, name, level, source_dir: sourceDir }),
   eventsUrl: (sessionId: string) =>
     getApiUrl(`/api/pi/sessions/${encodeURIComponent(sessionId)}/events`),
+  getRuntime: () => client.get<PiRuntimeInfo>("/api/pi/runtime"),
+  getDiagnostics: () => client.get<PiRuntimeInfo>("/api/pi/diagnostics"),
 };
+
+export interface PiRuntimeInfo {
+  enabled: boolean;
+  status:
+    | "disabled"
+    | "missing_runtime"
+    | "incompatible_runtime"
+    | "missing_dependencies"
+    | "launch_failed"
+    | "available";
+  message?: string;
+  node_version?: string;
+  node_path?: string;
+  cli_path?: string;
+  launch_error?: string;
+  checks?: Record<string, boolean>;
+  session_count?: number;
+}

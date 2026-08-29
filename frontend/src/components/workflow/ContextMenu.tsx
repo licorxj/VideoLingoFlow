@@ -104,8 +104,8 @@ export default function ContextMenu({ visible, position, onClose, onSelectNode }
   const catMenuWidth = 220;
   const subMenuWidth = 240;
   const totalWidth = catMenuWidth + subMenuWidth;
-  // 菜单高度在原 420px 基础上提升 20%
-  const menuMaxHeight = 504;
+  // 菜单高度在原 420px 基础上提升 30%
+  const menuMaxHeight = 546;
 
   // Position: try to keep the full two-panel menu in viewport
   let px = position.x;

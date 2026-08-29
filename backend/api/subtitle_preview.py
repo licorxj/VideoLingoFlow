@@ -63,7 +63,7 @@ async def prepare_preview():
     temp_dir = ensure_preview_resources(ROOT)
     return {
         "success": True,
-        "videoUrl": "/temp/black_5s.mp4",
+        "videoUrl": "/temp/preview_bg_5s.mp4",
         "examples": ["zh", "en", "bilingual"],
     }
 
@@ -85,7 +85,7 @@ async def generate_preview(req: PreviewRequest):
 
     srt_path = srt_map[req.example]
     ass_path = os.path.join(temp_dir, "preview.ass")
-    black_video = os.path.join(temp_dir, "black_5s.mp4")
+    bg_video = os.path.join(temp_dir, "preview_bg_5s.mp4")
     output_path = os.path.join(temp_dir, "preview_output.mp4")
 
     def _render():
@@ -104,7 +104,7 @@ async def generate_preview(req: PreviewRequest):
             escaped_ass = ass_path.replace("\\", "/").replace(":", "\\:")
             cmd = [
                 "ffmpeg", "-y",
-                "-i", black_video,
+                "-i", bg_video,
                 "-vf", f"subtitles='{escaped_ass}'",
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 output_path,

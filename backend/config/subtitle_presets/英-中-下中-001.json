@@ -1,10 +1,10 @@
 {
   "primary": {
     "fontName": "Arial",
-    "fontSize": 40,
-    "primaryColour": "&H00DDFA00",
+    "fontSize": 50,
+    "primaryColour": "&H00F6F8E8",
     "secondaryColour": "&HF5FFFFFF",
-    "outlineColour": "&H00756200",
+    "outlineColour": "&H00221C02",
     "backColour": "&HFA000000",
     "bold": false,
     "italic": true,
@@ -15,7 +15,7 @@
     "spacing": 0,
     "angle": 0.0,
     "borderStyle": 1,
-    "outline": 1.0,
+    "outline": 2.0,
     "shadow": 1,
     "alignment": 2,
     "marginL": 10,
@@ -25,7 +25,7 @@
   },
   "secondary": {
     "fontName": "Microsoft YaHei",
-    "fontSize": 48,
+    "fontSize": 60,
     "primaryColour": "&H00FFFFFF",
     "secondaryColour": "&H96FFFFFF",
     "outlineColour": "&H00000000",
