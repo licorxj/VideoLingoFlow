@@ -199,7 +199,14 @@ def import_copy(source_root: Path, dry_run: bool = False):
                 continue
             new_id = uuid.uuid4().hex
             character_ids[str(item["id"])] = new_id
-            target_conn.execute("INSERT INTO vf_characters (id, project_id, name, character_type, voice_profile_id, note, legacy_source_id) VALUES (?, ?, ?, ?, ?, ?, ?)", (new_id, project_id, item.get("name") or "角色", item.get("character_type") or "character", voice_ids.get(str(item.get("voice_profile_id") or item.get("voice_id"))), item.get("description") or "", str(item["id"])))
+            target_conn.execute(
+                "INSERT INTO vf_characters (id, project_id, name, character_type, sort_order, voice_profile_id, gender, age_range, personality, voice_design_desc, note, legacy_source_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (new_id, project_id, item.get("name") or "角色", item.get("character_type") or "character",
+                 item.get("sort_order") or 0,
+                 voice_ids.get(str(item.get("voice_profile_id") or item.get("voice_id") or item.get("bound_voice_id"))),
+                 item.get("gender") or "", item.get("age_range") or "", item.get("personality") or "",
+                 item.get("voice_design_desc") or "", item.get("description") or "", str(item["id"])),
+            )
         for item in source["sentences"]:
             project_id = project_ids.get(str(item.get("project_id")))
             if not project_id:

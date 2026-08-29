@@ -69,6 +69,11 @@ class CharacterCreate(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     character_type: str = "narrator"
     voice_profile_id: Optional[str] = None
+    sort_order: int = 0
+    gender: Optional[str] = Field(default=None, max_length=20)
+    age_range: Optional[str] = Field(default=None, max_length=50)
+    personality: Optional[str] = Field(default=None, max_length=2000)
+    voice_design_desc: Optional[str] = Field(default=None, max_length=2000)
     language: str = "zh-CN"
     note: str = ""
 
@@ -77,6 +82,11 @@ class CharacterUpdate(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=100)
     character_type: Optional[str] = None
     voice_profile_id: Optional[str] = None
+    sort_order: Optional[int] = None
+    gender: Optional[str] = Field(default=None, max_length=20)
+    age_range: Optional[str] = Field(default=None, max_length=50)
+    personality: Optional[str] = Field(default=None, max_length=2000)
+    voice_design_desc: Optional[str] = Field(default=None, max_length=2000)
     language: Optional[str] = None
     note: Optional[str] = None
 
@@ -247,6 +257,11 @@ class AnalysisCharacter(BaseModel):
     name: str = Field(min_length=1, max_length=100)
     character_type: str = Field(default="narrator", max_length=50)
     note: str = Field(default="", max_length=1000)
+    gender: Optional[str] = Field(default=None, max_length=20)
+    age_range: Optional[str] = Field(default=None, max_length=50)
+    personality: Optional[str] = Field(default=None, max_length=2000)
+    voice_design_desc: Optional[str] = Field(default=None, max_length=2000)
+    sort_order: Optional[int] = Field(default=None, ge=0)
 
 
 class ApplyAnalysisCharacters(BaseModel):
@@ -638,7 +653,7 @@ def delete_chapter(chapter_id: str):
 @router.get("/projects/{project_id}/characters")
 def list_characters(project_id: str):
     with session() as conn:
-        rows = conn.execute("SELECT * FROM vf_characters WHERE project_id = ? ORDER BY created_at", (project_id,)).fetchall()
+        rows = conn.execute("SELECT * FROM vf_characters WHERE project_id = ? ORDER BY sort_order, created_at", (project_id,)).fetchall()
     return {"characters": [row_to_dict(row) for row in rows]}
 
 
@@ -648,7 +663,10 @@ def create_character(project_id: str, data: CharacterCreate):
     with session() as conn:
         _one(conn, "SELECT id FROM vf_projects WHERE id = ?", (project_id,), "项目不存在")
         _validate_project_reference(conn, project_id, voice_profile_id=data.voice_profile_id)
-        conn.execute("INSERT INTO vf_characters (id, project_id, name, character_type, voice_profile_id, language, note) VALUES (?, ?, ?, ?, ?, ?, ?)", (character_id, project_id, data.name, data.character_type, data.voice_profile_id, data.language, data.note))
+        conn.execute(
+            "INSERT INTO vf_characters (id, project_id, name, character_type, sort_order, voice_profile_id, gender, age_range, personality, voice_design_desc, language, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (character_id, project_id, data.name, data.character_type, data.sort_order, data.voice_profile_id, data.gender, data.age_range, data.personality, data.voice_design_desc, data.language, data.note),
+        )
         return {"character": row_to_dict(conn.execute("SELECT * FROM vf_characters WHERE id = ?", (character_id,)).fetchone())}
 
 
@@ -1024,7 +1042,7 @@ def apply_analysis_characters(project_id: str, data: ApplyAnalysisCharacters):
             row["name"].strip().casefold()
             for row in conn.execute("SELECT name FROM vf_characters WHERE project_id = ?", (project_id,)).fetchall()
         }
-        for character in data.characters:
+        for index, character in enumerate(data.characters):
             normalized_name = character.name.strip()
             name_key = normalized_name.casefold()
             if name_key in existing_names:
@@ -1032,8 +1050,8 @@ def apply_analysis_characters(project_id: str, data: ApplyAnalysisCharacters):
                 continue
             character_id = uuid.uuid4().hex
             conn.execute(
-                "INSERT INTO vf_characters (id, project_id, name, character_type, note) VALUES (?, ?, ?, ?, ?)",
-                (character_id, project_id, normalized_name, character.character_type, character.note.strip()),
+                "INSERT INTO vf_characters (id, project_id, name, character_type, sort_order, gender, age_range, personality, voice_design_desc, note) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (character_id, project_id, normalized_name, character.character_type, character.sort_order if character.sort_order is not None else index + 1, character.gender, character.age_range, character.personality, character.voice_design_desc, character.note.strip()),
             )
             created.append(row_to_dict(conn.execute("SELECT * FROM vf_characters WHERE id = ?", (character_id,)).fetchone()))
             existing_names.add(name_key)

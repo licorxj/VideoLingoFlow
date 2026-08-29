@@ -242,12 +242,29 @@ class ImageGenInterfaceManager:
 
         url = (api_url.rstrip("/") + endpoint) if endpoint else api_url
 
-        # Custom params (endpoint-specific extras, e.g. watermark). Do not
-        # override the standard fields already set above.
+        # Custom params: endpoint-specific extras (equivalent to the SDK's
+        # extra_body). They may override optional fields like `size` to adapt to
+        # endpoints that expect pixel enums (e.g. SiliconFlow/OpenAI). Core
+        # fields prompt/model/n are protected from being overridden.
+        _protected = {"prompt", "model", "n"}
         for cp in cfg.get("custom_params", []):
             key = cp.get("key", "")
             default = cp.get("default", "")
-            if key and key not in body:
+            if not key:
+                continue
+            # Tolerate SDK-style extra_body passed as a JSON string: expand it
+            # into the body instead of sending a literal "extra_body" field.
+            if key == "extra_body" and isinstance(default, str):
+                try:
+                    extra = json.loads(default)
+                    if isinstance(extra, dict):
+                        for ek, ev in extra.items():
+                            if ek not in _protected:
+                                body[ek] = ev
+                        continue
+                except Exception:
+                    pass
+            if key not in _protected:
                 body[key] = default
 
         headers = {"Content-Type": "application/json"}

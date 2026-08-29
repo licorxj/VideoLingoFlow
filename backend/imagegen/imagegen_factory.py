@@ -1,5 +1,6 @@
 """Image generation factory: creates engine instances based on registered interfaces."""
 import os
+import json
 import importlib
 import requests
 from typing import Optional
@@ -61,6 +62,22 @@ class GenericImageGen(ImageGenBase):
             body = params.get("body", {})
             headers = dict(params.get("headers", {}))
             body_type = params.get("body_type", "json")
+
+            # Debug: print request params (omit secret keys from headers)
+            _safe_headers = {
+                k: ("***" if k.lower() in ("authorization", "api-key", "x-api-key")
+                    else v)
+                for k, v in headers.items()
+            }
+            print("=== ImageGen Request ===")
+            print(f"URL: {params.get('url')}")
+            print(f"Method: {params.get('method', 'POST')}")
+            print(f"Headers: {_safe_headers}")
+            try:
+                print(f"Body: {json.dumps(body, ensure_ascii=False)}")
+            except Exception:
+                print(f"Body: {body}")
+            print("=======================")
 
             if body_type == "form":
                 resp = requests.post(

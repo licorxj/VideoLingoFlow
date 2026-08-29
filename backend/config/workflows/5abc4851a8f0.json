@@ -1,0 +1,152 @@
+{
+  "id": "5abc4851a8f0",
+  "name": "生图测试",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1787892403740",
+      "type": "workflow",
+      "position": {
+        "x": -1740,
+        "y": -3105
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "url"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "adsa",
+          "filePath": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "url": "adsa",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          }
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 502
+      },
+      "selected": false
+    },
+    {
+      "id": "node_2_1787892426026",
+      "type": "workflow",
+      "position": {
+        "x": -765,
+        "y": -3030
+      },
+      "data": {
+        "nodeType": "image_gen",
+        "label": "AI生图",
+        "config": {
+          "mode": "txt2img",
+          "interface": "e22bffed",
+          "model": "Qwen-Image",
+          "resolution": "2K",
+          "aspect_ratio": "16:9",
+          "num_images": 1,
+          "custom_prompt_enabled": false,
+          "custom_prompt": "",
+          "output_prefix": "img"
+        },
+        "status": "failed",
+        "disableExecute": false,
+        "progress": -1,
+        "message": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
+        "outputs": {},
+        "error": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 605
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1787892437496",
+      "type": "workflow",
+      "position": {
+        "x": -1275,
+        "y": -3015
+      },
+      "data": {
+        "nodeType": "text_input",
+        "label": "文本输入框",
+        "config": {
+          "text": "生成一个小狗的图片"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "生成一个小狗的图片"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 333
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787892403740",
+      "sourceHandle": "out-url",
+      "target": "node_3_1787892437496",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1787892403740out-url-node_3_1787892437496in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1787892437496",
+      "sourceHandle": "out-text",
+      "target": "node_2_1787892426026",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_3_1787892437496out-text-node_2_1787892426026in-text"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-08-28T12:49:01",
+  "updatedAt": "2026-08-29T12:01:35",
+  "revision": 1
+}

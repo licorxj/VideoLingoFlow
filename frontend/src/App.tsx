@@ -16,6 +16,8 @@ import Collaboration from "./pages/Collaboration";
 import Community from "./pages/Community";
 import Guide from "./pages/Guide";
 import { VoiceForgeAssets, VoiceForgeHome, VoiceForgeSettings, VoiceForgeVoices, VoiceForgeWorkspace } from "./pages/VoiceForge";
+import { VoiceForgeLayout } from "./components/voiceforge/VoiceForgeLayout";
+import { SceneDesignPlaceholder, VideoDubPlaceholder } from "./components/voiceforge/VoiceForgePlaceholders";
 import { restoreLocalControlSession } from "./api/controlPlane";
 import { useSubscriptionStore } from "./stores/subscriptionStore";
 
@@ -89,11 +91,15 @@ export default function App() {
           <Route path="/history" element={<History />} />
           <Route path="/social" element={<SocialPublish />} />
           <Route path="/editing" element={<EditingWorkbench />} />
-          <Route path="/voiceforge" element={<VoiceForgeHome />} />
-          <Route path="/voiceforge/projects/:projectId" element={<VoiceForgeWorkspace />} />
-          <Route path="/voiceforge/voices" element={<VoiceForgeVoices />} />
-          <Route path="/voiceforge/assets" element={<VoiceForgeAssets />} />
-          <Route path="/voiceforge/settings" element={<VoiceForgeSettings />} />
+          <Route path="/voiceforge" element={<VoiceForgeLayout />}>
+            <Route index element={<VoiceForgeHome />} />
+            <Route path="projects/:projectId" element={<VoiceForgeWorkspace />} />
+            <Route path="voices" element={<VoiceForgeVoices />} />
+            <Route path="assets" element={<VoiceForgeAssets />} />
+            <Route path="settings" element={<VoiceForgeSettings />} />
+            <Route path="video-dub" element={<VideoDubPlaceholder />} />
+            <Route path="scene-design" element={<SceneDesignPlaceholder />} />
+          </Route>
           <Route path="/settings" element={<Settings />} />
           <Route path="/llm-router" element={<LLMRouter />} />
           <Route path="/collaboration" element={<Collaboration />} />

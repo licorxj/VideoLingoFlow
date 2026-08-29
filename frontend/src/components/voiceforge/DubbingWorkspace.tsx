@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
 import { Loader2, Music2, AlertTriangle } from "lucide-react";
 import { voiceForgeApi } from "@/api/voiceforge";
@@ -35,6 +35,10 @@ import { BatchVoiceDesignDialog } from "./dubbing/dialogs/BatchVoiceDesignDialog
    ══════════════════════════════════════════════════════════════════════ */
 
 export function DubbingWorkspace() {
+  const { projectId = "" } = useParams();
+  useEffect(() => {
+    if (projectId) localStorage.setItem("vl_last_voiceforge_project", projectId);
+  }, [projectId]);
   return (
     <DubbingProvider>
       <DubbingWorkspaceInner />
