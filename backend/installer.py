@@ -68,7 +68,7 @@ def get_cuda_version():
         )
         if result.returncode == 0:
             # 从nvidia-smi输出中提取CUDA版本
-            match = re.search(r"CUDA Version:\s*(\d+\.\d+)", result.stdout)
+            match = re.search(r"CUDA(?: UMD)? Version:\s*(\d+\.\d+)", result.stdout)
             if match:
                 cuda_version = match.group(1)
                 print(f"[成功] 检测到CUDA版本: {cuda_version}")
@@ -134,37 +134,45 @@ def get_torch_cuda_tag(cuda_version):
     return "cpu"
 
 
-def _torch_installed_ok(cuda_tag: str) -> bool:
-    """检查当前解释器环境是否已安装匹配版本/CUDA 标签的 PyTorch 三件套。
-
-    匹配则返回 True（跳过卸载与重装）；任一包缺失或版本/标签不符返回 False。
-    """
-    import importlib.metadata as md
-
+def _torch_packages(cuda_tag) -> dict:
+    """返回当前平台 / CUDA 标签下期望的 {包名: 安装规格}。"""
     if sys.platform == "darwin":
         # macOS：官方 wheel 无 +cpu/+cuXXX 后缀
-        expected = {
-            "torch": PYTORCH_VERSION,
-            "torchvision": TORCHVISION_VERSION,
-            "torchaudio": TORCHAUDIO_VERSION,
+        return {
+            "torch": f"torch=={PYTORCH_VERSION}",
+            "torchvision": f"torchvision=={TORCHVISION_VERSION}",
+            "torchaudio": f"torchaudio=={TORCHAUDIO_VERSION}",
         }
-    else:
-        suffix = f"+{cuda_tag}" if cuda_tag else "+cpu"
-        expected = {
-            "torch": f"{PYTORCH_VERSION}{suffix}",
-            "torchvision": f"{TORCHVISION_VERSION}{suffix}",
-            "torchaudio": f"{TORCHAUDIO_VERSION}{suffix}",
-        }
-    for pkg, want in expected.items():
+    suffix = f"+{cuda_tag}" if cuda_tag else "+cpu"
+    return {
+        "torch": f"torch=={PYTORCH_VERSION}{suffix}",
+        "torchvision": f"torchvision=={TORCHVISION_VERSION}{suffix}",
+        "torchaudio": f"torchaudio=={TORCHAUDIO_VERSION}{suffix}",
+    }
+
+
+def _missing_torch_packages(cuda_tag) -> list:
+    """返回需要（重新）安装的包规格列表；已安装且版本/标签匹配的不包含。"""
+    import importlib.metadata as md
+
+    missing = []
+    for pkg, spec in _torch_packages(cuda_tag).items():
+        want = spec.split("==", 1)[1]
         try:
             got = md.version(pkg)
         except md.PackageNotFoundError:
             print(f"[提示] 未安装 {pkg}，需要安装")
-            return False
+            missing.append(spec)
+            continue
         if got != want:
             print(f"[提示] {pkg} 已安装 {got} ≠ 期望 {want}，需要重新安装")
-            return False
-    return True
+            missing.append(spec)
+    return missing
+
+
+def _torch_installed_ok(cuda_tag: str) -> bool:
+    """检查当前解释器环境是否已安装匹配版本/CUDA 标签的 PyTorch 三件套。"""
+    return not _missing_torch_packages(cuda_tag)
 
 
 def _verify_torch_installed() -> bool:
@@ -183,62 +191,59 @@ def _verify_torch_installed() -> bool:
 
 
 def install_pytorch(cuda_tag, mirror="default"):
-    """安装PyTorch三件套（按平台/CUDA 版本适配）"""
+    """安装PyTorch三件套（按平台/CUDA 版本适配）
+
+    策略：
+      1. 只重装缺失 / 版本或 CUDA 标签不符的子包，已匹配的不动
+      2. 镜像源失败时自动回退 PyTorch 官方源，最后回退 PyPI 默认源
+    """
     print("\n" + "="*60)
     print(f"  安装PyTorch {PYTORCH_VERSION} (CUDA: {cuda_tag})")
     print("="*60)
 
-    # 已安装匹配版本则跳过卸载/重装，直接验证
-    if _torch_installed_ok(cuda_tag):
+    # 只处理需要安装的组件
+    missing = _missing_torch_packages(cuda_tag)
+    if not missing:
         print(f"[OK] venv 中已安装匹配的 PyTorch {PYTORCH_VERSION}+{cuda_tag}，跳过卸载与重装")
         return _verify_torch_installed()
 
-    # macOS 无 CUDA：使用 PyPI 官方 wheel（含 MPS 支持），不加 +cpu 后缀
+    # 官方源（兜底）
     if sys.platform == "darwin":
-        extra_index = None
-        packages = [
-            f"torch=={PYTORCH_VERSION}",
-            f"torchvision=={TORCHVISION_VERSION}",
-            f"torchaudio=={TORCHAUDIO_VERSION}",
-        ]
-    # 构建安装命令
+        official_index = None
     elif cuda_tag == "cpu":
-        extra_index = f"https://download.pytorch.org/whl/cpu"
-        packages = [
-            f"torch=={PYTORCH_VERSION}+cpu",
-            f"torchvision=={TORCHVISION_VERSION}+cpu",
-            f"torchaudio=={TORCHAUDIO_VERSION}+cpu",
-        ]
+        official_index = "https://download.pytorch.org/whl/cpu"
     else:
-        extra_index = f"https://download.pytorch.org/whl/{cuda_tag}"
-        packages = [
-            f"torch=={PYTORCH_VERSION}+{cuda_tag}",
-            f"torchvision=={TORCHVISION_VERSION}+{cuda_tag}",
-            f"torchaudio=={TORCHAUDIO_VERSION}+{cuda_tag}",
-        ]
+        official_index = f"https://download.pytorch.org/whl/{cuda_tag}"
 
-    # 使用国内镜像加速
-    if mirror in TORCH_MIRRORS and extra_index is not None:
-        extra_index = f"{TORCH_MIRRORS[mirror]}/{cuda_tag}"
+    # 国内镜像源（可选加速，失败会回退到官方源）
+    mirror_index = None
+    if mirror in TORCH_MIRRORS and mirror != "default" and official_index is not None:
+        mirror_index = f"{TORCH_MIRRORS[mirror]}/{cuda_tag}"
 
-    # 卸载旧版本
-    print("[步骤1] 卸载旧版本PyTorch...")
-    run_cmd(f"{sys.executable} -m pip uninstall -y torch torchvision torchaudio", check=False)
+    # 只卸载需要重装的包
+    to_uninstall = [spec.split("==", 1)[0] for spec in missing]
+    print(f"[步骤1] 卸载需要重装的组件: {', '.join(to_uninstall)}")
+    run_cmd(f"{sys.executable} -m pip uninstall -y {' '.join(to_uninstall)}", check=False)
 
-    # 安装新版本
-    print(f"[步骤2] 安装PyTorch三件套...")
-    for pkg in packages:
-        cmd = f"{sys.executable} -m pip install {pkg} --no-cache-dir"
-        if extra_index:
-            cmd += f" --extra-index-url {extra_index}"
-        result = run_cmd(cmd, check=False)
-        if result.returncode != 0:
-            print(f"[警告] 安装 {pkg} 失败，尝试使用国内镜像...")
-            # 尝试使用阿里云镜像
-            cmd = f"{sys.executable} -m pip install {pkg} -i {PIP_MIRRORS['aliyun']} --trusted-host mirrors.aliyun.com"
-            if extra_index:
-                cmd += f" --extra-index-url {extra_index}"
-            run_cmd(cmd, check=True)
+    # 安装：镜像源 → 官方源 → PyPI 默认源，逐级回退
+    print(f"[步骤2] 安装 {len(missing)} 个 PyTorch 组件（失败自动回退下一个源）...")
+    for spec in missing:
+        sources = []
+        for index in (mirror_index, official_index, None):
+            if index not in sources:
+                sources.append(index)
+        installed = False
+        for index in sources:
+            cmd = f"{sys.executable} -m pip install {spec} --no-cache-dir"
+            if index:
+                cmd += f" --extra-index-url {index}"
+            result = run_cmd(cmd, check=False)
+            if result.returncode == 0:
+                installed = True
+                break
+            print(f"[警告] 从 {index or 'PyPI 默认源'} 安装 {spec} 失败，尝试下一个源...")
+        if not installed:
+            print(f"[错误] {spec} 安装失败（已尝试镜像源与官方源），验证步骤会体现")
 
     return _verify_torch_installed()
 

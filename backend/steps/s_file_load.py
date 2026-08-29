@@ -26,7 +26,8 @@ class StepFileLoad(BaseStep):
         return True
 
     def run(self, task_dir, callback=None, cancel_callback=None):
-        raw = (self.config.get("filePath", "") or "").strip()
+        node_config = getattr(self, "_node_config", {}) or {}
+        raw = (node_config.get("filePath", "") or "").strip()
         abspath = os.path.abspath(raw) if raw else ""
         if callback:
             try:

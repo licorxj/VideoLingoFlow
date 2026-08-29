@@ -30,6 +30,8 @@ export interface ImageGenInterfaceConfig {
   model_metadata?: Record<string, ImageGenModelMeta>;
   model_list_url?: string;
   model_list_key?: string;
+  response_format?: string;       // "url" | "b64_json"
+  output_format?: string;         // e.g. "png" | "jpg" | "webp"
   balance_endpoint?: string;
   modes?: ImageGenModesMap;
   max_concurrent?: number;

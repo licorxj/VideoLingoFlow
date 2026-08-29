@@ -1052,13 +1052,21 @@ def start_llm_router():
             return
 
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    python_exe = _get_python()
     env = _setup_env()
 
     llm_router_dir = os.path.join(project_root, "thirdparty", "QM-LocalRouter", "backend")
     if not os.path.isdir(llm_router_dir):
         print("[Manager] LLM Router directory not found, skipping")
         return
+
+    # 优先使用 QM-LocalRouter 的独立虚拟环境，避免依赖污染主 venv312
+    python_exe = _get_python()
+    qm_venv_py = os.path.join(
+        llm_router_dir, "venv",
+        "Scripts/python.exe" if os.name == "nt" else "bin/python",
+    )
+    if os.path.isfile(qm_venv_py):
+        python_exe = qm_venv_py
 
     cmd = [
         python_exe, "-m", "uvicorn", "app.main:app",

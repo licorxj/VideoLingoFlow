@@ -314,7 +314,7 @@ def detect_cuda_version() -> tuple[int, int] | None:
     # 1. nvidia-smi
     try:
         out = subprocess.run(["nvidia-smi"], capture_output=True, text=True, timeout=15)
-        m = re.search(r"CUDA Version:\s*(\d+)\.(\d+)", out.stdout)
+        m = re.search(r"CUDA(?: UMD)? Version:\s*(\d+)\.(\d+)", out.stdout)
         if m:
             return int(m.group(1)), int(m.group(2))
     except Exception:
