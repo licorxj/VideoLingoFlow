@@ -154,22 +154,70 @@ class S_AiSubtitleCorrect(BaseStep):
         return ""
 
     @staticmethod
-    def _distribute_to_segments(full_text: str, segments: list) -> list:
-        """把纠错后的全文按比例分布回原 segments，保留时间轴与段落数量。"""
-        lens = [len((s.get("text") or "")) for s in segments]
-        total_in = sum(lens) or 1
+    def _rebuild_segments(new_text: str, original_segments: list) -> list:
+        """把原始 segments 中（时间戳正确的）words 重新对齐到纠错后的 new_text，
+        重写每段 text 为 new_text 中对应这些词的字符片段；words / speaker / 时间保持自洽。
+
+        这是修复 text↔words 错配的根治手段：旧实现 _distribute_to_segments 按字符比例硬切
+        new_text 回填，会把已纠错文本切成 ". Aar"/"on. Ha" 等不连续碎片，却保留原始词级时间
+        戳，导致 text↔words 错配并向断句预处理节点传递破坏性结构。这里改为基于字符子序列把
+        每个词锚定到 new_text，再按段聚合字符区间得到一致的新 text，并丢弃无法对齐的幻觉词
+        （如被纠错删除的 "check"）。
+        """
+        from backend.utils.time_align import SentenceTimeAligner
+
+        # 扁平化所有词并记录其所属段（仅纳入有 word 文本的 token）
+        flat = []  # (seg_index, word_dict)
+        for si, seg in enumerate(original_segments):
+            if not isinstance(seg, dict):
+                continue
+            for w in seg.get("words", []) or []:
+                if isinstance(w, dict) and w.get("word") is not None:
+                    flat.append((si, w))
+        if not flat:
+            return [copy.deepcopy(s) if isinstance(s, dict) else dict(s)
+                    for s in original_segments]
+
+        try:
+            aligner = SentenceTimeAligner(new_text, [w for _, w in flat])
+        except Exception:
+            aligner = None
+
+        # 按顺序把每个词锚定到 new_text，记录可对齐词的对象 id 与字符区间
+        spans = [None] * len(flat)
+        anchored_ids = set()
+        if aligner is not None:
+            cursor = 0
+            for i, (_, w) in enumerate(flat):
+                cs, ce = aligner.span_for_text(str(w.get("word", "")), cursor)
+                if cs is None:
+                    spans[i] = None
+                else:
+                    spans[i] = (cs, ce)
+                    cursor = ce
+                    anchored_ids.add(id(w))
+
         out = []
-        idx = 0
-        n = len(segments)
-        for i, s in enumerate(segments):
-            if i == n - 1:
-                part = full_text[idx:]
+        for si, seg in enumerate(original_segments):
+            ns = copy.deepcopy(seg) if isinstance(seg, dict) else dict(seg)
+            # 仅保留能对齐到纠错文本的词（去除幻觉词），保持 words 与 text 一致
+            seg_words = [w for w in (seg.get("words", []) or [])
+                         if isinstance(w, dict) and id(w) in anchored_ids]
+            ns["words"] = seg_words
+            seg_spans = [sp for (sj, _), sp in zip(flat, spans)
+                         if sj == si and sp is not None]
+            if seg_spans:
+                lo = min(cs for cs, _ in seg_spans)
+                hi = max(ce for _, ce in seg_spans)
+                ns["text"] = new_text[lo:hi]
+                if seg_words:
+                    ns["start"] = min(w.get("start", ns.get("start")) or ns.get("start", 0)
+                                      for w in seg_words)
+                    ns["end"] = max(w.get("end", ns.get("end")) or ns.get("end", 0)
+                                    for w in seg_words)
             else:
-                take = max(0, round(len(full_text) * lens[i] / total_in))
-                part = full_text[idx:idx + take]
-                idx += take
-            ns = copy.deepcopy(s) if isinstance(s, dict) else dict(s)
-            ns["text"] = part
+                # 该段词全部无法对齐到纠错文本（如整段被纠错删除），保留原 text 兜底
+                ns["text"] = seg.get("text", "") if isinstance(seg, dict) else ""
             out.append(ns)
         return out
 
@@ -256,29 +304,14 @@ class S_AiSubtitleCorrect(BaseStep):
         # 组装输出 JSON：保留原结构，回填纠错后的 text / segments
         if isinstance(asr, dict):
             out_asr = copy.deepcopy(asr)
+            # 方案A：以纠错后的 new_text 为唯一规范全文。不再把 new_text 按比例硬切回原
+            # segments（旧逻辑会制造 text↔words 错配），而是把原始（时间戳正确的）words 重新
+            # 对齐到 new_text 并重建自洽的 segments，交给下游断句预处理节点基于纠正后的全文
+            # 统一重新断句并正确对齐词级时间轴。
             out_asr["text"] = new_text
             segs = asr.get("segments")
             if isinstance(segs, list) and segs:
-                out_asr["segments"] = self._distribute_to_segments(new_text, segs)
-                # 用词级时间戳重算每段起止时间（稀疏亦可，失败保留原时间）
-                words = []
-                for seg in segs:
-                    for w in seg.get("words", []) or []:
-                        if w.get("start") is not None and w.get("end") is not None:
-                            words.append(w)
-                if words:
-                    try:
-                        from backend.utils.time_align import SentenceTimeAligner
-                        aligner = SentenceTimeAligner(
-                            text, words, segments=segs)
-                        for seg in out_asr.get("segments", []) or []:
-                            _, st, en = aligner.align_next(seg.get("text", ""))
-                            if st is not None:
-                                seg["start"] = st
-                            if en is not None:
-                                seg["end"] = en
-                    except Exception as e:  # 对齐异常不影响纠错结果，保留原时间
-                        print(f"[AiSubtitleCorrect] 词级时间重算失败，保留原时间：{e}")
+                out_asr["segments"] = self._rebuild_segments(new_text, segs)
         else:
             out_asr = {"text": new_text}
 

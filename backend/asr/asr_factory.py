@@ -193,12 +193,18 @@ def run_asr(
     except Exception:
         pass
     if md and duration and duration > md:
-        return _run_asr_chunked(
+        result = _run_asr_chunked(
             engine_name, input_path, output_path, callback,
             model, language, extra_kwargs, interface_id, md, duration,
         )
-    return _run_asr_single(engine_name, input_path, output_path, callback,
-                           model, language, extra_kwargs)
+    else:
+        result = _run_asr_single(
+            engine_name, input_path, output_path, callback,
+            model, language, extra_kwargs,
+        )
+    # 统一说话人字段格式（speaker_id -> speaker，并下放到词级）
+    from backend.asr.asr_base import normalize_speaker_format
+    return normalize_speaker_format(result)
 
 
 def run_asr_with_post_processing(
@@ -328,8 +334,10 @@ def run_asr_with_post_processing(
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(asr_result, f, ensure_ascii=False, indent=2)
-    
-    return asr_result
+
+    # 统一说话人字段格式（speaker_id -> speaker，并下放到词级）
+    from backend.asr.asr_base import normalize_speaker_format
+    return normalize_speaker_format(asr_result)
 
 # ---------------------------------------------------------------------------
 # 分阶段后处理 API：VAD断句 / 时间戳对齐 / 说话人识别 / 标点恢复 可单独执行，

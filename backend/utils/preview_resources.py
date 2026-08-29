@@ -68,16 +68,24 @@ def ensure_preview_resources(project_root: str) -> str:
     temp_dir = os.path.join(project_root, "temp")
     os.makedirs(temp_dir, exist_ok=True)
 
-    # 生成黑底 5 秒视频
-    black_video = os.path.join(temp_dir, "black_5s.mp4")
-    if not os.path.isfile(black_video):
+    # 生成左右拼色预览背景视频（左浅灰、右深灰），避免纯黑背景看不清字幕
+    bg_video = os.path.join(temp_dir, "preview_bg_5s.mp4")
+    if not os.path.isfile(bg_video):
         cmd = [
             "ffmpeg", "-y",
-            "-f", "lavfi", "-i", "color=c=black:s=1920x1080:d=5",
+            "-f", "lavfi", "-i", "color=c=0xD3D3D3:s=960x1080:d=5",
+            "-f", "lavfi", "-i", "color=c=0x404040:s=960x1080:d=5",
+            "-filter_complex", "[0:v][1:v]hstack=2[bg]",
+            "-map", "[bg]",
             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
-            black_video,
+            bg_video,
         ]
         subprocess.run(cmd, capture_output=True, timeout=60)
+
+    # 兼容旧版纯黑背景文件：如果存在则删除，避免后续复用
+    legacy_black_video = os.path.join(temp_dir, "black_5s.mp4")
+    if os.path.isfile(legacy_black_video):
+        os.remove(legacy_black_video)
 
     # 生成示例 SRT 文件
     _write_if_missing(os.path.join(temp_dir, "preview_zh.srt"), _PREVIEW_SRT_ZH)

@@ -783,6 +783,21 @@ class S09TTS(BaseStep):
                     updated_count += 1
         print(f"[TTS] 已更新 {updated_count}/{total} 段的真实时长")
 
+        # ═══════════ 校验：必须每个片段都生成有效音频，否则抛错 ═══════════
+        # 避免“部分片段未合成却静默标记节点完成”的问题。
+        missing = [
+            i for i, seg in enumerate(segments)
+            if not (
+                os.path.exists(os.path.join(task_dir, seg.get("audio_file", "")))
+                and os.path.getsize(os.path.join(task_dir, seg.get("audio_file", ""))) > 0
+            )
+        ]
+        if missing:
+            raise RuntimeError(
+                f"[TTS] 有 {len(missing)} 个配音片段未生成有效音频"
+                f"（段落索引: {missing}），请检查 TTS 引擎配置、参考音频与网络后重试。"
+            )
+
         # 无时间戳模式：参考音频按生成配音的真实时长顺序切割（per_segment 克隆用）
         if untimed and tts_config["mode"] in ["clone", "controllable_clone"] \
                 and tts_config["clone_source"] == "per_segment":

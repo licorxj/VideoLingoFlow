@@ -60,7 +60,7 @@ export interface NodePackageValidationResult {
     category?: string;
   } | null;
   versionComparison?: {
-    status: "new" | "upgrade" | "downgrade" | "same" | "different";
+    status: "new" | "upgrade" | "downgrade" | "same" | "different" | "builtin";
     message: string;
     localVersion?: string;
     packageVersion?: string;

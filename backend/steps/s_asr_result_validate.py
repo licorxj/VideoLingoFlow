@@ -45,79 +45,21 @@ class S_ASRResultValidate(BaseStep):
     # 顺序匹配：返回 (i, j)，为 (len(ref), len(sub)) 表示 sub 是 ref 的子序列
     # ------------------------------------------------------------------ #
     @staticmethod
-    def _first_mismatch(ref: str, sub: str):
-        i = j = 0
-        while j < len(sub):
-            while i < len(ref) and ref[i] != sub[j]:
-                i += 1
-            if i >= len(ref):
-                return i, j
-            i += 1
-            j += 1
-        return i, j
-
-    @staticmethod
-    def _seg_spans(segments):
-        spans = []
-        pos = 0
-        for idx, seg in enumerate(segments or []):
-            n = S_ASRResultValidate._norm(seg.get("text") or "")
-            spans.append({"seg": idx, "start": pos, "end": pos + len(n),
-                          "text": seg.get("text") or "", "norm": n})
-            pos += len(n)
-        return spans
-
-    @staticmethod
-    def _word_spans(segments):
-        spans = []
-        pos = 0
-        for sidx, seg in enumerate(segments or []):
-            for widx, w in enumerate(seg.get("words") or []):
-                n = S_ASRResultValidate._norm(w.get("word") or "")
-                spans.append({"seg": sidx, "word": widx, "start": pos,
-                              "end": pos + len(n), "text": w.get("word") or "", "norm": n})
-                pos += len(n)
-        return spans
-
-    @staticmethod
-    def _locate(spans, idx):
-        for sp in spans:
-            if sp["start"] <= idx < sp["end"]:
-                return sp
-        return spans[-1] if spans else None
+    def _first_diff(a: str, b: str):
+        """返回两串首个不同字符的下标；完全相同返回 -1；长度不同返回较短串长度。"""
+        n = min(len(a), len(b))
+        for k in range(n):
+            if a[k] != b[k]:
+                return k
+        if len(a) != len(b):
+            return n
+        return -1
 
     @staticmethod
     def _snippet(norm_str, idx, width=24):
         s = max(0, idx - width)
         e = min(len(norm_str), idx + width)
         return norm_str[s:e]
-
-    # ------------------------------------------------------------------ #
-    # 错误构造
-    # ------------------------------------------------------------------ #
-    @staticmethod
-    def _raise(where, title, ref, sub, i, j, locator):
-        sp = S_ASRResultValidate._locate(locator, j) if locator else None
-        if sp is not None:
-            seg_no = sp.get("seg", "?") + 1
-            local = j - sp["start"]
-            if "word" in sp:
-                loc = f"segments 第 {seg_no} 段 / word 第 {sp['word'] + 1} 个（段内第 {local} 字符，归一化后）"
-            else:
-                loc = f"segments 第 {seg_no} 段（段内第 {local} 字符，归一化后）"
-        else:
-            loc = f"text 第 {j + 1} 个字符（归一化后）"
-        char = sub[j] if j < len(sub) else "<文本结束>"
-        exp = ref[i] if i < len(ref) else "<文本结束>"
-        snip = S_ASRResultValidate._snippet(sub, j)
-        raise ValueError(
-            f"ASR 校验未通过（{where}）：\n"
-            f"  · {title}\n"
-            f"  · 偏离位置：{loc}\n"
-            f"  · 期望字符：{exp!r}，实际未匹配字符：{char!r}\n"
-            f"  · 上下文（去标点/空白后）：…{snip}…\n"
-            f"  · 已顺序匹配：{i}/{len(ref)} 字符"
-        )
 
     # ------------------------------------------------------------------ #
     # 主校验
@@ -131,9 +73,9 @@ class S_ASRResultValidate(BaseStep):
         if not isinstance(segments, list) or not segments:
             raise ValueError("ASR 校验未通过：缺少 segments 或 segments 为空")
 
-        # 第一级：压平 segments 应为 text 的子序列（顺序匹配）。
-        # 仅校验「方向」：每个 segment 字符都应在 text 中出现，
-        # 否则说明 segment 文本在全文里找不到，下游时间轴锚定会失败。
+        # 第一级：全文 text 必须与「压平后的 segments」完全一致（归一化后）。
+        # 之前只校验「segments 是 text 的子序列（方向）」，会漏掉 text 比 segments 多/少内容，
+        # 故改为全文相等校验。
         if text is not None and str(text).strip() != "":
             if callback:
                 callback(30, "校验 text 与压平后的 segments ...")
@@ -141,31 +83,40 @@ class S_ASRResultValidate(BaseStep):
             ns = self._norm(self._flatten_seg_text(segments))
             if not ns:
                 raise ValueError("ASR 校验未通过：segments 文本全部为空")
-            i1, j1 = self._first_mismatch(nt, ns)
-            if j1 < len(ns):
-                self._raise("text ↔ segments",
-                            "segments 中存在 text 里找不到的内容（segment 文本无法在全文锚定）",
-                            nt, ns, i1, j1, self._seg_spans(segments))
+            if nt != ns:
+                k = self._first_diff(nt, ns)
+                raise ValueError(
+                    f"ASR 校验未通过（text ↔ segments）：\n"
+                    f"  · 全文 text 与压平后的 segments 不完全一致（去标点/空白/大小写后）。\n"
+                    f"  · 全文 text 长度 {len(nt)}，segments 压平长度 {len(ns)}。\n"
+                    f"  · text(归一化):    …{self._snippet(nt, k if k >= 0 else 0)}…\n"
+                    f"  · segments(归一化): …{self._snippet(ns, k if k >= 0 else 0)}…"
+                )
         elif callback:
             callback(40, "未提供 text，跳过 text/segments 校验，仅校验 segments/words")
 
-        # 第二级：压平 words 应为压平 segments 的子序列（顺序匹配）。
-        # 仅校验「方向」：每个 word 字符都应在对应 segment 文本中出现，
-        # 否则说明 word 时间戳无法在 segment 文本中锚定（稀疏/错乱）。
-        # 注意：不要求反向（segments 完全被 words 覆盖），因为词级时间戳稀疏属正常。
-        nseg = self._norm(self._flatten_seg_text(segments))
-        nword = self._norm(self._flatten_words(segments))
-        if not nword:
-            if callback:
-                callback(60, "segments 下无 word 时间戳，跳过 segments/words 校验")
-        else:
-            if callback:
-                callback(60, "校验压平后的 segments 与 words ...")
-            i3, j3 = self._first_mismatch(nseg, nword)
-            if j3 < len(nword):
-                self._raise("segments ↔ words",
-                            "words 中存在 segments 文本之外的内容（word 无法在 segment 锚定）",
-                            nseg, nword, i3, j3, self._word_spans(segments))
+        # 第二级：逐段校验 words 与「该段 text」完全一致（归一化后）。
+        # 关键修复：之前把【所有段】的 words 拼成一串、所有段 text 拼成一串后只做
+        # 「全局子序列（方向）」匹配，导致某段的垃圾词可借用其它段文本蒙混过关，
+        # 空 words 的段被直接跳过，且从不要求 words 覆盖 segment 文本。
+        # 现改为逐段「完全相等」校验：每段 text 必须完整、且只由其 words 构成。
+        if callback:
+            callback(60, "逐段校验 segments 文本与 words ...")
+        for sidx, seg in enumerate(segments):
+            seg_norm = self._norm(seg.get("text") or "")
+            word_norm = self._norm(self._flatten_words([seg]))
+            if seg_norm != word_norm:
+                k = self._first_diff(seg_norm, word_norm)
+                raise ValueError(
+                    f"ASR 校验未通过（segments ↔ words）：\n"
+                    f"  · segments 第 {sidx + 1} 段的文本与 words 不完全一致"
+                    f"（去标点/空白/大小写后）。\n"
+                    f"  · segment 文本长度 {len(seg_norm)}，words 压平长度 {len(word_norm)}。\n"
+                    f"  · segment 文本(归一化): …{self._snippet(seg_norm, k if k >= 0 else 0)}…\n"
+                    f"  · words 压平(归一化):   …{self._snippet(word_norm, k if k >= 0 else 0)}…\n"
+                    f"  · 该段原文: {seg.get('text')!r}\n"
+                    f"  · 该段 words: {[w.get('word') for w in (seg.get('words') or [])]!r}"
+                )
 
     # ------------------------------------------------------------------ #
     # 输入读取 / 运行

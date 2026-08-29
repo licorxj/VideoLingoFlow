@@ -29,7 +29,7 @@ interface NodeManagerProps {
   onClose: () => void;
 }
 
-type VersionComparisonStatus = "new" | "upgrade" | "downgrade" | "same" | "different";
+type VersionComparisonStatus = "new" | "upgrade" | "downgrade" | "same" | "different" | "builtin";
 type ImportResultState = {
   files: string[];
   install: string;
@@ -124,6 +124,7 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
   const getVersionComparisonTone = (status?: VersionComparisonStatus) => {
     if (status === "upgrade") return "text-emerald-600 bg-emerald-500/5 border-emerald-500/20";
     if (status === "downgrade") return "text-amber-600 bg-amber-500/5 border-amber-500/20";
+    if (status === "builtin") return "text-rose-600 bg-rose-500/5 border-rose-500/20";
     if (status === "same" || status === "different") return "text-orange-600 bg-orange-500/5 border-orange-500/20";
     return "text-blue-600 bg-blue-500/5 border-blue-500/20";
   };
@@ -339,9 +340,14 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
     const file = fileRef.current?.files?.[0];
     if (!file) { showToast("请选择 ZIP 文件", "err"); return; }
     if (packageValidation && !packageValidation.valid) { showToast("节点包预检未通过，无法导入", "err"); return; }
+    const isBuiltinConflict = packageValidation?.versionComparison?.status === "builtin";
     if (renameMode) {
       if (!renameTo.trim()) { showToast("请输入新的节点 ID", "err"); return; }
       if (renameTo.trim() === packageValidation?.node?.id) { showToast("新 ID 不能与包内节点 ID 相同", "err"); return; }
+      if (renameTo.trim() === packageValidation?.localNode?.id) { showToast("新 ID 不能与包内节点 ID 相同", "err"); return; }
+    } else if (isBuiltinConflict) {
+      showToast("该节点 ID 与系统内置节点重名，无法覆盖，请使用「重命名导入」", "err");
+      return;
     } else if (packageValidation?.localNode && !allowOverwrite) {
       showToast("检测到同名节点，请确认允许覆盖或选择重命名导入", "err");
       return;
@@ -396,8 +402,12 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
       setCreateBackup(!!result.versionComparison?.recommendedBackup);
       if (result.valid) {
         if (result.localNode) {
-          // 同名节点：预填重命名建议 id，供用户切换重命名导入
+          // 同名/内置冲突：预填重命名建议 id，并自动切换为「重命名导入」
           setRenameTo(`${result.localNode.id}_copy`);
+          if (result.versionComparison?.status === "builtin") {
+            setRenameMode(true);
+            showToast("检测到与系统内置节点冲突，已自动切换为「重命名导入」，可修改新 ID 后导入", "ok");
+          }
         }
         showToast("节点包预检通过", "ok");
       }
@@ -1110,7 +1120,7 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                       <div className={`rounded-lg border p-3 text-xs ${getVersionComparisonTone(packageValidation.versionComparison.status)}`}>
                         <p className="font-medium mb-1">版本比较</p>
                         <p>{packageValidation.versionComparison.message}</p>
-                        {packageValidation.versionComparison.requiresConfirmation && (
+                        {packageValidation.versionComparison.requiresConfirmation && packageValidation.versionComparison.status !== "builtin" && (
                           <p className="mt-1 text-orange-600">该覆盖场景需要二次确认后才能继续导入。</p>
                         )}
                         {packageValidation.versionComparison.recommendedBackup && (
@@ -1159,20 +1169,26 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                       <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 p-3 text-xs space-y-3">
                         <div className="space-y-1">
                           <p className="font-medium text-orange-600">处理方式</p>
-                          <p className="text-muted-foreground">检测到本地已存在同 ID 节点，默认不会静默覆盖。</p>
+                          <p className="text-muted-foreground">
+                            {packageValidation.versionComparison?.status === "builtin"
+                              ? "该节点 ID 与系统内置节点重名，无法覆盖内置节点（否则会破坏内置功能）。请使用「重命名导入」以新 ID 安装。"
+                              : "检测到本地已存在同 ID 节点，默认不会静默覆盖。"}
+                          </p>
                         </div>
-                        <label className="flex items-start gap-2">
-                          <input
-                            type="checkbox"
-                            checked={allowOverwrite}
-                            onChange={(e) => { setAllowOverwrite(e.target.checked); if (e.target.checked) setRenameMode(false); }}
-                            className="mt-0.5"
-                          />
-                          <span>
-                            <span className="font-medium text-foreground">覆盖已有节点</span>
-                            <span className="block text-muted-foreground">用导入的包覆盖本地同名节点（可勾选下方备份）。</span>
-                          </span>
-                        </label>
+                        {packageValidation.versionComparison?.status !== "builtin" && (
+                          <label className="flex items-start gap-2">
+                            <input
+                              type="checkbox"
+                              checked={allowOverwrite}
+                              onChange={(e) => { setAllowOverwrite(e.target.checked); if (e.target.checked) setRenameMode(false); }}
+                              className="mt-0.5"
+                            />
+                            <span>
+                              <span className="font-medium text-foreground">覆盖已有节点</span>
+                              <span className="block text-muted-foreground">用导入的包覆盖本地同名节点（可勾选下方备份）。</span>
+                            </span>
+                          </label>
+                        )}
                         <label className="flex items-start gap-2">
                           <input
                             type="checkbox"

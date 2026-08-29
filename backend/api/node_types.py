@@ -258,6 +258,17 @@ def _get_existing_custom_node(node_id: str) -> dict | None:
 
 def _build_version_comparison(node_id: str, package_name: str, package_version: str) -> tuple[dict | None, dict]:
     local_node = _get_existing_custom_node(node_id)
+    is_builtin = False
+    if not local_node and node_id in BUILTIN_NODE_IDS:
+        builtin_node = get_builtin_node_type(node_id)
+        if builtin_node:
+            is_builtin = True
+            local_node = {
+                "id": builtin_node.get("id", node_id),
+                "name": builtin_node.get("name", ""),
+                "version": _normalize_version(builtin_node.get("version")),
+                "category": builtin_node.get("category", ""),
+            }
     if not local_node:
         return None, {
             "status": "new",
@@ -267,6 +278,22 @@ def _build_version_comparison(node_id: str, package_name: str, package_version: 
             "requiresConfirmation": False,
             "recommendedBackup": False,
         }
+
+    if is_builtin:
+        return (
+            local_node,
+            {
+                "status": "builtin",
+                "message": (
+                    f"节点 ID 与系统内置节点「{local_node.get('name', node_id)}」重名，"
+                    "直接导入会冲突。建议改用「重命名导入」以新 ID 安装，避免覆盖内置节点。"
+                ),
+                "localVersion": local_node.get("version", ""),
+                "packageVersion": package_version,
+                "requiresConfirmation": True,
+                "recommendedBackup": False,
+            },
+        )
 
     local_version = _normalize_version(local_node.get("version"))
     compare_status = _compare_versions(package_version, local_version)
@@ -446,10 +473,15 @@ def _analyze_package(node_data: dict, member_names: list[str], share_meta: dict)
         raise HTTPException(status_code=400, detail="Invalid node config: missing id")
     node_id = _validate_node_id(node_id)
     analyzed["id"] = node_id
-    if node_id in BUILTIN_NODE_IDS:
-        raise HTTPException(status_code=400, detail="Cannot import over built-in node types")
-
     warnings: list[str] = []
+    # 不直接拒绝：原始包内 id 与内置节点重名时，应允许通过「重命名导入」解决。
+    # 真正的内置覆盖保护放在 import_node_type 的非 rename 分支中处理。
+    if node_id in BUILTIN_NODE_IDS:
+        warnings.append(
+            "节点 ID 与系统内置节点重名，直接导入会与其冲突。"
+            "请使用「重命名导入」以新 ID 安装；若确认覆盖内置节点，可勾选覆盖。"
+        )
+        analyzed["builtinConflict"] = True
     analyzed["version"] = _normalize_version(analyzed.get("version") or share_meta.get("version"))
     schema_version = str(analyzed.get("schemaVersion") or share_meta.get("schemaVersion") or "").strip()
     if not schema_version:
@@ -714,12 +746,14 @@ async def import_node_type(
                 f.write(content)
 
             member_names, node_data, share_meta = _load_package_payload(temp_zip)
-            node_data, warnings = _analyze_package(node_data, member_names, share_meta)
 
+            # 先解析重命名（必须在 _analyze_package 之前）：否则原始包内 id 若为内置节点，
+            # _analyze_package 的内置冲突提示会阻断「重命名导入」路径。
+            pkg_node_id = str(node_data.get("id", "") or "").strip()
             rename_to = _validate_node_id(renameTo) if renameTo.strip() else ""
             is_rename = bool(rename_to)
             if is_rename:
-                if rename_to == node_data.get("id"):
+                if rename_to == pkg_node_id:
                     raise HTTPException(status_code=400, detail="renameTo must be different from the package node id")
                 if rename_to in BUILTIN_NODE_IDS:
                     raise HTTPException(status_code=400, detail=f"Cannot rename to a built-in node type id: {rename_to}")
@@ -738,17 +772,30 @@ async def import_node_type(
                     "recommendedBackup": False,
                 }
             else:
-                node_id = node_data.get("id", "")
+                node_id = pkg_node_id
                 local_node, version_comparison = _build_version_comparison(
                     node_id,
                     node_data.get("name", node_id),
                     _normalize_version(node_data.get("version") or share_meta.get("version")),
                 )
+                # 非重命名时不允许覆盖/冲突系统内置节点：引导用户改用「重命名导入」
+                if node_id in BUILTIN_NODE_IDS:
+                    raise HTTPException(
+                        status_code=400,
+                        detail=(
+                            f"节点 ID 与系统内置节点「"
+                            f"{local_node.get('name', node_id) if local_node else node_id}"
+                            f"」重名，无法覆盖内置节点。请改用「重命名导入」以新 ID 安装。"
+                        ),
+                    )
                 if local_node and not allowOverwrite:
                     raise HTTPException(
                         status_code=409,
                         detail=f"Node type already exists. {version_comparison['message']}；请确认覆盖后重试。",
                     )
+
+            # 此时 node_data["id"] 已为重命名后的新 id（重命名场景），内置冲突保护交给上面的分支处理。
+            node_data, warnings = _analyze_package(node_data, member_names, share_meta)
 
             backup_path = ""
             if local_node and createBackup:

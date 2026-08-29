@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import client from "@/api/client";
 import {
@@ -254,10 +254,12 @@ function StyleForm({
   prefix,
   style,
   onChange,
+  fonts,
 }: {
   prefix: string;
   style: StyleParams;
   onChange: (patch: Partial<StyleParams>) => void;
+  fonts: string[];
 }) {
   const set = <K extends keyof StyleParams>(key: K, val: StyleParams[K]) =>
     onChange({ [key]: val });
@@ -278,7 +280,7 @@ function StyleForm({
               value={style.fontName}
               onChange={(e) => set("fontName", e.target.value)}
             >
-              {FONTS.map((f) => (
+              {fonts.map((f) => (
                 <option key={f} value={f}>{f}</option>
               ))}
             </select>
@@ -416,6 +418,9 @@ export default function SubtitleStyle() {
   const [saveDialogOpen, setSaveDialogOpen] = useState(false);
   const [newPresetName, setNewPresetName] = useState("");
 
+  // ── System fonts ──
+  const [systemFonts, setSystemFonts] = useState<string[]>([]);
+
   // ── Preview state ──
   const [videoUrl, setVideoUrl] = useState("");
   const [previewExample, setPreviewExample] = useState("bilingual");
@@ -454,10 +459,26 @@ export default function SubtitleStyle() {
     } catch { /* ignore */ }
   }, []);
 
+  const fetchFonts = useCallback(async () => {
+    try {
+      const res = await client.get("/api/subtitle-presets/fonts");
+      setSystemFonts(res.data ?? []);
+    } catch {
+      setSystemFonts([]);
+    }
+  }, []);
+
+  // 合并默认字体与系统字体，去重后排序
+  const allFonts = useMemo(() => {
+    const merged = new Set<string>([...FONTS, ...systemFonts]);
+    return Array.from(merged);
+  }, [systemFonts]);
+
   useEffect(() => {
     fetchPresets();
     fetchConfig();
-  }, [fetchPresets, fetchConfig]);
+    fetchFonts();
+  }, [fetchPresets, fetchConfig, fetchFonts]);
 
   // ── Config actions ──
   const handleSetDefaultPreset = async () => {
@@ -480,13 +501,21 @@ export default function SubtitleStyle() {
   const handleSavePreset = async () => {
     const name = newPresetName.trim();
     if (!name) return;
+
+    const payload = {
+      name,
+      primary,
+      secondary,
+      dualSubtitleEnabled: dualEnabled,
+    };
+    const exists = presets.some((p) => p.name === name);
+
     try {
-      await client.post("/api/subtitle-presets", {
-        name,
-        primary,
-        secondary,
-        dualSubtitleEnabled: dualEnabled,
-      });
+      if (exists) {
+        await client.put(`/api/subtitle-presets/${encodeURIComponent(name)}`, payload);
+      } else {
+        await client.post("/api/subtitle-presets", payload);
+      }
       setSaveDialogOpen(false);
       setNewPresetName("");
       fetchPresets();
@@ -571,7 +600,10 @@ export default function SubtitleStyle() {
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={() => setSaveDialogOpen(true)}
+            onClick={() => {
+              setNewPresetName(selectedPreset);
+              setSaveDialogOpen(true);
+            }}
             className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-primary/10 text-primary text-sm font-medium hover:bg-primary/15 transition-colors duration-200"
           >
             <Save className="w-3.5 h-3.5" />
@@ -642,15 +674,39 @@ export default function SubtitleStyle() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
           <div className="bg-card border border-border/50 rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-xl">
             <h3 className="text-base font-semibold">保存字幕预设</h3>
-            <input
-              type="text"
-              className={inputCls}
-              placeholder="输入预设名称..."
-              value={newPresetName}
-              onChange={(e) => setNewPresetName(e.target.value)}
-              autoFocus
-              onKeyDown={(e) => e.key === "Enter" && handleSavePreset()}
-            />
+            <div className="space-y-3">
+              <div className="relative">
+                <label className={labelCls}>覆盖已有预设</label>
+                <select
+                  className={cn(inputCls + " appearance-none pr-8", !newPresetName && "text-muted-foreground")}
+                  value={presets.some((p) => p.name === newPresetName) ? newPresetName : ""}
+                  onChange={(e) => setNewPresetName(e.target.value)}
+                >
+                  <option value="">选择已有预设覆盖...</option>
+                  {presets.map((p) => (
+                    <option key={p.name} value={p.name}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 mt-3 w-4 h-4 text-muted-foreground pointer-events-none" />
+              </div>
+              <div>
+                <label className={labelCls}>预设名称</label>
+                <input
+                  type="text"
+                  className={inputCls}
+                  placeholder="输入新预设名称或覆盖上方已有预设..."
+                  value={newPresetName}
+                  onChange={(e) => setNewPresetName(e.target.value)}
+                  autoFocus
+                  onKeyDown={(e) => e.key === "Enter" && handleSavePreset()}
+                />
+              </div>
+              {presets.some((p) => p.name === newPresetName.trim()) && (
+                <p className="text-xs text-amber-500">该名称已存在，保存将覆盖原预设。</p>
+              )}
+            </div>
             <div className="flex justify-end gap-2">
               <button
                 type="button"
@@ -665,7 +721,8 @@ export default function SubtitleStyle() {
               <button
                 type="button"
                 onClick={handleSavePreset}
-                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity"
+                disabled={!newPresetName.trim()}
+                className="px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50"
               >
                 保存
               </button>
@@ -684,6 +741,7 @@ export default function SubtitleStyle() {
           prefix="primary"
           style={primary}
           onChange={(patch) => setPrimary((prev) => ({ ...prev, ...patch }))}
+          fonts={allFonts}
         />
       </div>
 
@@ -722,6 +780,7 @@ export default function SubtitleStyle() {
             prefix="secondary"
             style={secondary}
             onChange={(patch) => setSecondary((prev) => ({ ...prev, ...patch }))}
+            fonts={allFonts}
           />
         </div>
       )}

@@ -320,7 +320,7 @@
       "type": "sdk",
       "builtin": false,
       "enabled": true,
-      "description": "【推荐值：***】限时在线免费，小米的MiMo TTS 2.5 在线语音合成，支持预置音色、声音设计、声音克隆",
+      "description": "【推荐值：****】小米 MiMo-V2.5-TTS 在线语音合成（OpenAI 兼容非流式接口），支持预置音色/声音设计/声音克隆/可控克隆",
       "config": {
         "sdk_package": "",
         "sdk_function": "synthesize",
@@ -355,11 +355,11 @@
         "voice_list_key": "",
         "model_options": [],
         "sdk_extra_args": {
-          "api_key": ""
+          "api_key": "tp-c7xpz4yemvui363ld1b8khreu7fecig266o9qe9rpwumagr2",
+          "api_url": "https://api.xiaomimimo.com/v1"
         },
         "custom_params": [],
-        "sdk_api_key": "",
-        "max_concurrent": "3",
+        "max_concurrent": 3,
         "timeout": 300,
         "voice_options": []
       }

@@ -9,6 +9,8 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
 
+from backend.utils.system_fonts import get_system_fonts
+
 router = APIRouter()
 
 # 预设文件存储目录
@@ -120,6 +122,12 @@ async def list_presets():
             if data:
                 presets.append(SubtitlePresetResponse(name=name, **data))
     return presets
+
+
+@router.get("/fonts", response_model=list[str])
+async def list_fonts():
+    """获取系统可用字体族名称列表。"""
+    return get_system_fonts()
 
 
 @router.get("/{name}", response_model=SubtitlePresetResponse)

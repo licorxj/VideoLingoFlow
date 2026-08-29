@@ -2,6 +2,61 @@
 from abc import ABC, abstractmethod
 from typing import Callable, Optional, List, Dict, Any
 
+# ---------------------------------------------------------------------------
+# 说话人字段统一
+# 各 ASR 引擎对说话人标签的字段名不一致（speaker / speaker_id / spk_id 等），
+# 且有的引擎只在段级标注、有的只在词级标注。这里集中把结果归一为统一的
+# ``speaker`` 字段，并把段级 speaker 下放到词级，保证下游节点（按句或按词读取）
+# 拿到一致的格式。
+# ---------------------------------------------------------------------------
+_SPEAKER_KEY = "speaker"
+_SPEAKER_ID_KEYS = ("speaker_id", "speakerId", "spk_id")
+
+
+def _rename_speaker_in(obj: dict):
+    """把 obj 上的 speaker_id 等变体重命名为 speaker，返回最终 speaker 值。"""
+    val = obj.get(_SPEAKER_KEY)
+    for alt in _SPEAKER_ID_KEYS:
+        if alt in obj:
+            if val in (None, ""):
+                val = obj[alt]
+            del obj[alt]
+    if val not in (None, ""):
+        obj[_SPEAKER_KEY] = val
+    else:
+        obj.pop(_SPEAKER_KEY, None)
+    return val
+
+
+def normalize_speaker_format(result: dict) -> dict:
+    """统一 ASR 结果中的说话人字段格式（幂等，可重复调用）。
+
+    规则：
+    1. 段 / 词上的 ``speaker_id``（以及 ``speakerId`` / ``spk_id`` / ``spk`` 变体）
+       统一重命名为 ``speaker``。
+    2. 当某 segment 标注了 ``speaker``、而它内部的 word 没有 ``speaker`` 时，
+       把段级 speaker 下放到每个 word，避免下游按词读取时取不到说话人。
+    """
+    if not isinstance(result, dict):
+        return result
+    segments = result.get("segments")
+    if not isinstance(segments, list):
+        return result
+
+    for seg in segments:
+        if not isinstance(seg, dict):
+            continue
+        seg_speaker = _rename_speaker_in(seg)
+        words = seg.get("words")
+        if isinstance(words, list):
+            for w in words:
+                if not isinstance(w, dict):
+                    continue
+                w_speaker = _rename_speaker_in(w)
+                if seg_speaker and not w_speaker:
+                    w[_SPEAKER_KEY] = seg_speaker
+    return result
+
 
 class ASRBase(ABC):
     """Abstract base class for ASR engines.
@@ -143,7 +198,7 @@ class ASRBase(ABC):
         if callback:
             callback(100, "Post-processing complete")
         
-        return result
+        return normalize_speaker_format(result)
 
     def _apply_alignment(
         self,
@@ -388,12 +443,19 @@ class ASRBase(ABC):
                     # 的标点版本替换重建的 text。
                     seg_text = self._restore_punctuation(seg_words, asr_segments, seg_text)
                     
+                    # 保留段级说话人：取该段词中出现最多的 speaker
+                    _spk_counter: dict = {}
+                    for _w in seg_words:
+                        _s = _w.get("speaker")
+                        if _s:
+                            _spk_counter[_s] = _spk_counter.get(_s, 0) + 1
                     merged.append({
                         "id": len(merged) + 1,
                         "start": round(vad_seg.start, 3),
                         "end": round(vad_seg.end, 3),
                         "text": seg_text.strip(),
-                        "words": seg_words
+                        "words": seg_words,
+                        **({"speaker": max(_spk_counter, key=_spk_counter.get)} if _spk_counter else {}),
                     })
             
             # If we managed to produce merged segments, return them
