@@ -10,6 +10,9 @@ const EMPTY_LOCAL: ASRInterfaceConfig = {
   language_param: "language",
   endpoint: "/v1/audio/transcriptions",
   body_type: "form",
+  auth_header: "Authorization",
+  auth_scheme: "Bearer",
+  response_format: "verbose_json",
   api_key: "",
   max_duration: 0,
   word_timestamps: false,
@@ -52,7 +55,7 @@ interface Props {
 
 export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) {
   const [name, setName] = useState("");
-  const [type, setType] = useState<"local" | "sdk">("local");
+  const [type, setType] = useState<"local" | "sdk" | "openai">("local");
   const [desc, setDesc] = useState("");
   const [config, setConfig] = useState<ASRInterfaceConfig>({ ...EMPTY_LOCAL });
   const [saving, setSaving] = useState(false);
@@ -78,9 +81,9 @@ export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) 
     }
   }, [iface]);
 
-  const handleTypeChange = (t: "local" | "sdk") => {
+  const handleTypeChange = (t: "local" | "sdk" | "openai") => {
     setType(t);
-    setConfig(t === "local" ? { ...EMPTY_LOCAL } : { ...EMPTY_SDK });
+    setConfig(t === "sdk" ? { ...EMPTY_SDK } : { ...EMPTY_LOCAL });
     setModelList([]);
     setVoiceList([]);
   };
@@ -219,6 +222,7 @@ export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) 
               >
                 <option value="local">本地 API (HTTP)</option>
                 <option value="sdk">SDK (Python 模块)</option>
+                <option value="openai">OpenAI 兼容 (HTTP)</option>
               </select>
             </div>
           </div>
@@ -273,13 +277,38 @@ export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) 
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">接口端点</label>
                 <input className={cn(inputCls, "w-full")} value={config.endpoint || ""} onChange={(e) => uc("endpoint", e.target.value)} placeholder="/v1/audio/transcriptions" />
               </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">请求格式</label>
-                <select className={cn(inputCls, "w-full appearance-none")} value={config.body_type || "form"} onChange={(e) => uc("body_type", e.target.value)}>
-                  <option value="form">multipart/form-data</option>
-                  <option value="json">application/json</option>
-                </select>
-              </div>
+              {type === "openai" ? (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">响应格式</label>
+                  <select className={cn(inputCls, "w-full appearance-none")} value={config.response_format || "verbose_json"} onChange={(e) => uc("response_format", e.target.value)}>
+                    <option value="verbose_json">verbose_json（含时间戳）</option>
+                    <option value="json">json</option>
+                    <option value="text">text</option>
+                    <option value="srt">srt</option>
+                    <option value="vtt">vtt</option>
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-xs font-medium text-muted-foreground mb-1.5 block">请求格式</label>
+                  <select className={cn(inputCls, "w-full appearance-none")} value={config.body_type || "form"} onChange={(e) => uc("body_type", e.target.value)}>
+                    <option value="form">multipart/form-data</option>
+                    <option value="json">application/json</option>
+                  </select>
+                </div>
+              )}
+              {type === "openai" && (
+                <>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">鉴权头名称</label>
+                    <input className={cn(inputCls, "w-full")} value={config.auth_header || "Authorization"} onChange={(e) => uc("auth_header", e.target.value)} placeholder="Authorization" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">鉴权头前缀</label>
+                    <input className={cn(inputCls, "w-full")} value={config.auth_scheme || "Bearer"} onChange={(e) => uc("auth_scheme", e.target.value)} placeholder="Bearer（留空则不加前缀）" />
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -574,6 +603,11 @@ export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) 
                   {testResult.result.segments.length > 20 && (
                     <p className="text-xs text-muted-foreground">... 还有 {testResult.result.segments.length - 20} 个片段</p>
                   )}
+                </div>
+              )}
+              {(!testResult.result?.segments || testResult.result.segments.length === 0) && testResult.result?.text && (
+                <div className="text-xs text-foreground/80 whitespace-pre-wrap break-words leading-relaxed">
+                  {testResult.result.text}
                 </div>
               )}
             </div>

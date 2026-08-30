@@ -12,7 +12,7 @@ def redis_url() -> str:
 
 def max_lanes() -> int:
     """lane 工作进程上限（显存充足时的最大并发路数）。"""
-    return _int_env("GPU_SERVICE_MAX_LANES", 2)
+    return _int_env("GPU_SERVICE_MAX_LANES", 3)
 
 
 def lane_idle_timeout() -> int:

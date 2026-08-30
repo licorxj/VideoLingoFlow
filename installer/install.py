@@ -390,27 +390,28 @@ def gpu_service_defaults() -> dict[str, str]:
     if detected is None:
         return {
             "GPU_SERVICE_ENABLED": "0",
-            "GPU_SERVICE_MAX_LANES": "1",
+            "GPU_SERVICE_MAX_LANES": "3",
             "GPU_SERVICE_VRAM_HEADROOM_GB": "3.0",
             "GPU_SERVICE_LANE_IDLE_TIMEOUT": "600",
             "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "60",
             "GPU_SERVICE_JOB_TIMEOUT": "3600",
         }
     name, total_gb = detected
+    # 显存余量阈值按 VRAM 自动调整；GPU 任务槽（lane 数）固定初始化为 3
     if total_gb < 8:
-        lanes, headroom = 1, 2.0
+        headroom = 2.0
     elif total_gb < 16:
-        lanes, headroom = 1, 3.0
+        headroom = 3.0
     elif total_gb < 24:
-        lanes, headroom = 2, 4.0
+        headroom = 4.0
     elif total_gb < 48:
-        lanes, headroom = 3, 6.0
+        headroom = 6.0
     else:
-        lanes, headroom = 4, 8.0
-    ok(f"检测到 NVIDIA GPU: {name}（{total_gb:.1f} GB），GPU 服务将使用 {lanes} 条 lane")
+        headroom = 8.0
+    ok(f"检测到 NVIDIA GPU: {name}（{total_gb:.1f} GB），GPU 任务槽初始化为 3 条 lane")
     return {
         "GPU_SERVICE_ENABLED": "1",
-        "GPU_SERVICE_MAX_LANES": str(lanes),
+        "GPU_SERVICE_MAX_LANES": "3",
         "GPU_SERVICE_VRAM_HEADROOM_GB": f"{headroom:.1f}",
         "GPU_SERVICE_LANE_IDLE_TIMEOUT": "600",
         "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "60",

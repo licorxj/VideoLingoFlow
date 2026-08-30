@@ -48,7 +48,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 658
+        "height": 659
       },
       "selected": false,
       "dragging": false
@@ -75,7 +75,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 231
+        "height": 232
       },
       "selected": false,
       "dragging": false
@@ -116,7 +116,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 398
+        "height": 400
       },
       "selected": false,
       "dragging": false
@@ -147,7 +147,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 374
+        "height": 373
       },
       "selected": false,
       "dragging": false
@@ -192,7 +192,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 532
+        "height": 530
       },
       "selected": false,
       "dragging": false
@@ -225,7 +225,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 353
+        "height": 354
       },
       "selected": false,
       "dragging": false
@@ -244,7 +244,7 @@
           "tts_mode": [
             "clone"
           ],
-          "tts_engine": "mossTTS",
+          "tts_engine": "confucius4_tts",
           "clone_source": "per_segment",
           "ref_audio_path": "",
           "ref_audio_role_1": "",
@@ -259,9 +259,9 @@
           "voice_design_role_2_desc": "",
           "voice_design_role_3_desc": "",
           "voice_design_role_4_desc": "",
-          "speed_regenerate": false,
+          "speed_regenerate": true,
           "speed_rounds": 1,
-          "ai_subtitle_reduction": false,
+          "ai_subtitle_reduction": true,
           "ai_rounds": 1,
           "overwrite_generate": true
         },
@@ -288,9 +288,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 586
+        "height": 582
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
@@ -317,7 +317,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 310
+        "height": 309
       },
       "selected": false,
       "dragging": false
@@ -360,7 +360,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 469
+        "height": 466
       },
       "selected": false,
       "dragging": false
@@ -394,7 +394,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 439
+        "height": 433
       },
       "selected": false,
       "dragging": false
@@ -435,7 +435,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 755
+        "height": 760
       },
       "selected": false,
       "dragging": false
@@ -470,7 +470,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 490
+        "height": 484
       },
       "selected": false,
       "dragging": false
@@ -504,7 +504,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 655
+        "height": 653
       },
       "selected": false,
       "dragging": false
@@ -748,6 +748,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-28T09:20:45",
-  "updatedAt": "2026-08-29T14:59:41",
-  "revision": 11
+  "updatedAt": "2026-08-30T07:57:12",
+  "revision": 12
 }

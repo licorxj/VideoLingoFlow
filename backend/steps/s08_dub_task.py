@@ -252,9 +252,60 @@ class S08DubTask(BaseStep):
         return language_code.startswith("zh") or language_code in {"cn", "chinese"}
 
     @staticmethod
-    def _build_segments(entries: List[Dict], task_dir: str = "") -> List[Dict]:
+    def _normalize_speaker(raw) -> object:
+        """归一化 speaker：
+        - None / 空串 / "null" / "None" / 0 → 视为「未标注说话人」，返回 None
+        - 其余（含 "SPEAKER_00" 等字符串标签或非零整数）→ 原样返回，作为映射键
+        """
+        if raw is None:
+            return None
+        if isinstance(raw, str):
+            s = raw.strip()
+            if s in ("", "null", "None", "0"):
+                return None
+            return s
+        if isinstance(raw, (int, float)):
+            if raw == 0:
+                return None
+            return raw
+        return None
+
+    @staticmethod
+    def _check_min_sentence_duration(entries: List[Dict], threshold: float = 0.2) -> None:
+        """执行前单句时长检测：若存在时长小于 threshold 秒的句子，直接抛出错误。
+
+        文本类输入（start/end 为 None）无法计算时长，跳过不报。
+        """
+        bad = []
+        for idx, entry in enumerate(entries, start=1):
+            start = entry.get("start")
+            end = entry.get("end")
+            if start is None or end is None:
+                continue
+            try:
+                duration = float(end) - float(start)
+            except (TypeError, ValueError):
+                continue
+            if duration < threshold:
+                text = str(entry.get("text", "")).strip().replace("\n", " ")
+                text_excerpt = (text[:30] + "…") if len(text) > 31 else text
+                bad.append((idx, round(duration, 3), text_excerpt))
+        if bad:
+            lines = "；".join(
+                f"句子#{sid} 时长={dur}s" + (f"（文本：{t}）" if t else "")
+                for sid, dur, t in bad
+            )
+            raise RuntimeError(
+                f"检测到 {len(bad)} 条单句时长小于 {threshold} 秒，无法正常配音：{lines}"
+            )
+
+    @classmethod
+    def _build_segments(cls, entries: List[Dict], task_dir: str = "") -> List[Dict]:
         """Build TTS segments from entries.
-        
+
+        将上游 speaker（可能为 "SPEAKER_00" 等字符串标签，或整数序号）稳定映射为
+        整数 character_id：按首次出现顺序为每个不同说话人分配 0,1,2... 序号。
+
         Args:
             entries: List of sentence entries with timestamps
             task_dir: Task directory for creating dub_temp folder
@@ -263,7 +314,14 @@ class S08DubTask(BaseStep):
         if task_dir:
             dub_temp_dir = os.path.join(task_dir, "cache", "dub_temp")
             os.makedirs(dub_temp_dir, exist_ok=True)
-        
+
+        # 建立 说话人标签 -> 整数 character_id 的稳定映射（按出现顺序）
+        speaker_map: Dict[object, int] = {}
+        for entry in entries:
+            spk = cls._normalize_speaker(entry.get("speaker", 0))
+            if spk is not None and spk not in speaker_map:
+                speaker_map[spk] = len(speaker_map)
+
         segments = []
         for index, entry in enumerate(entries):
             original_text = entry.get("text", "")
@@ -286,6 +344,11 @@ class S08DubTask(BaseStep):
             start = round(entry["start"], 4) if has_ts else None
             end = round(entry["end"], 4) if has_ts else None
             duration = round(entry["end"] - entry["start"], 4) if has_ts else None
+
+            # speaker -> character_id：未标注说话人时用 0（单一角色）兜底
+            spk = cls._normalize_speaker(entry.get("speaker", 0))
+            character_id = speaker_map[spk] if spk is not None else 0
+
             segments.append({
                 "index": index,
                 "start": start,
@@ -296,8 +359,8 @@ class S08DubTask(BaseStep):
                 "overlap_after": round(abs(raw_gap), 4) if raw_gap < 0 else 0.0,
                 "gap_after": round(gap, 4),
                 "speed_ratio": 1.0,
-                "character_id": entry.get("speaker", 0),
-                "read_character_id": entry.get("speaker", 0),
+                "character_id": character_id,
+                "read_character_id": character_id,
                 "character_voice_desc": "",
                 "text": original_text,
                 "read_text": read_text,
@@ -623,6 +686,9 @@ class S08DubTask(BaseStep):
 
         if callback:
             callback(25, f"解析到 {len(entries)} 条数据（{'双语' if is_bilingual else '单语'}）")
+
+        # 执行前单句时长检测：任意单句时长小于 0.2 秒直接报错
+        self._check_min_sentence_duration(entries, threshold=0.2)
 
         node_cfg = getattr(self, "_node_config", {}) or {}
         read_language = self._resolve_read_language(task_dir)

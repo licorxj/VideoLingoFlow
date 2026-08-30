@@ -25,7 +25,7 @@
   },
   "secondary": {
     "fontName": "Microsoft YaHei",
-    "fontSize": 60,
+    "fontSize": 55,
     "primaryColour": "&H00FFFFFF",
     "secondaryColour": "&H96FFFFFF",
     "outlineColour": "&H00000000",

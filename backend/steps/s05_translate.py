@@ -299,8 +299,22 @@ class S05Translate(BaseStep):
                     entry["text"] = entry.get("origin") or entry.get("sentence") or ""
                 if "id" not in entry:
                     entry["id"] = idx
+                # 统一补齐句子级 speaker（上游 speaker 多只存于 words[].speaker）
+                entry["speaker"] = S05Translate._speaker_of(entry)
                 normalized.append(entry)
         return normalized
+
+    @staticmethod
+    def _speaker_of(item: Dict) -> str:
+        """优先取句子级 speaker，否则取 words 中首个非空词级 speaker。"""
+        sp = item.get("speaker")
+        if sp not in (None, "", "null", "None"):
+            return str(sp)
+        for w in (item.get("words") or []):
+            ws = w.get("speaker") if isinstance(w, dict) else None
+            if ws not in (None, "", "null", "None"):
+                return str(ws)
+        return ""
 
     # ------------------------------------------------------------------
     # Batching
@@ -719,6 +733,10 @@ class S05Translate(BaseStep):
             sid = s["id"]
             # Base item without word-level timestamps
             base_item = {k: v for k, v in s.items() if k != "words"}
+            # 保留说话人信息：归一化阶段已统一补齐句子级 speaker
+            spk = s.get("speaker") or self._speaker_of(s)
+            if spk:
+                base_item["speaker"] = spk
 
             # Find direct translation
             direct_entry = all_faithful.get(sid, {})

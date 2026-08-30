@@ -9,7 +9,7 @@ set "GPU_SERVICE_AUTO_CONFIG=1"
 rem Valid enabled values: 1, true, yes, on. Auto configuration enables only detected NVIDIA CUDA GPUs.
 set "GPU_SERVICE_ENABLED=0"
 rem Automatic values scale with VRAM. In manual mode this must be an integer >= 1.
-set "GPU_SERVICE_MAX_LANES=1"
+set "GPU_SERVICE_MAX_LANES=3"
 rem Free VRAM protection threshold in GB. In manual mode this must be >= 0.
 set "GPU_SERVICE_VRAM_HEADROOM_GB=1.0"
 rem Idle lane timeout and per-task timeout in seconds.

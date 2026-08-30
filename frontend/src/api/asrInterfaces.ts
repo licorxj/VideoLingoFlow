@@ -7,6 +7,10 @@ export interface ASRInterfaceConfig {
   language_param?: string;
   endpoint?: string;
   body_type?: string;
+  auth_header?: string;
+  auth_scheme?: string;
+  response_format?: string;
+  base_url?: string;
   sdk_package?: string;
   sdk_function?: string;
   sdk_module?: string;
@@ -41,7 +45,7 @@ export interface ASRInterfaceConfig {
 export interface ASRInterface {
   id: string;
   name: string;
-  type: "local" | "sdk";
+  type: "local" | "sdk" | "openai";
   builtin: boolean;
   enabled: boolean;
   description: string;
