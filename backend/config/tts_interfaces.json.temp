@@ -355,7 +355,7 @@
         "voice_list_key": "",
         "model_options": [],
         "sdk_extra_args": {
-          "api_key": "tp-c7xpz4yemvui363ld1b8khreu7fecig266o9qe9rpwumagr2",
+          "api_key": "",
           "api_url": "https://api.xiaomimimo.com/v1"
         },
         "custom_params": [],
