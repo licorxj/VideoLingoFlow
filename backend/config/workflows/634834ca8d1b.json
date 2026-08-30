@@ -343,27 +343,30 @@
           "ai_rounds": 1,
           "overwrite_generate": true
         },
-        "status": "running",
+        "status": "completed",
         "disableExecute": false,
-        "progress": 48,
-        "message": "",
-        "outputs": {},
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "[TTS] 引擎能力验证通过: confucius4_tts 支持 clone",
-          "[TTS] 合成第 11 段:",
-          "  - 文本: 当然。",
-          "  - 模式: clone",
-          "  - 引擎: confucius4_tts",
-          "  - 参考音频: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\refe\\0011.wav",
-          "  - 参考文本: Sure.",
-          "  - 音色: (默认)"
+          "[S09] 分析变速倍数",
+          "  - 需要变速: 18 段",
+          "  - 超出最大变速(1.35x): 3 段",
+          "[S09] 最终溢出段数: 3",
+          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\dub_task_node_1_1781709944783.json",
+          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\dub_task_node_1_1781709944783.csv",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 472
+        "height": 587
       },
       "selected": false,
       "dragging": false
@@ -435,9 +438,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 740
+        "height": 760
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -547,9 +550,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 478
+        "height": 473
       },
-      "selected": false,
+      "selected": true,
       "dragging": false
     },
     {
@@ -1897,6 +1900,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-29T23:26:31",
-  "updatedAt": "2026-08-30T11:11:11",
-  "revision": 37
+  "updatedAt": "2026-08-30T11:23:00",
+  "revision": 38
 }
