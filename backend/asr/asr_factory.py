@@ -98,14 +98,18 @@ def _resolve_max_duration(engine_name, interface_id, explicit, extra_kwargs):
 def _run_asr_single(engine_name, input_path, output_path, callback,
                     model, language, extra_kwargs):
     """单文件转录（GPU 服务或进程内），不做切分。"""
+    # 云端 ASR 引擎（MiMo / ElevenLabs 等，CLOUD=True）不占本地 GPU，跳过 GPU 服务
+    # lane 队列，避免与本地模型争用 lane、在显存不足时无 lane 可派发而长时间排队。
     try:
-        from backend.gpu_service import client as gpu_client
-        if gpu_client.gpu_service_enabled():
-            return gpu_client.run_asr(
-                engine_name, input_path, output_path,
-                model=model, language=language,
-                engine_params=extra_kwargs, callback=callback,
-            )
+        engine = get_asr_engine(engine_name)
+        if not getattr(engine, "CLOUD", False):
+            from backend.gpu_service import client as gpu_client
+            if gpu_client.gpu_service_enabled():
+                return gpu_client.run_asr(
+                    engine_name, input_path, output_path,
+                    model=model, language=language,
+                    engine_params=extra_kwargs, callback=callback,
+                )
     except Exception as exc:
         from backend.gpu_service.jobs import GpuServiceUnavailableError
         if not isinstance(exc, GpuServiceUnavailableError):

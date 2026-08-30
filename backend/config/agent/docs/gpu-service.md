@@ -67,7 +67,7 @@ python backend/manager.py
 |---|---|---|
 | `GPU_SERVICE_ENABLED` | `0` | 是否启用服务层 |
 | `GPU_SERVICE_REDIS_URL` | `redis://127.0.0.1:6379/2`（回退 `CONTROL_PLANE_CELERY_BROKER_URL`） | Redis 地址（独立 DB 2） |
-| `GPU_SERVICE_MAX_LANES` | `2` | lane 进程上限（显存充足时最大并发路数） |
+| `GPU_SERVICE_MAX_LANES` | `3` | lane 进程上限（显存充足时最大并发路数） |
 | `GPU_SERVICE_LANE_IDLE_TIMEOUT` | `600` | lane 空闲（秒）超时退出，释放显存 |
 | `GPU_SERVICE_PRESSURE_IDLE_TIMEOUT` | `60` | 显存紧张（free < 2×headroom）时空闲超时，显著更短 |
 | `GPU_SERVICE_VRAM_HEADROOM_GB` | `3.0` | 剩余显存低于此值不再分配新 lane（防 OOM 排队） |

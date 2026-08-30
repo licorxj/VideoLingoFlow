@@ -121,6 +121,8 @@ class ElevenLabsASRLocal(ASRBase):
     Requires API key (env ELEVENLABS_API_KEY or passed via config).
     """
 
+    CLOUD = True  # 云端 API，不占本地 GPU，ASR 节点不应进入 GPU 服务 lane 队列
+
     def transcribe(
         self,
         input_path: str,
@@ -358,3 +360,23 @@ class ElevenLabsASRLocal(ASRBase):
             "text": full_text,
             "segments": output_segments,
         }
+
+
+# ------------------------------------------------------------------
+# 模块级 transcribe 包装（供 SDK 测试路径 import + getattr 调用）
+# ------------------------------------------------------------------
+
+def transcribe(
+    input_path: str,
+    output_path: Optional[str] = None,
+    callback: Optional[Callable] = None,
+    **kwargs,
+) -> dict:
+    """模块级 transcribe 包装，实例化引擎并转发调用。
+
+    测试接口 (/api/asr-interfaces/{id}/test) 通过 sdk_module 导入本模块、
+    并查找名为 ``transcribe`` 的模块级函数；因此这里提供一层薄包装，
+    与 asr_moss / asr_mimo 保持一致。
+    """
+    engine = ElevenLabsASRLocal()
+    return engine.transcribe(input_path, output_path, callback, **kwargs)

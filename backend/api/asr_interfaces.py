@@ -216,6 +216,7 @@ def _run_asr_sdk(cfg, audio_path, output_path, language, model):
         elif k in sig.parameters or k in (
             "compute_type", "word_timestamps", "batch_size",
             "align_model_name", "vad_options", "asr_options",
+            "api_key", "base_url",
         ):
             kwargs[k] = v
 
@@ -230,23 +231,34 @@ def _run_asr_sdk(cfg, audio_path, output_path, language, model):
         if val is not None and key in sig.parameters:
             kwargs[key] = val
 
+    # Forward auth / endpoint params for cloud SDK engines (MiMo, ElevenLabs etc.)
+    # Priority: api_key > sdk_api_key (different config fields per type)
+    if "api_key" not in kwargs:
+        ak = cfg.get("api_key") or cfg.get("sdk_api_key")
+        if ak:
+            kwargs["api_key"] = ak
+    if "base_url" not in kwargs:
+        bu = cfg.get("base_url")
+        if bu:
+            kwargs["base_url"] = bu
+
     if asyncio.iscoroutinefunction(func):
         return asyncio.run(func(**kwargs))
     else:
         return func(**kwargs)
 
 
-def _run_asr_local(cfg, audio_path, output_path, language, model):
-    """Run ASR via local HTTP API."""
+def _run_asr_local(iface_id, audio_path, output_path, language, model):
+    """Run ASR via local HTTP API (user-defined OpenAI-compatible / local server interfaces)."""
     mgr = get_asr_interface_manager()
-    local_id = None
-    for iface in mgr.list_all():
-        if iface.get("type") == "local":
-            local_id = iface["id"]
-            break
-    if not local_id:
-        raise ValueError("No local ASR interface found")
-    params = mgr.build_request_params(local_id, audio_path, output_path, language, model)
+    iface = mgr.get(iface_id)
+    if not iface:
+        raise ValueError(f"Interface {iface_id} not found")
+    cfg = iface.get("config", {})
+    # 未显式传 model/language 时回退到接口配置默认值（OpenAI 兼容）
+    model = model or cfg.get("model")
+    language = language or cfg.get("language")
+    params = mgr.build_request_params(iface_id, audio_path, output_path, language, model)
 
     timeout = params.get("timeout", 300)
 
@@ -286,6 +298,34 @@ def _run_asr_local(cfg, audio_path, output_path, language, model):
     return result
 
 
+def _run_asr_engine(iface_id, audio_path, output_path, language, model):
+    """Run ASR test via the ASR factory by engine name (builtin local/cloud engines)."""
+    from backend.asr.asr_factory import run_asr
+    mgr = get_asr_interface_manager()
+    iface = mgr.get(iface_id) or {}
+    cfg = iface.get("config", {})
+    # 透传接口配置中的鉴权 / 服务地址等参数给引擎（云引擎依赖 api_key / base_url）
+    extra = {}
+    api_key = cfg.get("api_key") or cfg.get("sdk_api_key")
+    if api_key:
+        extra["api_key"] = api_key
+    base_url = cfg.get("base_url")
+    if base_url:
+        extra["base_url"] = base_url
+    return run_asr(
+        audio_path, output_path,
+        engine_name=iface_id,
+        model=model, language=language,
+        **extra,
+    )
+
+
+def _run_asr_openai(cfg, audio_path, output_path, language, model):
+    """Run ASR test via OpenAI-compatible HTTP endpoint (abstraction layer)."""
+    from backend.asr.openai_asr import run_openai_asr
+    return run_openai_asr(cfg, audio_path, output_path, language=language, model=model)
+
+
 def _run_asr_test(iface_id, audio_path, output_path, language, model):
     """Run ASR test for a given interface."""
     mgr = get_asr_interface_manager()
@@ -296,10 +336,27 @@ def _run_asr_test(iface_id, audio_path, output_path, language, model):
     cfg = iface.get("config", {})
     itype = iface.get("type", "local")
 
-    if itype == "sdk":
-        return _run_asr_sdk(cfg, audio_path, output_path, language, model)
+    if itype == "openai":
+        return _run_asr_openai(cfg, audio_path, output_path, language, model)
+
+    # 内置引擎（builtin=True，接口 id 与 asr_factory 引擎名一致）统一走工厂，
+    # 与真实工作流执行路径一致。其 transcribe 多为类方法，
+    # import_module + getattr 无法定位模块级函数，SDK 路径必然失败。
+    # 用户自定义的 sdk/cloud 接口（非 builtin）才尝试工厂后回退 SDK。
+    is_builtin = iface.get("builtin", False)
+    if itype in ("sdk", "cloud"):
+        from backend.asr.asr_factory import list_asr_engines
+        if iface_id in list_asr_engines():
+            return _run_asr_engine(iface_id, audio_path, output_path, language, model)
+        if not is_builtin:
+            # 用户自定义接口：工厂无此引擎名，回退 SDK import
+            return _run_asr_sdk(cfg, audio_path, output_path, language, model)
+        raise ValueError(
+            f"内置引擎 '{iface_id}' 未在 ASR 工厂注册，无法执行测试。"
+            f" 已注册引擎: {list_asr_engines()}"
+        )
     else:
-        return _run_asr_local(cfg, audio_path, output_path, language, model)
+        return _run_asr_local(iface_id, audio_path, output_path, language, model)
 
 
 @router.post("/{iface_id}/test")

@@ -7,6 +7,9 @@ import tempfile
 
 logger = logging.getLogger(__name__)
 
+# 云端 API，不占本地 GPU（与 ASR 的 CLOUD 标记一致）
+CLOUD = True
+
 # Default configuration
 CONFIG = {
     "api_url": "https://api.minimaxi.com/v1/t2a_v2",

@@ -1,17 +1,17 @@
 """ASR 结果校验节点。
 
 功能：
-1. 读取上游传入的 ASR JSON（whisper / 任意 ASR 引擎输出）。
+1. 读取「连线接入」的输入 ASR JSON 文件路径（step_inputs['json']），不做任何
+   文件名兜底匹配。
 2. 两级一致性校验（均先「去标点、去空白、转小写」再顺序匹配）：
-   - 第一级：text 与「压平后的 segments」顺序一致；
-   - 第二级：压平后的 segments 与「压平后的 words」顺序一致。
-3. 校验通过：原样透传输出 ASR JSON（文件名带节点 id 后缀）；
+   - 第一级：text 与「压平后的 segments」完全一致；
+   - 第二级：逐段校验 segment 文本与 words 完全一致。
+3. 校验通过：直接把「输入文件路径」作为本节点输出（不新建文件、不改写内容）；
    校验不通过：抛出 ValueError，并在错误信息中指明偏离位置与上下文。
 """
 import os
 import re
 import json
-import glob
 
 from backend.steps.base_step import BaseStep
 
@@ -65,6 +65,18 @@ class S_ASRResultValidate(BaseStep):
     # 主校验
     # ------------------------------------------------------------------ #
     def _validate(self, asr, callback):
+        """按输入类型分派校验：dict 视为 ASR 对象，list 视为句子列表。"""
+        if isinstance(asr, dict):
+            self._validate_asr_object(asr, callback)
+        elif isinstance(asr, list):
+            self._validate_sentence_list(asr, callback)
+        else:
+            raise ValueError(
+                "ASR 校验未通过：输入类型无法识别"
+                f"（期望 ASR 对象 dict 或句子列表 list，实际为 {type(asr).__name__}）"
+            )
+
+    def _validate_asr_object(self, asr, callback):
         if not isinstance(asr, dict):
             raise ValueError("ASR 校验未通过：输入不是合法的 JSON 对象（dict）")
 
@@ -118,68 +130,117 @@ class S_ASRResultValidate(BaseStep):
                     f"  · 该段 words: {[w.get('word') for w in (seg.get('words') or [])]!r}"
                 )
 
+    def _validate_sentence_list(self, sentences, callback):
+        """兼容「句子分割」产出的句子列表：[{id, text, words:[...], ...}, ...]。
+
+        校验：
+          - 列表非空；
+          - 每项为 dict；
+          - 每句的 text 非空；
+          - 若带 words，句子 text 必须（归一化后）完整、且仅由其 words 构成
+            （与 ASR 对象的「segment ↔ words」同级一致性）。
+        """
+        if not sentences:
+            raise ValueError("ASR 校验未通过（句子列表）：句子列表为空")
+
+        if callback:
+            callback(30, f"校验句子列表（共 {len(sentences)} 句）...")
+
+        for idx, s in enumerate(sentences):
+            sid = (s.get("id", idx + 1) if isinstance(s, dict) else idx + 1)
+            if not isinstance(s, dict):
+                raise ValueError(
+                    f"ASR 校验未通过（句子列表）：第 {idx + 1} 项不是对象（dict），"
+                    f"而是 {type(s).__name__}"
+                )
+            text = s.get("text")
+            if text is None or str(text).strip() == "":
+                raise ValueError(
+                    f"ASR 校验未通过（句子列表）：第 {idx + 1} 句（id={sid}）的 text 为空"
+                )
+
+            words = s.get("words") or []
+            if words:
+                seg_norm = self._norm(text)
+                word_norm = self._norm(self._flatten_words([s]))
+                if seg_norm != word_norm:
+                    # 定位首个差异字符下标（两副本通用，不依赖特定辅助方法）
+                    n = min(len(seg_norm), len(word_norm))
+                    k = -1
+                    for _i in range(n):
+                        if seg_norm[_i] != word_norm[_i]:
+                            k = _i
+                            break
+                    if k == -1 and len(seg_norm) != len(word_norm):
+                        k = n
+                    raise ValueError(
+                        f"ASR 校验未通过（句子列表）：第 {idx + 1} 句（id={sid}）"
+                        f"的文本与 words 不完全一致"
+                        f"（去标点/空白/大小写后）。\n"
+                        f"  · 句子文本长度 {len(seg_norm)}，words 压平长度 {len(word_norm)}。\n"
+                        f"  · 句子文本(归一化): …{self._snippet(seg_norm, k if k >= 0 else 0)}…\n"
+                        f"  · words 压平(归一化): …{self._snippet(word_norm, k if k >= 0 else 0)}…\n"
+                        f"  · 该句原文: {text!r}\n"
+                        f"  · 该句 words: {[w.get('word') for w in words]!r}"
+                    )
+
+        if callback:
+            callback(60, "句子列表校验通过")
+
     # ------------------------------------------------------------------ #
     # 输入读取 / 运行
     # ------------------------------------------------------------------ #
-    def _load_asr(self, task_dir):
+    def _input_path(self):
+        """忠实取回连线接入的输入文件路径（step_inputs['json']）。"""
         raw = (getattr(self, "_step_inputs", {}) or {}).get("json")
         if isinstance(raw, list):
             raw = raw[0] if raw else None
-        path = raw if isinstance(raw, str) else None
-        if path and os.path.isfile(path):
-            with open(path, "r", encoding="utf-8") as f:
-                return json.load(f), path
-        # 兜底：在 cache 中查找 asr_result*.json
-        matches = sorted(glob.glob(os.path.join(task_dir, "cache", "asr_result*.json")),
-                         key=os.path.getmtime, reverse=True)
-        for m in matches:
-            try:
-                with open(m, "r", encoding="utf-8") as f:
-                    return json.load(f), m
-            except Exception:
-                continue
-        raise ValueError(
-            "ASR 校验未通过：无法读取 ASR JSON 输入"
-            "（step_inputs['json'] 为空且 cache 中无 asr_result*.json）"
-        )
+        return raw if isinstance(raw, str) else None
+
+    def _resolve_input_path(self, task_dir):
+        """将输入路径解析为绝对路径：相对路径以 task_dir 为基准，与引擎其它节点一致。"""
+        path = self._input_path()
+        if not path:
+            return None
+        return path if os.path.isabs(path) else os.path.join(task_dir, path)
+
+    def _load_asr(self, task_dir):
+        path = self._input_path()
+        if not path:
+            raise ValueError(
+                "ASR 校验未通过：未接入有效的 ASR JSON 输入文件（step_inputs['json'] 为空）"
+            )
+        abs_path = self._resolve_input_path(task_dir)
+        if not os.path.isfile(abs_path):
+            raise ValueError(
+                "ASR 校验未通过：未接入有效的 ASR JSON 输入文件"
+                f"（step_inputs['json'] 指向的文件不存在：{abs_path}）"
+            )
+        with open(abs_path, "r", encoding="utf-8") as f:
+            return json.load(f), path
 
     def check_artifact(self, task_dir):
-        node_id = getattr(self, "_node_id", "")
-        name = f"asr_result_{node_id}.json" if node_id else "asr_result.json"
-        return os.path.isfile(os.path.join(task_dir, "cache", name))
+        # 本节点不生成新文件，产物即「接入的输入文件」本身，存在即可复跑/跳过。
+        path = self._resolve_input_path(task_dir)
+        return bool(path) and os.path.isfile(path)
 
     def validate_inputs(self, task_dir):
-        raw = (getattr(self, "_step_inputs", {}) or {}).get("json")
-        if isinstance(raw, list):
-            raw = raw[0] if raw else None
-        path = raw if isinstance(raw, str) else None
-        if path and os.path.isfile(path):
-            return True
-        # 兜底：cache 中存在 asr_result*.json
-        if find_artifact(os.path.join(task_dir, "cache"), "asr_result"):
-            return True
-        return False
+        path = self._resolve_input_path(task_dir)
+        return bool(path) and os.path.isfile(path)
 
     def run(self, task_dir, callback=None, cancel_callback=None):
-        node_id = getattr(self, "_node_id", "")
-        cache_dir = os.path.join(task_dir, "cache")
-        os.makedirs(cache_dir, exist_ok=True)
-
+        src = self._input_path()
         asr_data, src = self._load_asr(task_dir)
         if callback:
             callback(10, f"读取 ASR JSON：{os.path.basename(src)}")
         self._validate(asr_data, callback)
 
-        out_name = f"asr_result_{node_id}.json" if node_id else "asr_result.json"
-        out_path = os.path.join(cache_dir, out_name)
-        with open(out_path, "w", encoding="utf-8") as f:
-            json.dump(asr_data, f, ensure_ascii=False, indent=2)
-
-        self.artifacts = [os.path.join("cache", out_name)]
+        # 校验通过：直接把输入文件路径作为输出，不新建文件、不改写内容。
+        self.artifacts = [src]
         if callback:
-            callback(100, "ASR 结果校验通过，已透传输出")
+            callback(100, "ASR 结果校验通过，已透传输入文件")
         return {
             "artifacts": self.artifacts,
-            "outputs": {"json": os.path.join("cache", out_name)},
+            "outputs": {"json": src},
             "valid": True,
         }

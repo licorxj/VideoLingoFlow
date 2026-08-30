@@ -315,7 +315,15 @@ export default function Community() {
       setList(null);
       fetchList(1, false);
     } catch (e: any) {
-      alert(e?.message || "删除失败", "error");
+      const msg = String(e?.message || "删除失败");
+      // 管理员令牌失效（常见于社区 Worker 重新部署 / 更换 ADMIN_TOKEN 后，
+      // 本地 localStorage 仍缓存旧令牌，页面显示「管理员」但实际已不匹配）。
+      if (adminToken && /admin token/i.test(msg)) {
+        handleAdminChange(""); // 清除失效的本地管理员状态
+        alert("管理密钥已失效，已清除本地管理员状态。请重新在「设置身份」中登录管理员后再删除。", "error");
+      } else {
+        alert(msg, "error");
+      }
     } finally {
       setDeleting(false);
     }

@@ -314,6 +314,7 @@ class FunASRNanoLocal(ASRBase):
         vad_max_segment_time: int = 30000,
         batch_size: int = 1,
         sentence_timestamp: bool = True,
+        device: Optional[str] = None,
         **kwargs,
     ) -> dict:
         """Transcribe audio/video via FunASR Nano.
@@ -339,7 +340,19 @@ class FunASRNanoLocal(ASRBase):
         if callback:
             callback(5, "Preparing FunASR Nano...")
 
-        device = "cuda" if torch.cuda.is_available() else "cpu"
+        # 设备选择：显式 device > lane 进程广播的 CUDA 可用性 > 自动检测
+        # GPU lane 子进程在启动时预热 CUDA 并广播 VIDEOLINGO_LANE_CUDA=1，
+        # 避免某些环境下 torch.cuda.is_available() 在推理中途返回 False 导致静默回退 CPU。
+        lane_cuda = os.environ.get("VIDEOLINGO_LANE_CUDA") == "1"
+        if device is None:
+            device = "cuda" if (lane_cuda or torch.cuda.is_available()) else "cpu"
+        device = device.lower()
+        if device == "cuda" and not torch.cuda.is_available() and not lane_cuda:
+            print("[FunASRNano] WARNING: device='cuda' but torch.cuda.is_available()=False, "
+                  "falling back to cpu", flush=True)
+            device = "cpu"
+        print(f"[FunASRNano] device resolved: {device} "
+              f"(torch.cuda.is_available={torch.cuda.is_available()}, lane_cuda={lane_cuda})", flush=True)
 
         # --- Auto-select model based on language ---
         default_model = model or DEFAULT_MODEL

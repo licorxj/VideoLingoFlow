@@ -66,13 +66,12 @@ class S03SentenceSplit(BaseStep):
     # ── helpers ──────────────────────────────────────────────────────
 
     def _get_param(self, key: str, default=None):
-        """Read param from node config first, then global config."""
+        """只读取当前节点卡片上的设置，不再回退到全局配置。"""
         node_cfg = getattr(self, "_node_config", {}) or {}
         val = node_cfg.get(key)
-        if val is not None and val != "":
-            return val
-        val = config.get(f"general.{key}")
-        return val if val is not None else default
+        if val is None or val == "":
+            return default
+        return val
 
     def _get_bool_param(self, key: str, default: bool = False) -> bool:
         """Read a boolean param, tolerating string values like "true"/"false"."""
@@ -1605,7 +1604,7 @@ Return ONLY the JSON array, no explanation.""".format(
         if callback:
             callback(5, "Loading ASR results...")
 
-        # Load params: node config first, then config.yaml
+        # 只从当前节点卡片读取参数，不再回退到全局 config.yaml
         max_length = int(self._get_param("max_sentence_length", 30))
         use_llm = self._get_bool_param("use_llm_split", True)
         split_sentence_ends = self._get_param("split_sentence_ends", None)
@@ -1629,10 +1628,10 @@ Return ONLY the JSON array, no explanation.""".format(
         merge_max_gap = float(self._get_param("merge_max_gap", 0.5))
         pause_threshold = float(self._get_param("pause_split_threshold", 1.0))
         split_on_speaker = self._get_bool_param("split_on_speaker", False)
-        # 是否执行各操作的勾选开关（默认开启，兼容旧工作流缺省配置）
-        merge_short_enabled = self._get_bool_param("merge_short_enabled", False)
-        merge_gap_enabled = self._get_bool_param("merge_gap_enabled", False)
-        pause_split_enabled = self._get_bool_param("pause_split_enabled", False)
+        # 是否执行各操作的勾选开关（与内置节点默认配置保持一致）
+        merge_short_enabled = self._get_bool_param("merge_short_enabled", True)
+        merge_gap_enabled = self._get_bool_param("merge_gap_enabled", True)
+        pause_split_enabled = self._get_bool_param("pause_split_enabled", True)
         if not pause_split_enabled:
             pause_threshold = 0  # 关闭停顿断句（含最终合并的间隔限制）
 

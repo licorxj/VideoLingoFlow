@@ -164,7 +164,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 401
+        "height": 399
       },
       "selected": false,
       "dragging": false
@@ -196,7 +196,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 236
+        "height": 237
       },
       "selected": false,
       "dragging": false
@@ -228,7 +228,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 477
+        "height": 428
       },
       "selected": false,
       "dragging": false
@@ -317,7 +317,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 223
+        "height": 224
       },
       "selected": false,
       "dragging": false
@@ -354,7 +354,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 520
+        "height": 521
       },
       "selected": false,
       "dragging": false
@@ -392,7 +392,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 554
+        "height": 553
       },
       "selected": false,
       "dragging": false
@@ -466,7 +466,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 208
+        "height": 209
       },
       "selected": false,
       "dragging": false
@@ -503,7 +503,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 474
+        "height": 475
       },
       "selected": false,
       "dragging": false
@@ -545,7 +545,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 528
+        "height": 527
       },
       "selected": false,
       "dragging": false
@@ -577,7 +577,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 261
+        "height": 260
       },
       "selected": false,
       "dragging": false
@@ -612,7 +612,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 299
+        "height": 301
       },
       "selected": false,
       "dragging": false
@@ -652,7 +652,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 369
+        "height": 370
       },
       "selected": false,
       "dragging": false
@@ -700,7 +700,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 748
+        "height": 747
       },
       "selected": false,
       "dragging": false
@@ -737,7 +737,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 474
+        "height": 475
       },
       "selected": false,
       "dragging": false
@@ -769,7 +769,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 172
+        "height": 173
       },
       "selected": false,
       "dragging": false
@@ -801,7 +801,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 210
+        "height": 211
       },
       "selected": false,
       "dragging": false
@@ -869,7 +869,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 435
+        "height": 433
       },
       "selected": false,
       "dragging": false
@@ -903,7 +903,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 435
+        "height": 433
       },
       "selected": false,
       "dragging": false
@@ -937,7 +937,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 486
+        "height": 484
       },
       "selected": false,
       "dragging": false
@@ -971,7 +971,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 492
+        "height": 491
       },
       "selected": false,
       "dragging": false
@@ -988,7 +988,7 @@
         "label": "句子分割",
         "config": {
           "processing_language": "from_input",
-          "max_sentence_length": "18",
+          "max_sentence_length": "15",
           "use_llm_split": true,
           "split_sentence_ends": true,
           "split_clause_breaks": true,
@@ -1013,7 +1013,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 670
+        "height": 672
       },
       "selected": false,
       "dragging": false
@@ -1067,7 +1067,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 576
+        "height": 575
       },
       "selected": false,
       "dragging": false
@@ -1119,7 +1119,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 551
+        "height": 552
       },
       "selected": false,
       "dragging": false
@@ -1151,7 +1151,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 351
+        "height": 353
       },
       "selected": false,
       "dragging": false
@@ -1743,6 +1743,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-27T23:24:53",
-  "updatedAt": "2026-08-28T00:00:44",
-  "revision": 5
+  "updatedAt": "2026-08-30T08:01:03",
+  "revision": 7
 }

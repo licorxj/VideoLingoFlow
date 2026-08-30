@@ -128,6 +128,20 @@ def main() -> int:
     rc = jobs.get_redis()
     idle_timeout = config.lane_idle_timeout()
 
+    # 预热 CUDA 检测：在子进程启动早期 import torch 并初始化 CUDA 运行时，
+    # 广播本 lane 进程的 GPU 可用性，供引擎（如 FunASR Nano）可靠选择 cuda 而非静默回退 CPU。
+    try:
+        import torch
+        if torch.cuda.is_available():
+            # 触发一次设备初始化，避免推理中途首次调用 CUDA 的时序问题
+            torch.cuda.init()
+            os.environ["VIDEOLINGO_LANE_CUDA"] = "1"
+            print(f"[GPU-lane {lane_id}] CUDA available: {torch.cuda.get_device_name(0)}", flush=True)
+        else:
+            print(f"[GPU-lane {lane_id}] CUDA not available, local engines will use CPU", flush=True)
+    except Exception as e:
+        print(f"[GPU-lane {lane_id}] CUDA check failed: {e}", flush=True)
+
     def _shutdown(signum, frame):
         print(f"[GPU-lane {lane_id}] signal {signum}, exit", flush=True)
         sys.exit(0)

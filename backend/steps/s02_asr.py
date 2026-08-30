@@ -340,7 +340,14 @@ def _load_default_interface_config(engine_id: str) -> Dict[str, Any]:
         return {}
     for iface in data.get("interfaces", []):
         if iface.get("id") == engine_id:
-            return iface.get("config", {})
+            cfg = dict(iface.get("config", {}))
+            # 兼容接口配置把 key 存在 sdk_api_key 字段（部分云引擎 UI 字段名），
+            # 统一归一为 api_key 供引擎 transcribe 接收；与测试路径逻辑保持一致。
+            if not cfg.get("api_key"):
+                sdk_key = cfg.get("sdk_api_key")
+                if sdk_key:
+                    cfg["api_key"] = sdk_key
+            return cfg
     return {}
 
 

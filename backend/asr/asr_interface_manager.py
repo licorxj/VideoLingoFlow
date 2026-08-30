@@ -116,6 +116,11 @@ class ASRInterfaceManager:
 
         if itype == "sdk":
             return self._build_sdk_params(cfg, audio_path, output_path, language, model)
+        elif itype == "cloud":
+            # Cloud engines use the ASR factory directly; return minimal params for reference
+            return self._build_local_params(cfg, audio_path, output_path, language, model)
+        elif itype == "openai":
+            return self._build_openai_params(cfg, audio_path, output_path, language, model)
         else:
             return self._build_local_params(cfg, audio_path, output_path, language, model)
 
@@ -158,6 +163,22 @@ class ASRInterfaceManager:
             "body_type": body_type,
             "audio_param": audio_param,
             "timeout": timeout,
+        }
+
+    def _build_openai_params(self, cfg, audio_path, output_path, language=None, model=None):
+        """Construct OpenAI-compatible request params via the abstraction layer."""
+        from backend.asr.openai_asr import build_openai_request
+        url, headers, fields, file_tuple = build_openai_request(
+            cfg, audio_path, language=language, model=model
+        )
+        return {
+            "method": "POST",
+            "url": url,
+            "headers": headers,
+            "body": fields,
+            "body_type": "form",
+            "audio_param": file_tuple[0],
+            "timeout": cfg.get("timeout", 300),
         }
 
     def _build_sdk_params(self, cfg, audio_path, output_path, language=None, model=None):
@@ -204,6 +225,43 @@ class ASRInterfaceManager:
                 "model_list_key": "",
                 "voice_list_key": "",
                 "sdk_extra_args": {},
+            }
+        elif itype == "cloud":
+            return {
+                **base,
+                "api_url": "",
+                "api_key": "",
+                "base_url": "",
+                "audio_param": "file",
+                "language_param": "language",
+                "endpoint": "/v1/audio/transcriptions",
+                "body_type": "form",
+                "language_list_url": "",
+                "language_list_key": "",
+                "sdk_module": "",
+                "sdk_function": "transcribe",
+                "sdk_package": "",
+                "sdk_api_key": "",
+                "model": "",
+            }
+        elif itype == "openai":
+            return {
+                **base,
+                "api_url": "",
+                "api_key": "",
+                "base_url": "",
+                "audio_param": "file",
+                "language_param": "language",
+                "endpoint": "/v1/audio/transcriptions",
+                "body_type": "form",
+                "auth_header": "Authorization",
+                "auth_scheme": "Bearer",
+                "response_format": "verbose_json",
+                "prompt": "",
+                "temperature": "",
+                "language_list_url": "",
+                "language_list_key": "",
+                "model": "",
             }
         else:
             return {

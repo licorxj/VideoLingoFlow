@@ -82,49 +82,6 @@
       "dragging": false
     },
     {
-      "id": "node_1_1780948332813",
-      "type": "workflow",
-      "position": {
-        "x": 720,
-        "y": -1695
-      },
-      "data": {
-        "nodeType": "summarize",
-        "label": "内容总结",
-        "config": {
-          "audioPath": "",
-          "videoPath": "",
-          "subtitlePath": "",
-          "url": ""
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/summarize_result_node_1_1780948332813.json"
-        },
-        "error": "",
-        "workbench_url": "",
-        "disableExecute": false,
-        "logLines": [
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
-          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=35128",
-          "[step_worker] step instance created: S04Summarize",
-          "[step_worker] step_inputs keys=['text', 'language']",
-          "[step_worker] node_config keys=['audioPath', 'videoPath', 'subtitlePath', 'url']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5, kwargs=['callback'])",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780948332813_result.json, exiting 0"
-        ]
-      },
-      "measured": {
-        "width": 420,
-        "height": 398
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
       "id": "node_1_1781200299298",
       "type": "workflow",
       "position": {
@@ -151,7 +108,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 236
+        "height": 237
       },
       "selected": false,
       "dragging": false
@@ -183,7 +140,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 477
+        "height": 428
       },
       "selected": false,
       "dragging": false
@@ -272,7 +229,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 223
+        "height": 224
       },
       "selected": false,
       "dragging": false
@@ -309,7 +266,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 520
+        "height": 521
       },
       "selected": false,
       "dragging": false
@@ -347,7 +304,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 554
+        "height": 553
       },
       "selected": false,
       "dragging": false
@@ -421,9 +378,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 208
+        "height": 209
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -455,7 +412,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 435
+        "height": 433
       },
       "selected": false,
       "dragging": false
@@ -489,7 +446,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 435
+        "height": 433
       },
       "selected": false,
       "dragging": false
@@ -523,7 +480,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 486
+        "height": 484
       },
       "selected": false,
       "dragging": false
@@ -557,7 +514,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 492
+        "height": 491
       },
       "selected": false,
       "dragging": false
@@ -599,7 +556,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 670
+        "height": 672
       },
       "selected": false,
       "dragging": false
@@ -653,7 +610,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 576
+        "height": 575
       },
       "selected": false,
       "dragging": false
@@ -705,7 +662,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 551
+        "height": 552
       },
       "selected": false,
       "dragging": false
@@ -737,7 +694,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 351
+        "height": 353
       },
       "selected": false,
       "dragging": false
@@ -786,7 +743,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 474
+        "height": 475
       },
       "selected": false,
       "dragging": false
@@ -809,7 +766,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 241
+        "height": 242
       },
       "selected": false,
       "dragging": false
@@ -1084,20 +1041,6 @@
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1787654223924",
-      "sourceHandle": "out-text",
-      "target": "node_1_1780948332813",
-      "targetHandle": "in-text",
-      "id": "xy-edge__node_2_1787654223924out-text-node_1_1780948332813in-text",
-      "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
         "stroke": "#a78bfa",
         "strokeWidth": 2
       },
@@ -1214,6 +1157,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-27T23:30:57",
-  "updatedAt": "2026-08-28T00:16:07",
-  "revision": 6
+  "updatedAt": "2026-08-30T07:55:38",
+  "revision": 7
 }
