@@ -147,7 +147,9 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "skipped": true
+        },
         "error": "",
         "workbench_url": ""
       },
@@ -252,7 +254,8 @@
           "流式生成完成（usage={'generated_images': 1, 'output_tokens': 16384, 'total_tokens': 16384, 'tool_usage': {'web_search': 1}}）",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40\\cache\\.step_node_1_1788218826018_result.json, exiting 0"
-        ]
+        ],
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
@@ -310,7 +313,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 331
+        "height": 408
       },
       "selected": false,
       "dragging": false
@@ -357,13 +360,14 @@
           "流式生成完成（usage={'generated_images': 1, 'output_tokens': 16384, 'total_tokens': 16384}）",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40\\cache\\.step_node_2_1788219185620_result.json, exiting 0"
-        ]
+        ],
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 611
+        "height": 616
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -528,6 +532,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-01T05:18:55",
-  "updatedAt": "2026-09-01T08:09:31",
-  "revision": 13
+  "updatedAt": "2026-09-01T08:23:21",
+  "revision": 14
 }

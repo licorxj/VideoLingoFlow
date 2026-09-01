@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-01 06:41:22  
-> 节点总数：83　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-09-01 08:19:25  
+> 节点总数：88　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -11,13 +11,13 @@
 | 预览节点（`preview`） | 3 |
 | 音频处理节点（`audio`） | 10 |
 | 视频处理节点（`video`） | 14 |
-| AI生成类节点（`ai_gen`） | 13 |
+| AI生成类节点（`ai_gen`） | 17 |
 | 翻译相关节点（`translation`） | 14 |
 | AIGC流程链（`aigc`） | 3 |
 | 智能体（`agent`） | 2 |
 | 流程控制节点（`flow_control`） | 2 |
 | 网络请求类节点（`network_request`） | 4 |
-| 工具类节点（`utility`） | 8 |
+| 工具类节点（`utility`） | 9 |
 | 文件操作类节点（`file`） | 3 |
 | 组合节点（`group_node`） | 2 |
 
@@ -89,6 +89,10 @@
 | Seedream文生图 | `seedream_txt2img` | 调用火山引擎方舟 Seedream 文生图（txt2img）：根据提示词生成单张图片。支持流式输出与提示词优化，产物保存到 cache/images。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream组图生成 | `seedream_grid` | 调用 Seedream 文生组图（grid / sequential_image_generation）：根据提示词一次生成多张图片。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream联网搜索生图 | `seedream_websearch` | 调用 Seedream 联网搜索生图（websearch / tools=[web_search]）：结合网络搜索结果按提示词生成图片，适合需要真实世界参考的场景。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
+| 即梦-全模态参考生视频 | `seedance_autovideo` | 调用 Seedance 全模态参考生视频（autovideo）：以参考图/视频/音频任意组合生成视频。 | process | 提示词(`text`:text); 参考图(`image`:image); 参考视频(`video`:video); 参考音频(`audio`:audio) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
+| 即梦-图生视频 | `seedance_img2video` | 调用 Seedance 图生视频-首帧（img2video）：以 1 张参考图为首帧，按提示词生成视频。 | process | 提示词(`text`:text); 参考图(`image`:image) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
+| 即梦-图生视频(首尾帧) | `seedance_flf2video` | 调用 Seedance 图生视频-首尾帧（flf2video）：以 2 张参考图（首帧/尾帧）生成视频。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
+| 即梦-文生视频 | `seedance_txt2video` | 调用火山方舟 Seedance 文生视频（txt2video）：根据提示词生成视频。支持异步任务轮询、优先历史记录与查询进度。 | process | 提示词(`text`:text) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
 | 图片蒙版 | `image_mask` | 上游输入图片，在卡片上用画笔/矩形绘制蒙版，后端合成蒙版图并输出蒙版合成图与黑白蒙版 | thread | 图片(`image`:image) | 蒙版合成图(`image`:image); 蒙版(`mask`:image) |
 | 语音合成 (TTS) | `tts` | 文本转语音，支持多种TTS模式 | process | TTS任务单JSON(`text`*:json); TTS任务表(`pandas`:pandas); 原始音频(切割参考)(`source_audio`:audio) | TTS任务单JSON(`text`:json); TTS任务表(`pandas`:pandas) |
 | 通用LLM请求 | `llm_request` | 通用 LLM 请求，支持文本/图片输入，可配置 prompt、模型、温度等 | process | 文本输入(`text`:text); 图片输入(`image`:image); JSON输入(`json`:json) | 结果文件(`result`:json); 文本结果(`text`:text) |
@@ -151,6 +155,7 @@
 | JSON编辑 | `json_editor` | 按key表达式修改JSON中指定字段的值，覆盖保存原文件 | thread | JSON(`json`:json); 修改值(`text`:text) | JSON(`json`:json) |
 | JSON转文本 | `json_to_text` | 将JSON转换为文本文件，支持全量转文本或按key表达式取值 | thread | JSON(`json`:json) | 文本文件(`text`:text) |
 | SRT字幕转json | `srt_to_json` | 将 SRT 字幕转换为 ASR 结果格式 JSON（包含 text 与 segments，不生成词级时间戳 words），可直接接入 ASR 结果校验、预处理等下游节点。输入为「字幕」类型，可连线「字幕生成」等字幕节点的输出（默认输出 .srt）。 | thread | 字幕(`subtitle`*:subtitle) | ASR结果JSON(`json`:json) |
+| SRT转文本 | `srt_to_text` | 将 SRT 字幕直接转换为纯文本：去掉序号与时间轴，提取每条字幕的文本内容，按原顺序拼接为 .txt 文本文件输出。输入为「字幕」类型，可连线「字幕生成」等字幕节点的输出（默认输出 .srt）。 | thread | 字幕(`subtitle`*:subtitle) | 文本(`text`:text) |
 | 字幕编辑 | `subtitle_editor` | 逐条编辑字幕（文本/时间/合并/拆分），带视频预览，默认透传，可另存副本 | thread | 字幕(`subtitle`*:subtitle) | 字幕(`subtitle`:subtitle) |
 | 文本编辑 | `text_editor` | 可视化编辑文本，支持查找删除/替换/正则，默认透传，可另存副本 | thread | 文本(`text`*:text) | 文本(`text`:text) |
 | 视频发布 | `video_publish` | 将视频发布到指定社交平台，支持多平台分发、定时发布、草稿模式 | process | 视频(`video`*:video); 横屏封面(`cover_landscape`:image); 竖屏封面(`cover_portrait`:image); 标题/描述(`json`:json) | 发布结果(`text`:text); 结果文件(`result_file`:file) |
