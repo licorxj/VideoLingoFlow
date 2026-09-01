@@ -16,6 +16,16 @@ interface Props {
 const RESOLUTION_OPTIONS = ["1K", "2K", "4K"];
 const ASPECT_RATIO_OPTIONS = ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"];
 
+const IMAGE_MODE_LABELS: Record<string, string> = {
+  txt2img: "文生图 (txt2img)",
+  img2img: "图生图 (img2img)",
+  fusion: "多图融合 (fusion)",
+  grid: "组图输出 (grid)",
+  i2grid: "单图生组图 (i2grid)",
+  refs2grid: "多参考图生组图 (refs2grid)",
+  websearch: "联网搜索生图 (websearch)",
+};
+
 const DEFAULT_CONFIG: ImageGenInterfaceConfig = {
   api_url: "",
   api_key: "",
@@ -34,6 +44,11 @@ const DEFAULT_CONFIG: ImageGenInterfaceConfig = {
   modes: {
     txt2img: { enabled: true, endpoint: "" },
     img2img: { enabled: true, endpoint: "" },
+    fusion: { enabled: true, endpoint: "" },
+    grid: { enabled: true, endpoint: "" },
+    i2grid: { enabled: true, endpoint: "" },
+    refs2grid: { enabled: true, endpoint: "" },
+    websearch: { enabled: true, endpoint: "" },
   },
   custom_params: [],
   max_concurrent: 1,
@@ -273,7 +288,7 @@ export default function ImageGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
       <div className={sectionCls}>
         <h4 className="text-xs font-semibold text-foreground">模式配置</h4>
         <div className="grid grid-cols-2 gap-3">
-          {(["txt2img", "img2img"] as const).map((mode) => (
+          {Object.keys(config.modes || {}).map((mode) => (
             <div key={mode} className="flex items-center gap-2">
               <input
                 type="checkbox"
@@ -287,7 +302,7 @@ export default function ImageGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
                   })
                 }
               />
-              <label className="text-sm">{mode === "txt2img" ? "文生图 (txt2img)" : "图生图 (img2img)"}</label>
+              <label className="text-sm">{IMAGE_MODE_LABELS[mode] || mode}</label>
             </div>
           ))}
         </div>

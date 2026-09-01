@@ -59,7 +59,7 @@ const contextPresets = [
 function iconUrl(icon: string | undefined): string {
   if (!icon) return "";
   if (icon.startsWith("http")) return icon;
-  if (icon.startsWith("icons/")) return "/api/icons/file/" + icon.replace("icons/", "");
+  if (icon.startsWith("icons/")) return LLM_ROUTER_BASE + "/api/icons/file/" + icon.replace("icons/", "");
   return icon;
 }
 

@@ -336,6 +336,11 @@ class ImageGenInterfaceManager:
         _modes = {
             "txt2img": {"enabled": True, "endpoint": ""},
             "img2img": {"enabled": True, "endpoint": ""},
+            "fusion": {"enabled": True, "endpoint": ""},
+            "grid": {"enabled": True, "endpoint": ""},
+            "i2grid": {"enabled": True, "endpoint": ""},
+            "refs2grid": {"enabled": True, "endpoint": ""},
+            "websearch": {"enabled": True, "endpoint": ""},
         }
         if itype == "openai_compatible":
             return {

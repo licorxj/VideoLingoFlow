@@ -29,17 +29,25 @@ class S_ImageMask(BaseStep):
     description = "上游输入图片，在卡片上用画笔/矩形绘制蒙版，后端合成蒙版图并输出蒙版合成图与黑白蒙版。"
 
     step_id = "s_image_mask"
-    artifacts = ["image_mask.png", "image_masked.png"]
+    artifacts = ["image_mask_{node_id}.png", "image_masked_{node_id}.png"]
 
     def check_artifact(self, task_dir: str) -> bool:
         node_id = getattr(self, "_node_id", "")
         out_dir = os.path.join(task_dir, "output", node_id) if node_id else ""
-        if node_id and os.path.isfile(os.path.join(out_dir, "image_masked.png")):
+        if node_id and os.path.isfile(os.path.join(out_dir, f"image_masked_{node_id}.png")):
             return True
-        # 兼容未带 node_id 的旧产物命名
+        # 兼容未带 node_id 后缀的旧产物命名
         if os.path.isfile(os.path.join(task_dir, "output", "image_masked.png")):
             return True
         return False
+
+    def clear_artifact(self, task_dir: str) -> None:
+        import shutil
+        node_id = getattr(self, "_node_id", "")
+        if node_id:
+            out_dir = os.path.join(task_dir, "output", node_id)
+            if os.path.isdir(out_dir):
+                shutil.rmtree(out_dir, ignore_errors=True)
 
     def validate_inputs(self, task_dir: str) -> bool:
         step_inputs = getattr(self, "_step_inputs", {}) or {}
@@ -108,7 +116,7 @@ class S_ImageMask(BaseStep):
         out_dir = os.path.join(task_dir, "output", node_id)
         os.makedirs(out_dir, exist_ok=True)
 
-        mask_path = os.path.join(out_dir, "image_mask.png")
+        mask_path = os.path.join(out_dir, f"image_mask_{node_id}.png")
         mask_img.save(mask_path)
 
         # 彩色半透明蒙版叠加到原图
@@ -117,7 +125,7 @@ class S_ImageMask(BaseStep):
         odraw.bitmap((0, 0), mask_img, fill=(rgb[0], rgb[1], rgb[2], int(round(alpha * 255))))
         base = img.convert("RGBA")
         composited = Image.alpha_composite(base, overlay).convert("RGB")
-        masked_path = os.path.join(out_dir, "image_masked.png")
+        masked_path = os.path.join(out_dir, f"image_masked_{node_id}.png")
         composited.save(masked_path)
 
         return {

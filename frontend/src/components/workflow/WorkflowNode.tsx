@@ -472,7 +472,60 @@ function useStableFileUrl(path?: string, taskId?: string, refreshKey?: string): 
   }, [path, taskId, refreshKey]);
 }
 
-function VideoPreview({ config, videoPath, subtitlePath, taskId, onConfigChange, refreshKey }: { config: Record<string, any>; videoPath?: string; subtitlePath?: string; taskId?: string; onConfigChange?: (key: string, value: any) => void; refreshKey?: string }) {
+// 将上游列表输入（字符串 / JSON / 对象数组）归一化为路径数组
+function normalizeListPaths(raw: any): string[] {
+  if (!raw) return [];
+  let arr: any = raw;
+  if (typeof raw === "string") {
+    try {
+      arr = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(arr)) return [];
+  const paths: string[] = [];
+  for (const item of arr) {
+    if (typeof item === "string") paths.push(item);
+    else if (item && typeof item === "object") {
+      const p = item.path || item.file || item.filepath || item.src || item.url || item.value;
+      if (typeof p === "string") paths.push(p);
+    }
+  }
+  return paths;
+}
+
+function ListVideoItem({ path, taskId, refreshKey }: { path: string; taskId?: string; refreshKey?: string }) {
+  const src = useStableFileUrl(path, taskId, refreshKey);
+  return (
+    <div className="rounded-lg overflow-hidden bg-black">
+      <video src={src} controls className="w-full max-h-[200px]" />
+    </div>
+  );
+}
+
+function ListImageItem({ path, config, refreshKey, taskId }: { path: string; config: Record<string, any>; refreshKey?: string; taskId?: string }) {
+  const src = useStableFileUrl(path, taskId, refreshKey);
+  const [broken, setBroken] = useState(false);
+  useEffect(() => { setBroken(false); }, [src]);
+  return (
+    <div className="rounded-lg overflow-hidden bg-black/5">
+      {broken ? (
+        <div className="grid h-[120px] place-items-center text-[11px] text-muted-foreground/70">{path || "预览文件不存在或已删除"}</div>
+      ) : (
+        <img
+          src={src}
+          alt="Preview"
+          className="w-full max-h-[200px]"
+          style={{ objectFit: config.fit || "contain" }}
+          onError={() => setBroken(true)}
+        />
+      )}
+    </div>
+  );
+}
+
+function VideoPreview({ config, videoPath, subtitlePath, listPaths, taskId, onConfigChange, refreshKey }: { config: Record<string, any>; videoPath?: string; subtitlePath?: string; listPaths?: string[]; taskId?: string; onConfigChange?: (key: string, value: any) => void; refreshKey?: string }) {
   const [fontSize, setFontSize] = useState(config.fontSize || 12);
   const [subtitles, setSubtitles] = useState<{ start: number; end: number; text: string }[]>([]);
   const [currentTime, setCurrentTime] = useState(0);
@@ -565,6 +618,18 @@ function VideoPreview({ config, videoPath, subtitlePath, taskId, onConfigChange,
     document.addEventListener("fullscreenchange", handleFullscreenChange);
     return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
+
+  // 列表输入：竖向依次展示多个视频（即便未单独连接视频输入也生效）
+  if (listPaths && listPaths.length > 0) {
+    return (
+      <div className="px-3 pb-3 border-t border-border/50 pt-2 space-y-3">
+        <div className="text-[11px] font-medium text-muted-foreground">列表视频预览（共 {listPaths.length} 个）</div>
+        {listPaths.map((p, i) => (
+          <ListVideoItem key={i} path={p} taskId={taskId} refreshKey={refreshKey} />
+        ))}
+      </div>
+    );
+  }
 
   if (!videoPath) {
     return (
@@ -693,10 +758,22 @@ function VideoPreview({ config, videoPath, subtitlePath, taskId, onConfigChange,
   );
 }
 
-function ImagePreview({ config, imagePath, taskId, refreshKey }: { config: Record<string, any>; imagePath?: string; taskId?: string; refreshKey?: string }) {
+function ImagePreview({ config, imagePath, listPaths, taskId, refreshKey }: { config: Record<string, any>; imagePath?: string; listPaths?: string[]; taskId?: string; refreshKey?: string }) {
   const imageSrc = useStableFileUrl(imagePath, taskId, refreshKey);
   const [broken, setBroken] = useState(false);
   useEffect(() => { setBroken(false); }, [imageSrc]);
+  // 列表输入：竖向依次展示多张图片（即便未单独连接图片输入也生效）
+  if (listPaths && listPaths.length > 0) {
+    return (
+      <div className="px-3 pb-3 border-t border-border/50 pt-2 space-y-3">
+        <div className="text-[11px] font-medium text-muted-foreground">列表图片预览（共 {listPaths.length} 张）</div>
+        {listPaths.map((p, i) => (
+          <ListImageItem key={i} path={p} config={config} refreshKey={refreshKey} taskId={taskId} />
+        ))}
+      </div>
+    );
+  }
+
   if (!imagePath) {
     return (
       <div className="px-3 pb-3 border-t border-border/50 pt-2">
@@ -719,6 +796,80 @@ function ImagePreview({ config, imagePath, taskId, refreshKey }: { config: Recor
             onError={() => setBroken(true)}
           />
         )}
+      </div>
+    </div>
+  );
+}
+
+function ImageCompare({ config, image1Path, image2Path, taskId, refreshKey }: { config: Record<string, any>; image1Path?: string; image2Path?: string; taskId?: string; refreshKey?: string }) {
+  const [pos, setPos] = useState(50); // 分割线位置（%），默认居中，上层（图片2）显示右半部
+  const containerRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
+
+  const src1 = useStableFileUrl(image1Path, taskId, refreshKey);
+  const src2 = useStableFileUrl(image2Path, taskId, refreshKey);
+
+  const updateFromClientX = (clientX: number) => {
+    const el = containerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const p = ((clientX - rect.left) / rect.width) * 100;
+    setPos(Math.max(0, Math.min(100, p)));
+  };
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    draggingRef.current = true;
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    updateFromClientX(e.clientX);
+  };
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    updateFromClientX(e.clientX);
+  };
+  const onPointerUp = (e: React.PointerEvent) => {
+    draggingRef.current = false;
+    (e.target as HTMLElement).releasePointerCapture?.(e.pointerId);
+  };
+
+  if (!image1Path && !image2Path) {
+    return (
+      <div className="px-3 pb-3 border-t border-border/50 pt-2">
+        <div className="text-[11px] text-muted-foreground/70 text-center py-4">请连接图片1 / 图片2 输入</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="px-3 pb-3 border-t border-border/50 pt-2">
+      <div className="text-[11px] font-medium text-muted-foreground mb-2">图片对比（图片2在上 · 拖动分割线对比）</div>
+      <div
+        ref={containerRef}
+        className="relative w-full rounded-lg overflow-hidden bg-black/5 select-none cursor-ew-resize"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerLeave={onPointerUp}
+      >
+        {/* 下层：图片1 */}
+        {image1Path && (
+          <img src={src1} alt="图片1" className="block w-full" style={{ objectFit: config.fit || "contain" }} draggable={false} />
+        )}
+        {/* 上层：图片2，蒙版只显示分割线右侧 */}
+        {image2Path && (
+          <img
+            src={src2}
+            alt="图片2"
+            className="absolute inset-0 w-full h-full pointer-events-none"
+            style={{ objectFit: config.fit || "contain", clipPath: `inset(0 0 0 ${pos}%)` }}
+            draggable={false}
+          />
+        )}
+        {/* 分割线 + 手柄 */}
+        <div className="absolute top-0 bottom-0 w-0.5 bg-white/90 pointer-events-none" style={{ left: `${pos}%` }}>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-5 h-5 rounded-full bg-white/90 flex items-center justify-center text-[10px] text-black/70 shadow">
+            ⇄
+          </div>
+        </div>
       </div>
     </div>
   );
@@ -1892,6 +2043,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const [qmMailLoading, setQmMailLoading] = useState(false);
   const [subtitleFindOpen, setSubtitleFindOpen] = useState(false);
 
+  // Seedance 视频节点「查询生成进度」弹窗状态
+  const [sdQueryOpen, setSdQueryOpen] = useState(false);
+  const [sdQueryLoading, setSdQueryLoading] = useState(false);
+  const [sdQueryResult, setSdQueryResult] = useState<any>(null);
+  const [sdQueryError, setSdQueryError] = useState("");
+
   if (!nodeType) return null;
   if (isGroupNodeData(nd)) {
     return (
@@ -1997,6 +2154,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const visibleOutputs = getVisibleOutputs(nodeType, config);
   const visibleInputs = getNodeInputs(nodeType, config);
   const isPiAgent = nodeType.id === "pi_agent";
+  const isSeedance = (nodeType.id || "").startsWith("seedance_");
   const isDynamicPorts = isPiAgent || nodeType.id === "output_merge_list";
   const dedupedOutputEntries = (() => {
     const seen = new Set<string>();
@@ -2108,6 +2266,28 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
     setSubtitleEditorOpen(true);
   }, [upstreamOutputs.subtitle, upstreamOutputs.video, upstreamConfigs.subtitlePath, upstreamConfigs.videoPath, previewTaskId, getNodes]);
 
+  // Seedance 节点「查询生成进度」：用已记录的 task_id 查询任务状态并展示
+  const openSeedanceQuery = useCallback(async () => {
+    const taskId = nd.outputs?.task_id;
+    setSdQueryOpen(true);
+    setSdQueryLoading(true);
+    setSdQueryError("");
+    setSdQueryResult(null);
+    if (!taskId) {
+      setSdQueryLoading(false);
+      setSdQueryError("该节点尚未记录任务 ID，请先运行节点生成视频。");
+      return;
+    }
+    try {
+      const res = await client.post("/api/videogen-interfaces/seedance/query", { task_id: taskId });
+      setSdQueryResult(res.data || null);
+    } catch (e: any) {
+      setSdQueryError(e?.response?.data?.detail || e?.message || "查询失败");
+    } finally {
+      setSdQueryLoading(false);
+    }
+  }, [nd.outputs?.task_id]);
+
   const handleStyle = (portType: string, idx: number, total: number, portColor?: string) => ({
     top: ((idx + 1) / (total + 1)) * 100 + "%",
     background: portColor || PORT_COLORS[portType as PortType] || "#6b7280",
@@ -2185,6 +2365,96 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
               </div>
             )}
           </div>
+        )}
+        {nodeType.id !== "input" && isSeedance && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); openSeedanceQuery(); }}
+            title={nd.outputs?.task_id ? "查询生成进度" : "请先运行该节点生成任务"}
+            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-foreground/10 transition-colors"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </button>
+        )}
+        {sdQueryOpen && createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50"
+            onClick={() => setSdQueryOpen(false)}
+          >
+            <div
+              className="w-[520px] max-w-[92vw] max-h-[82vh] overflow-auto rounded-xl border border-border bg-card p-5 text-card-foreground shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-bold">Seedance 任务进度查询</div>
+                <button
+                  className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground hover:bg-foreground/10"
+                  onClick={() => setSdQueryOpen(false)}
+                >
+                  <XCircle className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="text-[11px] text-muted-foreground mb-3 break-all">
+                任务 ID：{nd.outputs?.task_id || "—"}
+              </div>
+              {sdQueryLoading && <div className="text-xs text-muted-foreground">查询中…</div>}
+              {sdQueryError && (
+                <div className="text-xs text-red-500 whitespace-pre-wrap">{sdQueryError}</div>
+              )}
+              {sdQueryResult && (
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className="text-muted-foreground">状态：</span>
+                    <span
+                      className={
+                        "px-2 py-0.5 rounded " +
+                        (sdQueryResult.status === "succeeded"
+                          ? "bg-emerald-500/20 text-emerald-400"
+                          : sdQueryResult.status === "failed"
+                            ? "bg-red-500/20 text-red-400"
+                            : "bg-amber-500/20 text-amber-400")
+                      }
+                    >
+                      {sdQueryResult.status}
+                    </span>
+                  </div>
+                  {sdQueryResult.content?.video_url && (
+                    <div>
+                      <span className="text-muted-foreground">视频：</span>
+                      <a
+                        className="text-primary underline break-all"
+                        href={sdQueryResult.content.video_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {sdQueryResult.content.video_url}
+                      </a>
+                    </div>
+                  )}
+                  {sdQueryResult.content?.last_frame_url && (
+                    <div>
+                      <span className="text-muted-foreground">尾帧：</span>
+                      <a
+                        className="text-primary underline break-all"
+                        href={sdQueryResult.content.last_frame_url}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {sdQueryResult.content.last_frame_url}
+                      </a>
+                    </div>
+                  )}
+                  <div>
+                    <span className="text-muted-foreground">完整响应：</span>
+                    <pre className="mt-1 max-h-[40vh] overflow-auto rounded bg-background/60 p-2 text-[10px] leading-relaxed whitespace-pre-wrap break-all">
+                      {JSON.stringify(sdQueryResult.raw, null, 2)}
+                    </pre>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
         )}
         {nd.onExecuteNode && (
           <div className="flex items-center gap-1">
@@ -2921,13 +3191,23 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           config={config}
           videoPath={nd.videoPath || upstreamOutputs.video || upstreamConfigs.videoPath}
           subtitlePath={nd.subtitlePath || upstreamOutputs.subtitle || upstreamOutputs.original || upstreamOutputs.bilingual || upstreamConfigs.subtitlePath}
+          listPaths={normalizeListPaths(nd.listPath || upstreamOutputs.list || upstreamConfigs.listPath)}
           taskId={previewTaskId}
           onConfigChange={handleConfigChange}
           refreshKey={upstreamRefreshKey}
         />
       )}
       {nodeType.id === "image_preview" && (
-        <ImagePreview config={config} imagePath={nd.imagePath || upstreamOutputs.image || upstreamConfigs.imagePath} taskId={previewTaskId} refreshKey={upstreamRefreshKey} />
+        <ImagePreview config={config} imagePath={nd.imagePath || upstreamOutputs.image || upstreamConfigs.imagePath} listPaths={normalizeListPaths(nd.listPath || upstreamOutputs.list || upstreamConfigs.listPath)} taskId={previewTaskId} refreshKey={upstreamRefreshKey} />
+      )}
+      {nodeType.id === "image_compare" && (
+        <ImageCompare
+          config={config}
+          image1Path={nd.image1Path || upstreamOutputs.image1 || upstreamConfigs.image1Path}
+          image2Path={nd.image2Path || upstreamOutputs.image2 || upstreamConfigs.image2Path}
+          taskId={previewTaskId}
+          refreshKey={upstreamRefreshKey}
+        />
       )}
 
       {/* Output Display Panel - shows results/errors after execution */}

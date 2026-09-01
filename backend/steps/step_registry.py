@@ -72,6 +72,14 @@ from backend.steps.s_file_load import StepFileLoad
 from backend.steps.s_image_mask import S_ImageMask
 from backend.steps.s_ai_videogen import S_AiVideoGen
 from backend.steps.s_audio_asset_library import S_AudioAssetLibrary
+from backend.steps.s_seedream import (
+    S_SeedreamTxt2Img, S_SeedreamImg2Img, S_SeedreamFusion,
+    S_SeedreamGrid, S_SeedreamWebSearch, S_SeedreamLayer,
+)
+from backend.steps.s_seedance import (
+    S_SeedanceTxt2Video, S_SeedanceImg2Video,
+    S_SeedanceFlf2Video, S_SeedanceAutoVideo,
+)
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -209,6 +217,18 @@ _STEPS = {
     "ai_video_gen": S_AiVideoGen(),
     "s_audio_asset_library": S_AudioAssetLibrary(),
     "audio_asset_library": S_AudioAssetLibrary(),
+    # Seedream 生图能力节点（每种能力一个节点，置于 AI生成类节点 分组）
+    "seedream_txt2img": S_SeedreamTxt2Img(),
+    "seedream_img2img": S_SeedreamImg2Img(),
+    "seedream_fusion": S_SeedreamFusion(),
+    "seedream_grid": S_SeedreamGrid(),
+    "seedream_websearch": S_SeedreamWebSearch(),
+    "seedream_layer": S_SeedreamLayer(),
+    # Seedance 视频生成能力节点（即梦品牌命名，置于 AI生成类节点 分组）
+    "seedance_txt2video": S_SeedanceTxt2Video(),
+    "seedance_img2video": S_SeedanceImg2Video(),
+    "seedance_flf2video": S_SeedanceFlf2Video(),
+    "seedance_autovideo": S_SeedanceAutoVideo(),
 }
 
 

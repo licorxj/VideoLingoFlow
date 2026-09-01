@@ -328,7 +328,7 @@
         "sdk_voice_list_function": "list_voices",
         "text_param": "text",
         "ref_audio_param": null,
-        "speed_param": "speed",
+        "speed_param": null,
         "voice": "mimo_default",
         "model": "",
         "modes": {
@@ -361,7 +361,8 @@
         "custom_params": [],
         "max_concurrent": 3,
         "timeout": 300,
-        "voice_options": []
+        "voice_options": [],
+        "sdk_api_key": ""
       }
     },
     {

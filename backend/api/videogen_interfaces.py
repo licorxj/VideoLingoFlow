@@ -391,3 +391,60 @@ async def serve_test_video(req: VideoGenTestVideoRequest):
     elif ext in ("mov",):
         media_type = "video/quicktime"
     return FileResponse(path, media_type=media_type, filename=os.path.basename(path))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Seedance 任务进度查询（前端节点「查询生成进度」按钮调用）
+# ─────────────────────────────────────────────────────────────────────────────
+class SeedanceQueryRequest(BaseModel):
+    task_id: str
+    api_key: Optional[str] = ""
+
+
+def _seedance_api_key(api_key: str = "") -> str:
+    """API Key 解析：显式参数 > 环境变量 ARK_API_KEY > seedance_video 接口配置。"""
+    if api_key:
+        return api_key
+    from backend.videogen.sdk import seedance_sdk
+    k = seedance_sdk._get_api_key("")
+    if k:
+        return k
+    try:
+        mgr = get_videogen_interface_manager()
+        iface = mgr.get("seedance_video")
+        if iface:
+            cfg = iface.get("config", {}) or {}
+            k = cfg.get("sdk_api_key") or cfg.get("api_key") or ""
+            if k:
+                return k
+    except Exception:
+        pass
+    return k
+
+
+@router.post("/seedance/query")
+async def query_seedance_task(req: SeedanceQueryRequest):
+    """按 task_id 查询 Seedance 视频生成任务状态与产物，返回精简结果供前端展示。"""
+    if not req.task_id:
+        raise HTTPException(status_code=400, detail="task_id 不能为空")
+    from backend.videogen.sdk import seedance_sdk
+    api_key = _seedance_api_key(req.api_key)
+    try:
+        task = seedance_sdk.query_task(req.task_id, api_key=api_key)
+    except Exception as e:
+        logger.error("Seedance 查询任务失败: %s", e)
+        raise HTTPException(status_code=502, detail=f"查询失败: {e}")
+    content = task.get("content") or {}
+    return {
+        "task_id": req.task_id,
+        "status": task.get("status"),
+        "created_at": task.get("created_at"),
+        "updated_at": task.get("updated_at"),
+        "error": task.get("error"),
+        "usage": task.get("usage"),
+        "content": {
+            "video_url": content.get("video_url"),
+            "last_frame_url": content.get("last_frame_url"),
+        },
+        "raw": task,
+    }

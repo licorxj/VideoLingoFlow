@@ -27,7 +27,15 @@ def _validate_generation_params(iface_id: str, **kwargs):
     # Validate mode
     supported_modes = meta.get("modes", [])
     if supported_modes:
-        mode_map = {"txt2img": "t2i", "img2img": "i2i"}
+        mode_map = {
+            "txt2img": "t2i",
+            "img2img": "i2i",
+            "fusion": "i2i",
+            "grid": "t2i",
+            "i2grid": "i2i",
+            "refs2grid": "i2i",
+            "websearch": "t2i",
+        }
         mapped_mode = mode_map.get(mode, mode)
         if mapped_mode not in supported_modes:
             errors.append(f"模型 '{model}' 不支持模式 '{mode}'（支持: {', '.join(supported_modes)}）")
@@ -242,6 +250,7 @@ class SDKImageGen(ImageGenBase):
                 "aspect_ratio": params.get("aspect_ratio", "1:1"),
                 "num_images": params.get("num_images", 1),
                 "ref_images": params.get("ref_images", []),
+                "mode": kwargs.get("mode", "txt2img"),
             }
             call_args.update(extra_args)
 

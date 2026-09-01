@@ -339,7 +339,7 @@ export default function Community() {
         </div>
         <div>
           <h2 className="text-base font-extrabold tracking-tight flex items-center gap-2">共享社区</h2>
-          <p className="text-xs text-muted-foreground">浏览云端节点与工作流，一键点赞、下载导入</p>
+          <p className="text-xs text-muted-foreground">浏览云端节点与工作流，一键点赞、下载导入,依托cloudflare,需要开全球网络.</p>
         </div>
         <div className="ml-auto flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={() => setIdentityOpen(true)}>

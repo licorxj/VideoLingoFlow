@@ -381,6 +381,219 @@
         "timeout": 1200,
         "sdk_extra_args": {}
       }
+    },
+    {
+      "id": "seedance_video",
+      "name": "火山方舟 Seedance 视频",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "火山引擎方舟 Seedance 视频生成（异步任务接口），支持文生视频、图生视频-首/尾帧、全模态参考生视频（图+视频+音频），可选同步音频与尾帧返回。",
+      "api_source_url": "https://www.volcengine.com/product/ark",
+      "model_docs_url": "https://docs.volcengine.com/docs/82379/1520757",
+      "balance": null,
+      "config": {
+        "api_url": "https://ark.cn-beijing.volces.com",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.videogen.sdk.seedance_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "",
+        "default_model": "doubao-seedance-2-5-pro-260628",
+        "model_options": [
+          "doubao-seedance-2-5-pro-260628",
+          "doubao-seedance-2-0-pro-260528",
+          "doubao-seedance-1-5-pro-251215",
+          "doubao-seedance-1-0-pro-250528"
+        ],
+        "model_metadata": {
+          "doubao-seedance-2-5-pro-260628": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              4,
+              5,
+              10,
+              15,
+              20,
+              30
+            ],
+            "max_ref_images": 30,
+            "max_ref_videos": 10,
+            "max_ref_audios": 10,
+            "supports_audio": true,
+            "default_audio": "model_default",
+            "ratio_default": "adaptive"
+          },
+          "doubao-seedance-2-0-pro-260528": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P",
+              "4K"
+            ],
+            "durations": [
+              4,
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 9,
+            "max_ref_videos": 3,
+            "max_ref_audios": 3,
+            "supports_audio": true,
+            "default_audio": "model_default",
+            "ratio_default": "adaptive"
+          },
+          "doubao-seedance-1-5-pro-251215": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              4,
+              5,
+              10,
+              12
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": true,
+            "default_audio": "model_default",
+            "ratio_default": "adaptive"
+          },
+          "doubao-seedance-1-0-pro-250528": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              2,
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": true,
+            "default_audio": "on",
+            "ratio_default": "16:9"
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "flf2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "autovideo": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "web_search",
+            "default": "false",
+            "description": "联网搜索（仅 Seedance 2.5 / 2.0 支持；开启后模型自主决定是否搜索，增加时延）"
+          },
+          {
+            "key": "output_format",
+            "default": "mp4",
+            "description": "输出格式：mp4（兼容） / mov（2.5 专业后期，H.264+yuv444p+PCM）"
+          },
+          {
+            "key": "watermark",
+            "default": "false",
+            "description": "是否添加 AI 生成水印"
+          },
+          {
+            "key": "return_last_frame",
+            "default": "false",
+            "description": "是否返回生成视频尾帧图像（png，用于连续视频拼接）"
+          },
+          {
+            "key": "draft",
+            "default": "false",
+            "description": "样片模式（仅 1.5 Pro：480p 预览，低成本验证）"
+          },
+          {
+            "key": "seed",
+            "default": "",
+            "description": "随机种子（仅 1.5 / 1.0 支持；-1 表示随机）"
+          },
+          {
+            "key": "camera_fixed",
+            "default": "false",
+            "description": "固定摄像头（仅 1.5 / 1.0 支持；参考图场景不支持）"
+          },
+          {
+            "key": "omni_reference_task_type",
+            "default": "",
+            "description": "全模态任务类型引导（仅 2.5）：auto / reference / edit / extend"
+          },
+          {
+            "key": "service_tier",
+            "default": "default",
+            "description": "服务等级：default（在线）/ flex（离线，仅 1.5 / 1.0）"
+          },
+          {
+            "key": "priority",
+            "default": "",
+            "description": "任务优先级 0-9（仅 2.5 / 2.0）"
+          },
+          {
+            "key": "poll_timeout",
+            "default": "1800",
+            "description": "任务轮询超时时间（秒）"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 1800,
+        "sdk_extra_args": {}
+      }
     }
   ]
 }

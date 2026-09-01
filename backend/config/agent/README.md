@@ -22,6 +22,7 @@ Do not infer a different root from a session directory or a temporary working di
 - `project-architecture.md`: repository architecture, runtime services, and technology stack.
 - `backend-api-catalog.md`: non-authentication and non-billing backend API groups.
 - `skills-index.md`: project workflow capabilities and the source paths for their implementations.
+- `docs/node_catalog.md`: auto-generated node catalog — every built-in/custom node's category, name, description, inputs/outputs. Regenerate with `python scripts/generate_node_catalog.py`.
 - `docs/capability-index.md`: capability document index used by the general assistant (read on demand).
 - `docs/*.md`: role capability documents (node creation, workflow orchestration, task execution, file management, publishing).
 
