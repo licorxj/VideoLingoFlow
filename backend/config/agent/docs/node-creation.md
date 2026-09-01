@@ -230,3 +230,17 @@ _STEPS = {
 - 工作流编辑器：`frontend/src/components/workflow/`（`WorkflowNode.tsx`、`NodeManager.tsx`、画布等）。
 - 节点类型元数据的客户端封装：`frontend/src/api/` 下对应 `node-types` 的 client。
 - 节点卡片的分类、端口、设置项完全由 `GET /api/node-types` 返回的 `configFields` / `inputs` / `outputs` 渲染，无需单独改前端即可让新节点出现。
+
+---
+
+## F. 节点名录（Node Catalog）
+
+`docs/node_catalog.md`（相对 `PROJECT_ROOT`）是**所有节点的权威清单**：按分组表格罗列每个节点的 id、名称、描述、执行域与输入/输出接口（含自定义节点）。新增或修改节点后，用它代替手工翻阅 `builtin_node_types.py` 来快速核对现有节点与端口，避免凭记忆使用过时节点 id。
+
+重新生成（在 `PROJECT_ROOT` 下执行，需 venv 已激活、能 import `backend/`）：
+
+```bash
+python scripts/generate_node_catalog.py
+```
+
+该脚本直接读取后端节点定义（内置 `backend/config/builtin_node_types.py` + 自定义 `backend/config/node_types/*.json`），覆盖写入 `docs/node_catalog.md` 并打印文件绝对路径。当你新增/修改节点并提交前，建议重新生成一次以保持名录与代码同步。

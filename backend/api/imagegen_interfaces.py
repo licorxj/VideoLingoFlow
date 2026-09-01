@@ -202,7 +202,15 @@ async def get_models_for_node(iface_id: str, mode: str = "txt2img"):
     if not metadata:
         # Fallback: return all model_options without filtering
         return mgr.get_models(iface_id)
-    mode_key = {"txt2img": "t2i", "img2img": "i2i"}.get(mode, mode)
+    mode_key = {
+        "txt2img": "t2i",
+        "img2img": "i2i",
+        "fusion": "i2i",
+        "grid": "t2i",
+        "i2grid": "i2i",
+        "refs2grid": "i2i",
+        "websearch": "t2i",
+    }.get(mode, mode)
     filtered = [name for name, meta in metadata.items() if mode_key in meta.get("modes", [])]
     return filtered
 

@@ -163,7 +163,7 @@ class VideoGenInterfaceManager:
     def build_request_params(self, iface_id, mode, prompt, output_dir, ref_images=None,
                              num_videos=1, resolution="720P", duration=5, ref_videos=None,
                              audio=None, negative_prompt="", model="", endpoint=None,
-                             api_key="", extra_args=None):
+                             api_key="", extra_args=None, ratio="16:9", ref_audios=None):
         """构建视频生成请求参数（供 SDK 引擎动态导入并调用 generate）。
 
         返回字典包含：module / function / extra_args（路由信息）+ 视频生成调用参数。
@@ -179,10 +179,12 @@ class VideoGenInterfaceManager:
             "model": model or config.get("default_model", ""),
             "negative_prompt": negative_prompt,
             "resolution": resolution,
+            "ratio": ratio,
             "duration": duration,
             "num_videos": num_videos,
             "ref_images": ref_images or [],
             "ref_videos": ref_videos or [],
+            "ref_audios": ref_audios or [],
             "audio": audio,
             "mode": mode,
         }

@@ -28,7 +28,7 @@
 
 ### 1. 节点式工作流，节点可自定义
 
-基于 `@xyflow/react` 的可视化 DAG 编排画布，内置 **40+ 节点**覆盖输入、平台下载、音频、ASR、翻译、字幕、配音、合成、生图、发布全链路。支持：
+基于 `@xyflow/react` 的可视化 DAG 编排画布，内置 **80+ 节点**覆盖输入、平台下载、音频、ASR、翻译、字幕、配音、合成、生图、发布全链路。支持：
 
 - **自定义节点**：按「节点定义 + 执行步骤 + 规则校验 + 注册」四件套即可新增节点，字段级规则校验、端口语义连线、节点产物落盘规范全部内置约定。
 - 工作流可保存、复用、批量重跑；节点级产物管理与清理由控制平面自动完成。
@@ -104,7 +104,7 @@ VideoLingoFlow/
 │   ├── api/                  # 全部 REST/WS 路由
 │   ├── control_plane/        # 控制平面：DB/模型/运行时/任务调度/Celery/安全
 │   ├── engine/               # 执行引擎：批量执行器、步骤流水线、任务管理
-│   ├── steps/                # 40+ 节点执行步骤（s_*.py，继承 BaseStep）
+│   ├── steps/                # 80+ 节点执行步骤（s_*.py，继承 BaseStep）
 │   ├── config/               # 内置节点定义、工作流文件、接口配置
 │   ├── voiceforge/           # 晴沐配音谷（独立数据库 + Celery 任务）
 │   ├── aigc/                 # AIGC 服务（ComfyUI/即梦/RunningHub）
@@ -137,6 +137,8 @@ VideoLingoFlow/
 - 可选：NVIDIA GPU + CUDA（本地模型推理）
 
 ### 1. 首次安装
+
+> 💡 如果你无法完成这一复杂的部署/安装过程，我也为你准备了 **Windows 整合包**（兼容支持 50 系列 NVIDIA 显卡），开箱即用，下载地址：[https://pan.quark.cn/s/b1f892f56a65](https://pan.quark.cn/s/b1f892f56a65)
 
 运行 `install.bat`（Linux/macOS 用 `install.sh`）：自动检查/安装 Python 3.12 与 Node.js、安装后端依赖（PyTorch 三件套按平台与 CUDA 自动选择）、安装第三方扩展。
 
@@ -285,6 +287,7 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 | [docs/剪辑工作台联动说明.md](docs/剪辑工作台联动说明.md) | 剪辑工作台与节点流水线联动、剪辑 Agent | 使用剪辑能力 |
 | [docs/依赖清单.md](docs/依赖清单.md) | 三大系统依赖声明、平台适配、安装入口 | 依赖管理与排障 |
 | [docs/快速开始.md](docs/快速开始.md) | 从零搭建运行环境 | 首次安装 |
+| [docs/node_catalog.md](docs/node_catalog.md) | 全部节点的分组、名称、描述、输入/输出接口一览 | 查阅可用节点与接口 |
 
 ## 常用脚本
 

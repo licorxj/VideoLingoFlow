@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "interfaces": [
     {
@@ -582,49 +582,420 @@
       }
     },
     {
-      "id": "doubao_seedream_openai",
-      "name": "豆包 Seedream (OpenAI 兼容)",
-      "type": "openai_compatible",
+      "id": "wuli",
+      "name": "呜哩创作平台 (Wuli)",
+      "type": "sdk",
       "builtin": true,
-      "enabled": false,
-      "description": "火山方舟 Doubao Seedream 系列，遵循 OpenAI 图像生成接口规范（client.images.generate）。支持文生图/图生图，response_format 控制返回 url 或 b64_json，img2img 参考图通过 image 字段传递。",
-      "api_source_url": "https://console.volcengine.com/ark/region:cn-beijing/apikey",
-      "model_docs_url": "https://www.volcengine.com/docs/82379/1430752",
+      "enabled": true,
+      "description": "呜哩创作平台（Wuli）开放平台图像生成接口，支持文生图、图生图与文件上传，异步任务轮询模式。",
+      "api_source_url": "https://wuli.art/generate?openRegisterModal=true&inviteCode=WL-WULIGVKDM8GQ",
+      "model_docs_url": "https://alidocs.dingtalk.com/i/nodes/vy20BglGWOxjGpq0CGEZ3L1RVA7depqY",
       "balance": null,
       "config": {
-        "api_url": "https://ark.cn-beijing.volces.com/api/v3",
+        "api_url": "https://platform.wuli.art",
         "api_key": "",
-        "default_model": "doubao-seedream-5-0-pro-260628",
+        "sdk_package": "",
+        "sdk_module": "backend.imagegen.sdk.wuli_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "",
+        "default_model": "Qwen Image 2.0",
         "model_options": [
-          "doubao-seedream-5-0-pro-260628",
-          "doubao-seedream-5-0-260629",
-          "doubao-seedream-4-0-250828",
-          "doubao-seedream-3-0-250715"
+          "智能IMAGE 2",
+          "全能图片 2",
+          "全能图片 Pro",
+          "通义万相 2.7",
+          "Qwen Image 2.0",
+          "Qwen Image Turbo",
+          "Seedream 5.0 Lite",
+          "Seedream 4.5",
+          "Seedream 4.0"
         ],
         "model_metadata": {
-          "doubao-seedream-5-0-pro-260628": {
-            "modes": ["t2i", "i2i"],
+          "智能IMAGE 2": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
             "price": "",
-            "resolutions": ["1K", "2K", "4K"],
-            "aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
           },
-          "doubao-seedream-5-0-260629": {
-            "modes": ["t2i", "i2i"],
+          "全能图片 2": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
             "price": "",
-            "resolutions": ["1K", "2K", "4K"],
-            "aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "全能图片 Pro": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "通义万相 2.7": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "Qwen Image 2.0": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "Qwen Image Turbo": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "Seedream 5.0 Lite": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "Seedream 4.5": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "Seedream 4.0": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "3:2",
+              "2:3",
+              "4:3",
+              "3:4",
+              "16:9",
+              "9:16",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2img": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2img": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "quality",
+            "default": "",
+            "description": "输出质量：低画质 / 标准画质 / 高画质（留空则按模型默认）"
+          },
+          {
+            "key": "optimize_prompt",
+            "default": "true",
+            "description": "是否启用平台智能改写 prompt（默认开启）"
+          },
+          {
+            "key": "poll_timeout",
+            "default": "600",
+            "description": "任务轮询超时时间（秒）"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 600,
+        "sdk_extra_args": {}
+      }
+    },
+    {
+      "id": "33c78ad1",
+      "name": "字节 Seedream（火山方舟）",
+      "type": "sdk",
+      "builtin": false,
+      "enabled": true,
+      "description": "字节跳动火山引擎方舟 Seedream 生图接口，requests 直连原生 API，支持文生图/图生图/多图融合/组图/联网搜索/图层拆分/流式输出。",
+      "api_source_url": "https://console.volcengine.com/ark/region:cn-beijing/apiKey",
+      "model_docs_url": "https://www.volcengine.com/docs/82379/1541523",
+      "balance": null,
+      "config": {
+        "api_url": "",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.imagegen.sdk.seedream_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "",
+        "default_model": "doubao-seedream-5-0-lite-260128",
+        "model_options": [
+          "doubao-seedream-5-0-pro-260128",
+          "doubao-seedream-5-0-lite-260128",
+          "doubao-seedream-4-5-251218",
+          "doubao-seedream-4-0-250828"
+        ],
+        "model_metadata": {
+          "doubao-seedream-5-0-pro-260128": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "1K",
+              "1.5K",
+              "2K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "21:9",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "doubao-seedream-5-0-lite-260128": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "3K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "21:9",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
+          },
+          "doubao-seedream-4-5-251218": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "",
+            "resolutions": [
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "21:9",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
           },
           "doubao-seedream-4-0-250828": {
-            "modes": ["t2i", "i2i"],
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
             "price": "",
-            "resolutions": ["1K", "2K", "4K"],
-            "aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
-          },
-          "doubao-seedream-3-0-250715": {
-            "modes": ["t2i", "i2i"],
-            "price": "",
-            "resolutions": ["1K", "2K"],
-            "aspect_ratios": ["1:1", "16:9", "9:16", "4:3", "3:4", "3:2", "2:3"]
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "21:9",
+              "2:1",
+              "1:2",
+              "5:4",
+              "4:5"
+            ]
           }
         },
         "model_list_url": "",
@@ -635,22 +1006,62 @@
         "modes": {
           "txt2img": {
             "enabled": true,
-            "endpoint": "/images/generations"
+            "endpoint": ""
           },
           "img2img": {
             "enabled": true,
-            "endpoint": "/images/generations"
+            "endpoint": ""
+          },
+          "fusion": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "grid": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "i2grid": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "refs2grid": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "websearch": {
+            "enabled": true,
+            "endpoint": ""
           }
         },
         "custom_params": [
           {
+            "key": "optimize_prompt_options_mode",
+            "default": "standard",
+            "description": "提示词优化模式：standard（质量高）/ fast（速度快，5.0 pro/4.0 支持）/ 留空关闭"
+          },
+          {
+            "key": "stream",
+            "default": "false",
+            "description": "是否流式输出（5.0 lite/4.5/4.0 支持，逐张返回；5.0 pro 不支持）"
+          },
+          {
+            "key": "background",
+            "default": "",
+            "description": "透明通道：transparent（透明背景，仅 5.0 pro 图生图）/ opaque / 留空"
+          },
+          {
+            "key": "layer_decomposition",
+            "default": "false",
+            "description": "图层拆分开关（仅 5.0 pro，输入单图拆为底图+多图层）"
+          },
+          {
             "key": "watermark",
             "default": "false",
-            "description": "是否添加水印（Seedream 专属，等同 extra_body.watermark）"
+            "description": "是否添加“AI 生成”水印（默认关闭）"
           }
         ],
         "max_concurrent": 1,
-        "timeout": 180,
+        "timeout": 600,
         "sdk_extra_args": {}
       }
     }

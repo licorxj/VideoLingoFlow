@@ -28,7 +28,7 @@ Here are a few previews of the workbench UI:
 
 ### 1. Node-Based Workflows with Custom Nodes
 
-A visual DAG canvas built on `@xyflow/react` ships with **40+ built-in nodes** covering input, platform download, audio, ASR, translation, subtitles, dubbing, composition, image generation, and publishing. Highlights:
+A visual DAG canvas built on `@xyflow/react` ships with **80+ built-in nodes** covering input, platform download, audio, ASR, translation, subtitles, dubbing, composition, image generation, and publishing. Highlights:
 
 - **Custom nodes**: add a node with the "definition + execution step + rule validation + registration" four-piece convention. Field-level validation, semantic port wiring, and artifact layout rules are all built in.
 - Workflows can be saved, reused, and re-run in batch; node-level artifact management and cleanup are handled automatically by the control plane.
@@ -104,7 +104,7 @@ VideoLingoFlow/
 │   ├── api/                  # All REST/WS routes
 │   ├── control_plane/        # Control plane: DB/models/runtime/scheduling/Celery/security
 │   ├── engine/               # Execution engine: batch executor, step pipeline, task management
-│   ├── steps/                # 40+ node execution steps (s_*.py, subclass BaseStep)
+│   ├── steps/                # 80+ node execution steps (s_*.py, subclass BaseStep)
 │   ├── config/               # Built-in node definitions, workflow files, interface config
 │   ├── voiceforge/           # VoiceForge TTS (separate DB + Celery tasks)
 │   ├── aigc/                 # AIGC services (ComfyUI/Jimeng/RunningHub)
@@ -137,6 +137,8 @@ VideoLingoFlow/
 - Optional: NVIDIA GPU + CUDA (local model inference)
 
 ### 1. First-Time Install
+
+> 💡 If this install/deployment process is too complex for you, I've also prepared an **all-in-one Windows package** (compatible with 50-series NVIDIA GPUs). Download: [https://pan.quark.cn/s/b1f892f56a65](https://pan.quark.cn/s/b1f892f56a65)
 
 Run `install.bat` (`install.sh` on Linux/macOS): auto-checks/installs Python 3.12 and Node.js, installs backend dependencies (PyTorch trio selected automatically by platform & CUDA), and installs third-party extensions.
 
@@ -285,6 +287,7 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 | [docs/剪辑工作台联动说明.md](docs/剪辑工作台联动说明.md) | Editing workbench & pipeline integration, editing Agent | Use editing capabilities |
 | [docs/依赖清单.md](docs/依赖清单.md) | Dependency declarations for the three systems, platform adaptation, install entries | Dependency management |
 | [docs/快速开始.md](docs/快速开始.md) | Set up a working environment from scratch | First-time install |
+| [docs/node_catalog.md](docs/node_catalog.md) | Overview of all nodes: category, name, description, inputs/outputs | Browse available nodes & ports |
 
 ## Common Scripts
 

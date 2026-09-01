@@ -88,7 +88,7 @@ python backend/manager.py 18001 11001   # 自定义端口
 
 系统由**节点（node）**组成工作流。每个节点在 `builtin_node_types.py` 定义展示元数据（名称/分类/输入/输出/表单/执行域），在 `step_registry.py` 映射到具体的 `S_*` Step 类。
 
-**节点总数随版本增长，当前约 57 个**（不要硬编码"41 个"这类旧数字）。完整定义以 `builtin_node_types.py` 为准。按职能分组（类名 ↔ Step 映射见 `step_registry.py`）：
+**节点总数随版本增长，当前 80+ 个**（不要硬编码旧数字）。完整定义以 `builtin_node_types.py` 为准；**所有节点最新、最权威的清单见 `docs/node_catalog.md`**（按分组表格罗列每个节点的 id / 名称 / 描述 / 执行域 / 输入 / 输出接口，含自定义节点）。新增或修改节点后，在 `PROJECT_ROOT` 下运行 `python scripts/generate_node_catalog.py` 即可按最新节点定义重新生成该名录。按职能分组（类名 ↔ Step 映射见 `step_registry.py`）：
 
 ### 3.1 输入 / 获取
 - `platform_download`：从平台链接下载视频

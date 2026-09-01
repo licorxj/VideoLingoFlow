@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "interfaces": [
     {
@@ -131,7 +131,7 @@
       "type": "sdk",
       "builtin": true,
       "enabled": true,
-      "description": "【五星-多语言支持，准确度高】Qwen3-ASR 系列包括 Qwen3-ASR-1.7B（最优） 和 Qwen3-ASR-0.6B，支持 52 种语言和方言的语言识别与语音识别（ASR）。两者均利用大规模语音训练数据以及其基础模型 Qwen3-Omni 强大的音频理解能力。实验表明，1.7B 版本在开源 ASR 模型中达到业界领先水平，并可与最强的商业闭源 API 相媲",
+      "description": "【四星-多语言支持，准确度高】Qwen3-ASR 系列包括 Qwen3-ASR-1.7B（最优） 和 Qwen3-ASR-0.6B，支持 52 种语言和方言的语言识别与语音识别（ASR）。两者均利用大规模语音训练数据以及其基础模型 Qwen3-Omni 强大的音频理解能力。实验表明，1.7B 版本在开源 ASR 模型中达到业界领先水平，并可与最强的商业闭源 API 相媲",
       "capabilities": {
         "vad": false,
         "word_timestamps": true,
@@ -150,7 +150,7 @@
         "device_map": "auto",
         "context": "",
         "aligner_model": "",
-        "max_duration": 1800,
+        "max_duration": 900,
         "model_options": [
           "Qwen/Qwen3-ASR-0.6B",
           "Qwen/Qwen3-ASR-1.7B"
@@ -250,7 +250,7 @@
         "tag_audio_events": false,
         "sdk_package": "",
         "diarize": true,
-        "max_duration": 1797,
+        "max_duration": 1800,
         "model": "scribe_v2",
         "timeout": 600,
         "sdk_api_key": "",
@@ -393,7 +393,7 @@
         "use_itn": true,
         "hotwords": "",
         "model": "FunAudioLLM/Fun-ASR-Nano-2512",
-        "max_duration": 1800,
+        "max_duration": 1200,
         "sdk_api_key": "",
         "sdk_language_list_function": "",
         "model_options": [
@@ -451,7 +451,7 @@
       "type": "sdk",
       "builtin": true,
       "enabled": true,
-      "description": "【五星-端到端联合识别+说话人分离+时间戳对齐-50+语言】OpenMOSS 0.9B MoE 模型，单次推理联合完成语音识别、说话人分离与段级时间戳对齐，并感知声音事件。模型经 ModelScope 自动下载至 _model_cache。需 transformers>=5.6 / torch>=2.8。",
+      "description": "【五星首选-端到端联合识别+说话人分离+时间戳对齐-50+语言】OpenMOSS 0.9B MoE 模型，单次推理联合完成语音识别、说话人分离与段级时间戳对齐，并感知声音事件。模型经 ModelScope 自动下载至 _model_cache。需 transformers>=5.6 / torch>=2.8。",
       "capabilities": {
         "vad": true,
         "word_timestamps": true,
@@ -473,7 +473,7 @@
         "hotwords": "",
         "num_speakers": 0,
         "use_itn": true,
-        "max_duration": 1200,
+        "max_duration": 600,
         "model_options": [
           "openmoss/MOSS-Transcribe-Diarize"
         ],
@@ -528,6 +528,45 @@
         "custom_params": [],
         "hotwords_enabled": true
       }
+    },
+    {
+      "id": "openai_compat_example",
+      "name": "OpenAI 兼容 (示例)",
+      "capabilities": {
+        "vad": false,
+        "word_timestamps": false,
+        "speaker_diarization": false
+      },
+      "config": {
+        "api_url": "https://api.openai.com/v1",
+        "api_key": "",
+        "endpoint": "/v1/audio/transcriptions",
+        "audio_param": "file",
+        "language_param": "language",
+        "auth_header": "Authorization",
+        "auth_scheme": "Bearer",
+        "response_format": "verbose_json",
+        "model": "whisper-1",
+        "language": "auto",
+        "max_duration": 1800,
+        "max_concurrent": 1,
+        "timeout": 600,
+        "custom_params": [],
+        "model_options": [
+          "whisper-1"
+        ],
+        "voice_options": [
+          "auto",
+          "zh",
+          "en"
+        ],
+        "word_timestamps": false,
+        "diarize": false
+      },
+      "builtin": true,
+      "description": "【示例-默认禁用】兼容 OpenAI 音频转录接口的通用 ASR（OpenAI / Groq / DeepInfra / 本地 Whisper 服务等）。启用后填写 api_url 与 api_key 即可使用；返回自动归一为标准结果。",
+      "type": "openai",
+      "enabled": false
     }
   ]
 }

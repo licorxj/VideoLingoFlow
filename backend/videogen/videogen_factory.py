@@ -97,10 +97,12 @@ class SDKVideoGen(GenericVideoGen):
             "model": params.get("model", ""),
             "negative_prompt": params.get("negative_prompt", ""),
             "resolution": params.get("resolution", "720P"),
+            "ratio": params.get("ratio", "16:9"),
             "duration": params.get("duration", 5),
             "num_videos": params.get("num_videos", 1),
             "ref_images": params.get("ref_images", []),
             "ref_videos": params.get("ref_videos", []),
+            "ref_audios": params.get("ref_audios", []),
             "audio": params.get("audio"),
             "mode": params.get("mode", "txt2video"),
         }

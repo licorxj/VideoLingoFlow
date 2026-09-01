@@ -120,6 +120,7 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   input: "输入",
   video_preview: "视频预览",
   image_preview: "图片预览",
+  image_compare: "图片对比",
   s02_asr: "语音识别",
     asr_recognize: "ASR识别",
     asr_postprocess: "ASR后处理",

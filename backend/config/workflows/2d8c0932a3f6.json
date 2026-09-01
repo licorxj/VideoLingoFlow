@@ -1,0 +1,533 @@
+{
+  "id": "2d8c0932a3f6",
+  "name": "see dream生图测试",
+  "description": "see dream生图测试，用法示例，可以用到你的工作流中去",
+  "nodes": [
+    {
+      "id": "node_1_1788210642763",
+      "type": "workflow",
+      "position": {
+        "x": 5085,
+        "y": 330
+      },
+      "data": {
+        "nodeType": "seedream_txt2img",
+        "label": "Seedream文生图",
+        "config": {
+          "model": "doubao-seedream-5-0-lite-260128",
+          "resolution": "auto",
+          "aspect_ratio": "1:1",
+          "output_format": "png",
+          "watermark": false,
+          "stream_output": true,
+          "optimize_prompt": true,
+          "custom_prompt_enabled": true,
+          "custom_prompt": "在火星上，一片荒芜，小女孩拿着布偶熊艰难的前行"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": [
+            "cache\\images\\在火星上，一片荒芜，小女孩拿着_node_1_1788210642763.png"
+          ],
+          "text": "cache\\images\\在火星上，一片荒芜，小女孩拿着_node_1_1788210642763.png"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] step instance created: S_SeedreamTxt2Img",
+          "[step_worker] step_inputs keys=[]",
+          "[step_worker] node_config keys=['model', 'resolution', 'aspect_ratio', 'output_format', 'watermark', 'stream_output', 'optimize_prompt', 'custom_prompt_enabled', 'custom_prompt']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40, kwargs=['callback', 'cancel_callback'])",
+          "流式生成中…已收到第 1 张图片",
+          "流式生成完成（usage={'generated_images': 1, 'output_tokens': 17800, 'total_tokens': 17800}）",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40\\cache\\.step_node_1_1788210642763_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 591
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1788210645725",
+      "type": "workflow",
+      "position": {
+        "x": 4005,
+        "y": 255
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "filepath",
+            "url"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          }
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 555
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_4_1788210799128",
+      "type": "workflow",
+      "position": {
+        "x": 4545,
+        "y": 330
+      },
+      "data": {
+        "nodeType": "text_input",
+        "label": "文本输入框",
+        "config": {
+          "text": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 307
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1788217784778",
+      "type": "workflow",
+      "position": {
+        "x": 6090,
+        "y": 1125
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 434
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1788217809490",
+      "type": "workflow",
+      "position": {
+        "x": 5685,
+        "y": 315
+      },
+      "data": {
+        "nodeType": "seedream_img2img",
+        "label": "Seedream图生图",
+        "config": {
+          "model": "doubao-seedream-5-0-lite-260128",
+          "resolution": "auto",
+          "aspect_ratio": "1:1",
+          "num_images": 1,
+          "output_format": "png",
+          "watermark": false,
+          "stream_output": true,
+          "optimize_prompt": true,
+          "custom_prompt_enabled": true,
+          "custom_prompt": "将画面中的小女孩更换为外星异兽"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": [
+            "cache\\images\\将画面中的小女孩更换为外星异兽_node_3_1788217809490.png"
+          ],
+          "text": "cache\\images\\将画面中的小女孩更换为外星异兽_node_3_1788217809490.png"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] step instance created: S_SeedreamImg2Img",
+          "[step_worker] step_inputs keys=['image']",
+          "[step_worker] node_config keys=['model', 'resolution', 'aspect_ratio', 'num_images', 'output_format', 'watermark', 'stream_output', 'optimize_prompt', 'custom_prompt_enabled', 'custom_prompt']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40, kwargs=['callback', 'cancel_callback'])",
+          "流式生成中…已收到第 1 张图片",
+          "流式生成完成（usage={'generated_images': 1, 'output_tokens': 16384, 'total_tokens': 16384}）",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40\\cache\\.step_node_3_1788217809490_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 591
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1788218826018",
+      "type": "workflow",
+      "position": {
+        "x": 5055,
+        "y": 1035
+      },
+      "data": {
+        "nodeType": "seedream_websearch",
+        "label": "Seedream联网搜索生图",
+        "config": {
+          "model": "doubao-seedream-5-0-lite-260128",
+          "resolution": "auto",
+          "aspect_ratio": "1:1",
+          "num_images": 1,
+          "output_format": "png",
+          "watermark": false,
+          "stream_output": true,
+          "optimize_prompt": true,
+          "custom_prompt_enabled": true,
+          "custom_prompt": "搜索北京未来五天的天气，并生成天气卡片和穿衣指南"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": [
+            "cache\\images\\搜索未来五天的天气，并生成天气_node_1_1788218826018.png"
+          ],
+          "text": "cache\\images\\搜索未来五天的天气，并生成天气_node_1_1788218826018.png"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] step instance created: S_SeedreamWebSearch",
+          "[step_worker] step_inputs keys=[]",
+          "[step_worker] node_config keys=['model', 'resolution', 'aspect_ratio', 'num_images', 'output_format', 'watermark', 'stream_output', 'optimize_prompt', 'custom_prompt_enabled', 'custom_prompt']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40, kwargs=['callback', 'cancel_callback'])",
+          "流式生成中…已收到第 1 张图片",
+          "流式生成完成（usage={'generated_images': 1, 'output_tokens': 16384, 'total_tokens': 16384, 'tool_usage': {'web_search': 1}}）",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40\\cache\\.step_node_1_1788218826018_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 591
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "n_mthvgc8fw2uc",
+      "type": "workflow",
+      "position": {
+        "x": 5625,
+        "y": 1125
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 408
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "n_mthvhkukijnx",
+      "type": "workflow",
+      "position": {
+        "x": 6600,
+        "y": 1125
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 331
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1788219185620",
+      "type": "workflow",
+      "position": {
+        "x": 6510,
+        "y": 255
+      },
+      "data": {
+        "nodeType": "seedream_fusion",
+        "label": "Seedream多图融合",
+        "config": {
+          "model": "doubao-seedream-5-0-lite-260128",
+          "resolution": "auto",
+          "aspect_ratio": "1:1",
+          "num_images": 1,
+          "output_format": "png",
+          "watermark": false,
+          "stream_output": true,
+          "optimize_prompt": true,
+          "custom_prompt_enabled": true,
+          "custom_prompt": "将image2的天气信息标签放到image1上，保持image2的天气卡片半透明状态"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": [
+            "cache\\images\\将image2的天气信息标签放_node_2_1788219185620.png"
+          ],
+          "text": "cache\\images\\将image2的天气信息标签放_node_2_1788219185620.png"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] step instance created: S_SeedreamFusion",
+          "[step_worker] step_inputs keys=['image1', 'image2']",
+          "[step_worker] node_config keys=['model', 'resolution', 'aspect_ratio', 'num_images', 'output_format', 'watermark', 'stream_output', 'optimize_prompt', 'custom_prompt_enabled', 'custom_prompt']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40, kwargs=['callback', 'cancel_callback'])",
+          "流式生成中…已收到第 1 张图片",
+          "流式生成完成（usage={'generated_images': 1, 'output_tokens': 16384, 'total_tokens': 16384}）",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\262d2079fb8040fea577ac17145e4a40\\cache\\.step_node_2_1788219185620_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 611
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "n_mthw3o1pjas7",
+      "type": "workflow",
+      "position": {
+        "x": 7080,
+        "y": 1125
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 408
+      },
+      "selected": false,
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_4_1788210799128",
+      "sourceHandle": "out-text",
+      "target": "node_1_1788210642763",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_4_1788210799128out-text-node_1_1788210642763in-text"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1788210645725",
+      "sourceHandle": "out-url",
+      "target": "node_4_1788210799128",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_2_1788210645725out-url-node_4_1788210799128in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "source": "node_4_1788210799128",
+      "sourceHandle": "out-text",
+      "target": "node_1_1788218826018",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_4_1788210799128out-text-node_1_1788218826018in-text"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788218826018",
+      "sourceHandle": "out-text",
+      "target": "n_mthvgc8fw2uc",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_1_1788218826018out-text-n_mthvgc8fw2ucin-image"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788217809490",
+      "sourceHandle": "out-text",
+      "target": "n_mthvhkukijnx",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_3_1788217809490out-text-n_mthvhkukijnxin-image"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788217809490",
+      "sourceHandle": "out-text",
+      "target": "node_2_1788219185620",
+      "targetHandle": "in-image1",
+      "id": "xy-edge__node_3_1788217809490out-text-node_2_1788219185620in-image1"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788218826018",
+      "sourceHandle": "out-text",
+      "target": "node_2_1788219185620",
+      "targetHandle": "in-image2",
+      "id": "xy-edge__node_1_1788218826018out-text-node_2_1788219185620in-image2"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788210642763",
+      "sourceHandle": "out-text",
+      "target": "node_3_1788217809490",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_1_1788210642763out-text-node_3_1788217809490in-image"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788210642763",
+      "sourceHandle": "out-text",
+      "target": "node_2_1788217784778",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_1_1788210642763out-text-node_2_1788217784778in-image"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1788219185620",
+      "sourceHandle": "out-text",
+      "target": "n_mthw3o1pjas7",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_2_1788219185620out-text-n_mthw3o1pjas7in-image"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-01T05:18:55",
+  "updatedAt": "2026-09-01T08:09:31",
+  "revision": 13
+}
