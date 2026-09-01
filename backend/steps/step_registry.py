@@ -70,6 +70,7 @@ from backend.steps.s_ai_subtitle_correct import S_AiSubtitleCorrect
 from backend.steps.s_text_input import StepTextInput
 from backend.steps.s_file_load import StepFileLoad
 from backend.steps.s_image_mask import S_ImageMask
+from backend.steps.s_srt_to_text import S_SrtToText
 from backend.steps.s_ai_videogen import S_AiVideoGen
 from backend.steps.s_audio_asset_library import S_AudioAssetLibrary
 from backend.steps.s_seedream import (
@@ -213,6 +214,8 @@ _STEPS = {
     "file_load": StepFileLoad(),
     "s_image_mask": S_ImageMask(),
     "image_mask": S_ImageMask(),
+    "s_srt_to_text": S_SrtToText(),
+    "srt_to_text": S_SrtToText(),
     "s_ai_videogen": S_AiVideoGen(),
     "ai_video_gen": S_AiVideoGen(),
     "s_audio_asset_library": S_AudioAssetLibrary(),

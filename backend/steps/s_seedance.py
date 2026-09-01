@@ -263,6 +263,8 @@ class S_SeedanceBase(BaseStep):
         ref_images, ref_videos, ref_audios = [], [], []
         if self.need_refs or self.capability == "autovideo":
             if self.capability == "autovideo":
+                # 参考图列表输入：把传入的列表包装成 image1、image2、… 序列，
+                # 由 build_content 逐个以 reference_image 角色提交（视频/音频同理）
                 ref_images = _resolve_refs(inputs.get("image"), task_dir)
                 ref_videos = _resolve_refs(inputs.get("video"), task_dir)
                 ref_audios = _resolve_refs(inputs.get("audio"), task_dir)

@@ -1913,6 +1913,23 @@ BUILTIN_NODE_TYPES = [
         "configFields": []
     },
     {
+        "id": "srt_to_text",
+        "name": "SRT转文本",
+        "execution_domain": "thread",
+        "category": "utility",
+        "description": "将 SRT 字幕直接转换为纯文本：去掉序号与时间轴，提取每条字幕的文本内容，按原顺序拼接为 .txt 文本文件输出。输入为「字幕」类型，可连线「字幕生成」等字幕节点的输出（默认输出 .srt）。",
+        "icon": "FileText",
+        "color": "#f97316",
+        "inputs": [
+            {"id": "subtitle", "label": "字幕", "type": "subtitle", "required": True}
+        ],
+        "outputs": [
+            {"id": "text", "label": "文本", "type": "text", "color": "#f97316"}
+        ],
+        "defaultConfig": {},
+        "configFields": []
+    },
+    {
         "id": "json_visual_editor",
         "name": "JSON可视化编辑",
         "execution_domain": "thread",
@@ -3221,7 +3238,7 @@ def _seedance_node(node_id, name, description, capability,
                    need_refs=False, ref_ports=1, outputs=None, extra_fields=None):
     inputs = [{"id": "text", "label": "提示词", "type": "text"}]
     if capability == "autovideo":
-        inputs.append({"id": "image", "label": "参考图", "type": "image"})
+        inputs.append({"id": "image", "label": "参考图列表", "type": "list"})
         inputs.append({"id": "video", "label": "参考视频", "type": "video"})
         inputs.append({"id": "audio", "label": "参考音频", "type": "audio"})
     elif need_refs:
