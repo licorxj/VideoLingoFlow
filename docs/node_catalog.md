@@ -1,6 +1,6 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-01 08:19:25  
+> 自动生成时间：2026-09-01 08:33:52  
 > 节点总数：88　（带 `*` 的接口为必填项）
 
 ## 总览
@@ -89,7 +89,7 @@
 | Seedream文生图 | `seedream_txt2img` | 调用火山引擎方舟 Seedream 文生图（txt2img）：根据提示词生成单张图片。支持流式输出与提示词优化，产物保存到 cache/images。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream组图生成 | `seedream_grid` | 调用 Seedream 文生组图（grid / sequential_image_generation）：根据提示词一次生成多张图片。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream联网搜索生图 | `seedream_websearch` | 调用 Seedream 联网搜索生图（websearch / tools=[web_search]）：结合网络搜索结果按提示词生成图片，适合需要真实世界参考的场景。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
-| 即梦-全模态参考生视频 | `seedance_autovideo` | 调用 Seedance 全模态参考生视频（autovideo）：以参考图/视频/音频任意组合生成视频。 | process | 提示词(`text`:text); 参考图(`image`:image); 参考视频(`video`:video); 参考音频(`audio`:audio) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
+| 即梦-全模态参考生视频 | `seedance_autovideo` | 调用 Seedance 全模态参考生视频（autovideo）：以参考图/视频/音频任意组合生成视频。 | process | 提示词(`text`:text); 参考图列表(`image`:list); 参考视频(`video`:video); 参考音频(`audio`:audio) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
 | 即梦-图生视频 | `seedance_img2video` | 调用 Seedance 图生视频-首帧（img2video）：以 1 张参考图为首帧，按提示词生成视频。 | process | 提示词(`text`:text); 参考图(`image`:image) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
 | 即梦-图生视频(首尾帧) | `seedance_flf2video` | 调用 Seedance 图生视频-首尾帧（flf2video）：以 2 张参考图（首帧/尾帧）生成视频。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
 | 即梦-文生视频 | `seedance_txt2video` | 调用火山方舟 Seedance 文生视频（txt2video）：根据提示词生成视频。支持异步任务轮询、优先历史记录与查询进度。 | process | 提示词(`text`:text) | 视频(`video`:video); 视频列表(`videos`:list); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
