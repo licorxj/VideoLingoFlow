@@ -507,7 +507,7 @@
             "max_ref_images": 2,
             "max_ref_videos": 0,
             "max_ref_audios": 0,
-            "supports_audio": true,
+            "supports_audio": false,
             "default_audio": "on",
             "ratio_default": "16:9"
           }

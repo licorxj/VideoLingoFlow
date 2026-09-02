@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from "@/lib/utils";
 import {
   type GroupOutputMapping, type WorkflowNode, type WorkflowEdge, type Workflow, type NodeTypeDef,
-  getNodeTypeDefFromNode, getVisibleOutputs, canConnect, findDownstreamCandidates,
+  getNodeTypeDefFromNode, getNodeTypeDef, getVisibleOutputs, canConnect, findDownstreamCandidates,
   PORT_COLORS, isGroupNodeData, type DownstreamCandidate,
 } from "@/lib/workflowTypes";
 import WorkflowNodeComponent from "./WorkflowNode";
@@ -550,7 +550,25 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     }
   }, [setNodes, setEdges, saveCurrentId, fitViewToAll]);
 
-  // Create new empty workflow
+  // 新建工作流时默认放入的输入节点：落在当前视口中央，便于从它向右继续连线
+  const createDefaultInputNode = useCallback((): WorkflowNode | null => {
+    const def = getNodeTypeDef("input");
+    if (!def) return null;
+    const NODE_WIDTH = 420;
+    const rect = reactFlowWrapper.current?.getBoundingClientRect();
+    const instance = reactFlowInstanceRef.current;
+    const center = instance && rect
+      ? instance.screenToFlowPosition({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+      : { x: 120, y: 120 };
+    return {
+      id: getNextId(),
+      type: "workflow",
+      position: { x: Math.round(center.x - NODE_WIDTH / 2), y: Math.round(center.y - 120) },
+      data: createNodeDataFromType(def),
+    };
+  }, []);
+
+  // Create new workflow（默认带一个输入节点）
   const createNew = useCallback(() => {
     store.setWorkflowName("\u672a\u547d\u540d\u5de5\u4f5c\u6d41");
     store.setWorkflowDesc("");
@@ -560,10 +578,11 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     setActiveTaskId(undefined);
     setTaskOutputs({});
     saveCurrentId(undefined);
-    setNodes([]);
-    setEdges([]);
     nodeIdCounter = 0;
-  }, [setNodes, setEdges]);
+    const inputNode = createDefaultInputNode();
+    setNodes(inputNode ? [inputNode] : []);
+    setEdges([]);
+  }, [setNodes, setEdges, createDefaultInputNode]);
 
   const onConnect = useCallback((connection: Connection) => {
     if (!connection.source || !connection.target) return;

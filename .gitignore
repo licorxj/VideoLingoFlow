@@ -145,7 +145,13 @@ dist-ssr/
 thirdparty/cloakbrowser/
 thirdparty/bun/
 thirdparty/**/node_modules/
-thirdparty/**/.next/
+# cutia standalone 部署产物（Windows 原生）随仓库分发，供 Windows / 整合包用户免构建直接使用。
+# 注意：standalone 内部含精简 node_modules 与嵌套 .next/static，必须显式 re-include；而又因
+# git 无法 re-include「被忽略目录」的子文件，故此处只忽略 app 自身的 .next（锚定一层），而非递归
+# 忽略所有 .next，从而让 standalone 内部的嵌套 .next/static 可被追踪。
+!thirdparty/cutia/apps/web/standalone/
+!thirdparty/cutia/apps/web/standalone/**
+thirdparty/*/apps/web/.next/
 thirdparty/**/.turbo/
 thirdparty/**/.cache/
 # 已提交的 Windows 构建产物（dist）重新纳入 git

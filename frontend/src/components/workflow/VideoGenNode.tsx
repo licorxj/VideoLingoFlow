@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 interface VGParams {
   modes?: string[];
   resolutions?: string[];
   durations?: (number | string)[];
+  audio?: string[];
   max_ref_images?: number;
   max_ref_videos?: number;
   supports_audio?: boolean;
@@ -27,8 +28,9 @@ async function apiGet(url: string): Promise<any> {
 }
 
 const fieldCls =
-  "w-full rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
-const labelCls = "block text-[11px] text-muted-foreground mb-1";
+  "w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
+const labelCls = "block text-[11px] text-muted-foreground mb-0.5";
+const checkboxCls = "flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer";
 
 export function VideoGenNode({ config, onChange }: Props) {
   const [interfaces, setInterfaces] = useState<Option[]>([]);
@@ -37,6 +39,7 @@ export function VideoGenNode({ config, onChange }: Props) {
   const [loadingModels, setLoadingModels] = useState(false);
   const [loadingParams, setLoadingParams] = useState(false);
 
+  const ifaceMap = useRef<Record<string, any>>({});
   const iface = config.interface || "";
   const model = config.model || "";
 
@@ -45,6 +48,9 @@ export function VideoGenNode({ config, onChange }: Props) {
     apiGet("/api/videogen-interfaces/enabled")
       .then((d) => {
         const arr = Array.isArray(d) ? d : d?.interfaces || [];
+        const map: Record<string, any> = {};
+        arr.forEach((m: any) => { if (m && m.id) map[m.id] = m; });
+        ifaceMap.current = map;
         setInterfaces(
           arr.map((m: any) => (typeof m === "string" ? { value: m, label: m } : { value: m.id, label: m.name || m.id }))
         );
@@ -69,18 +75,28 @@ export function VideoGenNode({ config, onChange }: Props) {
       .finally(() => setLoadingModels(false));
   }, [iface]);
 
-  // 模型变化 → 重新加载参数结构
+  // 模型变化 → 重新加载参数结构（传递完整接口配置，由后端按模型匹配设置项与可选项）
   useEffect(() => {
     if (!iface || !model) {
       setParams(null);
       return;
     }
+    const ifaceConfig = ifaceMap.current[iface]?.config;
+    if (!ifaceConfig) {
+      setParams(null);
+      return;
+    }
     setLoadingParams(true);
-    apiGet(`/api/videogen-interfaces/${encodeURIComponent(iface)}/params/${encodeURIComponent(model)}`)
+    fetch("/api/videogen-interfaces/schema", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config: ifaceConfig, model, mode: config.mode || "" }),
+    })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((d) => setParams(d || {}))
       .catch(() => setParams(null))
       .finally(() => setLoadingParams(false));
-  }, [iface, model]);
+  }, [iface, model, config.mode]);
 
   // 模型参数加载后，补齐默认值
   useEffect(() => {
@@ -109,66 +125,73 @@ export function VideoGenNode({ config, onChange }: Props) {
   const supportsAudio = params?.supports_audio ?? false;
 
   return (
-    <div className="space-y-2.5">
-      {/* 第一排：提示词前缀 */}
+    <div className="space-y-2">
+      {/* 提示词前缀 */}
       <div>
         <label className={labelCls}>提示词前缀</label>
         <textarea
-          className={fieldCls + " min-h-[48px] resize-y"}
+          className={fieldCls + " min-h-[40px] resize-y"}
           placeholder="可选；执行时拼接到连线输入的提示词之前"
           value={config.prompt_prefix || ""}
           onChange={(e) => onChange("prompt_prefix", e.target.value)}
+          onPointerDown={(e) => e.stopPropagation()}
         />
       </div>
 
-      {/* 第二排：接口选择 */}
-      <div>
-        <label className={labelCls}>生成接口</label>
-        <select className={fieldCls} value={iface} onChange={(e) => onInterfaceChange(e.target.value)}>
-          <option value="">请选择接口…</option>
-          {interfaces.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* 第三排：模型选择 */}
-      <div>
-        <label className={labelCls}>模型</label>
-        <select
-          className={fieldCls}
-          value={model}
-          disabled={!iface || loadingModels}
-          onChange={(e) => onChange("model", e.target.value)}
-        >
-          <option value="">{loadingModels ? "加载中…" : "请选择模型…"}</option>
-          {models.map((o) => (
-            <option key={o.value} value={o.value}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+      {/* 生成接口 + 模型 两列 */}
+      <div className="grid grid-cols-2 gap-2">
+        <div>
+          <label className={labelCls}>生成接口</label>
+          <select
+            className={fieldCls}
+            value={iface}
+            onChange={(e) => onInterfaceChange(e.target.value)}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <option value="">请选择接口…</option>
+            {interfaces.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className={labelCls}>模型</label>
+          <select
+            className={fieldCls}
+            value={model}
+            disabled={!iface || loadingModels}
+            onChange={(e) => onChange("model", e.target.value)}
+            onPointerDown={(e) => e.stopPropagation()}
+          >
+            <option value="">{loadingModels ? "加载中…" : "请选择模型…"}</option>
+            {models.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       {loadingParams && <div className="text-[11px] text-muted-foreground">正在加载模型参数…</div>}
 
       {/* 模型支持的参数设置 */}
       {params && (
-        <div className="space-y-2.5 border-t border-border/60 pt-2.5">
+        <div className="space-y-2 border-t border-border/60 pt-2">
           {/* 生成类型 */}
           {modes.length > 0 && (
             <div>
               <label className={labelCls}>生成类型</label>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="flex flex-wrap gap-1">
                 {modes.map((m) => (
                   <button
                     key={m}
                     type="button"
                     onClick={() => onChange("mode", m)}
                     className={
-                      "px-2 py-1 rounded-md text-[11px] border transition-colors " +
+                      "px-2 py-0.5 rounded-md text-[11px] border transition-colors " +
                       (config.mode === m
                         ? "bg-primary text-primary-foreground border-primary"
                         : "bg-background text-muted-foreground border-border hover:border-primary/50")
@@ -178,10 +201,11 @@ export function VideoGenNode({ config, onChange }: Props) {
                   </button>
                 ))}
               </div>
-              <p className="text-[10px] text-muted-foreground/70 mt-1">未选择时后端按已连接输入自动推断（图生/首尾帧/文生）</p>
+              <p className="text-[10px] text-muted-foreground/70 mt-0.5">未选择时后端按已连接输入自动推断</p>
             </div>
           )}
 
+          {/* 分辨率 / 时长 / 数量 / 声音 */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={labelCls}>分辨率</label>
@@ -218,9 +242,11 @@ export function VideoGenNode({ config, onChange }: Props) {
               <div>
                 <label className={labelCls}>声音</label>
                 <select className={fieldCls} value={config.sound || "on"} onChange={(e) => onChange("sound", e.target.value)}>
-                  <option value="off">静音</option>
-                  <option value="on">开启</option>
-                  <option value="keep_original">保留原声</option>
+                  {(params?.audio && params.audio.length ? params.audio : ["on", "off", "keep_original"]).map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
                 </select>
               </div>
             )}
@@ -230,16 +256,18 @@ export function VideoGenNode({ config, onChange }: Props) {
             <p className="text-[10px] text-muted-foreground/70">该接口/模型不支持声音。</p>
           )}
 
+          {/* 负向提示词 */}
           <div>
             <label className={labelCls}>负向提示词</label>
             <textarea
-              className={fieldCls + " min-h-[40px] resize-y"}
+              className={fieldCls + " min-h-[36px] resize-y"}
               placeholder="可选"
               value={config.negative_prompt || ""}
               onChange={(e) => onChange("negative_prompt", e.target.value)}
             />
           </div>
 
+          {/* 输出前缀 + 轮询超时 */}
           <div className="grid grid-cols-2 gap-2">
             <div>
               <label className={labelCls}>输出命名前缀</label>
@@ -262,17 +290,28 @@ export function VideoGenNode({ config, onChange }: Props) {
               />
             </div>
           </div>
-
-          <label className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={Boolean(config.optimize_prompt)}
-              onChange={(e) => onChange("optimize_prompt", e.target.checked)}
-            />
-            优化提示词
-          </label>
         </div>
       )}
+
+      {/* 通用开关：优化提示词 / 输出尾帧 */}
+      <div className="grid grid-cols-2 gap-x-2 gap-y-1">
+        <label className={checkboxCls}>
+          <input
+            type="checkbox"
+            checked={Boolean(config.optimize_prompt)}
+            onChange={(e) => onChange("optimize_prompt", e.target.checked)}
+          />
+          优化提示词
+        </label>
+        <label className={checkboxCls}>
+          <input
+            type="checkbox"
+            checked={Boolean(config.extract_last_frame)}
+            onChange={(e) => onChange("extract_last_frame", e.target.checked)}
+          />
+          输出尾帧(ffmpeg)
+        </label>
+      </div>
     </div>
   );
 }

@@ -1122,9 +1122,42 @@ def stop_llm_router():
     print(f"[Manager] LLM Router stopped")
 
 
+def _resolve_node_exe() -> str | None:
+    """优先用 start.bat 注入的 NODE_EXE，否则回退到 PATH 探测。"""
+    node = os.environ.get("NODE_EXE")
+    if node and os.path.isfile(node):
+        return node
+    for cand in ("node", "node.exe"):
+        p = shutil.which(cand)
+        if p:
+            return p
+    return None
+
+
+def _node_version_at_least(node_exe: str, major: int, minor: int = 0) -> bool:
+    try:
+        out = subprocess.run(
+            [node_exe, "--version"], capture_output=True, text=True, timeout=15
+        ).stdout.strip().lstrip("v")
+        parts = out.split(".")
+        if len(parts) < 2:
+            return False
+        return (int(parts[0]), int(parts[1])) >= (major, minor)
+    except Exception:
+        return False
+
+
 @_serialized
 def start_cutia():
-    """Start the Cutia editor on port 4100."""
+    """Start the Cutia editor on port 4100.
+
+    运行模式由环境变量 CUTIA_STANDALONE 控制（推荐用于小体积分发）:
+      - "1"/"true"/"yes"/"on" -> 生产 standalone 服务 (node apps/web/server.js)。
+        运行时仅需 apps/web/standalone 内自带的精简 node_modules，无需完整 node_modules。
+      - 未设置时: 若 standalone 产物存在且完整 node_modules 已被裁剪 -> 自动 standalone；
+        否则走默认 dev 服务 (bun run dev:web)，需要完整 node_modules。
+    绑定地址可用 CUTIA_HOST 覆盖（默认 127.0.0.1）。
+    """
     global _cutia_process, _cutia_start_time
 
     with _lock:
@@ -1142,9 +1175,72 @@ def start_cutia():
         print("[Manager] Cutia directory not found, skipping")
         return
 
-    bun_cmd = os.environ.get("BUN_CMD", "bun")
-    # Use 'dev:web' from monorepo root which uses turbo to run @cutia/web dev
     cutia_root = os.path.join(project_root, "thirdparty", "cutia")
+    standalone_root = os.path.join(cutia_dir, "standalone")
+    server_js = os.path.join(standalone_root, "apps", "web", "server.js")
+    has_standalone = os.path.isfile(server_js)
+    has_full_nm = os.path.isdir(os.path.join(cutia_root, "node_modules"))
+
+    standalone_env = str(os.environ.get("CUTIA_STANDALONE", "")).strip().lower()
+    if standalone_env:
+        standalone = standalone_env in ("1", "true", "yes", "on")
+    else:
+        # 未显式指定：standalone 产物存在且完整 node_modules 已被裁剪 -> 自动 standalone（小体积分发）
+        standalone = has_standalone and not has_full_nm
+
+    bun_cmd = os.environ.get("BUN_CMD", "bun")
+
+    if standalone:
+        if not has_standalone:
+            print(f"[Manager] Standalone 服务不存在: {server_js}")
+            print("[Manager] 回退到 dev 模式。请先构建 cutia 生成 standalone 产物（运行 thirdparty\\pack-cutia-standalone.bat）。")
+            standalone = False
+        else:
+            node_exe = _resolve_node_exe()
+            if not node_exe:
+                print("[Manager] 未找到 Node.js；standalone 模式需要 Node >= 20.9。回退到 dev 模式（需 bun）。")
+                standalone = False
+            elif not _node_version_at_least(node_exe, 20, 9):
+                print(f"[Manager] Node.js 版本过低（{node_exe}）；standalone 需 >= 20.9。回退到 dev 模式。")
+                standalone = False
+
+    if standalone:
+        host = os.environ.get("CUTIA_HOST", "127.0.0.1")
+        print(f"[Manager] 启动 Cutia (standalone): node apps/web/server.js (port {CUTIA_PORT}, host {host})")
+        env = os.environ.copy()
+        env["PORT"] = str(CUTIA_PORT)
+        env["HOSTNAME"] = host
+        try:
+            if os.name == "nt":
+                # 隐藏窗口启动；cwd 必须为 standalone 根目录，server.js 路径相对 standalone 根
+                cmd = f'cmd /K "cd /d "{standalone_root}" && "{node_exe}" apps/web/server.js"'
+                proc = subprocess.Popen(
+                    cmd,
+                    cwd=standalone_root,
+                    env=env,
+                    shell=True,
+                    creationflags=CREATE_HIDDEN,
+                )
+            else:
+                proc = subprocess.Popen(
+                    [node_exe, "apps/web/server.js"],
+                    cwd=standalone_root,
+                    env=env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+            _assign_to_job(proc)
+            with _lock:
+                _cutia_process = proc
+                _cutia_start_time = time.time()
+            _desired["cutia"] = True
+            print(f"[Manager] Cutia (standalone) 已启动, PID={proc.pid}")
+        except Exception as e:
+            print(f"[Manager] 启动 Cutia (standalone) 失败: {e}")
+        return
+
+    # dev 模式（默认）
     print(f"[Manager] Starting Cutia: bun run dev:web (port {CUTIA_PORT})")
     try:
         if os.name == "nt":
@@ -1238,7 +1334,13 @@ def _is_cutia_process(pid: int | None) -> bool:
             command_line = result.stdout.strip().lower()
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))).lower()
         cutia_dir = os.path.join(project_root, "thirdparty", "cutia", "apps", "web").lower()
-        return cutia_dir in command_line and "next" in command_line
+        # standalone 模式的进程命令行为 ".../apps/web/standalone/apps/web/server.js"，
+        # 不含 "next" 字样，需用 "standalone" / "server.js" 一并识别。
+        return cutia_dir in command_line and (
+            "next" in command_line
+            or "standalone" in command_line
+            or "server.js" in command_line
+        )
     except Exception:
         return False
 

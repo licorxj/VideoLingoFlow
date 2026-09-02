@@ -19,3 +19,9 @@ bun.lockb
 .vercel
 
 .DS_Store
+
+# 已提交的 standalone 部署产物（Windows 原生）随仓库分发，供 Windows / 整合包用户免构建直接使用。
+# 取消忽略 apps/web/standalone 及其内部精简 node_modules（上游 node_modules 仅忽略开发依赖）。
+!apps/web/standalone/
+!apps/web/standalone/node_modules/
+!apps/web/standalone/**

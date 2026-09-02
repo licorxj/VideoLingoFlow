@@ -31,6 +31,7 @@ import { LcwrNodeControls, LcwrRegionSummary, LcwrWatermarkEditor } from "./Lcwr
 import { SubtitleFindEditor } from "./SubtitleFindEditor";
 import { ImageMaskEditor } from "./ImageMaskEditor";
 import { VideoGenNode } from "./VideoGenNode";
+import { SeedanceVideoNode } from "./SeedanceVideoNode";
 import { AudioAssetLibraryNode } from "./AudioAssetLibraryNode";
 
 const ICON_MAP: Record<string, any> = {
@@ -981,6 +982,12 @@ function ApiSelectField({ field, value, config, onConfigChange }: { field: Confi
           allItems = mapOptionList(resData.presets);
         } else if (Array.isArray(resData.voices)) {
           allItems = mapOptionList(resData.voices);
+        } else if (Array.isArray(resData[field.key])) {
+          // 单设置项按字段 key 直接取可选项（如 resolution -> resData.resolution）
+          allItems = mapOptionList(resData[field.key]);
+        } else if (Array.isArray(resData[field.key + "s"])) {
+          // 复数键兜底（如 duration -> resData.durations / aspect_ratio -> resData.aspect_ratios）
+          allItems = mapOptionList(resData[field.key + "s"]);
         }
 
         // Handle { interfaces: [...] } shape (from /enabled or /asr-interfaces)
@@ -1379,6 +1386,8 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   })();
   // LCWR 去水印节点使用自定义编辑器（LcwrWatermarkEditor），跳过通用表单渲染
   if (nodeType.id === "lcwr_watermark_removal") return null;
+  // 即梦(Seedance) / AI生视频 节点由自定义组件渲染，不再走通用 configFields 表单
+  if ((nodeType.id || "").startsWith("seedance_") || nodeType.id === "ai_video_gen") return null;
   if (configFields.length === 0 && !dynamicLoading) return null;
 
   const fieldSpanClass = (field: ConfigField) => {
@@ -2202,6 +2211,13 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const visibleInputs = getNodeInputs(nodeType, config);
   const isPiAgent = nodeType.id === "pi_agent";
   const isSeedance = (nodeType.id || "").startsWith("seedance_");
+  const SEEDANCE_MODE_MAP: Record<string, string> = {
+    seedance_txt2video: "txt2video",
+    seedance_img2video: "img2video",
+    seedance_flf2video: "flf2video",
+    seedance_autovideo: "autovideo",
+  };
+  const seedanceMode = SEEDANCE_MODE_MAP[nodeType.id || ""] || "txt2video";
   const isDynamicPorts = isPiAgent || nodeType.id === "output_merge_list";
   const dedupedOutputEntries = (() => {
     const seen = new Set<string>();
@@ -2223,8 +2239,10 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   configRef.current = config;
 
   const handleConfigChange = useCallback((key: string, value: any) => {
-    const newConfig = { ...configRef.current, [key]: value };
-    updateNodeData(id, { config: newConfig });
+    // 使用 updateNodeData 的 updater function，避免同一事件内连续调用时后一次覆盖前一次
+    updateNodeData(id, (node) => ({
+      config: { ...(node.data?.config || configRef.current || {}), [key]: value },
+    }));
   }, [id, updateNodeData]);
 
   // JSON 可视化编辑：打开弹窗并载入输入（优先已编辑结果，其次上游 JSON 输入/配置）
@@ -2735,6 +2753,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
       {nodeType.id === "ai_video_gen" && (
         <div className="px-3 pb-3 pt-1">
           <VideoGenNode config={config} onChange={(k, v) => handleConfigChange(k, v)} />
+        </div>
+      )}
+      {/* 即梦(Seedance) 视频：按所选模型能力动态渲染参数面板（分辨率/时长/声音/各专有开关） */}
+      {isSeedance && (
+        <div className="px-3 pb-3 pt-1">
+          <SeedanceVideoNode config={config} mode={seedanceMode} onChange={(k, v) => handleConfigChange(k, v)} />
         </div>
       )}
       {/* 音频素材库：输入框 + 打开晴沐配音谷素材库按钮（嵌套弹窗） */}

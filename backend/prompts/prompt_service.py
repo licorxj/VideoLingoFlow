@@ -3,10 +3,12 @@ Prompt Service: renders prompt templates with live config values.
 Supports hot-reload, language-aware rendering, and template preview.
 Also supports JSON-based prompt template management for the Prompt Engineering UI.
 """
+import copy
 import json
 import os
 import re
 import threading
+import uuid
 from typing import Any, Optional, Set
 from jinja2 import Environment, meta, exceptions
 from backend.config.config_manager import config
@@ -24,6 +26,11 @@ class PromptService:
         self._json_templates_path = os.path.join(
             os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
             "config", "prompt_templates.json"
+        )
+        # 配音谷内置 Prompt 预设（只读种子源，用于补种与「恢复默认」）
+        self._voiceforge_defaults_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "config", "voiceforge_prompt_defaults.json"
         )
         self._json_cache = None
         self._json_lock = threading.Lock()
@@ -162,17 +169,102 @@ class PromptService:
     # JSON-based Prompt Template Management (Prompt Engineering)
     # ================================================================
 
-    def load_json_templates(self) -> list[dict]:
-        """Load all prompt templates from prompt_templates.json."""
+    def load_json_templates(self, scope: Optional[str] = None) -> list[dict]:
+        """Load prompt templates from prompt_templates.json.
+
+        scope 用于把 Prompt 预设限定在某个功能域（如 voiceforge 晴沐配音谷）。
+        未传 scope 时返回全部；模板缺失 scope 时按 "global" 处理。
+        """
         with self._json_lock:
             if self._json_cache is not None:
-                return list(self._json_cache)
-            if not os.path.exists(self._json_templates_path):
+                templates = list(self._json_cache)
+            elif not os.path.exists(self._json_templates_path):
                 return []
-            with open(self._json_templates_path, "r", encoding="utf-8") as f:
+            else:
+                with open(self._json_templates_path, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                self._json_cache = data.get("templates", [])
+                templates = list(self._json_cache)
+        if scope:
+            return [t for t in templates if (t.get("scope") or "global") == scope]
+        return templates
+
+    # ── 配音谷 Prompt 预设（scope=voiceforge）──────────────────────
+
+    def load_voiceforge_defaults(self) -> list[dict]:
+        """读取配音谷内置预设种子（只读，不写入缓存）。"""
+        if not os.path.exists(self._voiceforge_defaults_path):
+            return []
+        try:
+            with open(self._voiceforge_defaults_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            self._json_cache = data.get("templates", [])
-            return list(self._json_cache)
+        except (OSError, json.JSONDecodeError):
+            return []
+        return data.get("templates", [])
+
+    def seed_voiceforge_defaults(self) -> int:
+        """补种缺失的配音谷内置预设，返回新增数量（已存在则跳过，不覆盖用户改动）。"""
+        defaults = self.load_voiceforge_defaults()
+        if not defaults:
+            return 0
+        templates = self.load_json_templates()
+        existing = {t.get("id") for t in templates}
+        added = 0
+        for item in defaults:
+            if item.get("id") not in existing:
+                templates.append(copy.deepcopy(item))
+                added += 1
+        if added:
+            self.save_json_templates(templates)
+        return added
+
+    def create_json_template(self, data: dict, scope: str = "voiceforge") -> dict:
+        """新建一个限定作用域的 Prompt 预设。"""
+        templates = self.load_json_templates()
+        template_id = str(data.get("id") or "").strip() or f"voiceforge_preset_{uuid.uuid4().hex[:8]}"
+        if any(t.get("id") == template_id for t in templates):
+            raise ValueError(f"预设 id 已存在：{template_id}")
+        placeholders = data.get("placeholders") or []
+        template = {
+            "id": template_id,
+            "name": str(data.get("name") or template_id).strip(),
+            "description": data.get("description") or "",
+            "scope": scope,
+            "category": data.get("category") or "自定义",
+            "placeholders": placeholders if isinstance(placeholders, list) else [],
+            "system_prompt": data.get("system_prompt") or "",
+            "user_prompt": data.get("user_prompt") or "",
+        }
+        templates.append(template)
+        self.save_json_templates(templates)
+        return template
+
+    def delete_json_template(self, prompt_id: str) -> bool:
+        """删除一个 Prompt 预设。返回是否命中。"""
+        templates = self.load_json_templates()
+        remaining = [t for t in templates if t.get("id") != prompt_id]
+        if len(remaining) == len(templates):
+            return False
+        self.save_json_templates(remaining)
+        return True
+
+    def reset_json_template(self, prompt_id: str) -> bool:
+        """把某条预设恢复为配音谷内置默认内容。返回是否命中默认库。"""
+        default_item = next(
+            (t for t in self.load_voiceforge_defaults() if t.get("id") == prompt_id), None
+        )
+        if not default_item:
+            return False
+        templates = self.load_json_templates()
+        for i, t in enumerate(templates):
+            if t.get("id") == prompt_id:
+                templates[i] = copy.deepcopy(default_item)
+                self.save_json_templates(templates)
+                return True
+        # 已被删除则重新补种
+        templates.append(copy.deepcopy(default_item))
+        self.save_json_templates(templates)
+        return True
 
     def get_json_template_by_id(self, prompt_id: str) -> Optional[dict]:
         """Get a single prompt template by its ID."""
@@ -195,7 +287,7 @@ class PromptService:
         templates = self.load_json_templates()
         for i, t in enumerate(templates):
             if t.get("id") == prompt_id:
-                for key in ("name", "description", "placeholders", "system_prompt", "user_prompt"):
+                for key in ("name", "description", "category", "placeholders", "system_prompt", "user_prompt"):
                     if key in update_data:
                         templates[i][key] = update_data[key]
                 self.save_json_templates(templates)

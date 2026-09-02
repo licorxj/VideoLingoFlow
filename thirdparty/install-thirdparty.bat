@@ -3,7 +3,7 @@ chcp 65001 >nul 2>&1
 setlocal
 rem ============================================================
 rem  Third-party extensions installer (Windows)
-rem  CloakBrowser + pi + QM-LocalRouter + social-auto-upload-web-ui
+rem  CloakBrowser + cutia(standalone) + pi + QM-LocalRouter + social-auto-upload-web-ui
 rem  Invoked by the main installer after the venv is created:
 rem      call "%~dp0thirdparty\install-thirdparty.bat"
 rem  Options: --force  force re-download / rebuild

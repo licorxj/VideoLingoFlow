@@ -449,36 +449,6 @@
         "maxTokens": 16384
       },
       {
-        "id": "nvidia/nemotron-3-nano-30b-a3b",
-        "name": "nemotron-3-nano-30b-a3b",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 131072
-      },
-      {
         "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
         "name": "Nemotron 3 Nano Omni",
         "api": "openai-completions",
@@ -690,9 +660,9 @@
         "maxTokens": 16384
       }
     ],
-    "checkedAt": 1787994647984,
-    "lastModified": 1787917529000,
-    "etag": "W/\"4e8d0fdc7316820e8f767524310ebc49\""
+    "checkedAt": 1788320600384,
+    "lastModified": 1788266317000,
+    "etag": "W/\"52620e25656db352c870af48ff92a888\""
   },
   "xiaomi": {
     "models": [
@@ -767,7 +737,7 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1787994647918,
+    "checkedAt": 1788320600442,
     "lastModified": 1787571286000,
     "etag": "W/\"3db76cd3404affdf755b2efc443b74c3\""
   },
@@ -1201,26 +1171,6 @@
         }
       },
       {
-        "id": "gemini-robotics-er-1.6-preview",
-        "name": "Gemini Robotics-ER 1.6 Preview",
-        "api": "google-generative-ai",
-        "provider": "google",
-        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 1,
-          "output": 5,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "contextWindow": 131072,
-        "maxTokens": 65536
-      },
-      {
         "id": "gemma-4-26b-a4b-it",
         "name": "Gemma 4 26B A4B IT",
         "api": "google-generative-ai",
@@ -1275,9 +1225,9 @@
         }
       }
     ],
-    "checkedAt": 1787994646557,
-    "lastModified": 1787571256000,
-    "etag": "W/\"83d2a70407d3c5b76d5db4ef8ffb647d\""
+    "checkedAt": 1788320600394,
+    "lastModified": 1788266304000,
+    "etag": "W/\"59fee14a14df536c61e2202fd906d459\""
   },
   "openai": {
     "models": [
@@ -2496,7 +2446,7 @@
         }
       }
     ],
-    "checkedAt": 1787994645636,
+    "checkedAt": 1788320600513,
     "lastModified": 1787740207000,
     "etag": "W/\"de4430a471bcb862d1abf6d6e78f60c2\""
   },
@@ -4156,6 +4106,37 @@
         "maxTokens": 131072
       },
       {
+        "id": "zai-org/GLM-5.3",
+        "name": "GLM-5.3",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 1.4,
+          "output": 4.4,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 1048576,
+        "maxTokens": 131072,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": "max"
+        }
+      },
+      {
         "id": "zai-org/GLM-5.3-Flash",
         "name": "GLM-5.3-Flash",
         "api": "openai-completions",
@@ -4163,7 +4144,8 @@
         "baseUrl": "https://router.huggingface.co/v1",
         "reasoning": true,
         "input": [
-          "text"
+          "text",
+          "image"
         ],
         "cost": {
           "input": 0.15,
@@ -4187,9 +4169,9 @@
         }
       }
     ],
-    "checkedAt": 1787978949047,
-    "lastModified": 1787823117000,
-    "etag": "W/\"e9c32d233a51db8d688077d113d3a5cd\""
+    "checkedAt": 1788320600473,
+    "lastModified": 1788266309000,
+    "etag": "W/\"cf81118a87ef8bedc514709e3356d982\""
   },
   "anthropic": {
     "models": [
@@ -4564,7 +4546,7 @@
         }
       }
     ],
-    "checkedAt": 1787994646171,
+    "checkedAt": 1788320601497,
     "lastModified": 1787571244000,
     "etag": "W/\"f6c149c048a0e6e85e35ce0a72c1d4ec\""
   }

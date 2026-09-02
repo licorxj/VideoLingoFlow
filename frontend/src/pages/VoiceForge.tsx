@@ -18,6 +18,7 @@ import { EmotionTagDialog } from "@/components/voiceforge/EmotionTagDialog";
 import { EmotionDesignDialog } from "@/components/voiceforge/EmotionDesignDialog";
 import { BatchEmotionDesignDialog } from "@/components/voiceforge/BatchEmotionDesignDialog";
 import { DubbingWorkspace } from "@/components/voiceforge/DubbingWorkspace";
+import { VoiceForgeSettingsPanel } from "@/components/voiceforge/VoiceForgeSettingsPanel";
 import { AssetLibrary } from "@/components/voiceforge/assets/AssetLibrary";
 import { ProjectCreateDialog } from "@/components/voiceforge/ProjectCreateDialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -402,23 +403,7 @@ export function VoiceForgeAssets() {
 }
 
 export function VoiceForgeSettings() {
-  const [health, setHealth] = useState<any>(null); const load = async () => setHealth((await voiceForgeApi.health()).data); useEffect(() => { load(); }, []);
-  return (
-    <PageBackground tone="voiceforge" className="mx-auto max-w-4xl space-y-6 p-1">
-      <PageHeader
-        icon={Sparkles}
-        title="配音谷设置"
-        detail="TTS 与 LLM 配置由全局设置统一管理，此处只展示可用状态。"
-        hideTitle
-        breadcrumbs={[{ label: "晴沐配音谷", to: "/voiceforge" }, { label: "配音谷设置" }]}
-        actions={
-          <Button onClick={load}><RefreshCw className="mr-1.5 h-4 w-4" />刷新</Button>
-        }
-      />
-      <section className="grid gap-4 md:grid-cols-2">{[{ label: "数据库", value: health?.database ? "已连接" : "检查中" }, { label: "任务队列", value: health?.queue_mode === "celery" ? "Celery 已启用" : "本地回退模式" }, { label: "可用 TTS 接口", value: `${health?.tts_interfaces ?? 0} 个` }, { label: "LLM 服务", value: health?.llm_configured ? "已配置" : "未配置" }].map((item) => <div key={item.label} className="rounded-xl border border-border/60 bg-card p-5"><div className="text-sm text-muted-foreground">{item.label}</div><div className="mt-2 font-semibold">{item.value}</div></div>)}</section>
-        <p className="rounded-lg border border-warning/30 bg-warning/5 p-4 text-sm text-muted-foreground">要配置模型、密钥、TTS 接口或音色，请使用主应用的全局设置。这些配置不会在晴沐配音谷中复制或显示。</p>
-    </PageBackground>
-  );
+  return <VoiceForgeSettingsPanel />;
 }
 
 function OverviewItem({ icon: Icon, label, value, detail, tone = "default" }: { icon: any; label: string; value: string | number; detail: string; tone?: "default" | "error" }) { return <section className="border border-border/60 bg-card p-4"><div className="flex items-start justify-between"><span className="text-sm text-muted-foreground">{label}</span><Icon className={`h-4 w-4 ${tone === "error" ? "text-destructive" : "text-primary"}`} /></div><div className="mt-3 text-2xl font-semibold tabular-nums">{value}</div><p className="mt-1 text-xs text-muted-foreground">{detail}</p></section>; }

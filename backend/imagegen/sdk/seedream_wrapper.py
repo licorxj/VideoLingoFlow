@@ -197,8 +197,9 @@ def generate(prompt, output_dir, model="", negative_prompt="", resolution="1K",
     if bg in ("transparent", "opaque"):
         body["background"] = bg
 
-    # 输出格式 / 水印
-    body["output_format"] = kwargs.get("output_format") or "png"
+    # 输出格式 / 水印（4.0 / 4.5 不支持 output_format 参数，故不传递；5.0 系列才支持）
+    if not model.startswith("doubao-seedream-4-"):
+        body["output_format"] = kwargs.get("output_format") or "png"
     body["watermark"] = bool(kwargs.get("watermark", False))
 
     # 提示词优化

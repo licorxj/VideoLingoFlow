@@ -1,0 +1,3 @@
+{
+  "/api/ai/video/generate/route": "app/api/ai/video/generate/route.js"
+}

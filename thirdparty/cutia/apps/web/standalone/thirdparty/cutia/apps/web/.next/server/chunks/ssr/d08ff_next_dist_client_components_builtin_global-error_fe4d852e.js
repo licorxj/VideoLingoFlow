@@ -1,0 +1,3 @@
+module.exports=[55997,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(99313);a.n(d("[project]/thirdparty/cutia/apps/web/node_modules/next/dist/client/components/builtin/global-error.js <module evaluation>"))},58606,(a,b,c)=>{let{createClientModuleProxy:d}=a.r(99313);a.n(d("[project]/thirdparty/cutia/apps/web/node_modules/next/dist/client/components/builtin/global-error.js"))},50853,a=>{"use strict";a.i(55997);var b=a.i(58606);a.n(b)}];
+
+//# sourceMappingURL=d08ff_next_dist_client_components_builtin_global-error_fe4d852e.js.map

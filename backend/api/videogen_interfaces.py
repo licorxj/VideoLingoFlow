@@ -223,6 +223,40 @@ async def get_videogen_models_for_node(
     return {"models": supported, "param_schema": param_schema, "mode": target_mode}
 
 
+@router.get("/sdk/{sdk_module}/models-for-node")
+async def get_videogen_models_for_node_by_sdk(
+    sdk_module: str,
+    mode: str = Query("", description="节点模式: t2v / i2v / flf / v2v 或原始模式名"),
+):
+    """按 sdk_module 定位视频生成接口并返回其模型列表（供专用 Seedance 节点动态下拉使用）。
+
+    不依赖接口 id（生成型 UUID），通过配置中的 sdk_module 解析，便于配置升级模型。
+    mode 可选 t2v/i2v/flf/v2v 或原始模式名 txt2video/img2video/flf2video/autovideo，按能力过滤模型。
+    返回纯模型名数组，供前端 api-select 直接消费。
+    """
+    mgr = get_videogen_interface_manager()
+    iface = None
+    for i in mgr.get_enabled():
+        if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:
+            iface = i
+            break
+    if iface is None:
+        for i in mgr.list_all():
+            if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:
+                iface = i
+                break
+    if iface is None:
+        raise HTTPException(status_code=404, detail=f"未找到 sdk_module={sdk_module} 的视频生成接口")
+    config = iface.get("config", {})
+    metadata = config.get("model_metadata", {})
+    models = config.get("model_options", [])
+    if not mode:
+        return models
+    mode_map = {"t2v": "txt2video", "i2v": "img2video", "flf": "flf2video", "v2v": "autovideo"}
+    target_mode = mode_map.get(mode, mode)
+    return [m for m in models if target_mode in (metadata.get(m, {}).get("modes", []))]
+
+
 @router.get("/{iface_id}/params/{model}")
 async def get_videogen_model_params(iface_id: str, model: str):
     """返回模型支持的分辨率 / 时长 / 生成类型 / 参考限制 / 声音配置。"""
@@ -391,6 +425,156 @@ async def serve_test_video(req: VideoGenTestVideoRequest):
     elif ext in ("mov",):
         media_type = "video/quicktime"
     return FileResponse(path, media_type=media_type, filename=os.path.basename(path))
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 节点设置 Schema（按模型动态返回可选设置项与可选项）
+# ─────────────────────────────────────────────────────────────────────────────
+def _resolve_videogen_config(mgr, iface_id=None, sdk_module=None, config=None):
+    """按优先级解析接口配置：显式 config > interface_id > sdk_module。"""
+    if config:
+        return config
+    if iface_id:
+        iface = mgr.get(iface_id)
+        if not iface:
+            raise HTTPException(status_code=404, detail="接口不存在")
+        return iface.get("config", {})
+    if sdk_module:
+        for i in mgr.get_enabled():
+            if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:
+                return i.get("config", {})
+        for i in mgr.list_all():
+            if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:
+                return i.get("config", {})
+    raise HTTPException(status_code=400, detail="需提供 config / interface_id / sdk_module 之一")
+
+
+def _build_videogen_schema(config, model, mode):
+    """根据模型 metadata / SDK 能力矩阵构造节点设置 schema（设置项及其可选项）。
+
+    对 Seedance 类 SDK（sdk_module=backend.videogen.sdk.seedance_wrapper），直接按
+    seedance_sdk._family 能力矩阵推导分辨率集合、时长区间与各专有参数支持情况，确保
+    卡片展示的「可选时长 / 分辨率 / 开关项」与所选模型真实能力一致；其它接口沿用
+    model_metadata。
+    """
+    sdk_module = config.get("sdk_module", "")
+    is_seedance = sdk_module == "backend.videogen.sdk.seedance_wrapper"
+
+    fam = None
+    if is_seedance:
+        try:
+            from backend.videogen.sdk import seedance_sdk
+            fam = seedance_sdk._family(model)
+        except Exception:
+            fam = None
+
+    metadata = config.get("model_metadata", {})
+    if not model and config.get("default_model"):
+        model = config.get("default_model")
+    meta = metadata.get(model, {}) if model else {}
+
+    if fam:
+        # 分辨率优先用 metadata（权威），缺失时回落能力矩阵档位排序
+        _order = {"480p": 0, "720p": 1, "1080p": 2, "4k": 3}
+        resolutions = list(meta.get("resolutions", [])) or sorted(fam["resolutions"], key=lambda r: _order.get(r, 9))
+        # 时长优先用 metadata 中官方支持的离散取值；缺失时按家族区间展开（-1 表示智能时长）
+        durs_meta = meta.get("durations", [])
+        if durs_meta:
+            durations = [int(d) for d in durs_meta]
+            if fam.get("allow_neg1") and -1 not in durations:
+                durations = [-1] + durations
+        else:
+            dmin, dmax = fam["duration"]
+            durations = list(range(dmin, dmax + 1))
+            if fam.get("allow_neg1"):
+                durations = [-1] + durations
+        supports_audio = meta.get("supports_audio", "generate_audio" in fam["supports"])
+        default_audio = meta.get("default_audio", "on" if supports_audio else "model_default")
+        sup = fam["supports"]
+        ratio_default = meta.get("ratio_default") or fam.get("ratio_default", "16:9")
+        modes = list(meta.get("modes", []) or [])
+    else:
+        resolutions = list(meta.get("resolutions", []))
+        durations = list(meta.get("durations", []))
+        supports_audio = meta.get("supports_audio", False)
+        default_audio = meta.get("default_audio", "model_default")
+        sup = set(meta.get("supports", []) or [])
+        ratio_default = meta.get("ratio_default", "16:9")
+        modes = list(meta.get("modes", []) or [])
+
+    audio_options = ["on", "off", "keep_original", "model_default"] if supports_audio else []
+    # 专有参数能力开关：供前端按模型显隐设置项（seedance 取能力矩阵，其它取 meta.supports）
+    caps = {
+        "seed": "seed" in sup,
+        "camera_fixed": "camera_fixed" in sup,
+        "return_last_frame": "return_last_frame" in sup,
+        "draft": "draft" in sup,
+        "tools_web_search": "tools_web_search" in sup,
+        "service_tier_flex": "service_tier_flex" in sup,
+        "priority": "priority" in sup,
+        "output_format_mov": "output_format_mov" in sup,
+    }
+    settings = [
+        {"key": "resolution", "label": "分辨率", "type": "select",
+         "options": [{"value": v, "label": v} for v in resolutions],
+         "default": resolutions[0] if resolutions else "720P"},
+        {"key": "duration", "label": "时长(秒)", "type": "select",
+         "options": [{"value": str(v), "label": ("智能" if v == -1 else str(v))} for v in durations],
+         "default": str(durations[0]) if durations else "5"},
+        {"key": "audio", "label": "声音", "type": "select",
+         "options": [{"value": v, "label": v} for v in audio_options],
+         "default": default_audio, "visible": supports_audio},
+    ]
+    return {
+        "model": model,
+        "mode": mode,
+        "resolutions": resolutions,
+        "durations": [str(d) for d in durations],
+        "audio": audio_options,
+        "modes": modes,
+        "supports_audio": supports_audio,
+        "default_audio": default_audio,
+        "ratio_default": ratio_default,
+        "max_ref_images": meta.get("max_ref_images", 0),
+        "max_ref_videos": meta.get("max_ref_videos", 0),
+        "max_ref_audios": meta.get("max_ref_audios", 0),
+        "supports": caps,
+        "settings": settings,
+    }
+
+
+class VideoGenSchemaRequest(BaseModel):
+    config: Optional[Dict[str, Any]] = None
+    interface_id: Optional[str] = None
+    sdk_module: Optional[str] = None
+    model: str = ""
+    mode: str = "txt2video"
+
+
+@router.post("/schema")
+async def post_videogen_schema(req: VideoGenSchemaRequest):
+    """接收完整接口配置 JSON（或 interface_id / sdk_module），返回所选模型的设置 schema。
+
+    前端在用户选择接口与模型后调用，自动匹配卡片上的可选设置项及各设置项的可选项，
+    避免用户记忆模型参数差异。AI生视频 节点亦使用此接口（传递整个接口配置）。
+    """
+    mgr = get_videogen_interface_manager()
+    config = _resolve_videogen_config(mgr, req.interface_id, req.sdk_module, req.config)
+    return _build_videogen_schema(config, req.model, req.mode)
+
+
+@router.get("/{iface_id}/schema")
+async def get_videogen_schema_by_id(iface_id: str, model: str = "", mode: str = Query("txt2video")):
+    mgr = get_videogen_interface_manager()
+    config = _resolve_videogen_config(mgr, iface_id=iface_id)
+    return _build_videogen_schema(config, model, mode)
+
+
+@router.get("/sdk/{sdk_module}/schema")
+async def get_videogen_schema_by_sdk(sdk_module: str, model: str = "", mode: str = Query("txt2video")):
+    mgr = get_videogen_interface_manager()
+    config = _resolve_videogen_config(mgr, sdk_module=sdk_module)
+    return _build_videogen_schema(config, model, mode)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

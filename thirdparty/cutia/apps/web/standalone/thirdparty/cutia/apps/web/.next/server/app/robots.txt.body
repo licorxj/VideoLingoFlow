@@ -1,0 +1,8 @@
+User-Agent: *
+Allow: /
+Allow: /llms.txt
+Disallow: /_next/
+Disallow: /projects/
+Disallow: /editor/
+
+Sitemap: https://cutia.msgbyte.com/sitemap.xml

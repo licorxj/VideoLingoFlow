@@ -886,12 +886,11 @@
         "sdk_module": "backend.imagegen.sdk.seedream_wrapper",
         "sdk_function": "generate",
         "sdk_api_key": "",
-        "default_model": "doubao-seedream-5-0-lite-260128",
+        "default_model": "doubao-seedream-4-5-251128",
         "model_options": [
           "doubao-seedream-5-0-pro-260128",
           "doubao-seedream-5-0-lite-260128",
-          "doubao-seedream-4-5-251218",
-          "doubao-seedream-4-0-250828"
+          "doubao-seedream-4-5-251128"
         ],
         "model_metadata": {
           "doubao-seedream-5-0-pro-260128": {
@@ -946,37 +945,12 @@
               "4:5"
             ]
           },
-          "doubao-seedream-4-5-251218": {
+          "doubao-seedream-4-5-251128": {
             "modes": [
               "t2i",
               "i2i"
             ],
-            "price": "",
-            "resolutions": [
-              "2K",
-              "4K"
-            ],
-            "aspect_ratios": [
-              "1:1",
-              "16:9",
-              "9:16",
-              "4:3",
-              "3:4",
-              "3:2",
-              "2:3",
-              "21:9",
-              "2:1",
-              "1:2",
-              "5:4",
-              "4:5"
-            ]
-          },
-          "doubao-seedream-4-0-250828": {
-            "modes": [
-              "t2i",
-              "i2i"
-            ],
-            "price": "",
+            "price": "0.1",
             "resolutions": [
               "1K",
               "2K",
@@ -989,12 +963,7 @@
               "4:3",
               "3:4",
               "3:2",
-              "2:3",
-              "21:9",
-              "2:1",
-              "1:2",
-              "5:4",
-              "4:5"
+              "2:3"
             ]
           }
         },

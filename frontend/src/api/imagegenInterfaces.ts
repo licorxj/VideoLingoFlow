@@ -8,6 +8,12 @@ export interface ImageGenModeConfig {
 export interface ImageGenModesMap {
   txt2img?: ImageGenModeConfig;
   img2img?: ImageGenModeConfig;
+  fusion?: ImageGenModeConfig;
+  grid?: ImageGenModeConfig;
+  i2grid?: ImageGenModeConfig;
+  refs2grid?: ImageGenModeConfig;
+  websearch?: ImageGenModeConfig;
+  [key: string]: ImageGenModeConfig | undefined;
 }
 
 export interface ImageGenModelMeta {

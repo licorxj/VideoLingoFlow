@@ -5,4 +5,5 @@
 .env*
 !.env.example
 
-.next/
+# 仅忽略本 app 自身的 .next；standalone 部署目录内部的嵌套 .next/static 需随 git 分发（见根 .gitignore）。
+/.next/

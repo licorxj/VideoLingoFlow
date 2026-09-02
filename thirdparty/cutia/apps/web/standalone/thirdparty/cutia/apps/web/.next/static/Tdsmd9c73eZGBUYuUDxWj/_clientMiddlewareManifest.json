@@ -1,0 +1,6 @@
+[
+  {
+    "regexp": "^\\/cutia(?:\\/(_next\\/data\\/[^/]{1,}))?(?:\\/((?!api|_next\\/static|_next\\/image|favicon.ico|locales|logos|manifest.json|icon.svg|robots.txt|sitemap.xml|llms.txt).*))(\\\\.json)?[\\/#\\?]?$",
+    "originalSource": "/((?!api|_next/static|_next/image|favicon.ico|locales|logos|manifest.json|icon.svg|robots.txt|sitemap.xml|llms.txt).*)"
+  }
+]
