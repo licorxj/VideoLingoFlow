@@ -1,14 +1,19 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import { ReactFlow, Controls, ControlButton, Background, BackgroundVariant, BezierEdge, addEdge, useNodesState, useEdgesState } from "@xyflow/react";
-import type { Connection, ReactFlowInstance } from "@xyflow/react";
+import type { Connection, ReactFlowInstance, OnConnectStartParams, FinalConnectionState } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
-import { type GroupOutputMapping, type WorkflowNode, type WorkflowEdge, type Workflow, type NodeTypeDef, getNodeTypeDefFromNode, canConnect, PORT_COLORS, isGroupNodeData } from "@/lib/workflowTypes";
+import {
+  type GroupOutputMapping, type WorkflowNode, type WorkflowEdge, type Workflow, type NodeTypeDef,
+  getNodeTypeDefFromNode, getVisibleOutputs, canConnect, findDownstreamCandidates,
+  PORT_COLORS, isGroupNodeData, type DownstreamCandidate,
+} from "@/lib/workflowTypes";
 import WorkflowNodeComponent from "./WorkflowNode";
 import NodePalette from "./NodePalette";
 import ContextMenu from "./ContextMenu";
+import QuickConnectMenu, { type QuickConnectRequest } from "./QuickConnectMenu";
 import {
   Save, FolderOpen, Play, Trash2, RotateCcw, FileText, Loader2,
   Plus, Workflow as WorkflowIcon, Clock, CheckCircle2, Pause, Square, Copy,
@@ -52,6 +57,17 @@ function ensureNodePositions(nodes: any[]): any[] {
       ? n
       : { ...(n || {}), position: { x: 80 + (index % 8) * 260, y: 80 + Math.floor(index / 8) * 160 } }
   );
+}
+
+/** 从鼠标/触摸事件中取屏幕坐标（React Flow 的连线回调给的是原生事件） */
+function getEventClientPoint(event: MouseEvent | TouchEvent): { x: number; y: number } | null {
+  if (!event) return null;
+  if ("touches" in event || "changedTouches" in event) {
+    const touch = (event as TouchEvent).changedTouches?.[0] || (event as TouchEvent).touches?.[0];
+    return touch ? { x: touch.clientX, y: touch.clientY } : null;
+  }
+  const mouse = event as MouseEvent;
+  return { x: mouse.clientX, y: mouse.clientY };
 }
 
 function runtimeStatus(status: string | undefined) {
@@ -563,6 +579,77 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     if (!canConnect(srcPort.type, tgtPort.type)) return;
     setEdges((eds) => addEdge({ ...connection, type: edgeType, animated: true, style: { stroke: randomEdgeColor(), strokeWidth: 2 } }, eds));
   }, [edgeType, nodes, setEdges]);
+
+  // ============ 输出端点拖出连线：松手时弹出可接入的下游节点 ============
+  const connectStartRef = useRef<{ nodeId: string | null; handleId: string | null; handleType: string | null; x: number; y: number } | null>(null);
+  const [quickConnect, setQuickConnect] = useState<QuickConnectRequest | null>(null);
+
+  const onConnectStart = useCallback((event: MouseEvent | TouchEvent, params: OnConnectStartParams) => {
+    const point = getEventClientPoint(event);
+    connectStartRef.current = {
+      nodeId: params.nodeId,
+      handleId: params.handleId,
+      handleType: params.handleType,
+      x: point?.x ?? 0,
+      y: point?.y ?? 0,
+    };
+  }, []);
+
+  const onConnectEnd = useCallback((event: MouseEvent | TouchEvent, state: FinalConnectionState) => {
+    const start = connectStartRef.current;
+    connectStartRef.current = null;
+    // 仅在"从输出端点拖出且没有连上目标端点"时弹窗
+    if (!start || start.handleType !== "source" || !start.nodeId) return;
+    if (state?.isValid) return;
+    const point = getEventClientPoint(event);
+    if (!point) return;
+    // 只是点了一下端点（没有真正拖动）不弹窗
+    if (Math.abs(point.x - start.x) + Math.abs(point.y - start.y) < 20) return;
+
+    const sourceNode = nodesRef.current.find((n: any) => n.id === start.nodeId);
+    if (!sourceNode) return;
+    const srcTypeDef = getNodeTypeDefFromNode(sourceNode as any);
+    if (!srcTypeDef) return;
+    const outputs = getVisibleOutputs(srcTypeDef, (sourceNode.data as any)?.config || {});
+    const srcPort = outputs.find((p) => "out-" + p.id === start.handleId)
+      || srcTypeDef.outputs.find((p) => "out-" + p.id === start.handleId);
+    if (!srcPort) return;
+
+    setQuickConnect({
+      screen: point,
+      sourceNodeId: start.nodeId,
+      sourceNodeName: (sourceNode.data as any)?.label || srcTypeDef.name,
+      sourceHandle: start.handleId || "",
+      sourcePortLabel: srcPort.label,
+      sourcePortType: srcPort.type,
+      candidates: findDownstreamCandidates(srcPort.type),
+    });
+  }, []);
+
+  /** 选中候选节点：在松手位置放入节点并完成连线 */
+  const handleQuickConnectSelect = useCallback((candidate: DownstreamCandidate) => {
+    if (!quickConnect) return;
+    const id = getNextId();
+    const instance = reactFlowInstanceRef.current;
+    // 节点左上角落在松手位置（上移一点，避免遮住连线终点）
+    const position = instance
+      ? instance.screenToFlowPosition({ x: quickConnect.screen.x, y: Math.max(0, quickConnect.screen.y - 16) })
+      : { x: quickConnect.screen.x, y: quickConnect.screen.y };
+    setNodes((nds) => [
+      ...nds,
+      { id, type: "workflow", position, selected: false, data: createNodeDataFromType(candidate.nodeType) },
+    ]);
+    setEdges((eds) => addEdge({
+      source: quickConnect.sourceNodeId,
+      sourceHandle: quickConnect.sourceHandle,
+      target: id,
+      targetHandle: "in-" + candidate.port.id,
+      type: edgeType,
+      animated: true,
+      style: { stroke: randomEdgeColor(), strokeWidth: 2 },
+    }, eds));
+    setQuickConnect(null);
+  }, [quickConnect, edgeType, setNodes, setEdges, randomEdgeColor]);
 
   const handleEdgeTypeChange = useCallback((nextType: EdgeType) => {
     setEdgeType(nextType);
@@ -1422,6 +1509,11 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
 
   const flowNodes = nodes.map(n => ({
     ...n,
+    // 兜底保证使用自定义节点组件（其头部顶栏带拖拽手柄类）
+    type: n.type || "workflow",
+    // 只有按住节点头部顶栏（.wf-node-drag-handle）才能拖动节点，
+    // 避免正文内拖选文本、拖动控件时误移动节点
+    dragHandle: ".wf-node-drag-handle",
     data: {
       ...n.data,
       onExecuteNode: (id: string) => handleExecuteNodeRef.current(id),
@@ -1686,7 +1778,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           {/* Canvas */}
           <div ref={reactFlowWrapper} className="flex-1 relative">
             <ReactFlow nodes={flowNodes} edges={styledEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
-              onConnect={onConnect} onInit={(inst) => { reactFlowInstanceRef.current = inst; setReactFlowInstance(inst); }} onDragOver={onDragOver} onDrop={onDrop}
+              onConnect={onConnect} onConnectStart={onConnectStart} onConnectEnd={onConnectEnd}
+              onInit={(inst) => { reactFlowInstanceRef.current = inst; setReactFlowInstance(inst); }} onDragOver={onDragOver} onDrop={onDrop}
               onPaneContextMenu={(e) => { e.preventDefault(); setContextMenu({ visible: true, position: { x: e.clientX, y: e.clientY } }); }}
               nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView snapToGrid snapGrid={[15, 15]}
               selectionOnDrag selectionKeyCode="Shift" multiSelectionKeyCode="Shift"
@@ -2115,6 +2208,14 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           if (screenPos) setPlacingPos(screenPos);
           setPlacingNode(nodeType);
         }}
+      />
+
+      {/* 从输出端点拖线松手后的"可接入下游节点"面板 */}
+      <QuickConnectMenu
+        visible={!!quickConnect}
+        request={quickConnect}
+        onSelect={handleQuickConnectSelect}
+        onClose={() => setQuickConnect(null)}
       />
 
       {/* 粘附光标的节点预览：跟随鼠标，点击画布落下 */}
