@@ -532,11 +532,14 @@ def prepare_standalone(base: Path) -> bool:
         warn("cutia: 未找到 .next/standalone 产物，跳过 standalone 整理")
         return False
     dst = base / "apps" / "web" / "standalone"
-    ws_dst = dst / "thirdparty" / "cutia" / "apps" / "web"
+    ws_dst = dst / "apps" / "web"
     log("整理 cutia standalone 部署产物 → apps/web/standalone ...")
     if dst.exists():
         shutil.rmtree(dst)
-    shutil.copytree(str(src), str(dst), symlinks=True, dirs_exist_ok=True,
+    # Next standalone 输出带仓库根前缀 thirdparty/cutia，这里只拷贝其中的 web 工作区
+    # (server.js/.next/node_modules/public) 到 standalone/apps/web，去掉多余前缀，
+    # 以对齐 manager.start_cutia 与 ensure_cutia 预期的 server.js 路径。
+    shutil.copytree(str(ws_src), str(ws_dst), symlinks=True, dirs_exist_ok=True,
                    ignore_dangling_symlinks=True)
     web = base / "apps" / "web"
     static_src = web / ".next" / "static"
