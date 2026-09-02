@@ -215,6 +215,39 @@ async def get_models_for_node(iface_id: str, mode: str = "txt2img"):
     return filtered
 
 
+@router.get("/sdk/{sdk_module}/models-for-node")
+async def get_models_for_node_by_sdk(sdk_module: str, mode: str = ""):
+    """按 sdk_module 定位生图接口并返回其模型列表（供专用 Seedream 节点动态下拉使用）。
+
+    不依赖接口 id（其为生成型 UUID），通过配置中的 sdk_module 解析，便于配置升级模型。
+    mode 可选 txt2img/img2img/fusion/grid/websearch/layer，用于按能力过滤；留空返回全部 model_options。
+    """
+    mgr = get_imagegen_interface_manager()
+    iface = None
+    for i in mgr.get_enabled():
+        if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:
+            iface = i
+            break
+    if iface is None:
+        for i in mgr.list_all():
+            if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:
+                iface = i
+                break
+    if iface is None:
+        raise HTTPException(status_code=404, detail=f"未找到 sdk_module={sdk_module} 的生图接口")
+    iface_id = iface["id"]
+    if mode:
+        metadata = mgr.get_model_metadata(iface_id)
+        if not metadata:
+            return mgr.get_models(iface_id)
+        mode_key = {
+            "txt2img": "t2i", "img2img": "i2i", "fusion": "i2i",
+            "grid": "t2i", "i2grid": "i2i", "refs2grid": "i2i", "websearch": "t2i",
+        }.get(mode, mode)
+        return [name for name, meta in metadata.items() if mode_key in meta.get("modes", [])]
+    return mgr.get_models(iface_id)
+
+
 @router.get("/{iface_id}/params/{model}")
 async def get_model_params(iface_id: str, model: str):
     """Return resolution and aspect_ratio options for a specific model."""
@@ -352,3 +385,84 @@ async def get_test_image(subdir: str, filename: str):
         raise HTTPException(404, "Image not found")
     from fastapi.responses import FileResponse
     return FileResponse(filepath)
+
+
+# ─── 节点设置 Schema（按模型动态返回可选设置项与可选项）─────────────────
+def _resolve_imagegen_config(mgr, iface_id=None, sdk_module=None, config=None):
+    """按优先级解析接口配置：显式 config > interface_id > sdk_module。"""
+    if config:
+        return config
+    if iface_id:
+        iface = mgr.get(iface_id)
+        if not iface:
+            raise HTTPException(status_code=404, detail="接口不存在")
+        return iface.get("config", {})
+    if sdk_module:
+        for i in mgr.get_enabled():
+            if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:
+                return i.get("config", {})
+        for i in mgr.list_all():
+            if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:
+                return i.get("config", {})
+    raise HTTPException(status_code=400, detail="需提供 config / interface_id / sdk_module 之一")
+
+
+def _build_imagegen_schema(config, model, mode):
+    """根据模型 metadata 构造节点设置 schema（设置项及其可选项）。"""
+    metadata = config.get("model_metadata", {})
+    if not model and config.get("default_model"):
+        model = config.get("default_model")
+    meta = metadata.get(model, {}) if model else {}
+    resolutions = list(meta.get("resolutions", []))
+    aspect_ratios = list(meta.get("aspect_ratios", []))
+    # 保留「自动」作为首选项（wrapper 在未指定分辨率时自行推算）
+    res_options = (["auto"] if "auto" not in resolutions else []) + resolutions
+    settings = [
+        {"key": "resolution", "label": "分辨率", "type": "select",
+         "options": [{"value": v, "label": v} for v in res_options],
+         "default": "auto" if "auto" in res_options else (res_options[0] if res_options else "")},
+        {"key": "aspect_ratio", "label": "图片比例", "type": "select",
+         "options": [{"value": v, "label": v} for v in aspect_ratios],
+         "default": aspect_ratios[0] if aspect_ratios else "1:1"},
+    ]
+    return {
+        "model": model,
+        "mode": mode,
+        "resolutions": res_options,
+        "aspect_ratios": aspect_ratios,
+        "settings": settings,
+    }
+
+
+class ImageGenSchemaRequest(BaseModel):
+    config: Optional[dict] = None
+    interface_id: Optional[str] = None
+    sdk_module: Optional[str] = None
+    model: str = ""
+    mode: str = "txt2img"
+
+
+@router.post("/schema")
+async def post_imagegen_schema(req: ImageGenSchemaRequest):
+    """接收完整接口配置 JSON（或 interface_id / sdk_module），返回所选模型的设置 schema。
+
+    前端在用户选择接口与模型后调用，自动匹配卡片上的可选设置项及各设置项的可选项，
+    避免用户记忆模型参数差异。
+    """
+    mgr = get_imagegen_interface_manager()
+    config = _resolve_imagegen_config(mgr, req.interface_id, req.sdk_module, req.config)
+    return _build_imagegen_schema(config, req.model, req.mode)
+
+
+@router.get("/{iface_id}/schema")
+async def get_imagegen_schema_by_id(iface_id: str, model: str = "", mode: str = "txt2img"):
+    mgr = get_imagegen_interface_manager()
+    config = _resolve_imagegen_config(mgr, iface_id=iface_id)
+    return _build_imagegen_schema(config, model, mode)
+
+
+@router.get("/sdk/{sdk_module}/schema")
+async def get_imagegen_schema_by_sdk(sdk_module: str, model: str = "", mode: str = "txt2img"):
+    mgr = get_imagegen_interface_manager()
+    config = _resolve_imagegen_config(mgr, sdk_module=sdk_module)
+    return _build_imagegen_schema(config, model, mode)

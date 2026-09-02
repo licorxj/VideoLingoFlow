@@ -2,7 +2,7 @@
 # ============================================================
 #  第三方扩展安装（Linux / macOS）
 #  与 install-thirdparty.bat 等价：找到 Python 后调用跨平台脚本
-#  install_thirdparty.py（下载 CloakBrowser + 三个项目 + pi）
+#  install_thirdparty.py（下载 CloakBrowser + cutia standalone + 三个项目 + pi）
 #
 #  用法（无需可执行位，直接 bash 调用即可）：
 #      bash thirdparty/install-thirdparty.sh [--force]

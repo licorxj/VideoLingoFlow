@@ -1050,6 +1050,7 @@ def postVideo():
                 creation_declaration=data.get('creationDeclaration', ''),
                 # B 站转载来源(创作声明=转载 时必填)
                 bili_repost_source=data.get('biliRepostSource', ''),
+                bili_keep_system_tags=bool(data.get('biliKeepSystemTags', True)),
                 risk_warning=data.get('riskWarning', ''),
                 enable_cash_activity=data.get('enableCashActivity', False),
                 supplementary_declaration=data.get('supplementaryDeclaration', ''),
@@ -1100,6 +1101,11 @@ def postVideo():
                 channels_shoot_date=data.get('channelsShootDate', ''),
                 channels_shoot_region=data.get('channelsShootRegion', []),
                 channels_repost_source=data.get('channelsRepostSource', ''),
+                # 视频号关联剧集(picker 选择结果,含发布复现用 trace)
+                channels_drama=data.get('channelsDrama') or [],
+                channels_link_type=data.get('channelsLinkType', ''),
+                channels_link_article_url=data.get('channelsLinkArticleUrl', ''),
+                channels_red_envelope_url=data.get('channelsRedEnvelopeUrl', ''),
                 # CSDN 是否推荐
                 recommend=data.get('recommend', False),
                 # VIVO 平台特有参数
@@ -1209,6 +1215,7 @@ def postVideoBatch():
                     creation_declaration=data.get('creationDeclaration', ''),
                 # B 站转载来源(创作声明=转载 时必填)
                 bili_repost_source=data.get('biliRepostSource', ''),
+                bili_keep_system_tags=bool(data.get('biliKeepSystemTags', True)),
                     risk_warning=data.get('riskWarning', ''),
                     enable_cash_activity=data.get('enableCashActivity', False),
                     supplementary_declaration=data.get('supplementaryDeclaration', ''),
@@ -1254,6 +1261,7 @@ def postVideoBatch():
                     creation_declaration=data.get('creationDeclaration', ''),
                 # B 站转载来源(创作声明=转载 时必填)
                 bili_repost_source=data.get('biliRepostSource', ''),
+                bili_keep_system_tags=bool(data.get('biliKeepSystemTags', True)),
                     risk_warning=data.get('riskWarning', ''),
                     enable_cash_activity=data.get('enableCashActivity', False),
                     supplementary_declaration=data.get('supplementaryDeclaration', ''),
@@ -1742,6 +1750,92 @@ if __name__ == "__main__":
     except Exception as _e:
         logger.warning("[Startup] 账号检查模式读取失败（不影响主服务）: %s", _e)
 
+    # ========== 视频号（channels）保活线程 ==========
+    # 视频号长时间无操作会自动退出登录。每 30 分钟对全部有效视频号账号
+    # 跑一次 sync_profile（与账号列表「同步」按钮同一调用）：访问创作者中心
+    # 刷新服务端会话，顺带回填昵称/头像/运营数据。
+    def _channels_keepalive_loop():
+        INTERVAL = 30 * 60  # 30 分钟
+        while True:
+            time.sleep(INTERVAL)
+            try:
+                db_path = _get_db_path()
+                with sqlite3.connect(str(db_path)) as conn:
+                    rows = conn.execute(
+                        "SELECT id, filePath, userName FROM user_info"
+                        " WHERE type = 2 AND status = 1"
+                    ).fetchall()
+                if not rows:
+                    continue
+                from impl.registry import get_platform as _gp
+                platform = _gp(2)  # 2 = 视频号 channels
+                if not platform:
+                    continue
+
+                # 发布进行中的账号本轮跳过：发布与保活同时开浏览器
+                # 操作同一 cookie 会话，避免并发冲突
+                try:
+                    from ext_api.task_queue import get_task_queue as _gtq
+                    _busy_cookies = {
+                        t.account_cookie_path
+                        for t in list(_gtq().running.values())
+                    }
+                except Exception:
+                    _busy_cookies = set()
+
+                logger.info(
+                    f"[ChannelsKeepAlive] 开始同步 {len(rows)} 个视频号账号"
+                )
+                for acc_id, cookie_file, nick in rows:
+                    if cookie_file in _busy_cookies:
+                        logger.info(
+                            f"[ChannelsKeepAlive] 账号 {nick}(id={acc_id})"
+                            " 有发布任务进行中，本轮跳过"
+                        )
+                        continue
+                    try:
+                        cookie_path = str(Path(BASE_DIR / "cookiesFile" / cookie_file))
+                        if not Path(cookie_path).exists():
+                            continue
+                        # 与 /syncProfile 路由同一约定：dict{name, avatar, stats}
+                        result = asyncio.run(platform.sync_profile(cookie_file))
+                        if isinstance(result, dict):
+                            name = result.get('name', '') or ''
+                            avatar = result.get('avatar', '') or ''
+                            stats = result.get('stats', []) or []
+                            if not isinstance(stats, list):
+                                stats = []
+                            if name or avatar:
+                                stats_json = json.dumps(stats, ensure_ascii=False)
+                                with sqlite3.connect(str(db_path)) as conn:
+                                    if name:
+                                        conn.execute(
+                                            'UPDATE user_info SET userName = ?,'
+                                            ' avatar = ?, stats = ? WHERE id = ?',
+                                            (name, avatar, stats_json, acc_id),
+                                        )
+                                    else:
+                                        conn.execute(
+                                            'UPDATE user_info SET avatar = ?,'
+                                            ' stats = ? WHERE id = ?',
+                                            (avatar, stats_json, acc_id),
+                                        )
+                        logger.info(
+                            f"[ChannelsKeepAlive] 账号 {nick}(id={acc_id}) 同步完成"
+                        )
+                    except Exception as e:
+                        logger.info(
+                            f"[ChannelsKeepAlive] 账号 {nick}(id={acc_id}) 同步异常: {e}"
+                        )
+                logger.info("[ChannelsKeepAlive] 本轮同步完成")
+            except Exception as e:
+                logger.info(f"[ChannelsKeepAlive] 保活线程异常: {e}")
+
+    threading.Thread(
+        target=_channels_keepalive_loop, daemon=True, name="channels-keepalive"
+    ).start()
+    logger.info("[Startup] 视频号保活线程已启动（每 30 分钟同步一次全部视频号账号）")
+
     port = int(os.environ.get("SAU_PORT", "5409"))
     if port == 5409:
         try:
@@ -1756,6 +1850,4 @@ if __name__ == "__main__":
     os.environ["SAU_PORT"] = str(port)
     # threads=16：默认 4 线程会被「并发 checkCookie + 多个 SSE /login 长连接」
     # 占满，导致后端假死。加大线程池让两者不再互相挤占。
-    # 仅监听回环地址，避免与占用 192.168.x.x:5409 作为出站源端口的进程（如 Trae.exe）
-    # 冲突导致 WinError 10013。前端通过 localhost:5409 访问，回环即可满足。
-    serve(app, host="127.0.0.1", port=port, threads=16)
+    serve(app, host="0.0.0.0", port=port, threads=16)

@@ -5,6 +5,7 @@ import {
   Library,
   Mic,
   PlayCircle,
+  Settings,
   Sparkles,
   Video,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const items: NavItem[] = [
   { to: "/voiceforge/video-dub", label: "视频配音", icon: Video },
   { to: "/voiceforge/scene-design", label: "场景设计", icon: Sparkles },
   { to: "/voiceforge/assets", label: "素材库", icon: Library },
+  { to: "/voiceforge/settings", label: "设置", icon: Settings },
 ];
 
 export function VoiceForgeTopNav() {

@@ -133,6 +133,7 @@ BUILTIN_NODE_TYPES = [
         "outputs": [
             {"id": "videos", "label": "视频", "type": "video"},
             {"id": "video", "label": "视频(首个)", "type": "video"},
+            {"id": "last_frame", "label": "尾帧", "type": "image"},
         ],
         "defaultConfig": {
             "prompt_prefix": "",
@@ -147,6 +148,7 @@ BUILTIN_NODE_TYPES = [
             "output_prefix": "video",
             "optimize_prompt": True,
             "poll_timeout": 1800,
+            "extract_last_frame": False,
         },
     },
     {
@@ -1473,10 +1475,12 @@ BUILTIN_NODE_TYPES = [
             {"key": "model", "label": "模型选择", "type": "api-select",
              "apiEndpoint": "/api/imagegen-interfaces/{interface}/models-for-node?mode={mode}",
              "dependsOn": "interface", "placeholder": "请选择模型"},
-            {"key": "resolution", "label": "分辨率", "type": "select", "colSpan": "half",
-             "options": [{"value": "1K", "label": "1K"}, {"value": "2K", "label": "2K"}, {"value": "4K", "label": "4K"}]},
-            {"key": "aspect_ratio", "label": "图片比例", "type": "select", "colSpan": "half",
-             "options": [{"value": "1:1", "label": "1:1"}, {"value": "16:9", "label": "16:9"}, {"value": "9:16", "label": "9:16"}, {"value": "4:3", "label": "4:3"}, {"value": "3:4", "label": "3:4"}, {"value": "3:2", "label": "3:2"}, {"value": "2:3", "label": "2:3"}, {"value": "21:9", "label": "21:9"}]},
+            {"key": "resolution", "label": "分辨率", "type": "api-select", "colSpan": "half",
+             "apiEndpoint": "/api/imagegen-interfaces/{interface}/schema?model={model}",
+             "dependsOn": "model", "placeholder": "自动"},
+            {"key": "aspect_ratio", "label": "图片比例", "type": "api-select", "colSpan": "half",
+             "apiEndpoint": "/api/imagegen-interfaces/{interface}/schema?model={model}",
+             "dependsOn": "model", "placeholder": "1:1"},
             {"key": "num_images", "label": "生成数量", "type": "number", "min": 1, "max": 10, "colSpan": "half"},
             {"key": "custom_prompt_enabled", "label": "自定义提示词", "type": "checkbox", "colSpan": "half"},
             {"key": "custom_prompt", "label": "自定义提示词", "type": "textarea",
@@ -3050,26 +3054,15 @@ BUILTIN_NODE_TYPES = [
 def _seedream_common_fields(extra=None):
     """Seedream 节点通用面板配置项。"""
     fields = [
-        {"key": "model", "label": "模型", "type": "select", "colSpan": "half", "options": [
-            {"value": "doubao-seedream-5-0-pro-260128", "label": "Seedream 5.0 Pro"},
-            {"value": "doubao-seedream-5-0-lite-260128", "label": "Seedream 5.0 Lite"},
-            {"value": "doubao-seedream-4-5-251218", "label": "Seedream 4.5"},
-            {"value": "doubao-seedream-4-0-250828", "label": "Seedream 4.0"},
-        ]},
-        {"key": "resolution", "label": "分辨率", "type": "select", "colSpan": "half", "options": [
-            {"value": "auto", "label": "自动"},
-            {"value": "1K", "label": "1K"},
-            {"value": "1.5K", "label": "1.5K"},
-            {"value": "2K", "label": "2K"},
-            {"value": "3K", "label": "3K"},
-            {"value": "4K", "label": "4K"},
-        ]},
-        {"key": "aspect_ratio", "label": "图片比例", "type": "select", "colSpan": "half", "options": [
-            {"value": "1:1", "label": "1:1"}, {"value": "16:9", "label": "16:9"},
-            {"value": "9:16", "label": "9:16"}, {"value": "4:3", "label": "4:3"},
-            {"value": "3:4", "label": "3:4"}, {"value": "3:2", "label": "3:2"},
-            {"value": "2:3", "label": "2:3"}, {"value": "21:9", "label": "21:9"},
-        ]},
+        {"key": "model", "label": "模型", "type": "api-select", "colSpan": "half",
+         "apiEndpoint": "/api/imagegen-interfaces/sdk/backend.imagegen.sdk.seedream_wrapper/models-for-node",
+         "placeholder": "跟随接口默认"},
+        {"key": "resolution", "label": "分辨率", "type": "api-select", "colSpan": "half",
+         "apiEndpoint": "/api/imagegen-interfaces/sdk/backend.imagegen.sdk.seedream_wrapper/schema?model={model}",
+         "dependsOn": "model", "placeholder": "自动"},
+        {"key": "aspect_ratio", "label": "图片比例", "type": "api-select", "colSpan": "half",
+         "apiEndpoint": "/api/imagegen-interfaces/sdk/backend.imagegen.sdk.seedream_wrapper/schema?model={model}",
+         "dependsOn": "model", "placeholder": "1:1"},
         {"key": "num_images", "label": "生成数量", "type": "number", "min": 1, "max": 15,
          "colSpan": "half", "description": "生成 N 张图片；组图模式单次请求产出多张，其余模式逐张调用"},
         {"key": "output_format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
@@ -3103,7 +3096,7 @@ def _seedream_node(node_id, name, description, capability,
         else:
             inputs.append({"id": "image", "label": "参考图", "type": "image"})
     default = {
-        "model": "doubao-seedream-5-0-lite-260128" if not layer else "doubao-seedream-5-0-pro-260128",
+        "model": "",  # 空 = 跟随图像生成接口（字节 Seedream）的默认模型设置
         "resolution": "auto",
         "aspect_ratio": "1:1",
         "num_images": 1,
@@ -3120,6 +3113,11 @@ def _seedream_node(node_id, name, description, capability,
         {"id": "images", "label": "输出图片列表", "type": "json"},
         {"id": "text", "label": "第一张图片", "type": "image"},
     ]
+    # 模型下拉列表镜像 AI生图 节点：按能力 mode 过滤，从后端接口动态获取（不写死）
+    fields = _seedream_common_fields(extra_fields)
+    for f in fields:
+        if f.get("key") == "model":
+            f["apiEndpoint"] = f["apiEndpoint"] + f"?mode={capability}"
     return {
         "id": node_id,
         "name": name,
@@ -3131,7 +3129,7 @@ def _seedream_node(node_id, name, description, capability,
         "inputs": inputs,
         "outputs": outputs,
         "defaultConfig": default,
-        "configFields": _seedream_common_fields(extra_fields),
+        "configFields": fields,
     }
 
 
@@ -3172,69 +3170,6 @@ BUILTIN_NODE_TYPES.extend(_SEEDREAM_NODES)
 # ─────────────────────────────────────────────────────────────────────────────
 # Seedance 视频生成能力节点（即梦品牌命名，底层为火山方舟 Seedance）
 # ─────────────────────────────────────────────────────────────────────────────
-def _seedance_common_fields(extra=None):
-    """Seedance 视频节点通用面板配置项。"""
-    fields = [
-        {"key": "model", "label": "模型", "type": "select", "colSpan": "half", "options": [
-            {"value": "doubao-seedance-2-5-pro-260628", "label": "Seedance 2.5 Pro"},
-            {"value": "doubao-seedance-2-0-pro-260528", "label": "Seedance 2.0 Pro"},
-            {"value": "doubao-seedance-1-5-pro-251215", "label": "Seedance 1.5 Pro"},
-            {"value": "doubao-seedance-1-0-pro-250528", "label": "Seedance 1.0 Pro"},
-        ]},
-        {"key": "resolution", "label": "分辨率", "type": "select", "colSpan": "half", "options": [
-            {"value": "480P", "label": "480P"}, {"value": "720P", "label": "720P"},
-            {"value": "1080P", "label": "1080P"}, {"value": "4K", "label": "4K"},
-        ]},
-        {"key": "ratio", "label": "宽高比", "type": "select", "colSpan": "half", "options": [
-            {"value": "16:9", "label": "16:9"}, {"value": "9:16", "label": "9:16"},
-            {"value": "1:1", "label": "1:1"}, {"value": "4:3", "label": "4:3"},
-            {"value": "3:4", "label": "3:4"}, {"value": "21:9", "label": "21:9"},
-            {"value": "adaptive", "label": "自适应(按首帧)"},
-        ]},
-        {"key": "duration", "label": "时长(秒)", "type": "number", "min": 2, "max": 30,
-         "colSpan": "half", "description": "生成视频时长（秒）；-1 表示智能"},
-        {"key": "frames", "label": "帧数", "type": "number", "min": 29, "max": 289,
-         "colSpan": "half", "description": "可选；指定帧数（29~289），优先级高于时长"},
-        {"key": "num_videos", "label": "生成数量", "type": "number", "min": 1, "max": 10,
-         "colSpan": "half", "description": "生成 N 个视频（>1 时循环提交任务）"},
-        {"key": "audio", "label": "声音", "type": "select", "colSpan": "half", "options": [
-            {"value": "on", "label": "开启"}, {"value": "off", "label": "静音"},
-            {"value": "keep_original", "label": "保留原声"}, {"value": "model_default", "label": "模型默认"},
-        ]},
-        {"key": "output_format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
-            {"value": "mp4", "label": "MP4"}, {"value": "mov", "label": "MOV"},
-        ]},
-        {"key": "watermark", "label": "添加水印", "type": "checkbox", "colSpan": "half"},
-        {"key": "seed", "label": "随机种子", "type": "number", "colSpan": "half",
-         "description": "可选；固定种子可复现（部分模型支持）"},
-        {"key": "camera_fixed", "label": "固定摄像头", "type": "checkbox", "colSpan": "half",
-         "description": "固定镜头（部分模型支持；参考图场景不支持）"},
-        {"key": "return_last_frame", "label": "返回尾帧", "type": "checkbox", "colSpan": "half",
-         "description": "任务同时返回最后一帧图片"},
-        {"key": "draft", "label": "样片模式", "type": "checkbox", "colSpan": "half",
-         "description": "生成样片（部分模型支持）"},
-        {"key": "web_search", "label": "联网搜索", "type": "checkbox", "colSpan": "half",
-         "description": "结合联网搜索增强生成（2.5/2.0 支持）"},
-        {"key": "service_tier", "label": "服务等级", "type": "select", "colSpan": "half", "options": [
-            {"value": "default", "label": "默认"}, {"value": "flex", "label": "Flex 离线"},
-        ]},
-        {"key": "priority", "label": "优先级", "type": "number", "min": 0, "max": 9,
-         "colSpan": "half", "description": "任务优先级 0~9（部分模型支持）"},
-        {"key": "poll_timeout", "label": "轮询超时(秒)", "type": "number", "min": 60, "step": 60,
-         "colSpan": "half", "description": "等待任务完成的最长轮询时间"},
-        {"key": "prefer_history", "label": "优先历史记录", "type": "toggle", "colSpan": "half",
-         "description": "开启后，执行时先检查本节点已有的记录 JSON 与 task_id；存在则直接查询并下载产物，避免重复发起请求"},
-        {"key": "custom_prompt_enabled", "label": "自定义提示词", "type": "toggle", "colSpan": "half",
-         "description": "开启后使用下方自定义提示词，忽略连线文本输入"},
-        {"key": "custom_prompt", "label": "自定义提示词", "type": "textarea", "colSpan": "full",
-         "dependsOn": "custom_prompt_enabled", "dependsValue": True,
-         "placeholder": "输入视频生成提示词（开启「自定义提示词」后生效）"},
-    ]
-    if extra:
-        fields.extend(extra)
-    return fields
-
-
 def _seedance_node(node_id, name, description, capability,
                    need_refs=False, ref_ports=1, outputs=None, extra_fields=None):
     inputs = [{"id": "text", "label": "提示词", "type": "text"}]
@@ -3260,10 +3195,12 @@ def _seedance_node(node_id, name, description, capability,
         "prefer_history": False,
         "custom_prompt_enabled": False,
         "custom_prompt": "",
+        "extract_last_frame": False,
     }
     outputs = outputs or [
         {"id": "video", "label": "视频", "type": "video"},
         {"id": "videos", "label": "视频列表", "type": "list"},
+        {"id": "last_frame", "label": "尾帧", "type": "image"},
         {"id": "params", "label": "生成参数JSON", "type": "json"},
         {"id": "task_id", "label": "任务ID", "type": "text"},
     ]
@@ -3278,7 +3215,9 @@ def _seedance_node(node_id, name, description, capability,
         "inputs": inputs,
         "outputs": outputs,
         "defaultConfig": default,
-        "configFields": _seedance_common_fields(extra_fields),
+        # 即梦(Seedance) 节点的参数面板由前端 SeedanceVideoNode 按所选模型能力动态渲染，
+        # 不再依赖静态 configFields（模型切换时分辨率/时长/声音/各专有开关均随之调整）。
+        "configFields": [],
     }
 
 

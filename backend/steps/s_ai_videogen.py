@@ -15,9 +15,12 @@
 """
 import os
 import shutil
+import logging
 from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep
+
+logger = logging.getLogger(__name__)
 
 
 def _read_input_as_text(value, task_dir: str = "") -> str:
@@ -206,10 +209,28 @@ class S_AiVideoGen(BaseStep):
         if callback:
             callback(100, f"已保存 {len(final_paths)} 个视频")
 
+        # --- 7. 可选：用 ffmpeg 抽取首条视频的尾帧为图片 ---
+        outputs: dict = {
+            "videos": final_paths,
+            "video": final_paths[0] if final_paths else "",
+        }
+        extra_artifacts = []
+        if node_config.get("extract_last_frame"):
+            try:
+                from backend.utils.video_ops import extract_last_frame
+                first_abs = os.path.join(task_dir, final_paths[0]) if not os.path.isabs(final_paths[0]) else final_paths[0]
+                lf_name = f"last_frame_{node_id}.png"
+                lf_path = os.path.join(output_dir, lf_name)
+                extract_last_frame(first_abs, lf_path)
+                rel = f"output/{lf_name}"
+                outputs["last_frame"] = rel
+                extra_artifacts.append(rel)
+                if callback:
+                    callback(100, f"已抽取尾帧：{lf_name}")
+            except Exception as exc:
+                logger.warning("AI生视频：抽取尾帧失败（已忽略）: %s", exc)
+
         return {
-            "artifacts": list(final_paths),
-            "outputs": {
-                "videos": final_paths,
-                "video": final_paths[0] if final_paths else "",
-            },
+            "artifacts": list(final_paths) + extra_artifacts,
+            "outputs": outputs,
         }

@@ -1,0 +1,10 @@
+{
+  "pages": {},
+  "app": {
+    "[project]/thirdparty/cutia/apps/web/src/app/[locale]/projects/page": [
+      "static/media/83afe278b6a6bb3c-s.p.3a6ba036.woff2"
+    ]
+  },
+  "appUsingSizeAdjust": true,
+  "pagesUsingSizeAdjust": false
+}

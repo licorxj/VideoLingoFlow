@@ -15,7 +15,7 @@
         "label": "输入",
         "config": {
           "selectedTypes": [
-            "url"
+            "filepath"
           ],
           "videoPath": "",
           "audioPath": "",
@@ -48,22 +48,23 @@
         "width": 420,
         "height": 502
       },
-      "selected": false
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1787892426026",
       "type": "workflow",
       "position": {
         "x": -765,
-        "y": -3030
+        "y": -3180
       },
       "data": {
         "nodeType": "image_gen",
         "label": "AI生图",
         "config": {
           "mode": "txt2img",
-          "interface": "e22bffed",
-          "model": "Qwen-Image",
+          "interface": "bailian",
+          "model": "z-image-turbo",
           "resolution": "2K",
           "aspect_ratio": "16:9",
           "num_images": 1,
@@ -71,20 +72,34 @@
           "custom_prompt": "",
           "output_prefix": "img"
         },
-        "status": "failed",
+        "status": "completed",
         "disableExecute": false,
-        "progress": -1,
-        "message": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
-        "outputs": {},
-        "error": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
-        "workbench_url": ""
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": "['output/img_1_gen_image_node_2_1787892426026.png']",
+          "text": "output/img_1_gen_image_node_2_1787892426026.png"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3300cdd93b5b4ace800d1d8daebda501\\cache\\.step_node_2_1787892426026_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_2_1787892426026 pid=31192",
+          "[step_worker] step instance created: S_ImageGen",
+          "[step_worker] step_inputs keys=['text']",
+          "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3300cdd93b5b4ace800d1d8daebda501, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3300cdd93b5b4ace800d1d8daebda501\\cache\\.step_node_2_1787892426026_result.json, exiting 0"
+        ]
       },
       "measured": {
         "width": 420,
-        "height": 605
+        "height": 621
       },
-      "selected": true,
-      "dragging": false
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_3_1787892437496",
@@ -115,6 +130,85 @@
       },
       "selected": false,
       "dragging": false
+    },
+    {
+      "id": "node_5_1788355970988",
+      "type": "workflow",
+      "position": {
+        "x": -765,
+        "y": -2445
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "seedream_txt2img",
+        "label": "Seedream文生图",
+        "config": {
+          "model": "doubao-seedream-4-5-251128",
+          "resolution": "auto",
+          "aspect_ratio": "16:9",
+          "num_images": 1,
+          "output_format": "png",
+          "watermark": false,
+          "stream_output": true,
+          "optimize_prompt": true,
+          "custom_prompt_enabled": false,
+          "custom_prompt": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": [
+            "cache\\images\\生成一个小狗的图片_node_5_1788355970988.png"
+          ],
+          "text": "cache\\images\\生成一个小狗的图片_node_5_1788355970988.png"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] step instance created: S_SeedreamTxt2Img",
+          "[step_worker] step_inputs keys=['text']",
+          "[step_worker] node_config keys=['model', 'resolution', 'aspect_ratio', 'num_images', 'output_format', 'watermark', 'stream_output', 'optimize_prompt', 'custom_prompt_enabled', 'custom_prompt']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3300cdd93b5b4ace800d1d8daebda501, kwargs=['callback', 'cancel_callback'])",
+          "流式生成中…已收到第 1 张图片",
+          "流式生成完成（usage={'generated_images': 1, 'output_tokens': 16416, 'total_tokens': 16416}）",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3300cdd93b5b4ace800d1d8daebda501\\cache\\.step_node_5_1788355970988_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 440
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_6_1788355979404",
+      "type": "workflow",
+      "position": {
+        "x": -90,
+        "y": -2670
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "image_compare",
+        "label": "图片对比",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 451
+      }
     }
   ],
   "edges": [
@@ -143,10 +237,62 @@
       "target": "node_2_1787892426026",
       "targetHandle": "in-text",
       "id": "xy-edge__node_3_1787892437496out-text-node_2_1787892426026in-text"
+    },
+    {
+      "source": "node_3_1787892437496",
+      "sourceHandle": "out-text",
+      "target": "node_5_1788355970988",
+      "targetHandle": "in-text",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_3_1787892437496out-text-node_5_1788355970988in-text"
+    },
+    {
+      "source": "node_2_1787892426026",
+      "sourceHandle": "out-text",
+      "target": "node_6_1788355979404",
+      "targetHandle": "in-image1",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_2_1787892426026out-text-node_6_1788355979404in-image1"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_5_1788355970988",
+      "sourceHandle": "out-text",
+      "target": "node_6_1788355979404",
+      "targetHandle": "in-image2",
+      "id": "xy-edge__node_5_1788355970988out-text-node_6_1788355979404in-image2"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1787892403740",
+      "sourceHandle": "out-no_input",
+      "target": "node_3_1787892437496",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1787892403740out-no_input-node_3_1787892437496in-any"
     }
   ],
   "type": "user",
   "createdAt": "2026-08-28T12:49:01",
-  "updatedAt": "2026-08-29T12:01:35",
-  "revision": 1
+  "updatedAt": "2026-09-03T00:39:56",
+  "revision": 6
 }

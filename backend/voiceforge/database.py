@@ -185,6 +185,8 @@ def initialize_database():
                 "queue": "TEXT NOT NULL DEFAULT 'voiceforge_export'", "timeout_seconds": "INTEGER",
                 "max_retries": "INTEGER NOT NULL DEFAULT 3", "checkpoint_json": "TEXT NOT NULL DEFAULT '{}'",
                 "deletion_requested": "INTEGER NOT NULL DEFAULT 0",
+                # 是否已被任务泵投递（Celery 或本地线程池），用于并发占位统计
+                "dispatched": "INTEGER NOT NULL DEFAULT 0",
             }.items():
                 if name not in task_columns:
                     conn.execute(f"ALTER TABLE vf_tasks ADD COLUMN {name} {definition}")

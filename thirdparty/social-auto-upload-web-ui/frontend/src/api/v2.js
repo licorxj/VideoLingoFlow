@@ -15,6 +15,10 @@ export const taskApi = {
   cancelTask(taskId) {
     return http.post(`/api/v2/tasks/${taskId}/cancel`)
   },
+  cancelTasks(taskIds) {
+    // 批量取消:一次请求全取消,避免逐个请求中途被打断
+    return http.post('/api/v2/tasks/cancel-batch', { task_ids: taskIds })
+  },
   retryTask(taskId) {
     return http.post(`/api/v2/tasks/${taskId}/retry`)
   },
@@ -57,5 +61,18 @@ export const settingsApi = {
   },
   updateSettings(data) {
     return http.put('/api/v2/settings', data)
+  },
+}
+
+// 批量视频发布（发布页视频队列）
+export const batchPublishApi = {
+  // videos: 发布页每个视频的完整 draft_data 快照数组
+  // intervalMinutes: 本次批量发布视频间隔（分钟），仅本次批量生效；
+  //                 缺省/NaN/负数视为 0（= 立即发布下一个）。后端写 task.batch_interval_minutes。
+  batchPublishVideos(videos, intervalMinutes = 0) {
+    return http.post('/api/v2/videos/batch-publish', {
+      videos,
+      interval_minutes: Math.max(0, Number(intervalMinutes) || 0),
+    })
   },
 }

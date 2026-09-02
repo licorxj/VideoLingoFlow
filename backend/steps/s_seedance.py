@@ -395,14 +395,32 @@ class S_SeedanceBase(BaseStep):
         if callback:
             callback(100, f"已保存 {len(final_paths)} 个视频到 cache/videos")
 
+        # 6. 可选：用 ffmpeg 抽取首条视频的尾帧为图片（服务层处理，不依赖模型能力）
+        outputs = {
+            "videos": final_paths,
+            "video": final_paths[0],
+            "params": os.path.join("cache", "seedance", f"{node_id}_params.json"),
+            "task_id": task_id,
+        }
+        extra_artifacts = []
+        if config.get("extract_last_frame"):
+            try:
+                from backend.utils.video_ops import extract_last_frame
+                first_abs = os.path.join(task_dir, final_paths[0]) if not os.path.isabs(final_paths[0]) else final_paths[0]
+                lf_name = f"last_frame_{node_id}.png"
+                lf_path = os.path.join(cache_dir, lf_name)
+                extract_last_frame(first_abs, lf_path)
+                rel = os.path.join("cache", "videos", lf_name)
+                outputs["last_frame"] = rel
+                extra_artifacts.append(rel)
+                if callback:
+                    callback(100, f"已抽取尾帧：{lf_name}")
+            except Exception as exc:
+                logger.warning("Seedance: 抽取尾帧失败（已忽略）: %s", exc)
+
         return {
-            "artifacts": list(final_paths) + [os.path.join("cache", "seedance", f"{node_id}_params.json")],
-            "outputs": {
-                "videos": final_paths,
-                "video": final_paths[0],
-                "params": os.path.join("cache", "seedance", f"{node_id}_params.json"),
-                "task_id": task_id,
-            },
+            "artifacts": list(final_paths) + [os.path.join("cache", "seedance", f"{node_id}_params.json")] + extra_artifacts,
+            "outputs": outputs,
         }
 
 

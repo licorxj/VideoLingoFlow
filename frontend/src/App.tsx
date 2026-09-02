@@ -18,7 +18,8 @@ import Guide from "./pages/Guide";
 import { VoiceForgeAssets, VoiceForgeHome, VoiceForgeSettings, VoiceForgeVoices, VoiceForgeWorkspace } from "./pages/VoiceForge";
 import { VoiceForgeLayout } from "./components/voiceforge/VoiceForgeLayout";
 import { SceneDesignPlaceholder, VideoDubPlaceholder } from "./components/voiceforge/VoiceForgePlaceholders";
-import { restoreLocalControlSession } from "./api/controlPlane";
+import { ensureControlSession } from "./api/controlPlane";
+import { useControlStore } from "./stores/controlStore";
 import { useSubscriptionStore } from "./stores/subscriptionStore";
 
 function applyUISettings() {
@@ -70,7 +71,12 @@ function applyUISettings() {
 export default function App() {
   useEffect(() => {
     applyUISettings();
-    restoreLocalControlSession().catch(() => undefined);
+    // 启动期确保控制面会话：环回自动登录，未初始化则自动 bootstrap 默认管理员
+    ensureControlSession()
+      .then((user) => {
+        if (user) useControlStore.getState().setUser(user);
+      })
+      .catch(() => undefined);
     // 启动时若存在“记住密码/自动登录”，用本地记忆的凭据向前端发起登录，
     // 真正写入后端 token；否则兜底向后端刷新一次权益状态。
     const sub = useSubscriptionStore.getState();

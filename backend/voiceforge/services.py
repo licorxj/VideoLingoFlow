@@ -1,6 +1,7 @@
 import json
 import os
 import subprocess
+import time
 import uuid
 import wave
 import shutil
@@ -11,6 +12,13 @@ from pathlib import Path
 from backend.llm.llm_client import LLMClient
 from backend.tts.tts_factory import get_tts_engine
 from backend.voiceforge.database import session, storage_root
+from backend.voiceforge.task_defaults import synthesis_retry_count, synthesis_retry_delay
+from backend.voiceforge.prompting import (
+    PROMPT_SCRIPT_ANALYSIS,
+    assemble_prompt,
+    limit_source,
+    temperature_for,
+)
 from backend.voiceforge.storage import ensure_project_dirs, resolve_storage_key
 
 
@@ -37,6 +45,55 @@ def update_task(task_id: str, status: str, progress: float, error_message: str =
     with session() as conn:
         condition = " AND status != 'cancelled'" if status == "running" else ""
         conn.execute(f"UPDATE vf_tasks SET {', '.join(fields)} WHERE id = ?{condition}", values)
+    if status in {"succeeded", "failed", "cancelled"}:
+        # 任务终态释放并发占位，顺势投递仍在排队的合成任务
+        pump_pending_tasks()
+
+
+def bump_task_retry(task_id: str):
+    """累计任务的自动重试次数（vf_tasks.retry_count）。"""
+    try:
+        with session() as conn:
+            conn.execute("UPDATE vf_tasks SET retry_count = retry_count + 1 WHERE id = ?", (task_id,))
+    except Exception:
+        pass
+
+
+def pump_pending_tasks(limit: int | None = None) -> int:
+    """按并发上限把排队的句子合成任务投递出去。
+
+    - 在途数 = running + 已投递但未开始（queued 且 dispatched=1）
+    - 优先 Celery；Worker 不可用时由调用方降级到本地线程池
+    - 任何异常都不应影响调用方（任务完成回调），因此全部吞掉
+    """
+    try:
+        from backend.voiceforge.tasks.celery_app import dispatch_task
+        from backend.voiceforge.task_defaults import synthesis_concurrency
+
+        cap = limit or synthesis_concurrency()
+        with session() as conn:
+            inflight = conn.execute(
+                "SELECT COUNT(*) AS total FROM vf_tasks WHERE task_type = 'synthesize_sentence' "
+                "AND (status = 'running' OR (status = 'queued' AND dispatched = 1))"
+            ).fetchone()["total"]
+            room = cap - int(inflight or 0)
+            if room <= 0:
+                return 0
+            rows = conn.execute(
+                "SELECT id FROM vf_tasks WHERE task_type = 'synthesize_sentence' AND status = 'queued' "
+                "AND IFNULL(dispatched, 0) = 0 ORDER BY created_at LIMIT ?",
+                (room,),
+            ).fetchall()
+        started = 0
+        for row in rows:
+            try:
+                if dispatch_task(row["id"], "synthesis"):
+                    started += 1
+            except Exception:
+                continue
+        return started
+    except Exception:
+        return 0
 
 
 def audio_duration(path: Path):
@@ -79,6 +136,8 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
                 (sentence_id,),
             ).fetchone()
             if not row:
+                # 句子已被删除：必须收敛任务状态，否则会永久占用并发额度
+                update_task(task_id, "failed", 1, error_message="句子不存在，合成任务已终止")
                 return
             data = dict(row)
             if not task_is_active(conn, task_id, data["project_id"]):
@@ -104,19 +163,34 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
             params = json.loads(data.get("params_json") or "{}")
             ref_path = resolve_storage_key(data["reference_storage_key"]) if data.get("reference_storage_key") else None
             engine = get_tts_engine(effective_interface_id)
-            succeeded = engine.synthesize(
-                text,
-                str(output_path),
-                ref_audio=str(ref_path) if ref_path else None,
-                mode=data.get("mode"),
-                speed=data.get("speed") or data.get("default_speed"),
-                voice=voice_id,
-                voice_design=params.get("voice_design"),
-                controllable_clone=params.get("controllable_clone"),
-                ref_text=params.get("ref_text"),
-            )
-            if not succeeded or not output_path.exists() or output_path.stat().st_size == 0:
-                raise RuntimeError("TTS 接口未返回有效音频")
+            max_retries = synthesis_retry_count()
+            delay = synthesis_retry_delay()
+            last_error: Exception | None = None
+            for attempt in range(max_retries + 1):
+                try:
+                    output_path.unlink(missing_ok=True)
+                    succeeded = engine.synthesize(
+                        text,
+                        str(output_path),
+                        ref_audio=str(ref_path) if ref_path else None,
+                        mode=data.get("mode"),
+                        speed=data.get("speed") or data.get("default_speed"),
+                        voice=voice_id,
+                        voice_design=params.get("voice_design"),
+                        controllable_clone=params.get("controllable_clone"),
+                        ref_text=params.get("ref_text"),
+                    )
+                    if succeeded and output_path.exists() and output_path.stat().st_size > 0:
+                        last_error = None
+                        break
+                    last_error = RuntimeError("TTS 接口未返回有效音频")
+                except Exception as exc:
+                    last_error = exc
+                if attempt < max_retries:
+                    bump_task_retry(task_id)
+                    time.sleep(delay)
+            if last_error is not None:
+                raise last_error
         duration = audio_duration(output_path)
         with session() as conn:
             if not task_is_active(conn, task_id, data["project_id"]):
@@ -282,16 +356,23 @@ def analyze_project(project_id: str):
     source = "\n".join(f"{index + 1}. {(row['edited_text'] or row['text'])}" for index, row in enumerate(rows))
     if not source:
         raise ValueError("项目没有可分析文本")
-    if len(source) > 100000:
-        raise ValueError("项目文本超过分析上限")
-    prompt = (
-        "分析以下配音文本，返回 JSON，包含 summary 字符串和 characters 数组。"
-        "characters 每项包含：name（角色名）、character_type（narrator 或 character）、"
-        "gender（性别，如 男/女/未知）、age_range（年龄段，如 青年/中年）、"
-        "personality（性格与人设，简短）、voice_design_desc（声音设计描述，如 沉稳男声/甜美女声）、note（备注）。\n"
-        + source
+    source = limit_source(source)
+    system_prompt, prompt = assemble_prompt(PROMPT_SCRIPT_ANALYSIS, {"source": source})
+    if prompt is None:
+        prompt = (
+            "分析以下配音文本，返回 JSON，包含 summary 字符串和 characters 数组。"
+            "characters 每项包含：name（角色名）、character_type（narrator 或 character）、"
+            "gender（性别，如 男/女/未知）、age_range（年龄段，如 青年/中年）、"
+            "personality（性格与人设，简短）、voice_design_desc（声音设计描述，如 沉稳男声/甜美女声）、note（备注）。\n"
+            + source
+        )
+    response = LLMClient().chat(
+        PROMPT_SCRIPT_ANALYSIS,
+        prompt,
+        response_json=True,
+        system_prompt=system_prompt,
+        temperature=temperature_for(PROMPT_SCRIPT_ANALYSIS),
     )
-    response = LLMClient().chat("voiceforge_script_analysis", prompt, response_json=True)
     return response
 
 

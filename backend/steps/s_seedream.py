@@ -25,6 +25,27 @@ from backend.steps.base_step import BaseStep
 logger = logging.getLogger(__name__)
 
 
+def _get_seedream_interface_default_model() -> str:
+    """当节点未显式选择模型时，回退到「字节 Seedream」图像生成接口的默认模型设置。
+
+    接口以 sdk_module 标识（id 为生成型 UUID，不硬编码）。
+    """
+    try:
+        from backend.imagegen.imagegen_interface_manager import (
+            get_imagegen_interface_manager,
+        )
+        mgr = get_imagegen_interface_manager()
+        for iface in mgr.get_enabled():
+            cfg = iface.get("config", {}) or {}
+            if cfg.get("sdk_module") == "backend.imagegen.sdk.seedream_wrapper":
+                dm = (cfg.get("default_model") or "").strip()
+                if dm:
+                    return dm
+    except Exception as e:
+        logger.warning("读取 Seedream 接口默认模型失败: %s", e)
+    return ""
+
+
 def _read_input_as_text(value, task_dir: str = "") -> str:
     """解析文本输入：若是文件路径则读内容，否则原样返回。"""
     if not value or not isinstance(value, str):
@@ -166,7 +187,7 @@ class S_SeedreamBase(BaseStep):
 
         stream_on = bool(config.get("stream_output", True))
         optimize_on = bool(config.get("optimize_prompt", True))
-        model = config.get("model") or seedream_wrapper.DEFAULT_MODEL
+        model = config.get("model") or _get_seedream_interface_default_model() or seedream_wrapper.DEFAULT_MODEL
         resolution = config.get("resolution") or "auto"
         if resolution == "auto":
             resolution = "2K"

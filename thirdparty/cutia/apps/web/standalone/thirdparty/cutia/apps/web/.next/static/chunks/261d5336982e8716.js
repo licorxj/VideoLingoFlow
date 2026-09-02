@@ -1,0 +1,3 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,57002,e=>{"use strict";var t=e.i(19437),i=e.i(69325),s=e.i(63275),a=({code:e,language:a,maxHeight:l,raw:u,className:r,startLine:g,lineNumbers:o,...c})=>{let{shikiTheme:h}=(0,i.useContext)(t.A),n=(0,t.f)(),[m,d]=(0,i.useState)(u);return(0,i.useEffect)(()=>{if(!n)return void d(u);let t=n.highlight({code:e,language:a,themes:h},e=>{d(e)});t&&d(t)},[e,a,h,n,u]),(0,s.jsx)(t.c,{className:r,language:a,lineNumbers:o,maxHeight:l,result:m,startLine:g,...c})};e.s(["HighlightedCodeBlockBody",()=>a])}]);
+
+//# sourceMappingURL=0e73f0d4edab67e9.js.map
