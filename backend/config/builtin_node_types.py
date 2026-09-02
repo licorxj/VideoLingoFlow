@@ -23,6 +23,7 @@ BUILTIN_NODE_TYPES = [
             {"id": "subtitle", "label": "字幕", "type": "subtitle"},
             {"id": "url", "label": "URL", "type": "url"},
             {"id": "filepath", "label": "文件路径", "type": "any"},
+            {"id": "no_input", "label": "不需要输入", "type": "any"},
         ],
         "defaultConfig": {
             "selectedTypes": ["video"],
@@ -1334,8 +1335,8 @@ BUILTIN_NODE_TYPES = [
         "icon": "Columns2",
         "color": "#14b8a6",
         "inputs": [
-            {"id": "image1", "label": "图片1（下层）", "type": "image", "required": False},
-            {"id": "image2", "label": "图片2（上层）", "type": "image", "required": False},
+            {"id": "image1", "label": "图片1（下层）", "type": "any", "required": False},
+            {"id": "image2", "label": "图片2（上层）", "type": "any", "required": False},
         ],
         "outputs": [
             {"id": "image", "label": "图片", "type": "any"},

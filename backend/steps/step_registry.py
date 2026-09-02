@@ -143,6 +143,7 @@ _STEPS = {
     # UI-only / preview nodes
     "video_preview": PassthroughStep(),
     "image_preview": PassthroughStep(),
+    "image_compare": PassthroughStep(),
     # 其余真实执行节点（与 thread_scheduler.NODE_STEP_MAP 对齐）
     "s14_output": StepOutput(),
     "output": StepOutput(),

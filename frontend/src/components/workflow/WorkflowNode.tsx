@@ -40,6 +40,40 @@ const ICON_MAP: Record<string, any> = {
   Eraser, Type,
 };
 
+/** 节点头部顶栏：只有在该元素上按下鼠标才允许拖动节点，避免正文内框选/拖动误触移动节点 */
+const NODE_DRAG_HANDLE_CLASS = "wf-node-drag-handle";
+/** 判定为"点击"而非"拖动节点"的最大位移（px） */
+const HEADER_CLICK_TOLERANCE = 4;
+
+/** 头部顶栏的点击处理：拖动节点后浏览器仍会派发 click，用位移阈值把"拖动"和"点击"区分开。
+ *  注意：React Flow 的拖拽会在节点容器上 stopImmediatePropagation，React 合成事件收不到 mousedown，
+ *  因此这里用原生捕获阶段监听（捕获先于 d3 的冒泡监听执行）。 */
+function useHeaderDragSafeClick(onClick?: () => void) {
+  const headerRef = useRef<HTMLDivElement>(null);
+  const pressStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    const el = headerRef.current;
+    if (!el) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 0) return;
+      pressStartRef.current = { x: e.clientX, y: e.clientY };
+    };
+    el.addEventListener("mousedown", onMouseDown, true);
+    return () => el.removeEventListener("mousedown", onMouseDown, true);
+  }, []);
+
+  const onClickGuarded = useCallback((e: React.MouseEvent) => {
+    const start = pressStartRef.current;
+    pressStartRef.current = null;
+    if (!onClick) return;
+    if (start && (Math.abs(e.clientX - start.x) > HEADER_CLICK_TOLERANCE || Math.abs(e.clientY - start.y) > HEADER_CLICK_TOLERANCE)) return;
+    onClick();
+  }, [onClick]);
+
+  return { headerRef, onClickGuarded };
+}
+
 /** 解析 SRT/VTT/JSON 字幕内容为 [{start, end, text}]（时间为秒），支持双语（原文/译文两行） */
 function parseSubtitleEntries(content: string): { start: number; end: number; text: string }[] {
   const trimmed = content.trim();
@@ -231,7 +265,9 @@ function GroupWorkflowNodeCard({
         />
       ))}
 
-      <div className="flex items-center gap-2 px-4 py-3 rounded-t-xl bg-violet-500/15">
+      <div
+        className={cn("flex items-center gap-2 px-4 py-3 rounded-t-xl bg-violet-500/15 cursor-grab active:cursor-grabbing", NODE_DRAG_HANDLE_CLASS)}
+      >
         <div className="w-9 h-9 rounded-lg flex items-center justify-center bg-violet-500/20 text-violet-600 dark:text-violet-300">
           <Layers className="w-5 h-5" />
         </div>
@@ -251,23 +287,23 @@ function GroupWorkflowNodeCard({
                 }
               }}
               onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 w-full text-sm font-bold bg-background/80 border border-border/60 rounded-md px-2 py-1"
+              className="mt-0.5 w-full text-sm font-bold bg-background/80 border border-border/60 rounded-md px-2 py-1 nodrag"
             />
           ) : (
             <button
               type="button"
               onClick={(e) => { e.stopPropagation(); setEditingName(true); }}
-              className="text-left text-sm font-bold truncate hover:text-primary transition-colors"
+              className="text-left text-sm font-bold truncate hover:text-primary transition-colors nodrag"
             >
               {nd.groupMeta?.name || nd.label || "组合"}
             </button>
           )}
         </div>
-        <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold", statusCfg.badgeBg, statusCfg.badgeText)} title={nd.message || statusCfg.label}>
+        <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold nodrag", statusCfg.badgeBg, statusCfg.badgeText)} title={nd.message || statusCfg.label}>
           <StatusIcon className={cn("w-3 h-3", status === "running" && "animate-spin")} />
           {statusCfg.label}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 nodrag">
           {nd.onExecuteNode && (
             <button
               onClick={(e) => { e.stopPropagation(); nd.onExecuteNode(id); }}
@@ -799,6 +835,12 @@ function ImagePreview({ config, imagePath, listPaths, taskId, refreshKey }: { co
       </div>
     </div>
   );
+}
+
+function resolveImagePath(value: unknown): string | undefined {
+  const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg"];
+  const path = typeof value === "string" ? value.trim() : "";
+  return path && IMAGE_EXTS.some((ext) => path.toLowerCase().endsWith(ext)) ? path : undefined;
 }
 
 function ImageCompare({ config, image1Path, image2Path, taskId, refreshKey }: { config: Record<string, any>; image1Path?: string; image2Path?: string; taskId?: string; refreshKey?: string }) {
@@ -2043,6 +2085,11 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const [qmMailLoading, setQmMailLoading] = useState(false);
   const [subtitleFindOpen, setSubtitleFindOpen] = useState(false);
 
+  // 头部顶栏既是唯一的节点拖拽手柄，也承担"点击展开/折叠"，需要区分拖动与点击
+  const { headerRef, onClickGuarded: onHeaderClick } = useHeaderDragSafeClick(
+    useCallback(() => setExpanded((prev) => !prev), [])
+  );
+
   // Seedance 视频节点「查询生成进度」弹窗状态
   const [sdQueryOpen, setSdQueryOpen] = useState(false);
   const [sdQueryLoading, setSdQueryLoading] = useState(false);
@@ -2137,7 +2184,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
   // For preview nodes, get paths from upstream outputs or configs
   const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } =
-    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
+    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "image_compare" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
 
   // 当前任务 id（调试任务 activeTaskId 或一般/批量任务 taskModeId），用于相对产物路径解析
   const storeActiveTaskId = useWorkflowStore((s) => s.activeTaskId);
@@ -2326,14 +2373,15 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         />
       ))}
 
-      {/* Header */}
+      {/* Header：整个节点唯一的拖拽手柄 */}
       <div
+        ref={headerRef}
         className={cn(
-          "flex items-center gap-2 px-4 py-2.5",
-          hasConfig ? "cursor-pointer rounded-t-xl" : "rounded-t-xl"
+          "flex items-center gap-2 px-4 py-2.5 rounded-t-xl cursor-grab active:cursor-grabbing",
+          NODE_DRAG_HANDLE_CLASS
         )}
         style={{ backgroundColor: nodeType.color + "30" }}
-        onClick={hasConfig ? () => setExpanded(!expanded) : undefined}
+        onClick={hasConfig ? onHeaderClick : undefined}
       >
         <div
           className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
@@ -2346,7 +2394,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           <div className="text-xs text-muted-foreground truncate">{(nodeType.description || "").slice(0, 25)}</div>
         </div>
         {nodeType.id !== "input" && (
-          <div className="relative">
+          <div className="relative nodrag">
             <button
               onClick={(e) => { e.stopPropagation(); setShowDesc((p) => !p); }}
               onMouseEnter={() => setShowDesc(true)}
@@ -2371,7 +2419,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
             type="button"
             onClick={(e) => { e.stopPropagation(); openSeedanceQuery(); }}
             title={nd.outputs?.task_id ? "查询生成进度" : "请先运行该节点生成任务"}
-            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-foreground/10 transition-colors"
+            className="w-6 h-6 rounded-md flex items-center justify-center text-muted-foreground/70 hover:text-foreground hover:bg-foreground/10 transition-colors nodrag"
           >
             <RefreshCw className="w-3 h-3" />
           </button>
@@ -3203,8 +3251,8 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
       {nodeType.id === "image_compare" && (
         <ImageCompare
           config={config}
-          image1Path={nd.image1Path || upstreamOutputs.image1 || upstreamConfigs.image1Path}
-          image2Path={nd.image2Path || upstreamOutputs.image2 || upstreamConfigs.image2Path}
+          image1Path={resolveImagePath(nd.image1Path) || resolveImagePath(upstreamOutputs.image1) || resolveImagePath(upstreamConfigs.image1Path)}
+          image2Path={resolveImagePath(nd.image2Path) || resolveImagePath(upstreamOutputs.image2) || resolveImagePath(upstreamConfigs.image2Path)}
           taskId={previewTaskId}
           refreshKey={upstreamRefreshKey}
         />
