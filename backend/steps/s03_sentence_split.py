@@ -1310,7 +1310,10 @@ Return ONLY the JSON array, no explanation.""".format(
 
         llm = get_llm_client()
         max_chars = int(config.get("llm.max_request_chars") or 12000)
-        max_concurrent = int(config.get("llm.max_concurrent") or 10)
+        # vlf-03 (and similar queue-prone endpoints) can stall under concurrent
+        # load; sentence-split batches are typically small, so default to serial
+        # to avoid piling up requests and tripping short client timeouts.
+        max_concurrent = int(config.get("llm.max_concurrent") or 1)
 
         # Smart batching: group sentences so total chars per batch <= max_chars
         batches = self._build_smart_batches(to_split, max_chars)
