@@ -907,12 +907,14 @@ BUILTIN_NODE_TYPES = [
             "normalize_chinese_read_text": False,
             "ai_dialect_colloquial": False,
             "dialect_name": "四川话",
+            "min_sentence_duration": 0.2,
         },
         "configFields": [
             {"key": "ai_read_tone", "label": "AI设计朗读语气", "type": "checkbox", "description": "启用后由 LLM 为每句补充朗读情绪语气描述"},
             {"key": "normalize_chinese_read_text", "label": "中文朗读文本归一化", "type": "checkbox", "description": "仅在目标朗读语言为中文时生效，将数字、单位、符号等规范化为汉字读法"},
             {"key": "ai_dialect_colloquial", "label": "AI方言口语化", "type": "checkbox", "description": "启用后由 LLM 按方言特色改写朗读文本"},
             {"key": "dialect_name", "label": "方言", "type": "text", "placeholder": "四川话", "dependsOn": "ai_dialect_colloquial", "description": "填写目标方言名称，启用方言口语化时写入任务单(方言)列"},
+            {"key": "min_sentence_duration", "label": "单句最短时长(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 5, "step": 0.05, "defaultValue": 0.2, "description": "执行前单句时长检测阈值：任意单句时长小于该值(秒)将报错，默认0.2秒"},
         ],
     },
     {
