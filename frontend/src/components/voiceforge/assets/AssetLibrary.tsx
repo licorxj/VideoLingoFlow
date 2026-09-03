@@ -329,7 +329,6 @@ export function AssetLibrary({ embedded = false }: { embedded?: boolean }) {
         hideTitle
         back={{ to: "/voiceforge", label: "配音谷" }}
         breadcrumbs={[
-          { label: "晴沐配音谷", to: "/voiceforge" },
           { label: "素材库" },
         ]}
         actions={toolbar}

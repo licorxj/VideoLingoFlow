@@ -19,7 +19,7 @@ from starlette.background import BackgroundTask
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Scope, Receive, Send
 
-from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail
+from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup
 from backend.control_plane import runtime_flags
 from backend.utils.observability import correlation_id
 
@@ -167,6 +167,7 @@ app.include_router(editor.router, prefix="/api/editor", tags=["editor"])
 app.include_router(editor_agent.router, prefix="/api/editor", tags=["editor-agent"])
 app.include_router(cutia.router, prefix="/api/cutia", tags=["cutia"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
+app.include_router(backup.router, prefix="/api/backup", tags=["backup"])
 app.include_router(history.router, prefix="/api/history", tags=["history"])
 app.include_router(batch.router, prefix="/api/batch", tags=["batch"])
 app.include_router(gpu_service.router, prefix="/api", tags=["gpu-service"])

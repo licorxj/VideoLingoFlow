@@ -2,6 +2,7 @@
 import json
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
+from fastapi.concurrency import run_in_threadpool
 from pydantic import BaseModel
 from typing import Optional
 
@@ -80,8 +81,12 @@ async def test_llm(req: TestRequest):
         print(f"[LLM Test] prompt:     {req.prompt}")
         print(f"{'='*60}")
 
-        result = llm.chat(
-            req.step_name, req.prompt, response_json=True, log=False
+        result = await run_in_threadpool(
+            llm.chat,
+            req.step_name,
+            req.prompt,
+            response_json=True,
+            log=False,
         )
 
         print(f"[LLM Test] Response:")
@@ -107,7 +112,8 @@ async def chat(req: ChatRequest):
     """Send a chat completion request."""
     try:
         llm = get_llm_client()
-        result = llm.chat(
+        result = await run_in_threadpool(
+            llm.chat,
             req.step_name,
             req.prompt,
             messages=req.messages,
@@ -126,8 +132,12 @@ class StreamRequest(BaseModel):
 
 
 @router.post("/stream")
-async def stream_chat(req: StreamRequest):
-    """Stream a chat completion response."""
+def stream_chat(req: StreamRequest):
+    """Stream a chat completion response.
+
+    同步 def 路由：FastAPI 会将其放入线程池执行，流式 body 由
+    Starlette 的 iterate_in_threadpool 在线程中迭代，不阻塞事件循环。
+    """
     llm = get_llm_client()
 
     def generate():
@@ -165,7 +175,7 @@ async def batch_chat(req: BatchRequest):
             }
             for r in req.requests
         ]
-        results = llm.batch_chat(batch)
+        results = await run_in_threadpool(llm.batch_chat, batch)
         return {"success": True, "results": results}
     except Exception as e:
         return {"success": False, "error": str(e)}

@@ -21,34 +21,47 @@ LOG_DIR = os.path.join(
     "output", "llm_logs"
 )
 
+# --- 复用 OpenAI 客户端连接池：按 (base_url, api_key, timeout) 缓存单例 ---
+_CLIENT_CACHE: dict = {}
+_CLIENT_CACHE_LOCK = threading.Lock()
+_CLIENT_CACHE_MAX = 8
+
+# --- 日志写入锁（JSONL 追加写） ---
+_LOG_LOCK = threading.Lock()
+
 class LLMClient:
     """Unified LLM request client with step-name-based model routing."""
 
     def __init__(self):
         pass
 
+    def _get_llm_config_snapshot(self) -> dict:
+        """读取整个 llm 配置子树（一次 YAML 加载），避免每次请求多次 reload。"""
+        return config.get("llm") or {}
+
     def _get_api_config(self, step_name: str) -> dict:
-        """Read config on every call (live update support)."""
-        use_router = config.get("llm.use_router")
+        """读取配置（单次快照）以决定路由/base_url/model/timeout/retry。"""
+        llm_cfg = self._get_llm_config_snapshot()
+        use_router = llm_cfg.get("use_router")
         if use_router:
-            base_url = config.get("llm.router_url") or "http://localhost:8800/v1"
-            api_key = config.get("llm.router_api_key") or "123"
+            base_url = llm_cfg.get("router_url") or "http://localhost:8800/v1"
+            api_key = llm_cfg.get("router_api_key") or "123"
         else:
-            base_url = config.get("llm.base_url") or ""
-            api_key = config.get("llm.api_key") or ""
-        timeout = config.get("llm.timeout") or 120
-        retry_enabled = config.get("llm.retry_enabled")
+            base_url = llm_cfg.get("base_url") or ""
+            api_key = llm_cfg.get("api_key") or ""
+        timeout = llm_cfg.get("timeout") or 120
+        retry_enabled = llm_cfg.get("retry_enabled")
         if retry_enabled is None:
             retry_enabled = True
-        retry_count = config.get("llm.retry_count") or 1
+        retry_count = llm_cfg.get("retry_count") or 1
 
-        default_model = config.get("llm.step_models.default_model") or ""
-        enable_step_models = config.get("llm.enable_step_models")
+        step_models = llm_cfg.get("step_models") or {}
+        default_model = step_models.get("default_model") or ""
+        enable_step_models = llm_cfg.get("enable_step_models")
         if enable_step_models is False:
             model = default_model or step_name
         else:
-            step_override = config.get(f"llm.step_models.{step_name}")
-            model = step_override or default_model or step_name
+            model = step_models.get(step_name) or default_model or step_name
 
         return {
             "base_url": base_url,
@@ -60,7 +73,11 @@ class LLMClient:
         }
 
     def _make_client(self, api_cfg: dict) -> OpenAI:
-        """Create an OpenAI client with timeout."""
+        """Create (or reuse from cache) an OpenAI client with timeout.
+
+        复用连接池：相同 (base_url, api_key, timeout) 的 client 只创建一次，
+        避免每个请求重复 TCP+TLS 握手。
+        """
         url = api_cfg["base_url"]
         # 去除用户可能多填的 /chat/completions 结尾
         lower = url.lower()
@@ -69,15 +86,24 @@ class LLMClient:
         elif lower.endswith("/chat/completions"):
             url = url[: -len("/chat/completions")]
         url = url.rstrip("/")
-        timeout_val = api_cfg.get("timeout", 120)
-        return OpenAI(
-            api_key=api_cfg["api_key"],
-            base_url=url,
-            timeout=float(timeout_val),
-            max_retries=0,
-            # 忽略系统代理（VPN 全局代理会设置 HTTP_PROXY/HTTPS_PROXY），直接连接上游，避免 502
-            http_client=httpx.Client(timeout=float(timeout_val), trust_env=False),
-        )
+        timeout_val = float(api_cfg.get("timeout", 120))
+        key = (url, api_cfg["api_key"], timeout_val)
+        with _CLIENT_CACHE_LOCK:
+            client = _CLIENT_CACHE.get(key)
+            if client is None:
+                client = OpenAI(
+                    api_key=api_cfg["api_key"],
+                    base_url=url,
+                    timeout=timeout_val,
+                    max_retries=0,
+                    # 忽略系统代理（VPN 全局代理会设置 HTTP_PROXY/HTTPS_PROXY），直接连接上游，避免 502
+                    http_client=httpx.Client(timeout=timeout_val, trust_env=False),
+                )
+                _CLIENT_CACHE[key] = client
+                # 简单上限保护：超出时丢弃最早的缓存，避免无限堆积
+                if len(_CLIENT_CACHE) > _CLIENT_CACHE_MAX:
+                    _CLIENT_CACHE.pop(next(iter(_CLIENT_CACHE)))
+            return client
 
     @staticmethod
     def _is_timeout_error(exc: Exception) -> bool:
@@ -123,21 +149,18 @@ class LLMClient:
 
     def _save_log(self, step_name: str, prompt: str, response: Any):
         os.makedirs(LOG_DIR, exist_ok=True)
-        log_file = os.path.join(LOG_DIR, f"{step_name}.json")
+        # 改为 JSONL 追加写：单条一行，避免每次请求全量读改写整个 JSON 文件
+        log_file = os.path.join(LOG_DIR, f"{step_name}.jsonl")
         entry = {
             "prompt": str(prompt)[:500],
             "response": str(response)[:500],
             "time": time.time(),
         }
         try:
-            if os.path.exists(log_file):
-                with open(log_file, "r", encoding="utf-8") as f:
-                    logs = json.load(f)
-            else:
-                logs = []
-            logs.append(entry)
-            with open(log_file, "w", encoding="utf-8") as f:
-                json.dump(logs[-200:], f, ensure_ascii=False, indent=2)
+            line = json.dumps(entry, ensure_ascii=False)
+            with _LOG_LOCK:
+                with open(log_file, "a", encoding="utf-8") as f:
+                    f.write(line + "\n")
         except Exception:
             pass
 
@@ -316,8 +339,12 @@ class LLMClient:
         if not requests:
             return []
 
-        # Get timeout from config, default to 180 seconds per request
-        timeout_per_request = float(config.get("llm.api.timeout") or 180)
+        # 读取配置快照（一次），避免重复 reload 整个 YAML
+        llm_cfg = config.get("llm") or {}
+        # 兼容旧 key：llm.api.timeout 优先于 llm.timeout
+        timeout_per_request = float(
+            llm_cfg.get("api.timeout") or llm_cfg.get("timeout") or 180
+        )
 
         def _execute_single_request(req: dict, step: str) -> Any:
             """Execute a single request with retry logic."""
@@ -353,7 +380,7 @@ class LLMClient:
                         raise
 
         # Always use a fresh local executor to avoid stale/shut-down executor issues
-        max_workers = max_workers or max(1, int(config.get("llm.max_concurrent") or 10))
+        max_workers = max_workers or max(1, int(llm_cfg.get("max_concurrent") or 10))
         max_workers = max(1, int(max_workers))
         executor = ThreadPoolExecutor(max_workers=max_workers)
         futures = {}

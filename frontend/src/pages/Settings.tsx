@@ -14,6 +14,7 @@ import GeneralSettings from "@/components/settings/GeneralSettings";
 import UISettings from "@/components/settings/UISettings";
 import AudioProcessingSettings from "@/components/settings/AudioProcessing";
 import AigcCapabilitiesSettings from "@/components/settings/AigcCapabilitiesSettings";
+import DataBackupSettings from "@/components/settings/DataBackupSettings";
 import {
   Settings2,
   Brain,
@@ -29,6 +30,7 @@ import {
   Boxes,
   Sparkles,
   Layers,
+  Database,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -54,6 +56,7 @@ const TABS: TabDef[] = [
   { id: "imggen", label: "图像生成", icon: Image, group: "模型", tone: "ai", component: ImageGenSettings },
   { id: "videogen", label: "视频生成", icon: Video, group: "模型", tone: "ai", component: VideoGenSettings },
   { id: "aigc", label: "其他能力接口", icon: Boxes, group: "高级", tone: "warning", component: AigcCapabilitiesSettings },
+  { id: "backup", label: "用户数据备份", icon: Database, group: "高级", tone: "warning", component: DataBackupSettings },
   { id: "subtitle", label: "字幕样式", icon: Type, group: "媒体", tone: "primary", component: SubtitleStyle },
   { id: "videoprocess", label: "视频合成", icon: Film, group: "媒体", tone: "warning", component: VideoProcess },
 ];

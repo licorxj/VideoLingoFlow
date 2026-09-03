@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
-import { Loader2, Music2, AlertTriangle } from "lucide-react";
+import { Loader2, Music2 } from "lucide-react";
 import { voiceForgeApi } from "@/api/voiceforge";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/PageHeader";
+import { useNotificationStore } from "@/stores/notificationStore";
 import { DubbingProvider, useDubbingContext } from "./dubbing/DubbingContext";
 import { DubbingLayout } from "./dubbing/DubbingLayout";
 import { ChapterPanel } from "./dubbing/ChapterPanel";
@@ -72,6 +73,20 @@ function DubbingWorkspaceInner() {
     busy,
     error,
   } = state;
+
+  /* ── 把运行时错误统一推到顶部导航的铃铛抽屉 ─────────────── */
+  const lastErrorRef = useRef("");
+  useEffect(() => {
+    if (!error) return;
+    if (error === lastErrorRef.current) return;
+    lastErrorRef.current = error;
+    useNotificationStore.getState().pushNotification({
+      kind: "error",
+      title: "配音操作失败",
+      description: error,
+      source: "voiceforge",
+    });
+  }, [error]);
 
   /* ── Filtered sentences by selected chapter ────────────────────── */
   const shownSentences = useMemo(
@@ -893,25 +908,9 @@ function DubbingWorkspaceInner() {
         title={project?.name || "配音台"}
         detail="文本配音制作台 · 章节、角色、句子、批量合成与导出"
         hideTitle
-        back={{ to: "/voiceforge", label: "项目列表" }}
         breadcrumbs={[
-          { label: "晴沐配音谷", to: "/voiceforge" },
           { label: project?.name || "配音台" },
         ]}
-        actions={
-          <>
-            {error && (
-              <div
-                role="alert"
-                className="flex max-w-xs items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs text-destructive"
-                title={error}
-              >
-                <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-                <span className="truncate">{error}</span>
-              </div>
-            )}
-          </>
-        }
       />
 
       {/* ── Main workspace (3-panel layout) ────────────────────────── */}
