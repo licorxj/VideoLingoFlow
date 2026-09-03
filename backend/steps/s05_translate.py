@@ -269,6 +269,87 @@ class S05Translate(BaseStep):
             )
         }
 
+    def _build_combined_prompt(
+        self,
+        src_lang: str,
+        tgt_lang: str,
+        summary: str,
+        terminology: List[Dict[str, str]],
+        batch_sentences: List[Dict[str, Any]],
+        style_hint: str,
+        context_sentences: List[Dict[str, Any]],
+    ) -> dict:
+        """合并直译(faithful)与意译(reflect)为单次调用的 prompt 构造。
+
+        让模型在同一次响应里产出每句的 direct（直译）与 free（自然意译），
+        输出结构兼容原两步流程：{id: {"origin", "direct", "free"}}。
+        """
+        term_lines = "\n".join(
+            f"- {t['term']}: {t['explanation']}" for t in (terminology or [])
+        )
+        context_block = ""
+        if context_sentences:
+            context_lines = "\n".join(
+                f"[{s['id']}] {s['text']}" for s in context_sentences
+            )
+            context_block = (
+                f"\nPrevious sentences for context:\n{context_lines}\n"
+            )
+        style_block = ""
+        if style_hint:
+            style_block = f"\nTranslation style preference: {style_hint}\n"
+        lines = "\n".join(
+            f"[{s['id']}] {s['text']}" for s in batch_sentences
+        )
+
+        from backend.prompts.prompt_service import get_prompt_service
+        svc = get_prompt_service()
+        result = svc.assemble_prompt("s05_translate_combined", {
+            "src_lang": src_lang,
+            "tgt_lang": tgt_lang,
+            "summary": summary[:500],
+            "term_lines": term_lines or "(none)",
+            "style_block": style_block,
+            "context_block": context_block,
+            "lines": lines,
+            "batch_count": len(batch_sentences),
+            "raw_terminology": terminology or [],
+            "raw_lines": batch_sentences,
+            "raw_context": context_sentences or [],
+        })
+        if result.get("found"):
+            return {
+                "system_prompt": result.get("system_prompt") or "You are a professional Netflix subtitle translator and editor.",
+                "user_prompt": result.get("user_prompt"),
+            }
+
+        # Fallback 内联 prompt
+        return {
+            "system_prompt": "You are a professional Netflix subtitle translator and editor.",
+            "user_prompt": (
+                f"Translate the following lines from {src_lang} to {tgt_lang}, "
+                f"producing BOTH a faithful translation and a natural, expressive rewrite.\n\n"
+                f"Summary (for context only, do not translate):\n{summary[:500]}\n\n"
+                f"Terminology table:\n{term_lines or '(none)'}\n"
+                f"{style_block}"
+                f"{context_block}"
+                f"For each sentence, provide:\n"
+                f"- origin: the original text (verbatim)\n"
+                f"- direct: a faithful, precise translation preserving the original meaning\n"
+                f"- free: a natural, fluent, expressive translation in the target language\n\n"
+                f"CRITICAL RULES:\n"
+                f"1. Every input sentence MUST have its own separate entry in the output.\n"
+                f"2. NEVER merge multiple sentences into one entry. Each ID maps to exactly one entry.\n"
+                f"3. NEVER leave 'direct' or 'free' empty or blank. Every sentence must have both.\n"
+                f"4. The output JSON must have EXACTLY {len(batch_sentences)} entries, matching the input count.\n\n"
+                f"Lines to translate:\n{lines}\n\n"
+                f"Return a JSON object with integer keys matching the sentence IDs.\n"
+                f'Each value: {{"origin": str, "direct": str, "free": str}}\n'
+                f'Example: {{1: {{"origin": "Hello", "direct": "你好", "free": "嘿，你好呀"}}}}\n'
+                f"Return ONLY the JSON object, no extra text."
+            ),
+        }
+
     # ------------------------------------------------------------------
     # Input normalization
     # ------------------------------------------------------------------
@@ -480,6 +561,94 @@ class S05Translate(BaseStep):
     # Single-batch worker (thread-safe)
     # ------------------------------------------------------------------
 
+    def _translate_batch_combined(
+        self,
+        llm,
+        batch: Dict,
+        batch_sents: List[Dict],
+        expected_ids: List[int],
+        src_lang: str,
+        tgt_lang: str,
+        summary: str,
+        terminology: List[Dict],
+        style_hint: str,
+    ) -> Dict:
+        """合并直译(faithful)与意译(reflect)为单次 LLM 调用。
+
+        消除批内 faithful→reflect 串行往返，降低延迟。模型一次产出每句的
+        direct(直译) 与 free(自然意译)。失败时由调用方回退到两步流程。
+        """
+        batch_id = batch["index"]
+        prompt_data = self._build_combined_prompt(
+            src_lang, tgt_lang, summary, terminology, batch_sents, style_hint, []
+        )
+        result = llm.chat(
+            "s05_translate_combined",
+            prompt_data["user_prompt"],
+            system_prompt=prompt_data["system_prompt"],
+            response_json=True,
+        )
+        if not isinstance(result, dict):
+            raise ValueError(
+                f"Translate combined batch {batch_id} returned non-dict response"
+            )
+
+        combined_map = self._parse_response_to_map(result)
+        faithful_map: Dict[int, Dict] = {}
+        reflect_map: Dict[int, Dict] = {}
+        for sid, e in combined_map.items():
+            faithful_map[sid] = {
+                "origin": e.get("origin", ""),
+                "direct": e.get("direct", ""),
+            }
+            reflect_map[sid] = {
+                "origin": e.get("origin", ""),
+                "free": e.get("free", ""),
+            }
+
+        # 合并重试：direct 或 free 任一为空者，收集后一次性重发（仅含缺失句）
+        missing = [
+            sid for sid in expected_ids
+            if sid not in faithful_map
+            or self._is_translation_empty(faithful_map[sid].get("direct", ""))
+            or sid not in reflect_map
+            or self._is_translation_empty(reflect_map[sid].get("free", ""))
+        ]
+        if missing:
+            missing_set = set(missing)
+            retry_sents = [
+                {"id": s["id"], "text": s.get("text", "")}
+                for s in batch_sents if s["id"] in missing_set
+            ]
+            retry_prompt = self._build_combined_prompt(
+                src_lang, tgt_lang, summary, terminology, retry_sents, style_hint, []
+            )
+            try:
+                retry_result = llm.chat(
+                    "s05_translate_combined",
+                    retry_prompt["user_prompt"],
+                    system_prompt=retry_prompt["system_prompt"],
+                    response_json=True,
+                )
+                retry_map = self._parse_response_to_map(retry_result)
+                for sid, e in retry_map.items():
+                    if sid not in missing_set:
+                        continue
+                    d = e.get("direct", "")
+                    f = e.get("free", "")
+                    if not self._is_translation_empty(d):
+                        faithful_map.setdefault(sid, {})["direct"] = d
+                        if e.get("origin"):
+                            faithful_map[sid]["origin"] = e["origin"]
+                    if not self._is_translation_empty(f):
+                        reflect_map.setdefault(sid, {})["free"] = f
+                        if e.get("origin"):
+                            reflect_map[sid]["origin"] = e["origin"]
+            except Exception as e:
+                print(f"[Translate] Combined retry failed for batch {batch_id}: {e}")
+
+        return {"faithful": faithful_map, "reflect": reflect_map}
+
     def _translate_batch(
         self,
         llm,
@@ -495,6 +664,17 @@ class S05Translate(BaseStep):
         batch_id = batch["index"]
         batch_sents = batch["sentences"]
         expected_ids = [s["id"] for s in batch_sents]
+
+        # 合并直译+意译为单次调用，消除批内 faithful→reflect 串行往返（延迟优化）
+        if enable_reflect:
+            try:
+                return self._translate_batch_combined(
+                    llm, batch, batch_sents, expected_ids,
+                    src_lang, tgt_lang, summary, terminology, style_hint,
+                )
+            except Exception as e:
+                print(f"[Translate] Combined translate failed for batch {batch_id}, "
+                      f"falling back to two-step faithful+reflect: {e}")
 
         # --- Step 1: Faithful translation ---
         faithful_prompt_data = self._build_faithful_prompt(
@@ -523,7 +703,7 @@ class S05Translate(BaseStep):
                 field="direct", phase="faithful", original_map=faithful_map,
             )
 
-        # --- Step 2: Reflective translation (if enabled) ---
+        # --- Step 2: Reflective translation (only reached if combined fallback) ---
         if enable_reflect:
             reflect_prompt_data = self._build_reflective_prompt(
                 src_lang, tgt_lang, summary, terminology, batch_sents,

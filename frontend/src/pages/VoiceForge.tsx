@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
-  AudioLines, ChevronLeft, Download, FileAudio, FileText, FolderOpen, Loader2,
+  AudioLines, Download, FileAudio, FileText, FolderOpen, Loader2,
   CheckSquare, ChevronDown, Copy, Eye, ListMusic, Mic2, Music2, Play, Plus, RefreshCw, Sparkles, Trash2, Upload, UserRound, Volume2, X, CircleAlert, Clock3, Pencil, Search,
 } from "lucide-react";
 import { VoiceForgeAnalysis, VoiceForgeAsset, VoiceForgeDashboard, VoiceForgeProject, VoiceForgeSentence, VoiceForgeVoice, voiceForgeApi } from "@/api/voiceforge";
@@ -55,7 +55,6 @@ export function VoiceForgeHome() {
         icon={Mic2}
         title="晴沐配音谷"
         detail="项目、配音任务与音频产出的统一管理台"
-        breadcrumbs={[{ label: "晴沐配音谷" }]}
         actions={
           <>
             <Button variant="outline" asChild>
@@ -339,12 +338,8 @@ export function VoiceForgeVoices() {
         title="音色库"
         detail="管理预置音色、声音设计和情绪片段"
         hideTitle
-        breadcrumbs={[{ label: "晴沐配音谷", to: "/voiceforge" }, { label: "音色库" }]}
         actions={
           <>
-            <Button variant="outline" asChild>
-              <Link to="/voiceforge"><ChevronLeft className="mr-1.5 h-4 w-4" />返回</Link>
-            </Button>
             <Button variant="outline" onClick={() => setTagsOpen(true)}>情绪标签管理</Button>
             <Button variant="ai-soft" onClick={() => setBatchEmotionOpen(true)}>批量生成情绪</Button>
             <Button variant="outline" onClick={() => setGroupOpen(true)} disabled={!selected.length}>添加到分组</Button>
@@ -358,7 +353,6 @@ export function VoiceForgeVoices() {
           </>
         }
       />
-      <div className="flex flex-wrap gap-2"><Link to="/voiceforge"><Button variant="outline"><ChevronLeft className="h-4 w-4" />返回</Button></Link><Button variant="outline" onClick={() => setTagsOpen(true)}>情绪标签管理</Button><Button variant="outline" onClick={() => setBatchEmotionOpen(true)}>批量生成情绪</Button><Button variant="outline" onClick={() => setGroupOpen(true)} disabled={!selected.length}>添加到分组</Button><Button variant="destructive" onClick={batchDelete} disabled={!selected.length}><Trash2 className="h-4 w-4" />删除选中{selected.length ? ` (${selected.length})` : ""}</Button><Button variant="outline" onClick={toggleAll}>{selected.length === voices.length && voices.length ? "取消全选" : "全选"}</Button><Button onClick={() => { setEditingMode("voice_design"); setEditing(null); }}><Plus className="h-4 w-4" />声音设计</Button></div>
     <div className="flex flex-wrap gap-2 border border-border/60 bg-card/70 p-3"><input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={(event) => event.key === "Enter" && load()} placeholder="搜索名称、标签或说明" className="h-9 min-w-48 flex-1 border border-border bg-background px-3 text-sm" /><FilterSelect value={filters.interface_id} onChange={(value) => setFilters({ ...filters, interface_id: value })} placeholder="全部引擎" options={caps.map((item) => ({ value: item.id, label: item.name }))} /><FilterSelect value={filters.gender} onChange={(value) => setFilters({ ...filters, gender: value })} placeholder="全部性别" options={["male", "female", "儿童", "老年", "中性"].map((value) => ({ value, label: value }))} /><FilterSelect value={filters.age} onChange={(value) => setFilters({ ...filters, age: value })} placeholder="全部年龄" options={["儿童", "少年", "青年", "中年", "老年"].map((value) => ({ value, label: value }))} /><FilterSelect value={filters.pitch} onChange={(value) => setFilters({ ...filters, pitch: value })} placeholder="全部音高" options={["极低", "低", "中", "高", "极高"].map((value) => ({ value, label: value }))} /><input value={filters.dialect} onChange={(event) => setFilters({ ...filters, dialect: event.target.value })} placeholder="方言" className="h-9 w-24 border border-border bg-background px-3 text-sm" /><Button variant="outline" onClick={load}>筛选</Button></div>
     {groupOpen && <section className="flex flex-wrap items-center gap-2 border border-primary/30 bg-primary/5 p-3 text-sm"><span>已选 {selected.length} 个音色，移动到：</span><input autoFocus value={groupName} onChange={(event) => setGroupName(event.target.value)} onKeyDown={(event) => event.key === "Enter" && moveToGroup()} placeholder="输入分组名称，留空表示未分组" className="h-9 min-w-48 flex-1 border border-border bg-background px-3" /><Button onClick={moveToGroup}>确认分组</Button><Button variant="outline" onClick={() => setGroupOpen(false)}>取消</Button></section>}
     {!voices.length ? <EmptyState icon={UserRound} title="暂无音色" detail="通过声音设计创建音色档案后，音色会按分组显示在这里。" /> : groupKeys.map((group) => <section key={group} className="overflow-hidden border border-border/60 bg-card/70"><button type="button" onClick={() => setCollapsed((current) => current.includes(group) ? current.filter((item) => item !== group) : [...current, group])} className="flex w-full items-center justify-between border-b border-border/60 bg-muted/40 px-4 py-2 text-left text-sm font-semibold"><span>{group} <span className="ml-1 text-xs font-normal text-muted-foreground">({groups[group].length})</span></span><span className="text-muted-foreground">{collapsed.includes(group) ? "展开" : "收起"}</span></button>{!collapsed.includes(group) && <div className="grid gap-3 p-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{groups[group].map((voice) => <VoiceLibraryCard key={voice.id} voice={voice} selected={selected.includes(voice.id)} onToggle={() => toggle(voice.id)} onEdit={() => setEditing(voice)} onEmotions={() => setEmotionVoice(voice)} onDuplicate={async () => { await voiceForgeApi.duplicateVoice(voice.id); await load(); }} onDelete={async () => { if (confirm(`删除音色“${voice.display_name}”？`)) { await voiceForgeApi.deleteVoice(voice.id); await load(); } }} />)}</div>}</section>)}

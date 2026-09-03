@@ -278,7 +278,6 @@ export function VoiceForgeSettingsPanel() {
         icon={SlidersHorizontal}
         title="配音谷设置"
         detail="模型选择、Prompt 预设与合成导出参数，全部限定在晴沐配音谷内生效"
-        breadcrumbs={[{ label: "晴沐配音谷", to: "/voiceforge" }, { label: "配音谷设置" }]}
         actions={
           <Button variant="outline" onClick={() => { void loadConfig(); void loadPresets(); void loadHealth(); }} disabled={cfgLoading}>
             <RefreshCcw className="mr-1.5 h-4 w-4" />刷新

@@ -570,36 +570,6 @@
         "maxTokens": 262144
       },
       {
-        "id": "openai/gpt-oss-120b",
-        "name": "GPT-OSS-120B",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
-        },
-        "contextWindow": 128000,
-        "maxTokens": 8192
-      },
-      {
         "id": "openai/gpt-oss-20b",
         "name": "GPT OSS 20B",
         "api": "openai-completions",
@@ -660,9 +630,9 @@
         "maxTokens": 16384
       }
     ],
-    "checkedAt": 1788320600384,
-    "lastModified": 1788266317000,
-    "etag": "W/\"52620e25656db352c870af48ff92a888\""
+    "checkedAt": 1788443621431,
+    "lastModified": 1788432042000,
+    "etag": "W/\"9e08b40aec8bdd3f07048e0597de5fc2\""
   },
   "xiaomi": {
     "models": [
@@ -737,7 +707,7 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1788320600442,
+    "checkedAt": 1788443621898,
     "lastModified": 1787571286000,
     "etag": "W/\"3db76cd3404affdf755b2efc443b74c3\""
   },
@@ -1125,6 +1095,29 @@
         }
       },
       {
+        "id": "gemini-3.8-flash",
+        "name": "Gemini 3.8 Flash",
+        "api": "google-generative-ai",
+        "provider": "google",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.75,
+          "output": 3.75,
+          "cacheRead": 0.075,
+          "cacheWrite": 0
+        },
+        "contextWindow": 1048576,
+        "maxTokens": 65536,
+        "thinkingLevelMap": {
+          "off": null
+        }
+      },
+      {
         "id": "gemini-flash-latest",
         "name": "Gemini Flash Latest",
         "api": "google-generative-ai",
@@ -1225,9 +1218,9 @@
         }
       }
     ],
-    "checkedAt": 1788320600394,
-    "lastModified": 1788266304000,
-    "etag": "W/\"59fee14a14df536c61e2202fd906d459\""
+    "checkedAt": 1788443621362,
+    "lastModified": 1788432026000,
+    "etag": "W/\"82d850ac898f9406a8bedcd62f25e6da\""
   },
   "openai": {
     "models": [
@@ -2446,7 +2439,7 @@
         }
       }
     ],
-    "checkedAt": 1788320600513,
+    "checkedAt": 1788443621382,
     "lastModified": 1787740207000,
     "etag": "W/\"de4430a471bcb862d1abf6d6e78f60c2\""
   },
@@ -3817,7 +3810,7 @@
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 64000,
+        "maxTokens": 128000,
         "thinkingLevelMap": {
           "off": "none",
           "minimal": null,
@@ -4169,9 +4162,9 @@
         }
       }
     ],
-    "checkedAt": 1788320600473,
-    "lastModified": 1788266309000,
-    "etag": "W/\"cf81118a87ef8bedc514709e3356d982\""
+    "checkedAt": 1788443622494,
+    "lastModified": 1788432031000,
+    "etag": "W/\"ec4ec2daa97e4573ff583d845e38441a\""
   },
   "anthropic": {
     "models": [
@@ -4224,6 +4217,36 @@
               }
             }
           ]
+        }
+      },
+      {
+        "id": "claude-fable-5-1",
+        "name": "Claude Fable 5.1",
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "baseUrl": "https://api.anthropic.com",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 10,
+          "output": 50,
+          "cacheRead": 0.25,
+          "cacheWrite": 12.5
+        },
+        "contextWindow": 1000000,
+        "maxTokens": 128000,
+        "compat": {
+          "supportsMidConvoEffort": true,
+          "forceAdaptiveThinking": true,
+          "supportsStrictTools": true
+        },
+        "thinkingLevelMap": {
+          "off": null,
+          "xhigh": "xhigh",
+          "max": "max"
         }
       },
       {
@@ -4422,26 +4445,16 @@
         },
         "contextWindow": 1000000,
         "maxTokens": 128000,
-        "thinkingLevelMap": {
-          "xhigh": "xhigh",
-          "max": "max"
-        },
         "compat": {
+          "supportsMidConvoEffort": true,
           "forceAdaptiveThinking": true,
           "supportsTemperature": false,
-          "supportsStrictTools": true,
-          "allowedFallbackModels": [
-            {
-              "provider": "anthropic",
-              "model": "claude-opus-4-8",
-              "cost": {
-                "input": 5,
-                "output": 25,
-                "cacheRead": 0.5,
-                "cacheWrite": 6.25
-              }
-            }
-          ]
+          "supportsStrictTools": true
+        },
+        "thinkingLevelMap": {
+          "off": null,
+          "xhigh": "xhigh",
+          "max": "max"
         }
       },
       {
@@ -4546,8 +4559,8 @@
         }
       }
     ],
-    "checkedAt": 1788320601497,
-    "lastModified": 1787571244000,
-    "etag": "W/\"f6c149c048a0e6e85e35ce0a72c1d4ec\""
+    "checkedAt": 1788443622192,
+    "lastModified": 1788432010000,
+    "etag": "W/\"5fdc170fdb3eb24c0e164a059918e474\""
   }
 }
