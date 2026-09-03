@@ -17,8 +17,8 @@
           "selectedTypes": [
             "video"
           ],
-          "videoPath": "M:/翻译商单/加越南语英文/We-Will-Love-Again改  Love Me Again（54集）/05.mp4",
-          "source_language": "en",
+          "videoPath": "X:/PCTMoveData/Music/日本抖音剧情短片《自尊》…果然能打败老阿姨的只有老阿姨!.13575837212.mp4",
+          "source_language": "ja",
           "target_language": "zh",
           "copyInputs": true,
           "filePath": ""
@@ -42,7 +42,8 @@
         "height": 565
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1780650299385",
@@ -92,7 +93,7 @@
           "split_clause_breaks": false,
           "processing_language": "from_input",
           "merge_gap_enabled": false,
-          "merge_short_enabled": false,
+          "merge_short_enabled": true,
           "pause_split_enabled": true
         },
         "status": "completed",
@@ -111,7 +112,8 @@
         "height": 672
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1780948332813",
@@ -550,9 +552,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 473
+        "height": 428
       },
-      "selected": true,
+      "selected": false,
       "dragging": false
     },
     {
@@ -645,7 +647,7 @@
       "type": "workflow",
       "position": {
         "x": 30,
-        "y": 540
+        "y": 615
       },
       "data": {
         "nodeType": "image_gen",
@@ -687,7 +689,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 658
+        "height": 698
       },
       "selected": false,
       "dragging": false
@@ -715,7 +717,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 434
+        "height": 354
       },
       "selected": false,
       "dragging": false
@@ -807,7 +809,7 @@
             "img2img"
           ],
           "interface": "bailian",
-          "model": "qwen-image-edit-max",
+          "model": "wan2.7-image",
           "resolution": "2K",
           "aspect_ratio": "16:9",
           "num_images": 1,
@@ -839,10 +841,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 658
+        "height": 698
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_5_1782654274362",
@@ -866,7 +869,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 434
+        "height": 354
       },
       "selected": false,
       "dragging": false
@@ -1900,6 +1903,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-29T23:26:31",
-  "updatedAt": "2026-08-30T11:23:00",
-  "revision": 38
+  "updatedAt": "2026-09-03T03:00:51",
+  "revision": 41
 }

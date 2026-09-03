@@ -48,6 +48,17 @@ def update_task(task_id: str, status: str, progress: float, error_message: str =
     if status in {"succeeded", "failed", "cancelled"}:
         # 任务终态释放并发占位，顺势投递仍在排队的合成任务
         pump_pending_tasks()
+    # 事件驱动：任务状态变化即向订阅该项目的前端推送最新进度快照
+    try:
+        from backend.api.voiceforge_ws import enqueue_project_progress
+
+        with session() as conn:
+            row = conn.execute("SELECT project_id FROM vf_tasks WHERE id = ?", (task_id,)).fetchone()
+            if row:
+                enqueue_project_progress(row["project_id"])
+    except Exception:
+        # 广播失败绝不影响任务主流程
+        pass
 
 
 def bump_task_retry(task_id: str):

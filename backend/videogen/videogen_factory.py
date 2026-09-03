@@ -71,8 +71,11 @@ class SDKVideoGen(GenericVideoGen):
     def generate(self, prompt, output_dir, **kwargs):
         from backend.videogen.videogen_interface_manager import get_videogen_interface_manager
         mgr = get_videogen_interface_manager()
+        kwargs = dict(kwargs)
+        # mode 需显式取出，避免既按位置又按关键字传入导致 “multiple values” 错误
+        mode = kwargs.pop("mode", "txt2video")
         params = mgr.build_request_params(
-            self.iface_id, kwargs.get("mode", "txt2video"), prompt, output_dir, **kwargs
+            self.iface_id, mode, prompt, output_dir, **kwargs
         )
         mod_path = params.get("module")
         func_name = params.get("function", "generate")
