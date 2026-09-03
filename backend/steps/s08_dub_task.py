@@ -687,10 +687,15 @@ class S08DubTask(BaseStep):
         if callback:
             callback(25, f"解析到 {len(entries)} 条数据（{'双语' if is_bilingual else '单语'}）")
 
-        # 执行前单句时长检测：任意单句时长小于 0.2 秒直接报错
-        self._check_min_sentence_duration(entries, threshold=0.2)
-
         node_cfg = getattr(self, "_node_config", {}) or {}
+        # 执行前单句时长检测：任意单句时长小于阈值(秒)直接报错，阈值可由前端配置(默认0.2)
+        min_dur_cfg = node_cfg.get("min_sentence_duration")
+        try:
+            threshold = float(min_dur_cfg) if min_dur_cfg not in (None, "") else 0.2
+        except (TypeError, ValueError):
+            threshold = 0.2
+        self._check_min_sentence_duration(entries, threshold=threshold)
+
         read_language = self._resolve_read_language(task_dir)
         enable_tone = bool(node_cfg.get("ai_read_tone"))
         enable_normalize = bool(node_cfg.get("normalize_chinese_read_text"))
