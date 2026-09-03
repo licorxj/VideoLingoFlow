@@ -311,11 +311,24 @@ class LLMClient:
             try:
                 resp = client.chat.completions.create(**kwargs)
                 content = resp.choices[0].message.content or ""
-                result = self._parse_response_content(content, response_json)
+                # Parse the response separately: a parse failure means the request
+                # SUCCEEDED but the returned content is invalid (e.g. not JSON).
+                # Attribute it precisely instead of masking it as "request failed",
+                # and do NOT retry (retrying yields the same unparseable content).
+                try:
+                    result = self._parse_response_content(content, response_json)
+                except Exception as parse_err:
+                    raise RuntimeError(
+                        f"LLM response parse failed (step={step_name}, model={step_model}): {parse_err}"
+                    ) from parse_err
                 if log:
                     self._save_log(step_name, prompt, result)
                 return result
             except Exception as e:
+                # Response parse failures are already labelled precisely above;
+                # re-raise without retrying.
+                if "response parse failed" in str(e):
+                    raise
                 if self._is_retryable_error(e):
                     last_error = e
                     if attempt < retry_count:
@@ -328,7 +341,7 @@ class LLMClient:
                         )
                         time.sleep(wait)
                     continue
-                # Non-retryable errors raise immediately
+                # Non-retryable request errors raise immediately
                 raise RuntimeError(
                     f"LLM request failed (step={step_name}, model={step_model}): {e}"
                 ) from e

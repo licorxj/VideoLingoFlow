@@ -61,6 +61,62 @@ class S_ASRResultValidate(BaseStep):
         e = min(len(norm_str), idx + width)
         return norm_str[s:e]
 
+    def _align_words_to_text(self, text, words):
+        """Re-derive a ``words`` list whose (normalized) concatenation equals the
+        normalized ``text``, by consuming the original words in order and splitting
+        any boundary-straddling word proportionally by character count.
+
+        Handles the recoverable inconsistency where a sentence's ``text`` is a *prefix*
+        of its ``words`` (the text was truncated at a word boundary while the whole
+        word was kept): overflow beyond ``text`` is dropped, and the boundary word is
+        split (text + proportional timestamp) so the result exactly matches ``text``.
+
+        Returns the repaired words list, or ``None`` when the mismatch is not of this
+        recoverable form (e.g. ``text`` contains characters absent from ``words``).
+        """
+        tn = self._norm(text)
+        if not tn or not words:
+            return None
+        result = []
+        wi, wp, covered = 0, 0, 0
+        n = len(words)
+        while covered < len(tn) and wi < n:
+            w = words[wi]
+            wt = self._norm(w.get("word", ""))
+            if not wt:
+                wi += 1
+                wp = 0
+                continue
+            remaining = len(wt) - wp
+            take = min(remaining, len(tn) - covered)
+            if take <= 0:
+                break
+            sub_text = wt[wp:wp + take]
+            try:
+                ws = float(w.get("start", 0) or 0)
+                we = float(w.get("end", 0) or 0)
+            except (TypeError, ValueError):
+                ws = we = 0.0
+            span = we - ws
+            if span > 0:
+                sub_start = ws + span * (wp / len(wt))
+                sub_end = ws + span * ((wp + take) / len(wt))
+            else:
+                sub_start = sub_end = ws
+            sub = dict(w)
+            sub["word"] = sub_text
+            sub["start"] = round(sub_start, 4)
+            sub["end"] = round(sub_end, 4)
+            result.append(sub)
+            covered += take
+            wp += take
+            if wp >= len(wt):
+                wi += 1
+                wp = 0
+        if self._norm("".join(r.get("word", "") for r in result)) == tn:
+            return result
+        return None
+
     # ------------------------------------------------------------------ #
     # 主校验
     # ------------------------------------------------------------------ #
@@ -118,6 +174,14 @@ class S_ASRResultValidate(BaseStep):
             seg_norm = self._norm(seg.get("text") or "")
             word_norm = self._norm(self._flatten_words([seg]))
             if seg_norm != word_norm:
+                # Recoverable: text is a prefix of words -> re-derive words to match text.
+                repaired = self._align_words_to_text(
+                    seg.get("text") or "", seg.get("words") or []
+                )
+                if repaired is not None:
+                    seg["words"] = repaired
+                    self._repaired = True
+                    continue
                 k = self._first_diff(seg_norm, word_norm)
                 raise ValueError(
                     f"ASR 校验未通过（segments ↔ words）：\n"
@@ -164,25 +228,30 @@ class S_ASRResultValidate(BaseStep):
                 seg_norm = self._norm(text)
                 word_norm = self._norm(self._flatten_words([s]))
                 if seg_norm != word_norm:
-                    # 定位首个差异字符下标（两副本通用，不依赖特定辅助方法）
-                    n = min(len(seg_norm), len(word_norm))
-                    k = -1
-                    for _i in range(n):
-                        if seg_norm[_i] != word_norm[_i]:
-                            k = _i
-                            break
-                    if k == -1 and len(seg_norm) != len(word_norm):
-                        k = n
-                    raise ValueError(
-                        f"ASR 校验未通过（句子列表）：第 {idx + 1} 句（id={sid}）"
-                        f"的文本与 words 不完全一致"
-                        f"（去标点/空白/大小写后）。\n"
-                        f"  · 句子文本长度 {len(seg_norm)}，words 压平长度 {len(word_norm)}。\n"
-                        f"  · 句子文本(归一化): …{self._snippet(seg_norm, k if k >= 0 else 0)}…\n"
-                        f"  · words 压平(归一化): …{self._snippet(word_norm, k if k >= 0 else 0)}…\n"
-                        f"  · 该句原文: {text!r}\n"
-                        f"  · 该句 words: {[w.get('word') for w in words]!r}"
-                    )
+                    # Recoverable: text is a prefix of words -> re-derive words to match text.
+                    repaired = self._align_words_to_text(text, words)
+                    if repaired is not None:
+                        s["words"] = repaired
+                        self._repaired = True
+                    else:
+                        n = min(len(seg_norm), len(word_norm))
+                        k = -1
+                        for _i in range(n):
+                            if seg_norm[_i] != word_norm[_i]:
+                                k = _i
+                                break
+                        if k == -1 and len(seg_norm) != len(word_norm):
+                            k = n
+                        raise ValueError(
+                            f"ASR 校验未通过（句子列表）：第 {idx + 1} 句（id={sid}）"
+                            f"的文本与 words 不完全一致"
+                            f"（去标点/空白/大小写后）。\n"
+                            f"  · 句子文本长度 {len(seg_norm)}，words 压平长度 {len(word_norm)}。\n"
+                            f"  · 句子文本(归一化): …{self._snippet(seg_norm, k if k >= 0 else 0)}…\n"
+                            f"  · words 压平(归一化): …{self._snippet(word_norm, k if k >= 0 else 0)}…\n"
+                            f"  · 该句原文: {text!r}\n"
+                            f"  · 该句 words: {[w.get('word') for w in words]!r}"
+                        )
 
         if callback:
             callback(60, "句子列表校验通过")
@@ -231,9 +300,21 @@ class S_ASRResultValidate(BaseStep):
     def run(self, task_dir, callback=None, cancel_callback=None):
         src = self._input_path()
         asr_data, src = self._load_asr(task_dir)
+        self._repaired = False
         if callback:
             callback(10, f"读取 ASR JSON：{os.path.basename(src)}")
         self._validate(asr_data, callback)
+
+        # 若自动修复了 text/words 不一致，将修复结果写回输入文件，使下游拿到一致数据。
+        if self._repaired:
+            abs_path = self._resolve_input_path(task_dir)
+            try:
+                with open(abs_path, "w", encoding="utf-8") as f:
+                    json.dump(asr_data, f, ensure_ascii=False, indent=2)
+                if callback:
+                    callback(95, "已自动修复 text/words 不一致并写回输入文件")
+            except Exception as e:
+                print(f"[ASR 校验] 写回修复结果失败：{e}")
 
         # 校验通过：直接把输入文件路径作为输出，不新建文件、不改写内容。
         self.artifacts = [src]
