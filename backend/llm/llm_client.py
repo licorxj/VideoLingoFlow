@@ -97,13 +97,48 @@ class LLMClient:
                     timeout=timeout_val,
                     max_retries=0,
                     # 忽略系统代理（VPN 全局代理会设置 HTTP_PROXY/HTTPS_PROXY），直接连接上游，避免 502
-                    http_client=httpx.Client(timeout=timeout_val, trust_env=False),
+                    # transport 启用连接级重试：复用连接池时若上游已关闭空闲 keep-alive 连接
+                    # （表现为 ConnectionResetError / WinError 10054），httpx 会换新连接重试
+                    http_client=httpx.Client(
+                        timeout=timeout_val,
+                        trust_env=False,
+                        transport=httpx.HTTPTransport(retries=3, trust_env=False),
+                    ),
                 )
                 _CLIENT_CACHE[key] = client
                 # 简单上限保护：超出时丢弃最早的缓存，避免无限堆积
                 if len(_CLIENT_CACHE) > _CLIENT_CACHE_MAX:
                     _CLIENT_CACHE.pop(next(iter(_CLIENT_CACHE)))
             return client
+
+    @staticmethod
+    def _is_connection_error(exc: Exception) -> bool:
+        """连接级错误（对端重置/关闭连接）应可重试。
+
+        连接池复用场景下，上游/网关可能已关闭空闲 keep-alive 连接，
+        复用该连接会收到 RST（如 Windows WinError 10054）。httpx 会在请求
+        失败后将该失效连接移出连接池，重试即用新连接成功。
+        """
+        conn_names = {
+            "ConnectionError", "ConnectionResetError", "RemoteDisconnected",
+            "RemoteProtocolError", "ConnectError", "CloseError",
+            "APIConnectionError", "TransportError",
+        }
+        exc_names = {type(exc).__name__}
+        cause = getattr(exc, "__cause__", None)
+        if cause:
+            exc_names.add(type(cause).__name__)
+        if conn_names & exc_names:
+            return True
+        text = str(exc).lower()
+        return (
+            "10054" in text
+            or "connection reset" in text
+            or "connection aborted" in text
+            or "remote disconnected" in text
+            or "远程主机" in text
+            or "连接被" in text
+        )
 
     @staticmethod
     def _is_timeout_error(exc: Exception) -> bool:
@@ -119,7 +154,10 @@ class LLMClient:
 
     @staticmethod
     def _is_retryable_error(exc: Exception) -> bool:
-        """Check if error is retryable: timeout or 5xx server errors."""
+        """Check if error is retryable: connection error, timeout, or 5xx."""
+        # 连接级错误（对端重置/关闭连接，如 WinError 10054）优先重试
+        if LLMClient._is_connection_error(exc):
+            return True
         # Timeout errors
         if LLMClient._is_timeout_error(exc):
             return True
@@ -370,7 +408,7 @@ class LLMClient:
                     last_error = e
                     error_str = str(e)
                     # Only retry on transient errors (502, 503, 504, timeout, connection errors)
-                    is_transient = any(code in error_str for code in ["502", "503", "504", "timeout", "Timeout", "Connection"])
+                    is_transient = LLMClient._is_retryable_error(e)
                     if attempt < max_retries and is_transient:
                         wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
                         print(f"[LLM] 请求失败 (attempt {attempt + 1}/{max_retries + 1}), {wait_time:.1f}s 后重试: {error_str[:100]}")
