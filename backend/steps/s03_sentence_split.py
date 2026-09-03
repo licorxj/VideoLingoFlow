@@ -1372,8 +1372,16 @@ Return ONLY the JSON array, no explanation.""".format(
                     continue
                 orig_idx, orig_sent = batch[batch_item_idx]
 
-                # Align timestamps
-                aligned_result = self._align_split_result(new_texts, orig_sent, lang)
+                # Align timestamps. This is a node-internal step — a failure here
+                # is NOT an LLM failure, so handle it locally and route the
+                # sentence to strict retry instead of aborting the whole batch.
+                try:
+                    aligned_result = self._align_split_result(new_texts, orig_sent, lang)
+                except Exception as align_err:
+                    print(f"[Split] Batch {batch_idx} sentence {orig_idx} alignment failed "
+                          f"(node-internal, not an LLM error): {align_err}")
+                    failed_indices.append(orig_idx)
+                    continue
                 result[orig_idx] = aligned_result
 
             if callback:
@@ -1746,8 +1754,9 @@ Return ONLY the JSON array, no explanation.""".format(
                         sentences, all_words, max_length, callback, lang=detected_lang
                     )
                 except Exception as e:
-                    print(f"[Split] LLM round {llm_round + 1} failed: {e}")
-                    # Continue to fallback below
+                    print(f"[Split] LLM split batch error (round {llm_round + 1}; "
+                          f"node-internal/post-processing, NOT an LLM request failure): {e}")
+                    # 安全降级：跳过本轮 LLM 拆分，继续走规则拆分兜底
 
                 # Fix alignment mismatches and finalize timestamps
                 sentences = self._validate_and_fix_alignment(sentences)

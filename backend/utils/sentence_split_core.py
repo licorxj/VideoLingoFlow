@@ -334,6 +334,10 @@ def assign_words_by_char_offset(
             sub_word = dict(w)
             sub_word["start"] = round(sub_start, 4)
             sub_word["end"] = round(sub_end, 4)
+            # Slice the word *text* by the same character span, otherwise a word that
+            # straddles a chunk boundary would keep its full text while only a fraction
+            # of it belongs to this chunk (causing text/words inconsistency downstream).
+            sub_word["word"] = wt[wp:wp + take]
             assigned.append(sub_word)
 
             filled += take

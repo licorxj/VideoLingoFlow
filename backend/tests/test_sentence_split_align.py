@@ -191,6 +191,46 @@ def test_straddle():
     print("  [OK] Japanese single-word straddle: proportional + shared borders")
 
 
+def test_straddle_word_text_sliced():
+    """A word that straddles a chunk boundary must have its *text* sliced too, not just
+    its timestamps — otherwise the chunk's ``text`` and its ``words`` disagree
+    (the exact bug that broke ASR validation on the Japanese short-drama task)."""
+    import re
+    _clean = lambda s: re.sub(r"\s+", "", str(s or ""))
+
+    # Segment text and its (atomic) ASR words; one word straddles the sentence split.
+    text = "そんなに特に深い意味はないんですけど。"
+    parts = [
+        ("そんなに", 0.0, 1.0), ("特", 1.0, 1.3), ("に", 1.3, 1.6),
+        ("深", 1.6, 1.9), ("い", 1.9, 2.2), ("意", 2.2, 2.5),
+        ("味", 2.5, 2.8), ("はないんですけど。", 2.8, 3.2),
+    ]
+    words = _substr_words(text, parts)
+    chunks = ["そんなに特に深い意味はない", "んですけど。"]  # the two sentences
+
+    res = assign_words_by_char_offset(words, chunks, 0.0, 3.2)
+    assert len(res) == 2
+
+    # chunk 0 keeps only "はない" of the straddling word (not the whole token)
+    c0_words = res[0]["words"]
+    assert c0_words[-1]["word"] == "はない", (
+        f"chunk0 boundary word not sliced: {c0_words[-1]['word']!r}"
+    )
+    # chunk 1 keeps the remainder
+    c1_words = res[1]["words"]
+    assert c1_words[-1]["word"] == "んですけど。", (
+        f"chunk1 boundary word not sliced: {c1_words[-1]['word']!r}"
+    )
+
+    # invariant: concatenated (cleaned) sub-word texts == cleaned chunk text, per chunk
+    for ci, c in enumerate(res):
+        joined = _clean("".join(w["word"] for w in c["words"]))
+        assert joined == _clean(chunks[ci]), (
+            f"chunk {ci}: words {joined!r} != chunk {chunks[ci]!r}"
+        )
+    print("  [OK] straddle word TEXT sliced in sync with timestamps (text==words)")
+
+
 def test_no_words_fallback():
     """Segment with no word timestamps must stay within bounds (interpolation)."""
     sent = {"text": "hello world", "start": 1.0, "end": 3.0, "words": []}
@@ -207,6 +247,7 @@ def _run_all():
     test_chinese()
     test_english()
     test_straddle()
+    test_straddle_word_text_sliced()
     test_no_words_fallback()
     print("\nAll tests passed.")
 
