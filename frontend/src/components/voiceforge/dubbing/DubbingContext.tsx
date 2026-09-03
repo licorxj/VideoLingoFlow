@@ -17,6 +17,8 @@ import {
   VoiceForgeExport,
   VoiceForgeCapability,
   VoiceForgeEmotionTag,
+  VoiceForgeProjectProgress,
+  VoiceForgeProgressMessage,
 } from "@/api/voiceforge";
 import { getWebSocketUrl } from "@/api/ws";
 
@@ -59,6 +61,7 @@ export interface DubbingState {
   defaultGap: number;
   busy: string;
   error: string;
+  projectProgress: VoiceForgeProjectProgress | null;
 }
 
 export type DubbingAction =
@@ -73,7 +76,9 @@ export type DubbingAction =
   | { type: "SET_GAP"; payload: number }
   | { type: "SET_BUSY"; payload: string }
   | { type: "SET_ERROR"; payload: string }
-  | { type: "UPDATE_SENTENCE_LOCAL"; payload: { id: string; changes: Partial<VoiceForgeSentence> } };
+  | { type: "UPDATE_SENTENCE_LOCAL"; payload: { id: string; changes: Partial<VoiceForgeSentence> } }
+  | { type: "PATCH_SENTENCES"; payload: Array<Partial<VoiceForgeSentence> & { id: string }> }
+  | { type: "SET_PROJECT_PROGRESS"; payload: VoiceForgeProjectProgress };
 
 /* ── Reducer ───────────────────────────────────────────────────────── */
 
@@ -87,6 +92,7 @@ const initialState: DubbingState = {
   exports: [],
   capabilities: [],
   emotionTags: [],
+  projectProgress: null,
   selectedChapterId: null,
   selectedIds: new Set<string>(),
   engine: "",
@@ -154,6 +160,20 @@ function reducer(state: DubbingState, action: DubbingAction): DubbingState {
       );
       return { ...state, sentences };
     }
+
+    case "PATCH_SENTENCES": {
+      const map = new Map(action.payload.map((p) => [p.id, p]));
+      return {
+        ...state,
+        sentences: state.sentences.map((s) => {
+          const patch = map.get(s.id);
+          return patch ? { ...s, ...patch } : s;
+        }),
+      };
+    }
+
+    case "SET_PROJECT_PROGRESS":
+      return { ...state, projectProgress: action.payload };
 
     default:
       return state;
@@ -253,51 +273,25 @@ export function DubbingProvider({ children }: { children: React.ReactNode }) {
     socket.onerror = () => {}; // swallow – do not crash the component
     socket.onmessage = (evt) => {
       try {
-        const msg = JSON.parse(evt.data as string);
-        switch (msg.type) {
-          case "progress":
-            // Individual sentence starts generating — local update, no full reload
-            dispatch({
-              type: "UPDATE_SENTENCE_LOCAL",
-              payload: {
-                id: msg.data?.sentence_id,
-                changes: { status: "generating" },
-              },
-            });
-            break;
-          case "completed":
-            // Sentence done — local update with audio info
-            dispatch({
-              type: "UPDATE_SENTENCE_LOCAL",
-              payload: {
-                id: msg.data?.sentence_id,
-                changes: {
-                  status: "done",
-                  audio_storage_key: msg.data?.audio_path,
-                  audio_duration: msg.data?.audio_duration,
-                },
-              },
-            });
-            break;
-          case "error":
-            dispatch({
-              type: "UPDATE_SENTENCE_LOCAL",
-              payload: {
-                id: msg.data?.sentence_id,
-                changes: {
-                  status: "error",
-                  error_message: msg.data?.error_message ?? "合成失败",
-                },
-              },
-            });
-            break;
-          case "batch_summary":
-            // Batch finished — do a full reload to sync everything
-            void load();
-            break;
-          default:
-            break;
+        const msg = JSON.parse(evt.data as string) as VoiceForgeProgressMessage;
+        if (msg.type !== "voiceforge.progress" || !msg.summary) return;
+        // 事件驱动式局部更新：仅 patch 变化的句子状态，不整页 reload
+        if (Array.isArray(msg.sentences) && msg.sentences.length) {
+          dispatch({
+            type: "PATCH_SENTENCES",
+            payload: msg.sentences.map((s) => ({
+              id: s.id,
+              status: s.status,
+              error_message: s.error_message,
+              audio_storage_key: s.audio_storage_key,
+              audio_duration: s.audio_duration,
+            })),
+          });
         }
+        if (Array.isArray(msg.tasks)) {
+          dispatch({ type: "SET_ALL", payload: { tasks: msg.tasks as VoiceForgeTask[] } });
+        }
+        dispatch({ type: "SET_PROJECT_PROGRESS", payload: msg.summary });
       } catch {
         // Non-JSON message — ignore
       }

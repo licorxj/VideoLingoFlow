@@ -22,6 +22,7 @@ from backend.utils.sentence_split_core import (
     is_all_punctuation_or_whitespace, normalize_text_for_alignment_check,
     has_multi_speaker, pre_split_at_terminals, fix_leading_punctuation,
     split_chinese_by_chars, split_english_by_chars, distribute_timestamps_to_chunks,
+    assign_words_by_char_offset,
     salvage_json_response, build_smart_batches,
 )
 
@@ -1073,23 +1074,18 @@ class S03SentenceSplit(BaseStep):
                 })
                 continue
 
-            words_remaining = words_pool
-            hint = sent_start
-            for chunk in final_text_chunks:
-                if not chunk.strip():
+            # Deterministic character-offset alignment: every chunk is a substring of
+            # `text`, so assign words in order and split boundary-straddling words by time.
+            aligned_chunks = assign_words_by_char_offset(
+                words_pool, final_text_chunks, sent_start, sent_end
+            )
+            for ac in aligned_chunks:
+                if not str(ac.get("text", "")).strip():
                     continue
-                aligned, consumed_count = self._align_chunk_to_local_words(
-                    chunk, words_remaining, hint, sent_end
-                )
-                if not aligned["words"]:
-                    aligned = self._align_sentence_to_words(
-                        chunk, words_remaining, hint, sent_end
-                    )
-                if aligned["words"]:
-                    hint = aligned["words"][-1]["end"]
-                    if consumed_count > 0:
-                        words_remaining = words_remaining[consumed_count:]
-                result.append(aligned)
+                if ac.get("start") is None:
+                    ac["start"] = round(sent_start, 4)
+                    ac["end"] = round(sent_end, 4)
+                result.append(ac)
 
         return result
 
@@ -1111,31 +1107,27 @@ class S03SentenceSplit(BaseStep):
         words_pool = list(orig_sent.get("words", []) or [])
         sent_start = float(orig_sent.get("start", 0) or 0)
         sent_end = float(orig_sent.get("end", sent_start) or sent_start)
-        hint = sent_start
 
         # Fix leading punctuation before alignment
         new_texts = self._fix_leading_punctuation(new_texts)
 
-        result: List[Dict] = []
-        for chunk in new_texts:
-            chunk_text = self._clean_sentence_text(chunk, lang=lang)
-            if not chunk_text:
-                continue
-            aligned, consumed = self._align_chunk_to_local_words(
-                chunk_text, words_pool, hint, sent_end
-            )
-            if not aligned.get("words"):
-                # Fallback to broader matching
-                aligned = self._align_sentence_to_words(
-                    chunk_text, words_pool, hint, sent_end
-                )
-            if aligned.get("words"):
-                hint = float(aligned["words"][-1].get("end", hint))
-                if consumed > 0:
-                    words_pool = words_pool[consumed:]
-            result.append(aligned)
+        # Deterministic character-offset alignment against the original sentence's words.
+        cleaned_texts = [self._clean_sentence_text(t, lang=lang) for t in new_texts]
+        aligned_chunks = assign_words_by_char_offset(
+            words_pool, cleaned_texts, sent_start, sent_end
+        )
 
-        # Post-pass: interpolate timestamps for chunks that have no words
+        result: List[Dict] = []
+        for ac in aligned_chunks:
+            if not str(ac.get("text", "")).strip():
+                continue
+            if ac.get("start") is None:
+                # No words mapped onto this chunk — let interpolation fill timestamps.
+                ac["start"] = round(sent_start, 4)
+                ac["end"] = round(sent_end, 4)
+            result.append(ac)
+
+        # Last-resort interpolation only for chunks that still lack word timing.
         self._interpolate_missing_timestamps(result, sent_start, sent_end)
 
         return result
@@ -1506,16 +1498,31 @@ Return ONLY the JSON array, no explanation.""".format(
                 result.append(sent)
                 continue
 
-            # Pre-split at sentence-terminal punctuation to avoid
-            # jieba chunks crossing sentence boundaries
+            # Pre-split at sentence-terminal punctuation to avoid chunks crossing
+            # sentence boundaries, then split each sub-segment by character budget.
             segments = self._pre_split_at_terminals(text, terminals)
-            
+            sent_chunks = []
             for segment_text in segments:
                 if self._is_compact_spacing_language(lang):
-                    chunks = self._split_chinese_by_chars(segment_text, max_length, has_jieba)
+                    sent_chunks.extend(self._split_chinese_by_chars(segment_text, max_length, has_jieba))
                 else:
-                    chunks = self._split_english_by_chars(segment_text, max_length)
-                result.extend(self._distribute_timestamps_to_chunks(sent, chunks))
+                    sent_chunks.extend(self._split_english_by_chars(segment_text, max_length))
+
+            # The final chunks are substrings of `text`; align them against the
+            # sentence's words in one deterministic character-offset pass.
+            aligned = assign_words_by_char_offset(
+                list(sent.get("words", []) or []),
+                sent_chunks,
+                float(sent.get("start", 0) or 0),
+                float(sent.get("end", 0) or 0),
+            )
+            for ac in aligned:
+                if not str(ac.get("text", "")).strip():
+                    continue
+                if ac.get("start") is None:
+                    ac["start"] = round(float(sent.get("start", 0) or 0), 4)
+                    ac["end"] = round(float(sent.get("end", 0) or 0), 4)
+                result.append(ac)
 
         return result
 

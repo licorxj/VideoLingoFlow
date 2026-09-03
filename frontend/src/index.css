@@ -292,6 +292,18 @@
   background: hsl(var(--muted-foreground) / 0.55);
 }
 
+/* 工作流卡片单行横向滚动条：加粗便于鼠标拖动 */
+.wf-cards-scroll::-webkit-scrollbar { height: 10px; }
+.wf-cards-scroll::-webkit-scrollbar-track {
+  background: hsl(var(--secondary));
+  border-radius: 999px;
+}
+.wf-cards-scroll::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.45);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
 /* Animated gradient border */
 @keyframes gradient-rotate {
   0% { --angle: 0deg; }

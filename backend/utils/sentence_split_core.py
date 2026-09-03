@@ -264,24 +264,117 @@ def split_english_by_chars(text: str, max_length: int) -> List[str]:
     return fix_leading_punctuation(chunks)
 
 
+def assign_words_by_char_offset(
+    seg_words: List[Dict],
+    chunks: List[str],
+    seg_start: float = 0.0,
+    seg_end: float = 0.0,
+) -> List[Dict]:
+    """Deterministically assign each word (or a proportional slice of it) to the
+    chunk whose character span contains it.
+
+    Replaces the previous fuzzy prefix/subsequence re-matching. Every chunk is an
+    exact substring of the original segment text, so the concatenated (whitespace
+    stripped) chunk texts correspond character-for-character to the concatenated word
+    texts. We therefore consume words in order against each chunk's character budget:
+
+      * words are consumed in order — never skipped, never over-consumed;
+      * a word that straddles a chunk boundary is split by TIME proportionally to the
+        fraction of its characters that fall inside the chunk, giving both neighbouring
+        chunks a real sub-word timestamp;
+      * chunk timestamps are always within [word.start, word.end], so they never exceed
+        the true segment bounds.
+
+    Returns a list (parallel to ``chunks``) of
+    ``{"text": chunk, "start": float|None, "end": float|None, "words": [...]}``.
+    Empty-text chunks get ``words: []`` and ``start/end == None`` (the caller fills
+    these from ``seg_start``/``seg_end``).
+    """
+    import re
+
+    _clean = lambda s: re.sub(r"\s+", "", str(s or ""))
+    word_texts = [_clean(w.get("word", "")) for w in seg_words]
+    chunk_texts = [_clean(c) for c in chunks]
+
+    result: List[Dict] = []
+    wi = 0   # current word index
+    wp = 0   # char offset inside the current word
+    n = len(seg_words)
+
+    for ci, chunk in enumerate(chunks):
+        need = len(chunk_texts[ci])
+        assigned: List[Dict] = []
+        filled = 0
+
+        if need == 0:
+            result.append({"text": chunk, "start": None, "end": None, "words": []})
+            continue
+
+        while filled < need and wi < n:
+            wt = word_texts[wi]
+            if not wt:
+                # empty word: advance without consuming characters
+                wi += 1
+                wp = 0
+                continue
+            remaining = len(wt) - wp
+            take = remaining if remaining <= (need - filled) else (need - filled)
+            w = seg_words[wi]
+            try:
+                w_start = float(w.get("start", 0) or 0)
+                w_end = float(w.get("end", 0) or 0)
+            except (TypeError, ValueError):
+                w_start = w_end = 0.0
+            span = w_end - w_start
+            if span:
+                sub_start = w_start + span * (wp / len(wt))
+                sub_end = w_start + span * ((wp + take) / len(wt))
+            else:
+                sub_start = sub_end = w_start
+            sub_word = dict(w)
+            sub_word["start"] = round(sub_start, 4)
+            sub_word["end"] = round(sub_end, 4)
+            assigned.append(sub_word)
+
+            filled += take
+            wp += take
+            if wp >= len(wt):
+                wi += 1
+                wp = 0
+
+        if assigned:
+            cstart = assigned[0]["start"]
+            cend = assigned[-1]["end"]
+        else:
+            cstart = cend = None
+        result.append({"text": chunk, "start": cstart, "end": cend, "words": assigned})
+
+    return result
+
+
 def distribute_timestamps_to_chunks(
     original_sent: Dict, chunks: List[str]
 ) -> List[Dict]:
-    """Distribute timestamps from original sentence to split chunks."""
-    words = original_sent.get("words", [])
-    start = original_sent.get("start", 0)
-    end = original_sent.get("end", 0)
+    """Distribute timestamps from original sentence to split chunks.
+
+    Uses deterministic character-offset assignment (see
+    :func:`assign_words_by_char_offset`) so words are never dropped and chunk
+    timestamps never exceed the segment bounds.
+    """
+    words = list(original_sent.get("words", []) or [])
+    start = float(original_sent.get("start", 0) or 0)
+    end = float(original_sent.get("end", start) or start)
 
     if not chunks:
         return [original_sent]
 
     if not words:
-        # No word-level data, distribute evenly by char count
-        total_chars = sum(len(c) for c in chunks)
+        # No word-level data at all — distribute evenly by char count (legacy fallback)
+        total_chars = sum(len(re.sub(r"\s+", "", c)) for c in chunks) or 1
         current_time = start
         result = []
         for chunk in chunks:
-            chunk_duration = (len(chunk) / total_chars) * (end - start) if total_chars > 0 else 0
+            chunk_duration = (len(re.sub(r"\s+", "", chunk)) / total_chars) * (end - start)
             result.append({
                 "text": chunk,
                 "start": round(current_time, 4),
@@ -291,38 +384,12 @@ def distribute_timestamps_to_chunks(
             current_time += chunk_duration
         return result
 
-    # Distribute using word timestamps
-    result = []
-    word_idx = 0
-    for chunk in chunks:
-        chunk_clean = re.sub(r"\s+", "", chunk)
-        matched_words = []
-        pos = 0
-
-        while word_idx < len(words) and pos < len(chunk_clean):
-            word_text = re.sub(r"\s+", "", str(words[word_idx].get("word", "")))
-            if chunk_clean.startswith(word_text, pos):
-                matched_words.append(words[word_idx])
-                pos += len(word_text)
-                word_idx += 1
-            else:
-                break
-
-        if matched_words:
-            chunk_start = float(matched_words[0].get("start", start))
-            chunk_end = float(matched_words[-1].get("end", end))
-        else:
-            chunk_start = start
-            chunk_end = end
-
-        result.append({
-            "text": chunk,
-            "start": round(chunk_start, 4),
-            "end": round(chunk_end, 4),
-            "words": matched_words,
-        })
-
-    return result
+    out = assign_words_by_char_offset(words, chunks, start, end)
+    for cd in out:
+        if cd.get("start") is None:
+            cd["start"] = round(start, 4)
+            cd["end"] = round(end, 4)
+    return out
 
 
 # ── LLM split helpers ───────────────────────────────────────────────────

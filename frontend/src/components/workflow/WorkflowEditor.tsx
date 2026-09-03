@@ -17,7 +17,7 @@ import QuickConnectMenu, { type QuickConnectRequest } from "./QuickConnectMenu";
 import {
   Save, FolderOpen, Play, Trash2, RotateCcw, FileText, Loader2,
   Plus, Workflow as WorkflowIcon, Clock, CheckCircle2, Pause, Square, Copy,
-  ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2, Layers3, Group, Ungroup, Settings2, CornerDownRight, Spline, Minus,
+  ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2, Layers3, Group, Ungroup, Settings2, CornerDownRight, Spline, Minus, LayoutGrid,
 } from "lucide-react";
 import client from "@/api/client";
 import { TaskMonitor } from "@/api/taskMonitor";
@@ -157,6 +157,50 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   s_sentence_preprocess: "句预处理",
 };
 const nodeTypeLabel = (id: string) => NODE_TYPE_LABELS[id] || id;
+
+/** 工作流卡片时间显示（卡片与宫格弹窗共用） */
+const formatTime = (iso: string) => {
+  if (!iso) return "";
+  const d = new Date(iso);
+  return (d.getMonth() + 1) + "/" + d.getDate() + " " + d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+};
+
+/** 工作流卡片按钮公共样式（顶部单行卡片与宫格弹窗卡片共用） */
+const WF_CARD_BUTTON_CLASS = cn(
+  "w-full h-[112px] p-3 rounded-2xl text-left transition-all duration-300 flex flex-col overflow-hidden",
+  "border bg-gradient-to-b from-card to-card/90",
+  "shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.6)]",
+  "hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),0_10px_24px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.7)]",
+  "dark:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)]",
+  "dark:hover:shadow-[0_2px_4px_rgba(0,0,0,0.5),0_10px_24px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.1)]"
+);
+
+/** 工作流卡片内容（顶部单行卡片与宫格弹窗卡片共用） */
+function WorkflowCardBody({ wf }: { wf: SavedWorkflow }) {
+  return (
+    <>
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="w-7 h-7 rounded-xl flex items-center justify-center bg-primary/10 flex-shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
+          <FileText className="w-3.5 h-3.5 text-primary" />
+        </span>
+        <span className="text-sm font-bold truncate">{wf.name}</span>
+      </div>
+      {wf.description && (
+        <div className="mt-1.5 text-[10px] text-muted-foreground/80 line-clamp-2 leading-snug">{wf.description}</div>
+      )}
+      <div className="mt-auto flex items-center gap-1.5 flex-wrap">
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-400/20">
+          <span className="w-1 h-1 rounded-full bg-sky-500" />
+          {wf.nodeCount || 0} 节点
+        </span>
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-400/20 ml-auto">
+          <Clock className="w-2.5 h-2.5" />
+          {formatTime(wf.updatedAt)}
+        </span>
+      </div>
+    </>
+  );
+}
 
 // 分组标签：全部 / 未分组 / 各分组。分组标签右上角带删除键；compact 用于顶栏紧凑模式
 function GroupTab({ label, active, onClick, count, onDelete, compact }: {
@@ -306,6 +350,50 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       reactFlowInstanceRef.current?.fitView({ padding: 0.15, duration: 300 });
     }, delay);
   }, []);
+
+  // ===== 顶部工作流卡片：单行横向滚动 + 滚轮映射 + 宫格弹窗 =====
+  const wfCardsRef = useRef<HTMLDivElement>(null);
+  const cardHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [cardHover, setCardHover] = useState<{ wf: SavedWorkflow; rect: DOMRect } | null>(null);
+  const [wfGridOpen, setWfGridOpen] = useState(false);
+
+  // 当前分组下的工作流（卡片行与宫格弹窗共用同一份筛选结果）
+  const activeGroupWorkflows = useMemo(() => savedWorkflows.filter((w) => {
+    if (activeGroup === "all") return true;
+    if (activeGroup === "ungrouped") return !w.groupId;
+    return w.groupId === activeGroup;
+  }), [savedWorkflows, activeGroup]);
+
+  const activeGroupName = activeGroup === "all"
+    ? "全部分组"
+    : activeGroup === "ungrouped"
+      ? "未分组"
+      : (groups.find((g) => g.id === activeGroup)?.name || "当前分组");
+
+  // 鼠标滚轮绑定到卡片区的横向滚动条（仅在内容溢出时接管；触控板横向滚动走原生）
+  useEffect(() => {
+    const el = wfCardsRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.deltaY || el.scrollWidth <= el.clientWidth) return;
+      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+      e.preventDefault();
+      el.scrollLeft += e.deltaY;
+      setCardHover(null);
+    };
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => el.removeEventListener("wheel", onWheel);
+  }, [wfListCollapsed]);
+
+  // 卡片悬停详情改为 fixed 定位（避免被横向滚动容器裁剪），并做视口内水平收拢
+  const cardHoverPopover = useMemo(() => {
+    if (!cardHover) return null;
+    const { wf, rect } = cardHover;
+    const width = 320;
+    let left = rect.left + rect.width / 2 - width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+    return { wf, left, top: rect.bottom + 8, arrowLeft: rect.left + rect.width / 2 - left };
+  }, [cardHover]);
 
   const fetchWorkflows = useCallback(async () => {
     setLoadingList(true);
@@ -1504,13 +1592,6 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
 
   const handleClear = () => { setNodes([]); setEdges([]); nodeIdCounter = 0; };
 
-  const formatTime = (iso: string) => {
-    if (!iso) return "";
-    const d = new Date(iso);
-    return (d.getMonth() + 1) + "/" + d.getDate() + " " + d.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-  };
-
-
   // Map nodes to include onExecuteNode callback for React Flow
   // Use refs for callbacks to keep stable references and prevent unnecessary re-renders
   const handleExecuteNodeRef = useRef(handleExecuteNode);
@@ -1587,6 +1668,13 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             </button>
           </div>
           <button
+            onClick={() => setWfGridOpen(true)}
+            className="flex items-center justify-center w-5 h-5 rounded-md border border-border text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all flex-shrink-0"
+            title="宫格查看当前分组工作流"
+          >
+            <LayoutGrid className="w-3 h-3" />
+          </button>
+          <button
             onClick={() => setWfListCollapsed((p) => !p)}
             className="ml-auto p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors"
             title={wfListCollapsed ? "展开工作流列表" : "折叠工作流列表"}
@@ -1596,111 +1684,40 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         </div>
         {!wfListCollapsed && (
           <>
-          <div className="relative flex flex-wrap gap-2 px-3 pb-2 overflow-visible">
+          <div
+            ref={wfCardsRef}
+            className="wf-cards-scroll relative flex gap-2 px-3 pb-2 overflow-x-auto overflow-y-hidden"
+          >
             {(() => {
-              const filtered = savedWorkflows.filter((w) => {
-                if (activeGroup === "all") return true;
-                if (activeGroup === "ungrouped") return !w.groupId;
-                return w.groupId === activeGroup;
-              });
+              const filtered = activeGroupWorkflows;
               if (filtered.length === 0 && !loadingList) {
                 return <div className="text-xs text-muted-foreground/50 py-1">{"\u8be5\u5206\u7ec4\u6682\u65e0\u5de5\u4f5c\u6d41"}</div>;
               }
-              return filtered.map((wf, wfIdx) => (
-            <div key={wf.id} className="relative flex-shrink-0 w-52 group">
+              return filtered.map((wf) => (
+            <div
+              key={wf.id}
+              className="relative flex-shrink-0 w-52 group"
+              onMouseEnter={(e) => {
+                if (cardHoverTimer.current) clearTimeout(cardHoverTimer.current);
+                const rect = e.currentTarget.getBoundingClientRect();
+                cardHoverTimer.current = setTimeout(() => setCardHover({ wf, rect }), 250);
+              }}
+              onMouseLeave={() => {
+                if (cardHoverTimer.current) { clearTimeout(cardHoverTimer.current); cardHoverTimer.current = null; }
+                setCardHover(null);
+              }}
+            >
               <button
                 onClick={() => loadWorkflow(wf.id)}
                 className={cn(
-                  "w-full h-[112px] p-3 rounded-2xl text-left transition-all duration-300 flex flex-col overflow-hidden",
-                  "border bg-gradient-to-b from-card to-card/90",
-                  "shadow-[0_1px_2px_rgba(0,0,0,0.06),0_4px_12px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.6)]",
-                  "hover:-translate-y-0.5 hover:shadow-[0_2px_4px_rgba(0,0,0,0.08),0_10px_24px_rgba(0,0,0,0.12),inset_0_1px_0_rgba(255,255,255,0.7)]",
-                  "dark:shadow-[0_1px_2px_rgba(0,0,0,0.4),0_4px_12px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)]",
-                  "dark:hover:shadow-[0_2px_4px_rgba(0,0,0,0.5),0_10px_24px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.1)]",
+                  WF_CARD_BUTTON_CLASS,
                   currentWfId === wf.id
                     ? "border-primary/60 ring-1 ring-primary/20"
                     : "border-border/70 hover:border-primary/40"
                 )}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-7 h-7 rounded-xl flex items-center justify-center bg-primary/10 flex-shrink-0 shadow-[inset_0_1px_0_rgba(255,255,255,0.5)]">
-                    <FileText className="w-3.5 h-3.5 text-primary" />
-                  </span>
-                  <span className="text-sm font-bold truncate">{wf.name}</span>
-                </div>
-                {wf.description && (
-                  <div className="mt-1.5 text-[10px] text-muted-foreground/80 line-clamp-2 leading-snug">{wf.description}</div>
-                )}
-                <div className="mt-auto flex items-center gap-1.5 flex-wrap">
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-400/20">
-                    <span className="w-1 h-1 rounded-full bg-sky-500" />
-                    {wf.nodeCount || 0} 节点
-                  </span>
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-semibold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-400/20 ml-auto">
-                    <Clock className="w-2.5 h-2.5" />
-                    {formatTime(wf.updatedAt)}
-                  </span>
-                </div>
+                <WorkflowCardBody wf={wf} />
               </button>
-
-              {/* 悬停弹出：节点类型分布详情（向下弹出，避免被上方组件遮挡） */}
-              {/* 首张卡片左对齐、末张右对齐，避免弹窗被两侧导航/边栏遮挡 */}
-              <div className={cn(
-                "pointer-events-none absolute top-full mt-2 z-40 w-80 origin-top scale-95 opacity-0 group-hover:scale-100 group-hover:opacity-100 transition-all duration-200 ease-out",
-                wfIdx === 0
-                  ? "left-0"
-                  : wfIdx === filtered.length - 1
-                    ? "right-0"
-                    : "left-1/2 -translate-x-1/2"
-              )}>
-                <div className="rounded-2xl border border-border bg-popover/95 backdrop-blur-md p-3 shadow-[0_8px_30px_rgba(0,0,0,0.18)] ring-1 ring-black/5 dark:ring-white/10">
-                  <div className="flex items-center gap-1.5 mb-2">
-                    <FileText className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span className="text-sm font-bold truncate">{wf.name}</span>
-                  </div>
-                  {wf.description && (
-                    <div className="text-sm text-foreground mb-2 leading-snug">{wf.description}</div>
-                  )}
-                  <div className="grid grid-cols-2 gap-1.5 text-xs">
-                    <div className="flex items-center justify-between rounded-lg bg-sky-500/10 px-2 py-1">
-                      <span className="text-muted-foreground">节点</span>
-                      <span className="font-bold text-sky-600 dark:text-sky-400">{wf.nodeCount || 0}</span>
-                    </div>
-                    <div className="flex items-center justify-between rounded-lg bg-violet-500/10 px-2 py-1">
-                      <span className="text-muted-foreground">连接</span>
-                      <span className="font-bold text-violet-600 dark:text-violet-400">{wf.edgeCount || 0}</span>
-                    </div>
-                  </div>
-                  {wf.nodeTypes && Object.keys(wf.nodeTypes).length > 0 && (
-                    <div className="mt-2 pt-2 border-t border-border/50">
-                      <div className="text-xs font-semibold text-foreground mb-1.5">节点构成</div>
-                      <div className="flex flex-wrap gap-1">
-                        {Object.entries(wf.nodeTypes)
-                          .sort((a, b) => b[1] - a[1])
-                          .map(([nt, cnt]) => (
-                            <span key={nt} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium bg-secondary/80 border border-border/50">
-                              {nodeTypeLabel(nt)}
-                              <span className="text-primary font-bold">×{cnt}</span>
-                            </span>
-                          ))}
-                      </div>
-                    </div>
-                  )}
-                  <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-1 text-xs text-foreground">
-                    <Clock className="w-3 h-3" />
-                    更新于 {formatTime(wf.updatedAt)}
-                  </div>
-                </div>
-                {/* 小箭头（指向上方卡片），与弹窗对齐一致 */}
-                <div className={cn(
-                  "absolute bottom-full -mb-1 w-2 h-2 rotate-45 bg-popover border-l border-t border-border",
-                  wfIdx === 0
-                    ? "left-6 -translate-x-1/2"
-                    : wfIdx === filtered.length - 1
-                      ? "right-6 -translate-x-1/2"
-                      : "left-1/2 -translate-x-1/2"
-                )} />
-              </div>
 
               <button
                 onClick={(e) => {
@@ -1733,6 +1750,53 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               ));
               })()}
             </div>
+            {/* 悬停详情：fixed 定位，避免被单行横向滚动容器裁剪；水平方向已在视口内收拢 */}
+            {cardHoverPopover && (
+              <div
+                className="fixed z-[60] w-80 pointer-events-none"
+                style={{ left: cardHoverPopover.left, top: cardHoverPopover.top }}
+              >
+                <div className="rounded-2xl border border-border bg-popover/95 backdrop-blur-md p-3 shadow-[0_8px_30px_rgba(0,0,0,0.18)] ring-1 ring-black/5 dark:ring-white/10">
+                  <div className="flex items-center gap-1.5 mb-2">
+                    <FileText className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span className="text-sm font-bold truncate">{cardHoverPopover.wf.name}</span>
+                  </div>
+                  {cardHoverPopover.wf.description && (
+                    <div className="text-sm text-foreground mb-2 leading-snug">{cardHoverPopover.wf.description}</div>
+                  )}
+                  <div className="grid grid-cols-2 gap-1.5 text-xs">
+                    <div className="flex items-center justify-between rounded-lg bg-sky-500/10 px-2 py-1">
+                      <span className="text-muted-foreground">节点</span>
+                      <span className="font-bold text-sky-600 dark:text-sky-400">{cardHoverPopover.wf.nodeCount || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg bg-violet-500/10 px-2 py-1">
+                      <span className="text-muted-foreground">连接</span>
+                      <span className="font-bold text-violet-600 dark:text-violet-400">{cardHoverPopover.wf.edgeCount || 0}</span>
+                    </div>
+                  </div>
+                  {cardHoverPopover.wf.nodeTypes && Object.keys(cardHoverPopover.wf.nodeTypes).length > 0 && (
+                    <div className="mt-2 pt-2 border-t border-border/50">
+                      <div className="text-xs font-semibold text-foreground mb-1.5">节点构成</div>
+                      <div className="flex flex-wrap gap-1">
+                        {Object.entries(cardHoverPopover.wf.nodeTypes)
+                          .sort((a, b) => b[1] - a[1])
+                          .map(([nt, cnt]) => (
+                            <span key={nt} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-xs font-medium bg-secondary/80 border border-border/50">
+                              {nodeTypeLabel(nt)}
+                              <span className="text-primary font-bold">×{cnt}</span>
+                            </span>
+                          ))}
+                      </div>
+                    </div>
+                  )}
+                  <div className="mt-2 pt-2 border-t border-border/50 flex items-center gap-1 text-xs text-foreground">
+                    <Clock className="w-3 h-3" />
+                    更新于 {formatTime(cardHoverPopover.wf.updatedAt)}
+                  </div>
+                  <div className="absolute bottom-full -mb-1 w-2 h-2 rotate-45 bg-popover border-l border-t border-border" style={{ left: cardHoverPopover.arrowLeft - 4 }} />
+                </div>
+              </div>
+            )}
           </>
           )}
       </div>
@@ -2298,6 +2362,43 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                 删除
               </button>
             </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 宫格浏览：六列卡片展示当前分组下的工作流，点击直接载入画布 */}
+      <Dialog open={wfGridOpen} onOpenChange={setWfGridOpen}>
+        <DialogContent className="max-w-6xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <LayoutGrid className="w-4 h-4 text-primary" />
+              工作流一览
+            </DialogTitle>
+            <DialogDescription>
+              当前分组：{activeGroupName} · 共 {activeGroupWorkflows.length} 个工作流，点击卡片载入画布
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[62vh] overflow-y-auto pr-1">
+            {activeGroupWorkflows.length === 0 ? (
+              <div className="py-10 text-center text-sm text-muted-foreground">该分组暂无工作流</div>
+            ) : (
+              <div className="grid grid-cols-6 gap-2">
+                {activeGroupWorkflows.map((wf) => (
+                  <button
+                    key={wf.id}
+                    onClick={() => { setWfGridOpen(false); loadWorkflow(wf.id); }}
+                    className={cn(
+                      WF_CARD_BUTTON_CLASS,
+                      currentWfId === wf.id
+                        ? "border-primary/60 ring-1 ring-primary/20"
+                        : "border-border/70 hover:border-primary/40"
+                    )}
+                  >
+                    <WorkflowCardBody wf={wf} />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -46,7 +46,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 502
+        "height": 565
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -95,7 +95,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 621
+        "height": 698
       },
       "selected": false,
       "dragging": false,
@@ -126,7 +126,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 333
+        "height": 381
       },
       "selected": false,
       "dragging": false
@@ -166,20 +166,20 @@
         },
         "error": "",
         "logLines": [
-          "[step_worker] step instance created: S_SeedreamTxt2Img",
           "[step_worker] step_inputs keys=['text']",
           "[step_worker] node_config keys=['model', 'resolution', 'aspect_ratio', 'num_images', 'output_format', 'watermark', 'stream_output', 'optimize_prompt', 'custom_prompt_enabled', 'custom_prompt']",
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3300cdd93b5b4ace800d1d8daebda501, kwargs=['callback', 'cancel_callback'])",
           "流式生成中…已收到第 1 张图片",
-          "流式生成完成（usage={'generated_images': 1, 'output_tokens': 16416, 'total_tokens': 16416}）",
+          "流式生成完成（usage={'generated_images': 1, 'output_tokens': 16384, 'total_tokens': 16384}）",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3300cdd93b5b4ace800d1d8daebda501\\cache\\.step_node_5_1788355970988_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3300cdd93b5b4ace800d1d8daebda501\\cache\\.step_node_5_1788355970988_result.json, exiting 0",
+          "[step_worker] start node_type=seedream_txt2img node_id=node_5_1788355970988 pid=40296"
         ],
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 440
+        "height": 486
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -207,8 +207,48 @@
       },
       "measured": {
         "width": 420,
-        "height": 451
+        "height": 280
       }
+    },
+    {
+      "id": "node_1_1788374654061",
+      "type": "workflow",
+      "position": {
+        "x": 480,
+        "y": -3240
+      },
+      "data": {
+        "nodeType": "ai_video_gen",
+        "label": "AI生视频",
+        "config": {
+          "prompt_prefix": "可爱的小狗在奔跑",
+          "interface": "wuli_video",
+          "model": "Seedance 1.5 Pro",
+          "mode": "img2video",
+          "resolution": "720P",
+          "duration": 5,
+          "num_videos": 1,
+          "sound": "on",
+          "negative_prompt": "",
+          "output_prefix": "video",
+          "optimize_prompt": true,
+          "poll_timeout": 1800,
+          "extract_last_frame": true
+        },
+        "status": "running",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "Starting...",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 339
+      },
+      "selected": true,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     }
   ],
   "edges": [
@@ -289,10 +329,23 @@
       "target": "node_3_1787892437496",
       "targetHandle": "in-any",
       "id": "xy-edge__node_1_1787892403740out-no_input-node_3_1787892437496in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1787892426026",
+      "sourceHandle": "out-text",
+      "target": "node_1_1788374654061",
+      "targetHandle": "in-images",
+      "id": "xy-edge__node_2_1787892426026out-text-node_1_1788374654061in-images"
     }
   ],
   "type": "user",
   "createdAt": "2026-08-28T12:49:01",
-  "updatedAt": "2026-09-03T00:39:56",
-  "revision": 6
+  "updatedAt": "2026-09-03T02:50:25",
+  "revision": 7
 }

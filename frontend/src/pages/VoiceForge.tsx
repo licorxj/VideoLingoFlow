@@ -21,6 +21,7 @@ import { DubbingWorkspace } from "@/components/voiceforge/DubbingWorkspace";
 import { VoiceForgeSettingsPanel } from "@/components/voiceforge/VoiceForgeSettingsPanel";
 import { AssetLibrary } from "@/components/voiceforge/assets/AssetLibrary";
 import { ProjectCreateDialog } from "@/components/voiceforge/ProjectCreateDialog";
+import { dropRouteCache } from "@/components/layout/KeepAliveOutlet";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /* ActionButton 已被 Button 语义变体替代（success/info/ai/destructive/outline）。 */
@@ -41,7 +42,7 @@ export function VoiceForgeHome() {
   useEffect(() => { load(); }, []);
   const beginEdit = (project: VoiceForgeProject) => { setEditing(project); setEditName(project.name); setEditDescription(project.description || ""); };
   const saveProject = async () => { if (!editing || !editName.trim()) return; setBusyProjectId(editing.id); try { await voiceForgeApi.updateProject(editing.id, { name: editName.trim(), description: editDescription, version: editing.version }); setEditing(null); await load(); } finally { setBusyProjectId(null); } };
-  const removeProject = async (project: VoiceForgeProject) => { if (!confirm(`删除项目“${project.name}”？其章节、句子、任务和音频将一并删除。`)) return; setBusyProjectId(project.id); try { await voiceForgeApi.deleteProject(project.id); await load(); } finally { setBusyProjectId(null); } };
+  const removeProject = async (project: VoiceForgeProject) => { if (!confirm(`删除项目“${project.name}”？其章节、句子、任务和音频将一并删除。`)) return; setBusyProjectId(project.id); try { await voiceForgeApi.deleteProject(project.id); dropRouteCache(`/voiceforge/projects/${project.id}`); await load(); } finally { setBusyProjectId(null); } };
   const overview = dashboard?.overview;
   const openWorkspace = async () => {
     const result = await voiceForgeApi.projects();

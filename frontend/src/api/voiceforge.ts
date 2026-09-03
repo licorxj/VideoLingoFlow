@@ -62,6 +62,26 @@ export type VoiceForgeSentence = {
 };
 
 export type VoiceForgeTask = { id: string; task_type: string; status: string; progress: number; error_message?: string; created_at: string; output?: Record<string, unknown> };
+
+export type VoiceForgeProjectProgress = {
+  total: number;
+  done: number;
+  generating: number;
+  queued: number;
+  error: number;
+  in_flight: number;
+  concurrency: number;
+  progress_pct: number;
+  eta_seconds: number | null;
+};
+
+export type VoiceForgeProgressMessage = {
+  type: "voiceforge.progress";
+  project_id: string;
+  summary: VoiceForgeProjectProgress;
+  sentences: Array<{ id: string; status: string; error_message?: string; audio_storage_key?: string; audio_duration?: number }>;
+  tasks: VoiceForgeTask[];
+};
 export type VoiceForgeExport = { id: string; export_type: string; storage_key: string; file_name: string; status: string; task_id?: string; format?: string; error_message?: string; created_at: string };
 
 export type VoiceForgeVoice = {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
+import { isTabActive, resolveTabLocation } from "@/lib/tabMemory";
 import {
   LayoutDashboard,
   Layers,
@@ -46,6 +47,7 @@ const NAV_GROUPS = [
 ];
 
 export default function Sidebar({ collapsed, agentState }: { collapsed: boolean; agentState: "closed" | "booting" | "open" | "minimized" }) {
+  const location = useLocation();
   const [services, setServices] = useState<Record<string, { status: string; port?: number; managed?: boolean }>>({});
   const [restartingSvc, setRestartingSvc] = useState<string | null>(null);
   const [stoppingSvc, setStoppingSvc] = useState<string | null>(null);
@@ -188,35 +190,34 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
                 </div>
               )}
               <div className="space-y-0.5">
-                {visible.map((item) => (
-                  <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === "/"}
-                    className={({ isActive }) =>
-                      cn(
+                {visible.map((item) => {
+                  // 回到该标签页上次离开的位置，而不是固定回首页
+                  const to = resolveTabLocation(item.to);
+                  const active = isTabActive(item.to, location.pathname);
+                  return (
+                    <NavLink
+                      key={item.to}
+                      to={to}
+                      aria-current={active ? "page" : undefined}
+                      className={cn(
                         "group flex items-center gap-3 rounded-xl text-sm font-medium transition-all duration-200 w-full",
                         collapsed ? "justify-center px-0 py-2.5" : "px-3 py-2.5",
-                        isActive
+                        active
                           ? "bg-sidebar-active text-foreground font-semibold scale-[1.01]"
-                            : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      )
-                    }
-                  >
-                    {({ isActive }) => (
-                      <>
-                        <item.icon
-                          className={cn(
-                            "sidebar-nav-icon w-[18px] h-[18px] transition-all duration-200 flex-shrink-0",
-                            isActive ? "text-primary" : "group-hover:scale-105"
-                          )}
-                          strokeWidth={isActive ? 2.5 : 2}
-                        />
-                        {!collapsed && <span>{item.label}</span>}
-                      </>
-                    )}
-                  </NavLink>
-                ))}
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      )}
+                    >
+                      <item.icon
+                        className={cn(
+                          "sidebar-nav-icon w-[18px] h-[18px] transition-all duration-200 flex-shrink-0",
+                          active ? "text-primary" : "group-hover:scale-105"
+                        )}
+                        strokeWidth={active ? 2.5 : 2}
+                      />
+                      {!collapsed && <span>{item.label}</span>}
+                    </NavLink>
+                  );
+                })}
               </div>
             </div>
           );

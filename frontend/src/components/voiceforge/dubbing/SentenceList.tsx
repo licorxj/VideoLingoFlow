@@ -1,6 +1,15 @@
 import { useCallback, useRef } from "react";
 import type { VoiceForgeSentence } from "@/api/voiceforge";
 import { SentenceRow } from "./SentenceRow";
+import { useDubbingContext } from "./DubbingContext";
+
+function formatEta(sec: number | null | undefined): string {
+  if (sec == null || !Number.isFinite(sec)) return "—";
+  if (sec < 60) return `${Math.ceil(sec)} 秒`;
+  const m = Math.floor(sec / 60);
+  const s = Math.ceil(sec % 60);
+  return `${m} 分 ${s} 秒`;
+}
 
 export interface SentenceListProps {
   sentences: VoiceForgeSentence[];
@@ -34,6 +43,9 @@ export function SentenceList({
   queueUpdate,
 }: SentenceListProps) {
   const dragState = useRef({ dragIndex: -1, overIndex: -1 });
+  const { state } = useDubbingContext();
+  // 项目级进度汇总优先来自 WebSocket 实时推送，未连接时回退到本地统计
+  const progress = state.projectProgress;
 
   const handleDragStart = useCallback(
     (index: number) => (e: React.DragEvent) => {
@@ -129,18 +141,25 @@ export function SentenceList({
       </div>
 
       {/* 底部进度条 */}
-      <div className="flex items-center gap-3 border-t border-border/50 px-4 py-2">
-        <span className="text-xs text-muted-foreground">
-          已完成 {doneCount}/{totalCount}
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border/50 px-4 py-2">
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          已完成 {progress ? progress.done : doneCount}/{progress ? progress.total : totalCount}
+          {progress && progress.error > 0 ? ` · 失败 ${progress.error}` : ""}
         </span>
-        <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted/50">
+        <div className="h-2 min-w-[120px] flex-1 overflow-hidden rounded-full bg-muted/50">
           <div
             className="h-full rounded-full bg-green-500 transition-all duration-300"
-            style={{ width: `${percentage}%` }}
+            style={{ width: `${progress ? progress.progress_pct : percentage}%` }}
           />
         </div>
-        <span className="font-mono text-xs text-muted-foreground">
-          {percentage}%
+        <span className="whitespace-nowrap font-mono text-xs text-muted-foreground">
+          {progress ? progress.progress_pct : percentage}%
+        </span>
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          在途 {progress ? progress.in_flight : 0}/{progress ? progress.concurrency : "—"}
+        </span>
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
+          预计剩余 {formatEta(progress?.eta_seconds)}
         </span>
       </div>
     </div>

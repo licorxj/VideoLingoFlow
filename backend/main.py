@@ -204,6 +204,7 @@ app.include_router(qm_mail.router, tags=["qm-mail"])
 app.include_router(llm_router_update.router, tags=["llm-router-update"])
 
 LLM_ROUTER_UPSTREAM = "http://127.0.0.1:8800"
+CUTIA_UPSTREAM = f"http://127.0.0.1:{os.environ.get('CUTIA_PORT', '4100')}"
 HOP_BY_HOP_HEADERS = {
     "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
     "te", "trailer", "transfer-encoding", "upgrade",
@@ -252,6 +253,45 @@ async def proxy_llm_router(request: Request, path: str):
         headers=_proxy_headers(upstream_response.headers),
         background=BackgroundTask(close_upstream),
     )
+
+
+@app.api_route("/cutia", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+@app.api_route("/cutia/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+async def proxy_cutia(request: Request, path: str = ""):
+    # cutia 以 basePath=/cutia 构建，需保留 /cutia 前缀转发到 standalone (4100)
+    upstream_url = f"{CUTIA_UPSTREAM}/cutia/{path}" if path else f"{CUTIA_UPSTREAM}/cutia/"
+    if request.url.query:
+        upstream_url = f"{upstream_url}?{request.url.query}"
+    client = httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=None, write=60.0, pool=5.0), trust_env=False)
+    try:
+        upstream_response = await client.send(
+            client.build_request(
+                request.method,
+                upstream_url,
+                headers=_proxy_headers(request.headers),
+                content=await request.body(),
+            ),
+            stream=True,
+        )
+    except httpx.RequestError:
+        await client.aclose()
+        raise HTTPException(status_code=502, detail="剪辑工作台（Cutia）服务不可用")
+
+    async def stream_response():
+        async for chunk in upstream_response.aiter_raw():
+            yield chunk
+
+    async def close_upstream():
+        await upstream_response.aclose()
+        await client.aclose()
+
+    return StreamingResponse(
+        stream_response(),
+        status_code=upstream_response.status_code,
+        headers=_proxy_headers(upstream_response.headers),
+        background=BackgroundTask(close_upstream),
+    )
+
 
 os.makedirs(os.path.join(ROOT, "tasks"), exist_ok=True)
 
@@ -383,6 +423,10 @@ async def startup_event():
     from backend.api.ws_queue import start_queue_drainer
     start_queue_drainer()
     print("WS queue drainer started")
+
+    from backend.api.voiceforge_ws import start_project_drainer
+    start_project_drainer()
+    print("VoiceForge project progress drainer started")
 
     # 启动时后台拉取云端加密配置，覆盖每日用量限额（失败时保持预设兜底值）
     from backend.auth.subscription_guard import start_limits_refresh
