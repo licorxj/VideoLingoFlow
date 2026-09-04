@@ -1,5 +1,6 @@
 """s09_tts: Text-to-speech synthesis from JSON or pandas dubbing task sheets."""
 import os
+import shutil
 import json
 import csv
 import wave
@@ -114,6 +115,21 @@ class S09TTS(BaseStep):
             find_artifact(cache_dir, "dub_task.json")
             or find_artifact(cache_dir, "dub_task.csv")
         )
+
+    def rollback(self, task_dir: str):
+        """重跑前清理产物。
+
+        保留 ``cache/dub_temp`` 已生成的配音片段，避免单节点执行 / 断点续跑时
+        把已配好的 wav 清掉；这些片段由 ``run()`` 按 ``overwrite_generate`` 复用或覆盖。
+        """
+        for artifact in self.artifacts:
+            if artifact == "cache/dub_temp":
+                continue
+            path = os.path.join(task_dir, artifact)
+            if os.path.isfile(path):
+                os.remove(path)
+            elif os.path.isdir(path):
+                shutil.rmtree(path, ignore_errors=True)
 
     @staticmethod
     def _to_float(value, default=0.0):
