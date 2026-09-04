@@ -354,12 +354,12 @@
           "ai_rounds": 1,
           "overwrite_generate": false
         },
-        "status": "cancelled",
+        "status": "failed",
         "disableExecute": false,
-        "progress": 0,
-        "message": "",
+        "progress": -1,
+        "message": "节点超时: node_1_1781645240103",
         "outputs": {},
-        "error": "",
+        "error": "节点超时: node_1_1781645240103",
         "workbench_url": "",
         "logLines": [
           "[step_worker] node_config keys=['tts_engine', 'tts_mode', 'clone_source', 'voice_design_role_1_desc', 'speed_regenerate', 'ai_subtitle_reduction', 'speed_rounds', 'ai_rounds', 'overwrite_generate']",
@@ -374,7 +374,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 456
+        "height": 555
       },
       "selected": false,
       "dragging": false,
@@ -666,7 +666,7 @@
           "interface": "bailian",
           "model": "wan2.7-image",
           "resolution": "2K",
-          "aspect_ratio": "9:16",
+          "aspect_ratio": "3:4",
           "num_images": 1,
           "custom_prompt_enabled": false,
           "custom_prompt": "",
@@ -696,9 +696,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 698
+        "height": 693
       },
-      "selected": false,
+      "selected": true,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -719,7 +719,9 @@
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "skipped": true
+        },
         "error": "",
         "workbench_url": ""
       },
@@ -822,7 +824,7 @@
           "interface": "bailian",
           "model": "wan2.7-image",
           "resolution": "2K",
-          "aspect_ratio": "16:9",
+          "aspect_ratio": "4:3",
           "num_images": 1,
           "custom_prompt_enabled": false,
           "custom_prompt": "",
@@ -874,7 +876,9 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "skipped": true
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
@@ -1981,6 +1985,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-04T02:29:09",
-  "updatedAt": "2026-09-04T05:02:43",
-  "revision": 9
+  "updatedAt": "2026-09-04T10:16:17",
+  "revision": 10
 }
