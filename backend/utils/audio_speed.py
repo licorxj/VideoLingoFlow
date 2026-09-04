@@ -236,19 +236,16 @@ def _select_ffmpeg_speed_backend(speed_factor: float) -> str:
     """为语音素材选择更稳妥的 ffmpeg 变速后端。
 
     经验规则：
-    - 轻微加速/减速优先 atempo，语音往往更自然
-    - 较大倍率变化优先 rubberband，保留更多细节
+    - 默认优先 atempo，语音自然度更好
+    - 需要 rubberband 时可通过环境变量强制启用
     可用环境变量 VIDEOLINGO_AUDIO_SPEED_BACKEND 强制覆盖：
     auto | atempo | rubberband
     """
     forced = str(os.environ.get("VIDEOLINGO_AUDIO_SPEED_BACKEND", "auto")).strip().lower()
-    if forced == "atempo":
-        return "atempo"
     if forced == "rubberband" and _ffmpeg_has_filter("rubberband"):
         return "rubberband"
 
-    if _ffmpeg_has_filter("rubberband"):
-        return "rubberband"
+    # auto 模式下默认使用 atempo（语音自然度更佳）
     return "atempo"
 
 
