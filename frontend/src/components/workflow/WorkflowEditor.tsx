@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   type GroupOutputMapping, type WorkflowNode, type WorkflowEdge, type Workflow, type NodeTypeDef,
   getNodeTypeDefFromNode, getNodeTypeDef, getVisibleOutputs, canConnect, findDownstreamCandidates,
-  PORT_COLORS, isGroupNodeData, type DownstreamCandidate,
+  PORT_COLORS, isGroupNodeData, isLoopNodeData, type DownstreamCandidate,
 } from "@/lib/workflowTypes";
 import WorkflowNodeComponent from "./WorkflowNode";
 import NodePalette from "./NodePalette";
@@ -17,7 +17,7 @@ import QuickConnectMenu, { type QuickConnectRequest } from "./QuickConnectMenu";
 import {
   Save, FolderOpen, Play, Trash2, RotateCcw, FileText, Loader2,
   Plus, Workflow as WorkflowIcon, Clock, CheckCircle2, Pause, Square, Copy,
-  ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2, Layers3, Group, Ungroup, Settings2, CornerDownRight, Spline, Minus, LayoutGrid,
+  ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2, Layers3, Group, Ungroup, Settings2, CornerDownRight, Spline, Minus, LayoutGrid, Repeat,
 } from "lucide-react";
 import client from "@/api/client";
 import { TaskMonitor } from "@/api/taskMonitor";
@@ -27,6 +27,7 @@ import { packWorkflow, publishPackage, type PublishResult } from "@/api/communit
 import SharePackDialog, { type SharePackFields } from "@/components/community/SharePackDialog";
 import { captureWorkflowCanvas } from "@/lib/snapshot";
 import { buildGroupNode, createNodeDataFromType, expandGroupNodesForExecution, groupNodeToNodeTypeConfig, ungroupNode, updateGroupOutputMappings } from "@/lib/groupWorkflow";
+import { buildLoopNode, ungroupLoopNode } from "@/lib/loopWorkflow";
 import { useProjectStore } from "@/stores/projectStore";
 import { useControlStore } from "@/stores/controlStore";
 import { getSubscriptionError, isDeviceLimitError, isSubscriptionBlocked, getQuotaExhaustedMessage } from "@/api/subscription";
@@ -877,13 +878,38 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
 
   const handleUngroupNode = useCallback((groupNodeId: string) => {
     try {
-      const next = ungroupNode(nodes as WorkflowNode[], edges as WorkflowEdge[], groupNodeId);
+      const target = nodes.find((node: any) => node.id === groupNodeId);
+      const next = isLoopNodeData(target?.data)
+        ? ungroupLoopNode(nodes as WorkflowNode[], edges as WorkflowEdge[], groupNodeId)
+        : ungroupNode(nodes as WorkflowNode[], edges as WorkflowEdge[], groupNodeId);
       setNodes(next.nodes);
       setEdges(next.edges);
     } catch (error) {
-      alert(error instanceof Error ? error.message : "解散组合失败");
+      alert(error instanceof Error ? error.message : "解散容器失败");
     }
   }, [edges, nodes, setEdges, setNodes]);
+
+  // 选中若干已连线节点 → 创建循环容器（Foreach）
+  const handleCreateLoop = useCallback(() => {
+    const selectedIds = nodes.filter((node: any) => node.selected).map((node: any) => node.id);
+    try {
+      const built = buildLoopNode(nodes as WorkflowNode[], edges as WorkflowEdge[], selectedIds);
+      setNodes(built.nodes);
+      setEdges(built.edges);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : "创建循环失败");
+    }
+  }, [edges, nodes, setEdges, setNodes]);
+
+  // 选中的容器节点（组合或循环）→ 解散回原始节点
+  const handleUngroupSelected = useCallback(() => {
+    const target = nodes.find((node: any) => node.selected && (isGroupNodeData(node.data) || isLoopNodeData(node.data)));
+    if (!target) {
+      alert("请先选中一个组合或循环节点");
+      return;
+    }
+    handleUngroupNode(target.id);
+  }, [handleUngroupNode, nodes]);
 
   const handleSaveGroupAsNodeType = useCallback(async (groupNodeId: string) => {
     const groupNode = nodes.find((node: any) => node.id === groupNodeId) as WorkflowNode | undefined;
@@ -1042,6 +1068,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       const ctrl = e.ctrlKey || e.metaKey;
       if (e.key === "Delete" || e.key === "Backspace") { deleteSelected(); e.preventDefault(); }
       else if (ctrl && e.key.toLowerCase() === "g") { handleGroupSelected(); e.preventDefault(); }
+      else if (ctrl && e.shiftKey && e.key.toLowerCase() === "l") { handleCreateLoop(); e.preventDefault(); }
       else if (ctrl && e.key === "c") { copySelected(); e.preventDefault(); }
       else if (ctrl && e.key === "v") { pasteClipboard(); e.preventDefault(); }
       else if (ctrl && e.shiftKey && e.key === "S") { setSaveAsModalOpen(true); e.preventDefault(); }
@@ -1050,7 +1077,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [deleteSelected, handleGroupSelected, copySelected, pasteClipboard, handleSave, selectAll]);
+  }, [deleteSelected, handleGroupSelected, handleCreateLoop, copySelected, pasteClipboard, handleSave, selectAll]);
 
   const handleSaveAs = async () => {
     setSaveAsName(workflowName || "未命名工作流");
@@ -1329,6 +1356,27 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         const progress = typeof data.progress === "number" ? data.progress : 0;
         const message = typeof data.message === "string" ? data.message : "";
         if (stepId === "__task__") return;
+        // 循环迭代产生的虚拟节点（node_key 形如 {loopId}#0003__inner）在画布上没有对应节点，直接忽略
+        if (stepId.includes("#")) return;
+
+        // 循环容器进度：事件携带 loop_index / loop_total / loop_done，写回节点供卡片展示迭代进度
+        if (stepId && typeof data.loop_total === "number" && data.loop_total > 0) {
+          setNodes((nds) => nds.map((node: any) => {
+            if (node.id !== stepId || !isLoopNodeData(node.data)) return node;
+            return {
+              ...node,
+              data: {
+                ...node.data,
+                loopProgress: {
+                  index: typeof data.loop_index === "number" ? data.loop_index : 0,
+                  total: data.loop_total,
+                  done: typeof data.loop_done === "number" ? data.loop_done : 0,
+                  status: typeof data.loop_item_status === "string" ? data.loop_item_status : "",
+                },
+              },
+            };
+          }));
+        }
 
         // node_log 事件：子进程转发的调试日志，追加到节点 logLines（独立于 message）
         if (data.event_type === "node_log" && stepId) {
@@ -1358,7 +1406,12 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             const ninfo = taskNodes[stepId];
             // 空消息不覆盖已有消息（避免进度文字一闪而过）
             const keepMessage = ninfo.message || (node.data as any)?.message || "";
-            return { ...node, data: { ...node.data, status: runtimeStatus(ninfo.status), progress: ninfo.progress, message: keepMessage, outputs: ninfo.outputs, error: ninfo.error } };
+            // 循环迭代进度事件不携带 outputs：保留已有 outputs，避免 manifest 路径被清空
+            const hasOutputs = ninfo.outputs && Object.keys(ninfo.outputs).length > 0;
+            const nextOutputs = hasOutputs || !isLoopNodeData(node.data)
+              ? ninfo.outputs
+              : ((node.data as any)?.outputs || {});
+            return { ...node, data: { ...node.data, status: runtimeStatus(ninfo.status), progress: ninfo.progress, message: keepMessage, outputs: nextOutputs, error: ninfo.error } };
           });
         });
       },
@@ -1840,6 +1893,21 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                 title="选中节点后按 Ctrl+G 组合"
               >
                 <Group className="w-3 h-3" /> 组合
+              </button>
+              <button
+                onClick={handleCreateLoop}
+                disabled={selectedNodeCount < 1}
+                className="flex items-center gap-1 px-2.5 py-2 text-sm font-bold text-indigo-700 border border-indigo-400/40 bg-indigo-500/10 rounded-lg hover:bg-indigo-500/20 active:scale-[0.97] disabled:opacity-40 transition-all"
+                title="把选中的已连线节点收进循环体，逐条处理迭代对象（Ctrl+Shift+L）"
+              >
+                <Repeat className="w-3 h-3" /> 循环
+              </button>
+              <button
+                onClick={handleUngroupSelected}
+                className="flex items-center gap-1 px-2.5 py-2 text-sm font-bold text-muted-foreground border border-border/60 bg-muted/30 rounded-lg hover:bg-muted/60 active:scale-[0.97] disabled:opacity-40 transition-all"
+                title="解散选中的组合或循环节点，还原为原始节点与连线"
+              >
+                <Ungroup className="w-3 h-3" /> 解散
               </button>
               <div className="w-px h-4 bg-border/40 mx-0.5" />
               <button onClick={handleExecute} disabled={nodes.length === 0 || executing || !!executingNode || cancelling}

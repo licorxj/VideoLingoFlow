@@ -4,6 +4,7 @@ import json
 import csv
 import wave
 import struct
+import time
 from typing import Callable, Optional, List, Dict
 
 try:
@@ -726,38 +727,57 @@ class S09TTS(BaseStep):
         node_cfg = getattr(self, "_node_config", {}) or {}
         overwrite_generate = node_cfg.get("overwrite_generate", False)
 
-        for i, seg in enumerate(segments):
-            audio_file = os.path.join(task_dir, seg["audio_file"])
+        # 并发上限：取 TTS 引擎配置里的 max_concurrent（get_tts_engine 同时绑定），默认 1
+        from backend.tts.tts_factory import get_tts_engine_concurrency
+        engine_id = tts_config.get("engine") or ""
+        concurrency = get_tts_engine_concurrency(engine_id) if engine_id else 1
+        print(f"[TTS] 并发合成上限: {concurrency}")
 
-            # 跳过已存在的文件（除非勾选了覆盖生成）
+        # 预筛：跳过已存在且非空的文件，剩余片段并发合成
+        todo = []
+        for seg in segments:
+            audio_file = os.path.join(task_dir, seg["audio_file"])
             if not overwrite_generate and os.path.exists(audio_file) and os.path.getsize(audio_file) > 0:
                 skip_count += 1
-                processed_count += 1
-                continue
+            else:
+                todo.append(seg)
 
+        def _synthesize_one(seg):
+            """单段合成（含 1 次重试），返回 (seg, 是否成功)。线程安全。"""
+            audio_file = os.path.join(task_dir, seg["audio_file"])
             text = seg.get("read_text") or seg.get("text", "")
             text = text.replace("[待翻译]", "").replace("[To translate]", "").strip()
             if not text:
                 text = "placeholder"
-
-            # 更新进度 - 显示已完成句子数量和总数量
-            processed_count += 1
-            progress = 15 + int((processed_count / total) * 80)
-            if callback:
-                callback(progress, f"合成进度: {processed_count}/{total} 句")
-
-            # 尝试真实TTS（含1次重试）
-            success = self._try_real_tts(seg, tts_config, audio_file, task_dir, ref_map)
-            if not success:
-                print(f"[TTS] 第1次失败，1秒后重试...")
-                import time
+            ok = self._try_real_tts(seg, tts_config, audio_file, task_dir, ref_map)
+            if not ok:
                 time.sleep(1)
-                success = self._try_real_tts(seg, tts_config, audio_file, task_dir, ref_map)
-            if success:
-                success_count += 1
-            else:
-                fail_count += 1
-                print(f"[TTS] 错误: 第 {processed_count} 段合成失败（已重试1次）")
+                ok = self._try_real_tts(seg, tts_config, audio_file, task_dir, ref_map)
+            return seg, ok
+
+        if todo:
+            import threading
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+            _done_lock = threading.Lock()
+            _done = 0
+            with ThreadPoolExecutor(max_workers=concurrency) as executor:
+                futures = [executor.submit(_synthesize_one, seg) for seg in todo]
+                for fut in as_completed(futures):
+                    seg, ok = fut.result()
+                    with _done_lock:
+                        _done += 1
+                        processed_count = skip_count + _done
+                        if ok:
+                            success_count += 1
+                        else:
+                            fail_count += 1
+                    progress = 15 + int((processed_count / total) * 80)
+                    if callback:
+                        callback(progress, f"合成进度: {processed_count}/{total} 句")
+                    if not ok:
+                        print(f"[TTS] 错误: 第 {seg.get('index', '?')} 段合成失败（已重试1次）")
+        else:
+            print("[TTS] 全部片段已存在，跳过合成")
 
         # 打印汇总
         print(f"\n{'='*60}")

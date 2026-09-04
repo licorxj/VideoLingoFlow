@@ -13,6 +13,7 @@ import logging
 import os
 
 import requests
+from backend.tts.tts_interface_manager import finalize_tts_output
 
 logger = logging.getLogger(__name__)
 
@@ -68,18 +69,15 @@ def synthesize(
         body["emotion_alpha"] = float(emotion_alpha)
 
     try:
-        os.makedirs(os.path.dirname(os.path.abspath(output_path)), exist_ok=True)
-
-        # 优先服务端直接落盘（output_path 支持绝对路径）
+        # 主路径：传绝对 output_path 让服务端直接落盘（统一助手先判定是否已落盘）
         resp = requests.post(
             f"{base_url}/api/tts",
             json={**body, "output_path": os.path.abspath(output_path)},
             timeout=float(timeout or 600),
         )
         resp.raise_for_status()
-        data = resp.json()
-        if data.get("code") == 0 and os.path.isfile(output_path) \
-                and os.path.getsize(output_path) > 0:
+        if finalize_tts_output(output_path, timeout=timeout):
+            data = resp.json()
             logger.info(
                 f"IndexTTS-2.5 synthesized to {output_path}, "
                 f"duration={data.get('duration')}"
@@ -88,8 +86,7 @@ def synthesize(
 
         # 降级：不传 output_path，取内嵌 base64 本地写入
         logger.warning(
-            f"IndexTTS-2.5 server-side save failed (code={data.get('code')}), "
-            f"fallback to base64"
+            f"IndexTTS-2.5 server-side save failed, fallback to base64"
         )
         resp = requests.post(f"{base_url}/api/tts", json=body, timeout=float(timeout or 600))
         resp.raise_for_status()
@@ -97,9 +94,9 @@ def synthesize(
         if data.get("code") != 0 or not data.get("audio_base64"):
             logger.error(f"IndexTTS-2.5 synthesis failed: {str(data)[:300]}")
             return False
-        with open(output_path, "wb") as f:
-            f.write(base64.b64decode(data["audio_base64"]))
-        return os.path.isfile(output_path) and os.path.getsize(output_path) > 0
+        return finalize_tts_output(
+            output_path, content=base64.b64decode(data["audio_base64"]), timeout=timeout
+        )
     except requests.exceptions.ConnectionError as e:
         logger.error(f"IndexTTS-2.5 service unreachable at {base_url}: {e}")
         return False

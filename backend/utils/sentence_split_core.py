@@ -218,8 +218,66 @@ def fix_leading_punctuation(chunks: List[str]) -> List[str]:
     return [c for c in result if c.strip()]
 
 
+def _balanced_split_words(words: List[str], max_length: int, space_sep: bool) -> List[str]:
+    """Split ``words`` (a list of word tokens) into chunks, each <= ``max_length``
+    characters, choosing cut points NEAR THE MIDDLE of the remaining text instead of
+    greedily filling up to ``max_length`` (which left the remainder as a short,
+    hard-to-read tail sentence).
+
+    Strategy: distribute the words into ``k = ceil(total/max_length)`` chunks as evenly
+    as possible by cutting whenever the running length would exceed ``target = total/k``.
+    Because ``target <= max_length``, every chunk stays within budget, and the chunks are
+    balanced — the largest cut lands around the centre of the text, never at the tail.
+
+    A single token longer than ``max_length`` cannot be split further and is returned
+    verbatim (defensive termination against infinite recursion).
+    """
+    if not words:
+        return []
+
+    if space_sep:
+        total = sum(len(w) for w in words) + (len(words) - 1)
+    else:
+        total = sum(len(w) for w in words)
+
+    joiner = " ".join if space_sep else "".join
+    if total <= max_length:
+        return [joiner(words)]
+
+    import math
+    k = max(1, math.ceil(total / max_length))
+    target = total / k  # guaranteed <= max_length
+
+    chunks: List[List[str]] = []
+    cur: List[str] = []
+    cur_len = 0
+    for w in words:
+        add = len(w) + (1 if (space_sep and cur) else 0)
+        if cur and cur_len + add > target:
+            chunks.append(cur)
+            cur = [w]
+            cur_len = len(w)
+        else:
+            cur.append(w)
+            cur_len += add
+    if cur:
+        chunks.append(cur)
+
+    # Defensive re-split for any chunk still over budget (e.g. one oversized token);
+    # a single-token chunk is returned as-is to guarantee termination.
+    result: List[str] = []
+    for c in chunks:
+        joined = joiner(c)
+        if len(joined) > max_length and len(c) > 1:
+            result.extend(_balanced_split_words(c, max_length, space_sep))
+        else:
+            result.append(joined)
+    return result
+
+
 def split_chinese_by_chars(text: str, max_length: int, has_jieba: bool = True) -> List[str]:
-    """Split Chinese text at word boundaries using jieba."""
+    """Split Chinese/CJK text at word boundaries using jieba, cutting near the
+    MIDDLE of the text (balanced) rather than leaving a short tail sentence."""
     if has_jieba:
         import jieba
         words = list(jieba.cut(text))
@@ -227,41 +285,14 @@ def split_chinese_by_chars(text: str, max_length: int, has_jieba: bool = True) -
         # Fallback: treat each character as a word
         words = list(text)
 
-    chunks = []
-    current = ""
-    for word in words:
-        if len(current) + len(word) > max_length and current:
-            chunks.append(current)
-            current = word
-        else:
-            current += word
-    if current:
-        chunks.append(current)
-
-    return fix_leading_punctuation(chunks)
+    return fix_leading_punctuation(_balanced_split_words(words, max_length, space_sep=False))
 
 
 def split_english_by_chars(text: str, max_length: int) -> List[str]:
-    """Split English text at word boundaries (spaces)."""
+    """Split English text at word boundaries (spaces), cutting near the MIDDLE of
+    the text (balanced) rather than leaving a short tail sentence."""
     words = text.split()
-    chunks = []
-    current = []
-    current_len = 0
-
-    for word in words:
-        word_len = len(word) + (1 if current else 0)  # +1 for space
-        if current_len + word_len > max_length and current:
-            chunks.append(" ".join(current))
-            current = [word]
-            current_len = len(word)
-        else:
-            current.append(word)
-            current_len += word_len
-
-    if current:
-        chunks.append(" ".join(current))
-
-    return fix_leading_punctuation(chunks)
+    return fix_leading_punctuation(_balanced_split_words(words, max_length, space_sep=True))
 
 
 def assign_words_by_char_offset(

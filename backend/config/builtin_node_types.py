@@ -3049,6 +3049,58 @@ BUILTIN_NODE_TYPES = [
             },
         ],
     },
+    {
+        "id": "loop",
+        "name": "循环",
+        "execution_domain": "thread",
+        "category": "flow_control",
+        "description": "接收一个列表作为迭代对象，逐条取出驱动循环体内的子流程执行；每次迭代的产物按序号记录在 manifest 清单中（选中若干已连线节点后创建循环体）",
+        "icon": "Repeat",
+        "color": "#6366f1",
+        "inputs": [
+            {"id": "items", "label": "迭代对象", "type": "json", "required": False},
+        ],
+        "outputs": [
+            {"id": "results", "label": "产物清单", "type": "json"},
+            {"id": "count", "label": "迭代总数", "type": "json"},
+        ],
+        "defaultConfig": {
+            "itemsSource": "upstream",
+            "inlineItems": "",
+            "globPattern": "",
+            "maxIterations": 0,
+            "iterationConcurrency": 1,
+            "onItemError": "stop",
+            "itemAlias": "item",
+            "indexAlias": "index",
+        },
+        "configFields": [
+            {"key": "itemsSource", "label": "迭代对象来源", "type": "select", "options": [
+                {"value": "upstream", "label": "上游连线输入"},
+                {"value": "inline_json", "label": "内联 JSON 数组"},
+                {"value": "directory_glob", "label": "目录文件匹配"},
+            ], "description": "上游连线取 items 端口传入的列表；内联 JSON 直接填写数组；目录匹配按通配符扫描文件"},
+            {"key": "inlineItems", "label": "内联 JSON 数组", "type": "textarea", "colSpan": "full",
+             "dependsOn": "itemsSource", "dependsValue": "inline_json",
+             "placeholder": '["a.mp4", "b.mp4"] 或 [{"path": "a.mp4"}, {"path": "b.mp4"}]'},
+            {"key": "globPattern", "label": "目录通配符", "type": "text", "colSpan": "full",
+             "dependsOn": "itemsSource", "dependsValue": "directory_glob",
+             "placeholder": "D:/videos/*.mp4"},
+            {"key": "maxIterations", "label": "最大迭代数", "type": "number", "min": 0, "max": 500, "step": 1, "colSpan": "half",
+             "description": "0 表示不限制（受全局上限 LOOP_MAX_ITEMS=500 约束）"},
+            {"key": "iterationConcurrency", "label": "并发数", "type": "slider", "min": 1, "max": 16, "step": 1, "colSpan": "half",
+             "description": "同时处理的迭代条目数；串行填 1"},
+            {"key": "onItemError", "label": "单项失败策略", "type": "select", "colSpan": "half", "options": [
+                {"value": "stop", "label": "立即停止"},
+                {"value": "skip", "label": "跳过并继续"},
+                {"value": "collect_error", "label": "记录错误后继续"},
+            ]},
+            {"key": "itemAlias", "label": "条目变量名", "type": "text", "colSpan": "half",
+             "placeholder": "item", "description": "循环体节点配置中以 {item} 引用当前条目"},
+            {"key": "indexAlias", "label": "序号变量名", "type": "text", "colSpan": "half",
+             "placeholder": "index", "description": "循环体节点配置中以 {index} / {index:03d} 引用当前序号"},
+        ],
+    },
 ]
 
 

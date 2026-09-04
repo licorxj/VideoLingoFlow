@@ -240,5 +240,25 @@ def get_step_instance(step_id: str):
     return _STEPS.get(step_id)
 
 
+def new_step_instance(step_id: str):
+    """创建步骤的独立实例（循环迭代并发执行时使用）。
+
+    ``_STEPS`` 中的实例是模块级单例，``_run_node`` 会在执行前把 ``_node_id`` /
+    ``_node_config`` / ``_step_inputs`` 直接写到实例上。并发跑同一节点类型的多个
+    迭代时会互相覆盖，因此循环迭代必须各自持有独立实例。
+
+    注册表中全部步骤类均为零参构造（backend/steps 下仅 s02_asr 与 s_asr_stages
+    显式定义 __init__，均为空实现），故 ``type(instance)()`` 安全可用。
+    构造失败时回退到注册表单例（退化为串行安全但不隔离）。
+    """
+    instance = _STEPS.get(step_id)
+    if instance is None:
+        return None
+    try:
+        return type(instance)()
+    except Exception:
+        return instance
+
+
 def get_all_steps() -> dict:
     return dict(_STEPS)

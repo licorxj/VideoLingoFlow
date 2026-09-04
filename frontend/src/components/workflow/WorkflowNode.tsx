@@ -11,8 +11,11 @@ import { useWorkflowStore } from "@/stores/workflowStore";
 import {
   getNodeTypeDef, PORT_COLORS, getVisibleOutputs, getNodeInputs, isConfigFieldVisible,
   PI_AGENT_OUTPUT_TYPES, buildInlineGroupTypeDef, isGroupNodeData,
+  buildInlineLoopTypeDef, isLoopNodeData,
   type WorkflowNode as WFNode, type ConfigField, type PortType,
 } from "@/lib/workflowTypes";
+import { STATUS_CONFIG } from "./nodeStatus";
+import LoopContainerCard from "./LoopContainerCard";
 import VoiceSelectPanel from "../VoiceSelectPanel";
 import AudioSelectorDialog from "@/components/AudioSelectorDialog";
 import SkillMcpPickerDialog, { type PickerKind } from "@/components/workflow/SkillMcpPickerDialog";
@@ -115,57 +118,6 @@ function parseSubtitleEntries(content: string): { start: number; end: number; te
     return [];
   }
 }
-
-const STATUS_CONFIG: Record<string, { icon: any; color: string; bg: string; border: string; glow: string; label: string; badgeBg: string; badgeText: string }> = {
-  pending: {
-    icon: Clock, color: "text-muted-foreground", bg: "bg-muted/30",
-    border: "", glow: "",
-    label: "等待中",
-    badgeBg: "bg-muted/60", badgeText: "text-muted-foreground",
-  },
-  running: {
-    icon: Loader2, color: "text-blue-500", bg: "bg-blue-500/5",
-    border: "border-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.25)]",
-    glow: "ring-2 ring-blue-400/30",
-    label: "执行中",
-    badgeBg: "bg-blue-500/15", badgeText: "text-blue-600",
-  },
-  waiting: {
-    icon: Clock, color: "text-amber-600", bg: "bg-amber-500/5",
-    border: "border-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)]",
-    glow: "",
-    label: "等待剪辑",
-    badgeBg: "bg-amber-500/15", badgeText: "text-amber-700",
-  },
-  completed: {
-    icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-500/5",
-    border: "!border-[4px] border-emerald-400 shadow-[0_0_14px_rgba(16,185,129,0.3)]",
-    glow: "",
-    label: "已完成",
-    badgeBg: "bg-emerald-500/15", badgeText: "text-emerald-600",
-  },
-  failed: {
-    icon: XCircle, color: "text-red-500", bg: "bg-red-500/5",
-    border: "border-red-400 shadow-[0_0_12px_rgba(239,68,68,0.25)]",
-    glow: "",
-    label: "失败",
-    badgeBg: "bg-red-500/15", badgeText: "text-red-600",
-  },
-  skipped: {
-    icon: Clock, color: "text-yellow-500", bg: "bg-yellow-500/5",
-    border: "border-yellow-400",
-    glow: "",
-    label: "已跳过",
-    badgeBg: "bg-yellow-500/15", badgeText: "text-yellow-600",
-  },
-  cancelled: {
-    icon: AlertTriangle, color: "text-orange-500", bg: "bg-orange-500/5",
-    border: "border-orange-400 shadow-[0_0_10px_rgba(249,115,22,0.2)]",
-    glow: "",
-    label: "已取消",
-    badgeBg: "bg-orange-500/15", badgeText: "text-orange-600",
-  },
-};
 
 const CHIP_COLORS: Record<string, string> = {
   video: "#3b82f6",
@@ -2069,7 +2021,11 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
 
 function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const nd = data as any;
-  const nodeType = isGroupNodeData(nd) ? buildInlineGroupTypeDef(nd) : getNodeTypeDef(nd.nodeType);
+  const nodeType = isGroupNodeData(nd)
+    ? buildInlineGroupTypeDef(nd)
+    : isLoopNodeData(nd)
+      ? buildInlineLoopTypeDef(nd)
+      : getNodeTypeDef(nd.nodeType);
   const { updateNodeData, getNodes, getEdges } = useReactFlow();
   const activeTaskId = useWorkflowStore((s) => s.activeTaskId);
   const taskModeId = useWorkflowStore((s) => s.taskModeId);
@@ -2117,6 +2073,21 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         setExpanded={setExpanded}
         updateNodeData={updateNodeData}
         taskId={artifactTaskId}
+      />
+    );
+  }
+  if (isLoopNodeData(nd)) {
+    return (
+      <LoopContainerCard
+        id={id}
+        nd={nd}
+        selected={!!selected}
+        nodeType={nodeType}
+        expanded={expanded}
+        setExpanded={setExpanded}
+        updateNodeData={updateNodeData}
+        taskId={artifactTaskId}
+        dragHandleClass={NODE_DRAG_HANDLE_CLASS}
       />
     );
   }
