@@ -24,35 +24,69 @@ def _is_inline_group_node(node: dict) -> bool:
     return isinstance(data, dict) and data.get("kind") == "group" and isinstance(data.get("groupMeta"), dict)
 
 
-def _validate_inline_group_node(node: dict) -> None:
-    meta = (node.get("data") or {}).get("groupMeta") or {}
+def _is_inline_loop_node(node: dict) -> bool:
+    """循环容器节点：data.kind == "loop" 且携带 loopMeta.internalWorkflow。"""
+    data = node.get("data") or {}
+    return isinstance(data, dict) and data.get("kind") == "loop" and isinstance(data.get("loopMeta"), dict)
+
+
+def _is_container_node(node: dict) -> bool:
+    """容器节点（组合 / 循环）：内部子图在运行时展开，对外表现为单一节点。"""
+    return _is_inline_group_node(node) or _is_inline_loop_node(node)
+
+
+def _container_kind(node: dict) -> str:
+    return "group" if _is_inline_group_node(node) else ("loop" if _is_inline_loop_node(node) else "")
+
+
+def _container_meta(node: dict) -> dict:
+    """返回容器节点的内部子图元数据（groupMeta / loopMeta），非容器返回空 dict。"""
+    data = node.get("data") or {}
+    if not isinstance(data, dict):
+        return {}
+    if _is_inline_group_node(node):
+        return data.get("groupMeta") or {}
+    if _is_inline_loop_node(node):
+        return data.get("loopMeta") or {}
+    return {}
+
+
+def _validate_container_node(node: dict, kind: str) -> None:
+    """校验容器节点（group / loop）的内部子图与端口映射。"""
+    label = "Inline group" if kind == "group" else "Inline loop"
+    meta = _container_meta(node)
     if meta.get("version") != 1:
-        raise ValueError("Unsupported inline group version")
+        raise ValueError(f"Unsupported {label.lower()} version")
     internal = meta.get("internalWorkflow")
     if not isinstance(internal, dict):
-        raise ValueError("Inline group internalWorkflow must be an object")
+        raise ValueError(f"{label} internalWorkflow must be an object")
     internal_nodes = internal.get("nodes")
     internal_edges = internal.get("edges")
-    if not isinstance(internal_nodes, list) or len(internal_nodes) < 2 or not isinstance(internal_edges, list):
-        raise ValueError("Inline group requires internal nodes and edges")
-    if any(_is_inline_group_node(item) for item in internal_nodes if isinstance(item, dict)):
-        raise ValueError("Nested group nodes are not supported")
+    if not isinstance(internal_nodes, list) or not isinstance(internal_edges, list):
+        raise ValueError(f"{label} requires internal nodes and edges")
+    # 组合节点至少 2 个成员（1 个成员等价于普通节点）；循环体允许单节点
+    min_nodes = 2 if kind == "group" else 1
+    if len(internal_nodes) < min_nodes:
+        raise ValueError(f"{label} requires at least {min_nodes} internal node(s)")
+    # 禁止嵌套：容器内部不得再出现组合 / 循环节点
+    if any(_is_container_node(item) for item in internal_nodes if isinstance(item, dict)):
+        raise ValueError(f"Nested {kind} nodes are not supported")
     validate_workflow_nodes(internal_nodes)
     internal_ids = {str(item.get("id") or "") for item in internal_nodes if isinstance(item, dict)}
     for mapping_key, node_key, port_key in (("inputMappings", "targetNodeId", "targetPortId"), ("outputMappings", "internalNodeId", "internalPortId")):
         mappings = meta.get(mapping_key)
         if not isinstance(mappings, list):
-            raise ValueError(f"Inline group {mapping_key} must be a list")
+            raise ValueError(f"{label} {mapping_key} must be a list")
         exposed_ids: set[str] = set()
         for mapping in mappings:
             if not isinstance(mapping, dict):
-                raise ValueError(f"Invalid inline group {mapping_key} item")
+                raise ValueError(f"Invalid {label.lower()} {mapping_key} item")
             exposed_id = str(mapping.get("exposedPortId") or "")
             if not exposed_id or exposed_id in exposed_ids:
-                raise ValueError(f"Inline group {mapping_key} exposedPortId must be unique")
+                raise ValueError(f"{label} {mapping_key} exposedPortId must be unique")
             exposed_ids.add(exposed_id)
             if str(mapping.get(node_key) or "") not in internal_ids or not str(mapping.get(port_key) or ""):
-                raise ValueError(f"Invalid inline group {mapping_key} target")
+                raise ValueError(f"Invalid {label.lower()} {mapping_key} target")
 
 
 def validate_workflow_nodes(nodes: object) -> None:
@@ -74,8 +108,8 @@ def validate_workflow_nodes(nodes: object) -> None:
         node_type = data.get("nodeType")
         if not isinstance(node_type, str) or not node_type.strip():
             raise ValueError(f"nodes[{index}].data.nodeType is required")
-        if _is_inline_group_node(node):
-            _validate_inline_group_node(node)
+        if _is_container_node(node):
+            _validate_container_node(node, _container_kind(node))
             continue
         if _node_definition(node_type) is None:
             raise ValueError(f"Unknown node type: {node_type}")
@@ -111,14 +145,20 @@ def _port_map(node_type: str, direction: str) -> dict[str, str]:
 
 
 def _port_map_for_node(node: dict, direction: str) -> dict[str, str]:
-    if _is_inline_group_node(node):
-        meta = (node.get("data") or {}).get("groupMeta") or {}
+    if _is_container_node(node):
+        meta = _container_meta(node)
         mapping_key = "outputMappings" if direction == "source" else "inputMappings"
-        return {
+        ports = {
             str(item.get("exposedPortId")): str(item.get("type"))
             for item in meta.get(mapping_key, [])
             if isinstance(item, dict) and item.get("exposedPortId") and item.get("type") and (direction != "source" or item.get("enabled") is not False)
         }
+        if _is_inline_loop_node(node):
+            # 循环节点在映射端口之外额外暴露内建端口（产物清单 / 迭代总数）
+            static_ports = _port_map(_node_type(node), direction)
+            for port_id, port_type in static_ports.items():
+                ports.setdefault(port_id, port_type)
+        return ports
     return _port_map(_node_type(node), direction)
 
 
@@ -160,8 +200,8 @@ def normalize_workflow_edges(nodes: list[dict], edges: list[dict]) -> tuple[list
             continue
         source_type = _node_type(source_node)
         target_type = _node_type(target_node)
-        migrated_source = LEGACY_HANDLE_MIGRATIONS.get((source_type, "source", source_port_id)) if not _is_inline_group_node(source_node) else None
-        migrated_target = LEGACY_HANDLE_MIGRATIONS.get((target_type, "target", target_port_id)) if not _is_inline_group_node(target_node) else None
+        migrated_source = LEGACY_HANDLE_MIGRATIONS.get((source_type, "source", source_port_id)) if not _is_container_node(source_node) else None
+        migrated_target = LEGACY_HANDLE_MIGRATIONS.get((target_type, "target", target_port_id)) if not _is_container_node(target_node) else None
         if migrated_source is not None:
             source_port_id = migrated_source
         if migrated_target is not None:
@@ -264,9 +304,9 @@ def _migrate_node_configs(nodes: list[dict]) -> int:
         data = node.get("data")
         if not isinstance(data, dict):
             continue
-        # 内联组合节点：递归迁移内部工作流节点
-        if data.get("kind") == "group" and isinstance(data.get("groupMeta"), dict):
-            internal = data["groupMeta"].get("internalWorkflow") or {}
+        # 容器节点（组合 / 循环）：递归迁移内部子工作流节点
+        if _is_container_node(node):
+            internal = _container_meta(node).get("internalWorkflow") or {}
             migrated += _migrate_node_configs(internal.get("nodes") or [])
         rule = NODE_CONFIG_MIGRATIONS.get(data.get("nodeType"))
         if not rule:

@@ -27,9 +27,9 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\input_video.mp4",
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\input_video.mkv",
           "languages": {
-            "source_language": "ja",
+            "source_language": "en",
             "target_language": "zh"
           }
         },
@@ -39,9 +39,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 560
+        "height": 565
       },
-      "selected": true,
+      "selected": false,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -60,7 +60,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "audio": "output/extracted_audio_node_1_1780650299385.m4a"
+          "audio": "output/extracted_audio_node_1_1780650299385.opus"
         },
         "error": "",
         "workbench_url": "",
@@ -85,12 +85,12 @@
         "nodeType": "sentence_split",
         "label": "句子分割",
         "config": {
-          "use_llm_split": true,
+          "use_llm_split": false,
           "merge_min_duration": "0.2",
-          "max_sentence_length": "13",
+          "max_sentence_length": "15",
           "merge_max_gap": "0.2",
           "split_on_speaker": true,
-          "pause_split_threshold": "1.8",
+          "pause_split_threshold": "1.5",
           "split_sentence_ends": false,
           "split_clause_breaks": true,
           "processing_language": "from_input",
@@ -137,14 +137,14 @@
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
-          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=25796",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
+          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=45412",
           "[step_worker] step instance created: S04Summarize",
           "[step_worker] step_inputs keys=['text', 'language']",
           "[step_worker] node_config keys=(empty)",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832\\cache\\.step_node_1_1780948332813_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1780948332813_result.json, exiting 0"
         ],
         "disableExecute": false
       },
@@ -179,18 +179,18 @@
           "subtitle": "cache/translation_direct_node_1_1780954897405_zh.json",
           "reflect": "cache/translation_reflect_node_1_1780954897405_zh.json"
         },
-        "error": "timeout",
+        "error": "",
         "disableExecute": false,
         "workbench_url": "",
         "logLines": [
           "[step_worker] step_inputs keys=['summary', 'subtitle', 'language', 'prompt_template']",
           "[step_worker] node_config keys=['translation_style', 'reflect_translate', 'processing_language', 'target_language']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832, kwargs=['callback'])",
-          "[Translate] Languages: ja -> zh, reflect=True, batch_limit=3000, reflect_batch_limit=1500",
-          "[LLM] Timeout (step=s05_translate_faithful, model=vlf-05), attempt 3/4, retrying in 9s...",
-          "[LLM] Timeout (step=s05_translate_faithful, model=vlf-05), attempt 1/4, retrying in 3s...",
-          "[LLM] Timeout (step=s05_translate_faithful, model=vlf-05), attempt 2/4, retrying in 6s...",
-          "[LLM] Timeout (step=s05_translate_faithful, model=vlf-05), attempt 3/4, retrying in 9s..."
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
+          "[Translate] Languages: en -> zh, reflect=True, batch_limit=3000, reflect_batch_limit=1500",
+          "[Translate] WARNING: 4 direct translations still empty after all retries: [21, 26, 32, 38]",
+          "[Translate] WARNING: 4 reflect translations still empty after all retries: [21, 26, 32, 38]",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1780954897405_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -250,17 +250,19 @@
           "fade_in": 0.5,
           "fade_out": 0.5
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_with_subs_node_2_1781207780159.mp4"
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 553
+        "height": 653
       },
       "selected": false,
       "dragging": false,
@@ -323,7 +325,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 209
+        "height": 452
       },
       "selected": false,
       "dragging": false,
@@ -350,9 +352,9 @@
           "ai_subtitle_reduction": true,
           "speed_rounds": 1,
           "ai_rounds": 1,
-          "overwrite_generate": true
+          "overwrite_generate": false
         },
-        "status": "pending",
+        "status": "cancelled",
         "disableExecute": false,
         "progress": 0,
         "message": "",
@@ -360,14 +362,14 @@
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "[S09] 分析变速倍数",
-          "  - 需要变速: 18 段",
-          "  - 超出最大变速(1.35x): 3 段",
-          "[S09] 最终溢出段数: 3",
-          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\dub_task_node_1_1781709944783.json",
-          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\dub_task_node_1_1781709944783.csv",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
+          "[step_worker] node_config keys=['tts_engine', 'tts_mode', 'clone_source', 'voice_design_role_1_desc', 'speed_regenerate', 'ai_subtitle_reduction', 'speed_rounds', 'ai_rounds', 'overwrite_generate']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
+          "============================================================",
+          "[TTS] 配置参数:",
+          "  - TTS模式: clone",
+          "  - 配音引擎: confucius4_tts",
+          "  - 克隆来源: per_segment",
+          "  - 参考音频: (未设置)"
         ]
       },
       "measured": {
@@ -395,17 +397,20 @@
           "dialect_name": "四川话",
           "min_sentence_duration": 0.2
         },
-        "status": "failed",
+        "status": "completed",
         "disableExecute": false,
-        "progress": -1,
-        "message": "检测到 3 条单句时长小于 0.2 秒，无法正常配音：句子#29 时长=0.103s（文本：ので、）；句子#38 时长=0.135s（文本：ああ、）；句子#48 时长=0.198s（文本：いいのよ。）",
-        "outputs": {},
-        "error": "检测到 3 条单句时长小于 0.2 秒，无法正常配音：句子#29 时长=0.103s（文本：ので、）；句子#38 时长=0.135s（文本：ああ、）；句子#48 时长=0.198s（文本：いいのよ。）",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
+        "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 416
+        "height": 418
       },
       "selected": false,
       "dragging": false,
@@ -505,14 +510,14 @@
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] start node_type=vocal_separation node_id=node_2_1781973904798 pid=51000",
+          "[step_worker] start node_type=vocal_separation node_id=node_2_1781973904798 pid=32292",
           "[step_worker] step instance created: StepVocalSeparation",
           "[step_worker] step_inputs keys=['audio']",
           "[step_worker] node_config keys=['method', 'format', 'model']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832, kwargs=['callback', 'cancel_callback'])",
-          "[VocalSeparation] Using upstream audio: Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832\\output/transcoded_audio_node_1_1788016251850.wav",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback', 'cancel_callback'])",
+          "[VocalSeparation] Using upstream audio: Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\output/transcoded_audio_node_1_1788016251850.wav",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs', 'output_vocals', 'output_background']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832\\cache\\.step_node_2_1781973904798_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_2_1781973904798_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -581,19 +586,19 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1782422054967.json",
-          "text": "{\n  \"tittle\": \"让座风波\",\n  \"hook\": \"尴尬对话何时了？\",\n  \"summary\": \"这段视频展示了一场发生在电车上的尴尬对话。S01试图让座给S02，但S02误解了意图，引发了一系列争执。S02质疑S01的道歉和理由，甚至上升到年龄歧视和时尚批评。S03加入对话，讨论了时尚消费和生活方式，进一步暴露了社会偏见。对话中涉及了让座规范、年龄偏见、时尚观念等社会议题，最终以双方僵持不下结束，凸显了日常互动中的误解和价值观冲突。亮点在于展现了不同年龄段和生活背景的人在公共场合的碰撞，引发观众对社交礼仪和个人尊重的思考。\"\n}"
+          "text": "{\n  \"tittle\": \"NX23草图新变化\",\n  \"hook\": \"草图革命：尺寸与约束全解析\",\n  \"summary\": \"视频由Tech Design的Santosh主讲，专注于Siemens NX23版本中草图环境的重大更新。他对比了旧版本，详细讲解了尺寸标注、几何约束（现称为关系）和表达式的变化。新环境中，尺寸标注不再使用传统“快速尺寸”命令，而是通过选择对象直接显示和编辑；几何约束触发方式改变，称为关系，需选择对象后从选项中选择相关约束；表达式需手动添加，支持参数化设计。视频通过实际绘图示例演示了这些操作，帮助用户适应新功能，提升CAD设计效率。亮点包括界面简化、交互优化、隐藏约束的显示方式，以及参数化灵活性的增强，为设计工作流带来显著改进。\"\n}"
         },
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "S02：バカにしてます？",
-          "S02：譲るなら",
-          "こちらじゃないですか？",
-          "S02：うん、いいよ。",
-          "S02：私はまだそんな。",
-          "S02：汚い格好されてるし",
+          "S01：this is Santosh and welcome to Tech Design.",
+          "S01：I have already uploaded a one video on NX23 version.",
+          "S01：That video is on coordinate system and what are the",
+          "S01：different types of coordinate system.",
+          "S01：So if you have not checked that video,",
+          "S01：I will giv",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832\\cache\\.step_node_1_1782422054967_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1782422054967_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -630,7 +635,7 @@
         "message": "Completed",
         "outputs": {
           "prompt": "output/cover_prompt_node_1_1782501714759.txt",
-          "text": "**画面设计描述**：  \n现代简约插画风格。画面中央，一位年轻女孩（S01）站着，身体微微前倾，手掌向上做出让座手势，表情诚恳略带困惑。对面一位年长女性（S02）坐在座位上，眉头紧皱，一只手抬起做出拒绝或质疑的姿势，眼神带着不悦。背景是模糊的电车内部环境，使用蓝灰色调。画面顶部居中放置主标题“让座风波”（黑色加粗无衬线字体，带白色描边），底部居中放置副标题“尴尬对话何时了？”（稍小字号，灰色字体）。整体色彩对比鲜明，人物突出，氛围紧张。\n\n**文生图提示词**：  \nA minimalist modern illustration in a subway car, a young woman standing and leaning forward with an open palm offering a seat, sincere and puzzled expression. Opposite her, an older woman sits with furrowed brows and one hand raised in a dismissive or questioning gesture, looking displeased. Focused lighting on the two figures, blurred subway background with cool blue-grey tones. Strong visual contrast, dramatic tension. Composition centered, clean lines, vibrant color blocking. Top center text \"让座风波\" in bold black sans-serif font with white outline, bottom center text \"尴尬对话何时了？\" in smaller grey font. High-quality digital art, suitable for a video thumbnail."
+          "text": "A high-impact, tech-themed video cover for Siemens NX23 sketch updates. Background: dark gradient from deep blue to black with glowing, abstract CAD sketch lines in neon blue and white, featuring dimension arrows and constraint symbols. Central subject: a stylized 3D NX23 logo or simplified CAD interface window showcasing new dimensioning and relationship tools, rendered in metallic silver with sharp, futuristic edges, highlighted by a spotlight effect. Main title \"NX23草图新变化\" in bold, uppercase white font, centered at the top with a subtle glow, using a modern sans-serif typeface. Subtitle \"草图革命：尺寸与约束全解析\" in smaller, bright yellow text below the main title, centered or slightly offset for balance. Overall design emphasizes strong color contrast, dynamic composition, and a clean, professional look suitable for short video platforms, with the主体突出 by luminous accents and layered elements."
         },
         "error": "",
         "disableExecute": false,
@@ -679,14 +684,14 @@
         "note": "竖图封面",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1782507205161_result.json, exiting 0",
-          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=39048",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1782507205161_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=10336",
           "[step_worker] step instance created: S_ImageGen",
-          "[step_worker] step_inputs keys=['text']",
+          "[step_worker] step_inputs keys=['text', 'image']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1782507205161_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1782507205161_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -710,17 +715,17 @@
         "config": {
           "fit": "contain"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
-        "progress": 0,
-        "message": "",
+        "progress": 100,
+        "message": "Completed",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 408
+        "height": 434
       },
       "selected": false,
       "dragging": false,
@@ -787,7 +792,7 @@
         "message": "Completed",
         "outputs": {
           "prompt": "output/cover_prompt_node_2_1782640528572.txt",
-          "text": "任务：\n1：首先，去除画面上的文字水印，保持画面纯净无文字元素；\n2：为画面加上标题和副标题，制作为电影海报；\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“让座风波” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“尴尬对话何时了？” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。"
+          "text": "任务：\n1：首先，去除画面上的文字水印，保持画面纯净无文字元素；\n2：为画面加上标题和副标题，制作为电影海报；\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“NX23草图新变化” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“草图革命：尺寸与约束全解析” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。"
         },
         "error": "",
         "workbench_url": ""
@@ -835,14 +840,14 @@
         "note": "横图封面",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_3_1782641542678_result.json, exiting 0",
-          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=47092",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_3_1782641542678_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=47788",
           "[step_worker] step instance created: S_ImageGen",
           "[step_worker] step_inputs keys=['image', 'text']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_3_1782641542678_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_3_1782641542678_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -866,9 +871,9 @@
         "config": {
           "fit": "contain"
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
         "outputs": {},
         "error": "",
         "workbench_url": "",
@@ -876,7 +881,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 408
+        "height": 434
       },
       "selected": false,
       "dragging": false,
@@ -961,19 +966,19 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1782725550457.json",
-          "text": "{\n  \"tittle\": \"电车让座误解，年龄时尚之争引热议\",\n  \"description\": \"这段视频展示了一场电车上的尴尬对话，S01试图让座却引发S02的误解，导致争执升级。对话涉及年龄歧视、时尚批评等社会偏见，最终僵持不下，凸显日常互动中的价值观冲突，引发观众对社交礼仪和个人尊重的思考。\",\n  \"tags\": [\n    \"社会冲突\",\n    \"让座礼仪\",\n    \"年龄偏见\",\n    \"时尚批评\",\n    \"电车日常\"\n  ]\n}"
+          "text": "{\n  \"title\": \"NX23草图革命：尺寸与约束全解析\",\n  \"description\": \"本视频由Tech Design的Santosh主讲，深入解析Siemens NX23版本中草图环境的重大更新。对比旧版本，详解尺寸标注、几何约束（现称为关系）和表达式的变化，强调界面简化、交互优化及参数化设计的增强。通过实际绘图演示，帮助用户快速适应新功能，显著提升CAD设计效率。\",\n  \"tags\": [\n    \"CAD教程\",\n    \"NX23更新\",\n    \"草图设计\",\n    \"技术解析\",\n    \"设计优化\"\n  ]\n}"
         },
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "{",
-          "  \"tittle\": \"科技收购娱乐公司\",",
-          "  \"hook\": \"收购背后的野心\",",
-          "  \"summary\": \"视频中，科技公司高管Mr. Preston在独家采访后，与助手Aaron讨论收购Crazy Maple Studios的计划。当Aaron质疑科技公司为何投资娱乐公司时，Mr. Preston透露他不仅计划投资，更是要收购该工作室，甚至不惜拆分。这段对话揭示了商业世界中的战略扩张、野心决策以及潜在冲突，展现了收购案背后的复杂动机和风险。\"",
-          "}",
+          "视频信息：",
           "##",
+          "{",
+          "  \"tittle\": \"NX23草图新变化\",",
+          "  \"hook\": \"草图革命：尺寸与约束全解析\",",
+          "  \"summary\": \"视频由Tech Design的Santosh主讲，专注于Siemens NX23版本中草图环境的重大更新。他对比了旧版本，详细讲解了尺寸标注、几何约束（现称为关系）和表达式的变化。新环境中，尺寸标注不再使用传统“快速尺寸”命令，而是通过选择对象直接显示和编辑；几何约束触发方式改变，称为关系，需选择对象后从选项中选择相关约束；表达式需手动添加，支持参数化设计。视频通过实际绘图示例演示了这些操作，帮助用户适应新功能，提升CAD设计",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\435ee0df3a5c434698833cf5144d391e\\cache\\.step_node_1_1782725550457_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1782725550457_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -1003,7 +1008,7 @@
         "message": "Completed",
         "outputs": {
           "text": "cache/task_name.txt",
-          "translated": "日本抖音剧情短片_自尊_果然能打败老阿姨的只有老阿姨_.13575837212"
+          "translated": "自尊-果然能打败老阿姨的只有老阿姨-13575837212"
         },
         "error": "",
         "workbench_url": ""
@@ -1062,17 +1067,19 @@
           "value_source": "auto",
           "custom_value": ""
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\output/LLM_node_1_1782725550457.json"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 337
+        "height": 437
       },
       "selected": false,
       "dragging": false,
@@ -1254,7 +1261,7 @@
           "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
           "[ASR PostProcess] No post-processing needed, returning original result",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\54b5cf7d96414923934f759e2be6f832\\cache\\.step_node_2_1788054290141_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_2_1788054290141_result.json, exiting 0"
         ],
         "workbench_url": ""
       },
@@ -1284,7 +1291,7 @@
         "outputs": {
           "json": "cache/sentences_node_2_1780807148463.json"
         },
-        "error": "ASR 校验未通过（句子列表）：第 10 句（id=10）的文本与 words 不完全一致（去标点/空白/大小写后）。\n  · 句子文本长度 13，words 压平长度 18。\n  · 句子文本(归一化): …そんなに特に深い意味はない…\n  · words 压平(归一化): …そんなに特に深い意味はないんですけど…\n  · 该句原文: 'そんなに特に深い意味はない'\n  · 该句 words: ['そんなに', '特', 'に', '深', 'い', '意', '味', 'はないんですけど。']",
+        "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
@@ -1312,12 +1319,19 @@
           "time_mode": "negative",
           "avoid_subtitles": false
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "image": "cache/key_frame_node_1_1788461823056.png"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 301
+        "height": 400
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1967,6 +1981,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-04T02:29:09",
-  "updatedAt": "2026-09-04T03:00:14",
-  "revision": 6
+  "updatedAt": "2026-09-04T05:02:43",
+  "revision": 9
 }

@@ -93,17 +93,19 @@ def validate_node_type_data(data: dict) -> None:
         raise ValueError(f"{exec_type} nodes require execCode")
 
     kind = data.get("kind", "normal")
-    if kind not in {"normal", "group"}:
+    if kind not in {"normal", "group", "loop"}:
         raise ValueError(f"Invalid node kind: {kind}")
     group_definition = data.get("groupDefinition")
-    if kind == "group":
-        if category != "group_node":
-            raise ValueError("Group nodes must use group_node category")
+    if kind in {"group", "loop"}:
+        expected_category = "group_node" if kind == "group" else "flow_control"
+        if category != expected_category:
+            raise ValueError(f"{kind.capitalize()} nodes must use {expected_category} category")
         if exec_type:
-            raise ValueError("Group nodes cannot define execType")
-        _validate_group_definition(group_definition)
+            raise ValueError(f"{kind.capitalize()} nodes cannot define execType")
+        # 循环体允许单节点子图；组合节点至少两个成员
+        _validate_group_definition(group_definition, min_nodes=1 if kind == "loop" else 2)
     elif group_definition is not None:
-        raise ValueError("groupDefinition is only supported by group nodes")
+        raise ValueError("groupDefinition is only supported by group/loop nodes")
 
     for port_kind in ("inputs", "outputs"):
         ports = data.get(port_kind) or []
@@ -190,7 +192,7 @@ def validate_node_type_data(data: dict) -> None:
                 raise ValueError(f"Config field max must be >= min: {field_key}")
 
 
-def _validate_group_definition(definition: object) -> None:
+def _validate_group_definition(definition: object, min_nodes: int = 2) -> None:
     if not isinstance(definition, dict):
         raise ValueError("Group nodes require groupDefinition")
     if definition.get("version") != 1:
@@ -200,8 +202,8 @@ def _validate_group_definition(definition: object) -> None:
         raise ValueError("groupDefinition.internalWorkflow must be an object")
     internal_nodes = internal.get("nodes")
     internal_edges = internal.get("edges")
-    if not isinstance(internal_nodes, list) or len(internal_nodes) < 2:
-        raise ValueError("Group nodes require at least two internal nodes")
+    if not isinstance(internal_nodes, list) or len(internal_nodes) < min_nodes:
+        raise ValueError(f"Group nodes require at least {min_nodes} internal nodes")
     if not isinstance(internal_edges, list):
         raise ValueError("groupDefinition.internalWorkflow.edges must be a list")
     node_ids = {str(node.get("id", "")) for node in internal_nodes if isinstance(node, dict)}

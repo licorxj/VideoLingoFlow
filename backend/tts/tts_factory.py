@@ -8,7 +8,7 @@ import time
 import urllib.parse
 from typing import Optional
 from backend.tts.tts_base import TTSBase
-from backend.tts.tts_interface_manager import get_tts_interface_manager
+from backend.tts.tts_interface_manager import get_tts_interface_manager, finalize_tts_output
 
 
 def _speed_to_ssml_rate(speed: float) -> str:
@@ -143,38 +143,40 @@ class GenericTTS(TTSBase):
                 print(f"TTS request failed: {resp.status_code} {resp.text[:300]}")
                 return False
 
-            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-
-            # Handle async task-based APIs (OmniVoice, VoxCPM, etc.)
+            # 异步任务型 API（OmniVoice / VoxCPM 等）走轮询逻辑（同样遵循该规则）
             if params.get("is_async"):
                 return self._poll_async_task(resp, params, output_path, timeout)
 
-            # Direct file response
-            if params.get("is_file_response", True):
-                with open(output_path, "wb") as fp:
-                    fp.write(resp.content)
-                return True
-
-            # JSON response with audio_url
-            resp_json = resp.json()
-            if "audio_url" in resp_json:
-                audio_resp = requests.get(resp_json["audio_url"], timeout=timeout)
-                if audio_resp.status_code == 200:
-                    with open(output_path, "wb") as fp:
-                        fp.write(audio_resp.content)
-                    return True
-                print(f"Download audio failed: {audio_resp.status_code}")
-                return False
-
-            with open(output_path, "wb") as fp:
-                fp.write(resp.content)
-            return True
+            # 统一落盘规则：服务端写盘 / 拷贝 / HTTP 下载兜底
+            return self._finalize_output(resp, params, output_path, timeout)
 
         except Exception as e:
             print(f"TTS request error: {e}")
             import traceback
             traceback.print_exc()
             return False
+
+    def _finalize_output(self, resp, params, output_path, timeout):
+        """统一落盘规则：服务端写盘 / 拷贝 / HTTP 下载兜底（委托 manager.finalize_tts_output）。
+
+        解析响应 JSON 取出服务端返回的路径/下载 URL 与文件字节，交由公共助手按三级优先级落盘。
+        既尊重“传路径让服务端落盘”的 local 引擎，也兼容“返回字节/URL 下载”的在线引擎。
+        """
+        data = None
+        try:
+            data = resp.json()
+        except Exception:
+            data = None
+        remote = (data or {}).get("output_path") or (data or {}).get("audio_path")
+        url = (data or {}).get("audio_url") or (data or {}).get("download_url")
+        content = resp.content if params.get("is_file_response", True) else None
+        return finalize_tts_output(
+            output_path,
+            remote_path=remote,
+            download_url=url,
+            content=content,
+            timeout=timeout,
+        )
 
     def _poll_async_task(self, init_resp, params, output_path, timeout):
         """For async TTS APIs (e.g. OmniVoice): poll task status then use local output_path."""
@@ -207,26 +209,14 @@ class GenericTTS(TTSBase):
                     status_data = status_resp.json()
                     status = status_data.get("status", "")
                     if status == "completed":
-                        # Priority 1: File was saved directly to output_path by the local API
-                        if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-                            print(f"Async TTS: task completed, audio saved directly at {output_path}")
-                            return True
-                        # Priority 2: API returned an output_path in status response
+                        # 统一三级优先级：服务端写盘 / 拷贝 / HTTP 下载兜底
                         remote_path = status_data.get("output_path")
-                        if remote_path and os.path.exists(remote_path):
-                            print(f"Async TTS: task completed, copying from {remote_path}")
-                            shutil.copy2(remote_path, output_path)
-                            return True
-                        # Priority 3: Download via HTTP (fallback)
-                        print(f"Async TTS: task completed, downloading from {download_url}")
-                        dl_resp = requests.get(download_url, timeout=timeout)
-                        if dl_resp.status_code == 200:
-                            os.makedirs(os.path.dirname(output_path), exist_ok=True)
-                            with open(output_path, "wb") as fp:
-                                fp.write(dl_resp.content)
-                            return True
-                        print(f"Download failed: {dl_resp.status_code} {dl_resp.text[:200]}")
-                        return False
+                        return finalize_tts_output(
+                            output_path,
+                            remote_path=remote_path,
+                            download_url=download_url,
+                            timeout=timeout,
+                        )
                     elif status == "failed":
                         print(f"Async TTS: task failed: {status_data.get('message', '')}")
                         return False
@@ -364,6 +354,24 @@ class SDKTTS(TTSBase):
 _engines = {}
 
 
+def _engine_concurrency(iface: Optional[dict]) -> int:
+    """读取 TTS 引擎配置的并发合成上限（config.max_concurrent，默认 1）。"""
+    if not iface:
+        return 1
+    cfg = iface.get("config", {}) or {}
+    try:
+        value = int(cfg.get("max_concurrent", 1) or 1)
+    except (TypeError, ValueError):
+        value = 1
+    return max(1, value)
+
+
+def get_tts_engine_concurrency(engine_id: str) -> int:
+    """返回指定 TTS 引擎配置的并发合成上限（来自接口 config.max_concurrent）。"""
+    mgr = get_tts_interface_manager()
+    return _engine_concurrency(mgr.get(engine_id))
+
+
 def get_tts_engine(name: str) -> TTSBase:
     global _engines
     if name in _engines:
@@ -381,6 +389,8 @@ def get_tts_engine(name: str) -> TTSBase:
     else:
         engine = GenericTTS(name)
 
+    # 绑定引擎并发合成上限（来自接口 config.max_concurrent，默认 1），供调用方并发请求
+    engine.concurrency = _engine_concurrency(iface)
     _engines[name] = engine
     return engine
 

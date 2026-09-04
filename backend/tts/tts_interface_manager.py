@@ -5,6 +5,52 @@ import uuid
 import subprocess
 import threading
 from typing import Optional, Dict, List, Any
+import shutil
+import requests
+
+
+def finalize_tts_output(output_path: str, *, remote_path: Optional[str] = None,
+                        download_url: Optional[str] = None,
+                        content: Optional[bytes] = None, timeout: int = 120) -> bool:
+    """统一 TTS 落盘三级优先级：服务端写盘 / 拷贝 / HTTP 下载兜底。
+
+    调用方按引擎能力选择性传入：
+        1) output_path 已存在且非空 -> 视为服务端已按该路径直接落盘，直接复用；
+        2) remote_path   -> 服务端返回的同机文件路径，shutil.copy2 拷贝过来；
+        3) download_url  -> 通过该 URL 发起 HTTP GET 下载成品并写盘；
+        4) content       -> 已知音频字节（响应体 / base64 解码后），直接写盘。
+    返回 output_path 是否非空存在（即落盘成功）。
+    """
+    # 1) 服务端按传入 output_path 直接写盘
+    if os.path.isfile(output_path) and os.path.getsize(output_path) > 0:
+        return True
+    # 2) 拷贝服务端返回的同机路径
+    if remote_path and os.path.isfile(remote_path) and os.path.getsize(remote_path) > 0:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        shutil.copy2(remote_path, output_path)
+        return os.path.isfile(output_path) and os.path.getsize(output_path) > 0
+    # 3) HTTP 下载成品
+    if download_url:
+        try:
+            dl = requests.get(download_url, timeout=timeout)
+        except Exception as e:
+            print(f"TTS download failed: {e}")
+            return False
+        if dl.status_code == 200 and dl.content:
+            os.makedirs(os.path.dirname(output_path), exist_ok=True)
+            with open(output_path, "wb") as fp:
+                fp.write(dl.content)
+            return os.path.getsize(output_path) > 0
+        print(f"TTS download audio failed: {dl.status_code}")
+        return False
+    # 4) 直接写已知字节
+    if content:
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        with open(output_path, "wb") as fp:
+            fp.write(content)
+        return os.path.getsize(output_path) > 0
+    return False
+
 
 INTERFACES_FILE = os.path.join(
     os.path.dirname(__file__), "..", "config", "tts_interfaces.json"
