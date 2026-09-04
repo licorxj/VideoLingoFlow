@@ -159,9 +159,11 @@ def synthesize(
 
     try:
         # 1. 提交声音克隆任务（Form 表单，本地路径模式）
+        #    直接把 output_path 传给引擎，由引擎把配音片段写盘到该路径
         form = {
             "text": text,
             "ref_audio_path": ref_audio,
+            "output_path": os.path.abspath(output_path),
             "lang": lang or "zh",
             "temperature": float(temperature),
             "top_p": float(top_p),
@@ -197,12 +199,23 @@ def synthesize(
             logger.error(f"Confucius4-TTS: timeout after {timeout}s waiting for task {task_id}")
             return False
 
-        # 3. 下载音频写入 output_path（统一落盘助手：HTTP 下载兜底）
+        # 3. 产物校验：引擎已按 output_path 直接写盘，优先校验本地文件；
+        #    若因版本/异常情况缺失产物，再回退 HTTP 下载兜底
+        if os.path.exists(output_path):
+            logger.info(
+                f"Confucius4-TTS synthesized to {output_path}, "
+                f"rtf={status_data.get('rtf')}"
+            )
+            return True
+        logger.warning(
+            f"Confucius4-TTS: engine did not write {output_path}, "
+            f"falling back to HTTP download"
+        )
         download_url = f"{base_url}/api/v1/voice/download/{task_id}"
         ok = finalize_tts_output(output_path, download_url=download_url, timeout=timeout)
         if ok:
             logger.info(
-                f"Confucius4-TTS synthesized to {output_path}, "
+                f"Confucius4-TTS synthesized to {output_path} (via download), "
                 f"rtf={status_data.get('rtf')}"
             )
         return ok
