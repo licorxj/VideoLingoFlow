@@ -1,9 +1,9 @@
 {
   "id": "hyperframe_render",
-  "name": "HyperFrames 渲染",
+  "name": "HyperFrames 单文件渲染",
   "version": "1.0.0",
-  "category": "ai_gen",
-  "description": "使用 HyperFrames CLI 将 HTML 合成脚本渲染为 MP4 视频",
+  "category": "hyperframes",
+  "description": "【自定义】直接把一段 HTML 合成脚本交给 HyperFrames CLI 渲染成片，不经过 BRIEF.md 与工作流路由；成片由工作流驱动时使用「HyperFrames 渲染」节点",
   "icon": "Film",
   "color": "#8b5cf6",
   "inputs": [

@@ -3707,6 +3707,53 @@ _HYPERFRAMES_NODES = [
 BUILTIN_NODE_TYPES.extend(_HYPERFRAMES_NODES)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# AIGC 流程链节点
+# ─────────────────────────────────────────────────────────────────────────────
+BUILTIN_NODE_TYPES.append(
+    {
+        "id": "image_grid_split",
+        "name": "图片宫格切割",
+        "execution_domain": "thread",
+        "category": "aigc",
+        "description": (
+            "把宫格组合图按 N×N 切成单张图片：支持 4/9/16/25 宫格，"
+            "可设置外框收缩与内部切缝收缩像素，输出切割后的图片路径列表"
+        ),
+        "icon": "Grid3x3",
+        "color": "#22c55e",
+        "inputs": [
+            {"id": "image", "label": "图片", "type": "image", "required": True},
+        ],
+        "outputs": [
+            {"id": "images", "label": "图片列表", "type": "list"},
+        ],
+        "defaultConfig": {
+            "grid": "4",
+            "outer_shrink": 0,
+            "inner_shrink": 5,
+        },
+        "configFields": [
+            {
+                "key": "grid", "label": "宫格选择", "type": "select", "colSpan": "full",
+                "options": [
+                    {"value": "4", "label": "4宫格（2×2）"},
+                    {"value": "9", "label": "9宫格（3×3）"},
+                    {"value": "16", "label": "16宫格（4×4）"},
+                    {"value": "25", "label": "25宫格（5×5）"},
+                ],
+            },
+            {"key": "outer_shrink", "label": "外框收缩像素", "type": "number",
+             "min": 0, "step": 1, "colSpan": "half", "defaultValue": 0,
+             "description": "切割前整图四边向内收缩的像素，用于去掉图片外框，默认 0"},
+            {"key": "inner_shrink", "label": "内部切割收缩像素", "type": "number",
+             "min": 0, "step": 1, "colSpan": "half", "defaultValue": 5,
+             "description": "每个内部切缝两侧各向内收缩的像素，用于去掉格间接缝；与图片外边缘重合的边不收缩，默认 5"},
+        ],
+    }
+)
+
+
 BUILTIN_NODE_IDS = {node["id"] for node in BUILTIN_NODE_TYPES}
 DELETED_BUILTIN_NODE_IDS_FILE = Path(__file__).parent / "deleted_builtin_node_ids.json"
 

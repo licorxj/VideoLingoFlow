@@ -85,6 +85,7 @@ from backend.steps.s_hyperframes_creative import S_HyperFramesCreative
 from backend.steps.s_hyperframes_render import S_HyperFramesRender
 from backend.steps.s_hyperframes_cli import S_HyperFramesCli
 from backend.steps.s_hyperframes_agent import S_HyperFramesAgent
+from backend.steps.s_image_grid_split import S_ImageGridSplit
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -232,6 +233,9 @@ _STEPS = {
     "seedream_grid": S_SeedreamGrid(),
     "seedream_websearch": S_SeedreamWebSearch(),
     "seedream_layer": S_SeedreamLayer(),
+    # 图片宫格切割（AIGC 流程链 分组）
+    "image_grid_split": S_ImageGridSplit(),
+    "s_image_grid_split": S_ImageGridSplit(),
     # HyperFrames 系列节点（HTML 合成 → 渲染成片，置于 HyperFrames 节点 分组）
     "s_hyperframes_creative": S_HyperFramesCreative(),
     "hyperframes_creative": S_HyperFramesCreative(),

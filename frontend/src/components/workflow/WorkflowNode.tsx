@@ -26,6 +26,7 @@ import {
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
   Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
+  Grid3x3,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
@@ -41,7 +42,7 @@ const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
-  Eraser, Type,
+  Eraser, Type, Grid3x3,
 };
 
 /** 节点头部顶栏：只有在该元素上按下鼠标才允许拖动节点，避免正文内框选/拖动误触移动节点 */

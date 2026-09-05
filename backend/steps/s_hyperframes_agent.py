@@ -17,7 +17,6 @@ from backend.steps.s_hyperframes_base import (
     HyperFramesBase,
     _config,
     _inputs,
-    _node_id,
     _rel_or_abs,
 )
 from backend.utils import hyperframes as hf
@@ -50,7 +49,6 @@ class S_HyperFramesAgent(HyperFramesBase):
     def run(self, task_dir: str, callback: Optional[Callable] = None,
             cancel_callback: Optional[Callable] = None) -> dict:
         config, inputs = _config(self), _inputs(self)
-        node_id = _node_id(self)
         span = str(config.get("span") or "full")
         if span not in ("full", "creative", "render"):
             raise ValueError(f"未知的执行跨度：{span}")

@@ -11,16 +11,12 @@
 from __future__ import annotations
 
 import json
-import os
 import shutil
 from pathlib import Path
 from typing import Any, Callable, Optional
 
 from backend.steps.base_step import BaseStep
 from backend.utils import hyperframes as hf
-
-# 成片输出端口的扩展名白名单
-_VIDEO_EXTS = (".mp4", ".webm", ".mov", ".mkv")
 
 
 def _config(node: Any) -> dict:
@@ -140,7 +136,6 @@ class HyperFramesBase(BaseStep):
         不发起 Pi 会话；``mode=create`` 由 Pi 会话按意图访谈写简报。
         """
         low, high = progress_range
-        node_id = _node_id(self)
         project_dir = self._project_dir(task_dir, config, inputs)
         cli, package = self._cli_settings(config)
         mode = str(config.get("mode") or "create").strip().lower()
@@ -198,7 +193,6 @@ class HyperFramesBase(BaseStep):
             # 内联文本（非文件路径）直接当作主题描述
             if inline and not hf.resolve_input_path(task_dir, inline):
                 subject = inline
-            materials.setdefault("subject_hint", materials.get("source", ""))
 
         system_prompt = hf.build_creative_prompt(
             project_dir=project_dir,
@@ -266,13 +260,17 @@ class HyperFramesBase(BaseStep):
         node_id = _node_id(self)
         creative = creative or {}
 
+        # 上游 project_dir 端口 > 创意阶段产出的目录 > 配置/默认目录
+        linked_project = hf.resolve_input_path(task_dir, inputs.get("project_dir"))
+        if linked_project is not None and not linked_project.is_dir():
+            linked_project = None
+        inherited = creative.get("project_dir") or ""
         project_dir = (
-            hf.resolve_input_path(task_dir, inputs.get("project_dir"))
-            or (Path(creative["project_dir"]) if creative.get("project_dir") else None)
+            linked_project
+            or (Path(inherited) if inherited and Path(inherited).is_dir() else None)
             or self._project_dir(task_dir, config, inputs)
         )
-        if not project_dir.is_dir():
-            project_dir.mkdir(parents=True, exist_ok=True)
+        project_dir.mkdir(parents=True, exist_ok=True)
 
         def progress(percent: int, message: str) -> None:
             if callback:
