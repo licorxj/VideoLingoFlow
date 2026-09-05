@@ -6,6 +6,8 @@ import json
 import os
 from pathlib import Path
 
+from backend.utils.hyperframes import WORKFLOW_ROUTES
+
 
 BUILTIN_NODE_TYPES = [
     {
@@ -870,6 +872,7 @@ BUILTIN_NODE_TYPES = [
             "file_prefix": "",
             "filter_punctuation": False,
             "punctuation_replace_mode": "space",
+            "processing_language": "from_source",
         },
         "configFields": [
             {"key": "file_prefix", "label": "文件名前缀", "type": "text", "placeholder": "可选，如 video1_"},
@@ -882,6 +885,26 @@ BUILTIN_NODE_TYPES = [
                 "options": [
                     {"value": "space", "label": "空格"},
                     {"value": "remove", "label": "去除"},
+                ],
+            },
+            {
+                "key": "processing_language",
+                "label": "处理语言",
+                "type": "select",
+                "dependsOn": "filter_punctuation",
+                "options": [
+                    {"value": "from_source", "label": "来自输入的源语言"},
+                    {"value": "from_target", "label": "来自输入的目标语言"},
+                    {"value": "auto", "label": "自动检测 (auto)"},
+                    {"value": "zh", "label": "中文 (zh)"},
+                    {"value": "en", "label": "英语 (en)"},
+                    {"value": "ja", "label": "日语 (ja)"},
+                    {"value": "ko", "label": "韩语 (ko)"},
+                    {"value": "fr", "label": "法语 (fr)"},
+                    {"value": "de", "label": "德语 (de)"},
+                    {"value": "es", "label": "西班牙语 (es)"},
+                    {"value": "pt", "label": "葡萄牙语 (pt)"},
+                    {"value": "ru", "label": "俄语 (ru)"},
                 ],
             },
         ],
@@ -938,6 +961,7 @@ BUILTIN_NODE_TYPES = [
             "tts_mode": ["preset_voice"],
             "tts_engine": "",
             "clone_source": "fixed",
+            "cc_colloquial_desc": "",
             "ref_audio_path": "",
             "ref_audio_role_1": "",
             "ref_audio_role_2": "",
@@ -971,6 +995,8 @@ BUILTIN_NODE_TYPES = [
                 {"value": "per_segment", "label": "原文逐段参考"},
             ]},
             {"key": "ref_audio_path", "label": "参考音频路径", "type": "audio-selector", "dependsOn": "clone_source", "dependsValue": "fixed", "placeholder": "选择参考音频文件", "fileFilter": ["wav", "mp3", "flac", "ogg"]},
+            {"key": "cc_colloquial_desc", "label": "口语化描述", "type": "text", "dependsOn": "tts_mode", "dependsAnyValues": ["controllable_clone"], "placeholder": "例如：用四川话说", "colSpan": "full",
+             "description": "拼接在可控克隆指令最前面，自动补逗号分隔；留空不拼接"},
             {"key": "ref_audio_role_1", "label": "角色1参考音频", "type": "audio-selector", "dependsOn": "clone_source", "dependsValue": "multi_role", "placeholder": "角色1的参考音频", "fileFilter": ["wav", "mp3", "flac", "ogg"]},
             {"key": "ref_audio_role_2", "label": "角色2参考音频", "type": "audio-selector", "dependsOn": "clone_source", "dependsValue": "multi_role", "placeholder": "角色2的参考音频", "fileFilter": ["wav", "mp3", "flac", "ogg"]},
             {"key": "ref_audio_role_3", "label": "角色3参考音频", "type": "audio-selector", "dependsOn": "clone_source", "dependsValue": "multi_role", "placeholder": "角色3的参考音频", "fileFilter": ["wav", "mp3", "flac", "ogg"]},
@@ -3294,6 +3320,391 @@ _SEEDANCE_NODES = [
         "autovideo", need_refs=True, ref_ports=3),
 ]
 BUILTIN_NODE_TYPES.extend(_SEEDANCE_NODES)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HyperFrames 系列节点
+#
+# HyperFrames 用 HTML 描述合成、用 `npx hyperframes` 渲染成片。本组节点把它拆成
+# 「创意 → 渲染」两步：创意节点收敛出 BRIEF.md（或加载已有 BRIEF.md 复用既有
+# 工作流），渲染节点按简报构建并渲染成片；工具节点直接调用 CLI 的附属能力；
+# 智能体节点是复合节点，直接驱动本项目的 piagent（小 Pi）框架跑完整条链路。
+# 技能源码：backend/config/agent/skills/hyperframes/
+# ─────────────────────────────────────────────────────────────────────────────
+_HF_WORKFLOW_OPTIONS = [{"value": "", "label": "自动路由（由意图访谈决定）"}]
+_HF_WORKFLOW_OPTIONS += [
+    {"value": key, "label": f"/{key} — {label}"} for key, label in WORKFLOW_ROUTES.items()
+]
+
+_HF_ASPECT_OPTIONS = [
+    {"value": "auto", "label": "按投放平台自动推断"},
+    {"value": "16:9", "label": "16:9 横屏（YouTube/嵌入）"},
+    {"value": "9:16", "label": "9:16 竖屏（短视频）"},
+    {"value": "1:1", "label": "1:1 方形（社交信息流）"},
+    {"value": "4:3", "label": "4:3"},
+    {"value": "21:9", "label": "21:9 宽屏"},
+]
+
+
+def _hf_pi_fields(settle_default: int = 1800) -> list:
+    """HyperFrames 由小 Pi 驱动的节点共用的工程/运行时设置。"""
+    return [
+        {
+            "key": "project_dir", "label": "项目目录", "type": "text", "colSpan": "full",
+            "placeholder": "留空则使用任务缓存下的 hyperframes_<节点id>",
+            "description": "HyperFrames 工程目录；留空或目录为空时由节点自动初始化。上游 project_dir 端口优先于此处配置",
+        },
+        {"key": "update_skills", "label": "执行前刷新技能", "type": "checkbox", "colSpan": "half",
+         "description": "执行前运行 npx hyperframes skills update，保证目标工作流技能已安装"},
+        {"key": "skills_timeout", "label": "技能刷新超时(秒)", "type": "number", "min": 30, "max": 3600, "colSpan": "half"},
+        {"key": "settle_timeout", "label": "智能体会话超时(秒)", "type": "number", "min": 60, "max": 7200, "colSpan": "half"},
+        {"key": "cli_command", "label": "CLI 执行程序", "type": "text", "colSpan": "half", "placeholder": "npx"},
+        {"key": "cli_package", "label": "CLI 包", "type": "text", "colSpan": "half", "placeholder": "hyperframes@latest"},
+        {"key": "extra_instruction", "label": "补充要求", "type": "textarea", "colSpan": "full",
+         "placeholder": "追加给智能体的要求，例如「不要用真实品牌 Logo」「控制在 45 秒内」"},
+    ]
+
+
+_HYPERFRAMES_NODES = [
+    {
+        "id": "hyperframes_creative",
+        "name": "HyperFrames 创意",
+        "execution_domain": "process",
+        "category": "hyperframes",
+        "description": (
+            "两步走第一步：把 URL / 主题 / PR / 素材收敛成一份 BRIEF.md 创意简报；"
+            "支持加载已有 BRIEF.md 稳定复用既有工作流，不重复做意图访谈"
+        ),
+        "icon": "Clapperboard",
+        "color": "#f43f5e",
+        "inputs": [
+            {"id": "source", "label": "素材/主题", "type": "any", "required": False},
+            {"id": "assets", "label": "附加素材", "type": "any", "required": False},
+            {"id": "brief", "label": "已有 BRIEF.md", "type": "filepath", "required": False},
+        ],
+        "outputs": [
+            {"id": "brief", "label": "BRIEF.md", "type": "filepath"},
+            {"id": "project_dir", "label": "项目目录", "type": "filepath"},
+            {"id": "summary", "label": "创意摘要", "type": "text"},
+        ],
+        "defaultConfig": {
+            "mode": "create",
+            "subject": "",
+            "brief_path": "",
+            "workflow": "",
+            "run_mode": "collaborative",
+            "style_preset": "",
+            "aspect": "auto",
+            "language": "",
+            "project_dir": "",
+            "update_skills": True,
+            "skills_timeout": 600,
+            "settle_timeout": 1800,
+            "cli_command": "npx",
+            "cli_package": "hyperframes@latest",
+            "extra_instruction": "",
+        },
+        "configFields": [
+            {
+                "key": "mode", "label": "运行模式", "type": "select", "colSpan": "full",
+                "options": [
+                    {"value": "create", "label": "新建创意简报（走意图访谈）"},
+                    {"value": "load", "label": "加载已有 BRIEF.md（复用既有工作流）"},
+                ],
+                "description": "加载模式不调用大模型，直接把已有简报装入项目目录并解析其中的工作流路由",
+            },
+            {
+                "key": "brief_path", "label": "BRIEF.md 路径", "type": "file", "colSpan": "full",
+                "fileFilter": ["md"], "placeholder": "选择已有的 BRIEF.md",
+                "dependsOn": "mode", "dependsValue": "load",
+            },
+            {
+                "key": "subject", "label": "创作主题", "type": "textarea", "colSpan": "full",
+                "placeholder": "这段视频要讲什么？可以是一个主题、一段脚本、一个产品描述",
+                "description": "留空时优先使用「素材/主题」端口传入的内联文本",
+                "dependsOn": "mode", "dependsValue": "create",
+            },
+            {
+                "key": "workflow", "label": "工作流路由", "type": "select", "colSpan": "full",
+                "options": _HF_WORKFLOW_OPTIONS,
+                "description": "留空则由意图访谈按输入自动路由；加载已有 BRIEF.md 时以简报里的 workflow 字段为准",
+            },
+            {
+                "key": "run_mode", "label": "协作模式", "type": "select", "colSpan": "half",
+                "options": [
+                    {"value": "collaborative", "label": "协作（关键选择先确认）"},
+                    {"value": "autonomous", "label": "自主（不再追问，直接产出）"},
+                ],
+                "dependsOn": "mode", "dependsValue": "create",
+            },
+            {
+                "key": "aspect", "label": "画幅", "type": "select", "colSpan": "half",
+                "options": _HF_ASPECT_OPTIONS,
+                "dependsOn": "mode", "dependsValue": "create",
+            },
+            {
+                "key": "style_preset", "label": "风格预设", "type": "text", "colSpan": "half",
+                "placeholder": "留空由智能体按内容挑选",
+                "dependsOn": "mode", "dependsValue": "create",
+            },
+            {
+                "key": "language", "label": "旁白/字幕语言", "type": "text", "colSpan": "half",
+                "placeholder": "留空跟随用户语言",
+                "dependsOn": "mode", "dependsValue": "create",
+            },
+            *_hf_pi_fields(),
+        ],
+    },
+    {
+        "id": "hyperframes_render",
+        "name": "HyperFrames 渲染",
+        "execution_domain": "process",
+        "category": "hyperframes",
+        "description": (
+            "两步走第二步：读取 BRIEF.md，按其中的工作流路由构建 HTML 合成并渲染成片；"
+            "支持只构建 / 只渲染 / 只校验，可勾选渲染后 publish 出分享链接"
+        ),
+        "icon": "Film",
+        "color": "#ef4444",
+        "inputs": [
+            {"id": "brief", "label": "BRIEF.md", "type": "filepath", "required": False},
+            {"id": "project_dir", "label": "项目目录", "type": "filepath", "required": False},
+            {"id": "assets", "label": "附加素材", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "video", "label": "成片", "type": "video"},
+            {"id": "project_dir", "label": "项目目录", "type": "filepath"},
+            {"id": "brief", "label": "BRIEF.md", "type": "filepath"},
+            {"id": "url", "label": "发布链接", "type": "url"},
+        ],
+        "defaultConfig": {
+            "stage": "build_and_render",
+            "workflow": "",
+            "brief_path": "",
+            "output_name": "output.mp4",
+            "output_path": "",
+            "publish": False,
+            "project_dir": "",
+            "update_skills": True,
+            "skills_timeout": 600,
+            "settle_timeout": 3600,
+            "cli_command": "npx",
+            "cli_package": "hyperframes@latest",
+            "extra_instruction": "",
+        },
+        "configFields": [
+            {
+                "key": "stage", "label": "执行阶段", "type": "select", "colSpan": "full",
+                "options": [
+                    {"value": "build_and_render", "label": "构建 + 渲染（默认）"},
+                    {"value": "build", "label": "只构建合成，不渲染"},
+                    {"value": "render", "label": "只对已有合成渲染"},
+                    {"value": "validate", "label": "只校验（lint / check / validate）"},
+                ],
+            },
+            {
+                "key": "workflow", "label": "工作流路由", "type": "select", "colSpan": "full",
+                "options": _HF_WORKFLOW_OPTIONS,
+                "description": "留空则沿用 BRIEF.md 中记录的 workflow 字段",
+            },
+            {
+                "key": "brief_path", "label": "BRIEF.md 路径", "type": "file", "colSpan": "full",
+                "fileFilter": ["md"], "placeholder": "留空则读取项目目录或上游 brief 端口",
+            },
+            {"key": "output_name", "label": "成片文件名", "type": "text", "colSpan": "half", "placeholder": "output.mp4"},
+            {"key": "output_path", "label": "成片查找路径", "type": "text", "colSpan": "half",
+             "placeholder": "留空自动在 out/ dist/ render/ 等目录查找最新成片"},
+            {"key": "publish", "label": "渲染后发布分享链接", "type": "checkbox", "colSpan": "full",
+             "description": "勾选后渲染完成会执行 publish，链接从 url 端口输出"},
+            *_hf_pi_fields(settle_default=3600),
+        ],
+    },
+    {
+        "id": "hyperframes_cli",
+        "name": "HyperFrames 工具",
+        "execution_domain": "process",
+        "category": "hyperframes",
+        "description": (
+            "附属工具调用节点：直接在工作目录执行一条 HyperFrames CLI 命令，"
+            "覆盖技能安装/体检、工程初始化、网站抓取、Registry 组件、关键帧诊断、校验、升级、预览、渲染与发布"
+        ),
+        "icon": "Wrench",
+        "color": "#f59e0b",
+        "inputs": [
+            {"id": "project_dir", "label": "项目目录", "type": "filepath", "required": False},
+            {"id": "input", "label": "附加输入", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "output", "label": "执行日志", "type": "filepath"},
+            {"id": "stdout", "label": "输出文本", "type": "text"},
+        ],
+        "defaultConfig": {
+            "command": "check",
+            "args": "",
+            "custom_args": "",
+            "skill_names": "",
+            "block": "",
+            "url": "",
+            "project_dir": "",
+            "timeout": 1800,
+            "cli_command": "npx",
+            "cli_package": "hyperframes@latest",
+        },
+        "configFields": [
+            {
+                "key": "command", "label": "子命令", "type": "select", "colSpan": "full",
+                "options": [
+                    {"value": "init", "label": "init — 初始化工程"},
+                    {"value": "skills_update", "label": "skills update — 安装/刷新技能"},
+                    {"value": "skills_check", "label": "skills check — 技能体检"},
+                    {"value": "add", "label": "add — 安装 Registry 组件"},
+                    {"value": "capture", "label": "capture — 抓取网站"},
+                    {"value": "keyframes", "label": "keyframes — 关键帧诊断"},
+                    {"value": "lint", "label": "lint — 代码检查"},
+                    {"value": "validate", "label": "validate — 结构校验"},
+                    {"value": "check", "label": "check — 工程体检"},
+                    {"value": "upgrade", "label": "upgrade — 升级工程 CLI 版本"},
+                    {"value": "doctor", "label": "doctor — 环境诊断"},
+                    {"value": "preview", "label": "preview — 启动预览"},
+                    {"value": "render", "label": "render — 渲染成片"},
+                    {"value": "publish", "label": "publish — 发布分享链接"},
+                    {"value": "custom", "label": "custom — 自定义子命令"},
+                ],
+            },
+            {"key": "skill_names", "label": "技能名称", "type": "text", "colSpan": "full",
+             "placeholder": "空格或逗号分隔，留空只刷新核心技能集",
+             "dependsOn": "command", "dependsValue": "skills_update"},
+            {"key": "block", "label": "Registry 组件名", "type": "text", "colSpan": "full",
+             "placeholder": "如 data-chart / device-mockup",
+             "dependsOn": "command", "dependsValue": "add"},
+            {"key": "url", "label": "目标网址", "type": "text", "colSpan": "full",
+             "placeholder": "https://example.com",
+             "dependsOn": "command", "dependsValue": "capture"},
+            {"key": "custom_args", "label": "完整参数", "type": "textarea", "colSpan": "full",
+             "placeholder": "直接填写子命令与参数，如：skills update pr-to-video figma",
+             "dependsOn": "command", "dependsValue": "custom"},
+            {"key": "args", "label": "附加参数", "type": "text", "colSpan": "full",
+             "placeholder": "空格分隔，如：--json --concurrency 4",
+             "dependsOn": "command", "dependsValue": ["init", "skills_update", "skills_check", "keyframes",
+                                                      "lint", "validate", "check", "upgrade", "doctor",
+                                                      "preview", "render", "publish"]},
+            {"key": "project_dir", "label": "工作目录", "type": "text", "colSpan": "full",
+             "placeholder": "留空则使用任务缓存下的 hyperframes_<节点id>",
+             "description": "命令在此目录内执行；上游 project_dir 端口优先于此处配置"},
+            {"key": "timeout", "label": "超时(秒)", "type": "number", "min": 30, "max": 21600, "colSpan": "half"},
+            {"key": "cli_command", "label": "CLI 执行程序", "type": "text", "colSpan": "half", "placeholder": "npx"},
+            {"key": "cli_package", "label": "CLI 包", "type": "text", "colSpan": "half", "placeholder": "hyperframes@latest"},
+        ],
+    },
+    {
+        "id": "hyperframes_agent",
+        "name": "HyperFrames 智能体",
+        "execution_domain": "process",
+        "category": "hyperframes",
+        "description": (
+            "复合节点：直接驱动本项目的小 Pi（piagent）框架，一个节点跑完「创意 → 渲染」整条链路；"
+            "检测到已有 BRIEF.md 时自动按加载模式复用既有工作流"
+        ),
+        "icon": "Bot",
+        "color": "#a855f7",
+        "inputs": [
+            {"id": "source", "label": "素材/主题", "type": "any", "required": False},
+            {"id": "assets", "label": "附加素材", "type": "any", "required": False},
+            {"id": "brief", "label": "已有 BRIEF.md", "type": "filepath", "required": False},
+        ],
+        "outputs": [
+            {"id": "video", "label": "成片", "type": "video"},
+            {"id": "brief", "label": "BRIEF.md", "type": "filepath"},
+            {"id": "project_dir", "label": "项目目录", "type": "filepath"},
+            {"id": "text", "label": "执行摘要", "type": "text"},
+        ],
+        "defaultConfig": {
+            "span": "full",
+            "subject": "",
+            "brief_path": "",
+            "workflow": "",
+            "run_mode": "collaborative",
+            "style_preset": "",
+            "aspect": "auto",
+            "language": "",
+            "stage": "build_and_render",
+            "output_name": "output.mp4",
+            "output_path": "",
+            "publish": False,
+            "project_dir": "",
+            "update_skills": True,
+            "skills_timeout": 600,
+            "settle_timeout": 3600,
+            "cli_command": "npx",
+            "cli_package": "hyperframes@latest",
+            "extra_instruction": "",
+        },
+        "configFields": [
+            {
+                "key": "span", "label": "执行跨度", "type": "select", "colSpan": "full",
+                "options": [
+                    {"value": "full", "label": "创意 + 渲染（完整链路）"},
+                    {"value": "creative", "label": "只做创意"},
+                    {"value": "render", "label": "只做渲染"},
+                ],
+            },
+            {"key": "subject", "label": "创作主题", "type": "textarea", "colSpan": "full",
+             "placeholder": "这段视频要讲什么？填写后即使存在旧简报也会先刷新创意",
+             "dependsOn": "span", "dependsValue": ["full", "creative"]},
+            {"key": "brief_path", "label": "已有 BRIEF.md 路径", "type": "file", "colSpan": "full",
+             "fileFilter": ["md"], "placeholder": "选择已有的 BRIEF.md，命中即复用既有工作流",
+             "description": "也可通过 brief 输入端口接入；两者任一命中就跳过意图访谈"},
+            {
+                "key": "workflow", "label": "工作流路由", "type": "select", "colSpan": "full",
+                "options": _HF_WORKFLOW_OPTIONS,
+                "description": "留空则由意图访谈自动路由，或沿用已有 BRIEF.md 里的 workflow 字段",
+            },
+            {
+                "key": "run_mode", "label": "协作模式", "type": "select", "colSpan": "half",
+                "options": [
+                    {"value": "collaborative", "label": "协作（关键选择先确认）"},
+                    {"value": "autonomous", "label": "自主（不再追问，直接产出）"},
+                ],
+                "dependsOn": "span", "dependsValue": ["full", "creative"],
+            },
+            {
+                "key": "aspect", "label": "画幅", "type": "select", "colSpan": "half",
+                "options": _HF_ASPECT_OPTIONS,
+                "dependsOn": "span", "dependsValue": ["full", "creative"],
+            },
+            {
+                "key": "style_preset", "label": "风格预设", "type": "text", "colSpan": "half",
+                "placeholder": "留空由智能体按内容挑选",
+                "dependsOn": "span", "dependsValue": ["full", "creative"],
+            },
+            {
+                "key": "language", "label": "旁白/字幕语言", "type": "text", "colSpan": "half",
+                "placeholder": "留空跟随用户语言",
+                "dependsOn": "span", "dependsValue": ["full", "creative"],
+            },
+            {
+                "key": "stage", "label": "渲染阶段", "type": "select", "colSpan": "full",
+                "options": [
+                    {"value": "build_and_render", "label": "构建 + 渲染（默认）"},
+                    {"value": "build", "label": "只构建合成，不渲染"},
+                    {"value": "render", "label": "只对已有合成渲染"},
+                    {"value": "validate", "label": "只校验（lint / check / validate）"},
+                ],
+                "dependsOn": "span", "dependsValue": ["full", "render"],
+            },
+            {"key": "output_name", "label": "成片文件名", "type": "text", "colSpan": "half",
+             "placeholder": "output.mp4",
+             "dependsOn": "span", "dependsValue": ["full", "render"]},
+            {"key": "output_path", "label": "成片查找路径", "type": "text", "colSpan": "half",
+             "placeholder": "留空自动在 out/ dist/ render/ 等目录查找最新成片",
+             "dependsOn": "span", "dependsValue": ["full", "render"]},
+            {"key": "publish", "label": "渲染后发布分享链接", "type": "checkbox", "colSpan": "full",
+             "dependsOn": "span", "dependsValue": ["full", "render"]},
+            *_hf_pi_fields(settle_default=3600),
+        ],
+    },
+]
+BUILTIN_NODE_TYPES.extend(_HYPERFRAMES_NODES)
 
 
 BUILTIN_NODE_IDS = {node["id"] for node in BUILTIN_NODE_TYPES}

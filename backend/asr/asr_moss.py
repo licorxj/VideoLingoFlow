@@ -265,6 +265,37 @@ class MossTranscribeDiarizeLocal(ASRBase):
             })
         return words
 
+    # ── 音频时长估算（用于按长度放大生成预算，避免长音频被截断）──────────
+    @staticmethod
+    def _estimate_duration(path: str) -> float:
+        """用 ffprobe 估算音频/视频时长（秒），失败返回 0。"""
+        try:
+            import subprocess
+            import json as _json
+            out = subprocess.run(
+                ["ffprobe", "-v", "error",
+                 "-show_entries", "format=duration",
+                 "-of", "json", path],
+                capture_output=True, text=True, timeout=30,
+            )
+            d = _json.loads(out.stdout).get("format", {}).get("duration")
+            if d:
+                return float(d)
+        except Exception:
+            pass
+        return 0.0
+
+    @staticmethod
+    def _max_new_tokens_for_duration(duration: float) -> int:
+        """按音频时长估算安全生成预算。
+
+        MOSS 单次推理联合输出带时间戳/说话人标签的转录文本，token 量随时长近似
+        线性增长。固定 2048 对长音频（>~3 分钟）会提前耗尽生成预算，导致该 chunk
+        尾部（甚至中部）内容被截断而丢失，表现为结果中出现断层。这里按 ~14
+        token/秒 线性放大并保留余量；下限 2048 兼容极短视频。
+        """
+        return max(2048, int(duration * 14) + 512)
+
     # ── 主入口 ──────────────────────────────────────────────────────────
     def transcribe(
         self,
@@ -295,6 +326,11 @@ class MossTranscribeDiarizeLocal(ASRBase):
         prompt = self._build_prompt(hotwords=hotwords, diarize=diarize)
         messages = build_transcription_messages(input_path, prompt=prompt)
 
+        # 按音频时长放大生成预算，避免长音频被 max_new_tokens 截断而丢中部/尾部
+        duration = self._estimate_duration(input_path)
+        max_new_tokens = self._max_new_tokens_for_duration(duration)
+        print(f"[MOSS] audio duration={duration:.1f}s, max_new_tokens={max_new_tokens}", flush=True)
+
         if callback:
             callback(35, "MOSS 推理中（识别 + 分离 + 对齐）...")
 
@@ -304,7 +340,7 @@ class MossTranscribeDiarizeLocal(ASRBase):
                 model,
                 processor,
                 messages,
-                max_new_tokens=2048,
+                max_new_tokens=max_new_tokens,
                 do_sample=False,
                 device=device,
                 dtype=dtype,

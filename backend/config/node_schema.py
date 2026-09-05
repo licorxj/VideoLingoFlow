@@ -16,6 +16,7 @@ NODE_CATEGORIES = [
     {"value": "utility", "label": "工具类节点", "color": "#f59e0b", "icon": "Wrench"},
     {"value": "file", "label": "文件操作类节点", "color": "#f97316", "icon": "FolderOpen"},
     {"value": "group_node", "label": "组合节点", "color": "#64748b", "icon": "Boxes"},
+    {"value": "hyperframes", "label": "HyperFrames 节点", "color": "#f43f5e", "icon": "Clapperboard"},
 ]
 
 PORT_TYPES = [

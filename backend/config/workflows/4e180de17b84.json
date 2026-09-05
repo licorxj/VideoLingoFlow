@@ -17,23 +17,30 @@
           "selectedTypes": [
             "video"
           ],
-          "videoPath": "M:/视频下载/西门子UG-NX-初学者教程-数控软件/02-Siemens NX- What's New in Sketcher ｜｜ NX 2306 Tutorials.mkv",
+          "videoPath": "M:/视频下载/西门子UG-NX-初学者教程-数控软件/03-Unigraphics NX - Creating points for Beginners ｜｜ NX 2306 Tutorials.mkv",
           "source_language": "en",
           "target_language": "zh",
           "copyInputs": true,
           "filePath": ""
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\input_video.mkv",
+          "languages": {
+            "source_language": "en",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 486
+        "height": 565
       },
       "selected": false,
       "dragging": false,
@@ -50,17 +57,19 @@
         "nodeType": "extract_audio",
         "label": "音频分离",
         "config": {},
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "audio": "output/extracted_audio_node_1_1780650299385.opus"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 230
+        "height": 309
       },
       "selected": false,
       "dragging": false,
@@ -77,27 +86,29 @@
         "nodeType": "summarize",
         "label": "内容总结",
         "config": {},
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "subtitle": "cache/summarize_result_node_1_1780948332813.json"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
-          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=28724",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
+          "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=50488",
           "[step_worker] step instance created: S04Summarize",
           "[step_worker] step_inputs keys=['text', 'language']",
           "[step_worker] node_config keys=(empty)",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1780948332813_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1780948332813_result.json, exiting 0"
         ],
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 322
+        "height": 400
       },
       "selected": false,
       "dragging": false,
@@ -119,27 +130,30 @@
           "processing_language": "from_input",
           "target_language": "from_input"
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "subtitle": "cache/translation_direct_node_1_1780954897405_zh.json",
+          "reflect": "cache/translation_reflect_node_1_1780954897405_zh.json"
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": "",
         "logLines": [
-          "[step_worker] start node_type=translate node_id=node_1_1780954897405 pid=47260",
+          "[step_worker] start node_type=translate node_id=node_1_1780954897405 pid=46556",
           "[step_worker] step instance created: S05Translate",
-          "[step_worker] step_inputs keys=['summary', 'subtitle', 'language', 'prompt_template']",
+          "[step_worker] step_inputs keys=['subtitle', 'summary', 'language', 'prompt_template']",
           "[step_worker] node_config keys=['translation_style', 'reflect_translate', 'processing_language', 'target_language']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
           "[Translate] Languages: en -> zh, reflect=True, batch_limit=3000, reflect_batch_limit=1500",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1780954897405_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1780954897405_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 420
+        "height": 530
       },
       "selected": false,
       "dragging": false,
@@ -149,8 +163,8 @@
       "id": "node_1_1781200299298",
       "type": "workflow",
       "position": {
-        "x": 1530,
-        "y": -1320
+        "x": 1605,
+        "y": -1275
       },
       "data": {
         "nodeType": "subtitle_gen",
@@ -158,17 +172,21 @@
         "config": {
           "file_prefix": "tran_"
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "subtitle": "output/tran_subtitles_node_1_1781200299298.srt",
+          "original": "output/tran_subtitles_original_node_1_1781200299298.srt",
+          "bilingual": "output/tran_subtitles_bilingual_node_1_1781200299298.srt"
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 258
+        "height": 398
       },
       "selected": false,
       "dragging": false,
@@ -178,8 +196,8 @@
       "id": "node_2_1781207780159",
       "type": "workflow",
       "position": {
-        "x": 2370,
-        "y": -465
+        "x": 2400,
+        "y": -585
       },
       "data": {
         "nodeType": "merge_sub_video",
@@ -190,17 +208,19 @@
           "fade_in": 0.5,
           "fade_out": 0.5
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "video": "output/video_with_subs_node_2_1781207780159.mp4"
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 574
+        "height": 653
       },
       "selected": false,
       "dragging": false,
@@ -210,8 +230,8 @@
       "id": "node_3_1781212794939",
       "type": "workflow",
       "position": {
-        "x": -1935,
-        "y": -300
+        "x": -2040,
+        "y": 30
       },
       "data": {
         "nodeType": "video_preview",
@@ -219,7 +239,7 @@
         "config": {
           "title": "原视频展示"
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
         "outputs": {},
@@ -229,7 +249,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 473
+        "height": 478
       },
       "selected": false,
       "dragging": false,
@@ -253,7 +273,7 @@
           "subtitlePosition": "bottom",
           "title": "翻译后视频"
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
         "outputs": {},
@@ -263,7 +283,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 230
+        "height": 428
       },
       "selected": false,
       "dragging": false,
@@ -293,27 +313,30 @@
           "overwrite_generate": true,
           "voice_role_1": "白桦"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
           "[S09] 分析变速倍数",
-          "  - 需要变速: 138 段",
-          "  - 超出最大变速(1.35x): 8 段",
-          "[S09] 最终溢出段数: 8",
-          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\dub_task_node_1_1781709944783.json",
-          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\dub_task_node_1_1781709944783.csv",
+          "  - 需要变速: 62 段",
+          "  - 超出最大变速(1.35x): 4 段",
+          "[S09] 最终溢出段数: 4",
+          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\dub_task_node_1_1781709944783.json",
+          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\dub_task_node_1_1781709944783.csv",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 664
+        "height": 773
       },
       "selected": false,
       "dragging": false,
@@ -336,17 +359,20 @@
           "dialect_name": "四川话",
           "min_sentence_duration": 0.2
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 308
+        "height": 418
       },
       "selected": false,
       "dragging": false,
@@ -364,22 +390,28 @@
         "label": "音频合并",
         "config": {
           "video_speed_adjust": false,
-          "speed_min": "1",
+          "speed_min": "0.9",
           "speed_max": "1.4",
           "gap_threshold": "0.5",
           "fast_limit": "1.5"
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "audio": "output/dub_node_1_1781810867151.wav",
+          "dub_srt": "output/dub_node_1_1781810867151.srt",
+          "dub_bilingual_srt": "output/dub_bilingual_node_1_1781810867151.srt",
+          "配音任务单": "cache\\dub_task_node_1_1781709944783.csv",
+          "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\input_video.mkv"
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 542
+        "height": 760
       },
       "selected": false,
       "dragging": false,
@@ -389,32 +421,34 @@
       "id": "node_1_1781939413425",
       "type": "workflow",
       "position": {
-        "x": 4185,
-        "y": -975
+        "x": 4515,
+        "y": -885
       },
       "data": {
         "nodeType": "merge_sub_video",
         "label": "字幕烧录",
         "config": {
           "video_quality": "copy",
-          "bgm_volume": 0.75,
+          "bgm_volume": 0.65,
           "dub_volume": 0.8,
           "fade_in": 0.5,
           "fade_out": 0.5,
           "preset_id": "单语-白-半透底",
           "mute_original": true
         },
-        "status": "pending",
-        "disableExecute": false,
-        "progress": 70,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_with_dub_node_1_1781939413425.mp4"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 553
+        "height": 653
       },
       "selected": false,
       "dragging": false,
@@ -435,27 +469,30 @@
           "format": "wav",
           "model": "htdemucs_6s"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "audio": "output/vocals_node_2_1781973904798.wav",
+          "background": "output/background_node_2_1781973904798.wav"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] start node_type=vocal_separation node_id=node_2_1781973904798 pid=32292",
+          "[step_worker] start node_type=vocal_separation node_id=node_2_1781973904798 pid=24516",
           "[step_worker] step instance created: StepVocalSeparation",
           "[step_worker] step_inputs keys=['audio']",
           "[step_worker] node_config keys=['method', 'format', 'model']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback', 'cancel_callback'])",
-          "[VocalSeparation] Using upstream audio: Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\output/transcoded_audio_node_1_1788016251850.wav",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback', 'cancel_callback'])",
+          "[VocalSeparation] Using upstream audio: Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\output/transcoded_audio_node_1_1788016251850.wav",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs', 'output_vocals', 'output_background']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_2_1781973904798_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_2_1781973904798_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 356
+        "height": 466
       },
       "selected": false,
       "dragging": false,
@@ -481,15 +518,15 @@
         },
         "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 230
+        "height": 402
       },
       "selected": false,
       "dragging": false,
@@ -499,8 +536,8 @@
       "id": "node_1_1782422054967",
       "type": "workflow",
       "position": {
-        "x": -1380,
-        "y": -105
+        "x": -1395,
+        "y": 150
       },
       "data": {
         "nodeType": "llm_request",
@@ -513,27 +550,30 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "result": "output/LLM_node_1_1782422054967.json",
+          "text": "{\n  \"tittle\": \"NX点创建详解\",\n  \"hook\": \"掌握点创建技巧，提升建模效率\",\n  \"summary\": \"本视频教程由Santosh讲解在NX软件中创建3D点的多种方法。内容涵盖推断点、光标位置、现有点、端点、曲线上点、面上点和两点之间点等常用选项，重点介绍了推断点的智能性，能自动结合多种创建方式，是工作中最常用的技巧。视频强调点在曲面建模中的重要性，有助于构建复杂几何形状，提升零件建模精度。通过实例演示操作步骤，并鼓励观众实践这些方法以增强建模技能。教程结尾提醒，点的创建是CAD建模的基础，熟练掌握能大幅提高工作效率。如有疑问，欢迎在评论区交流。\"\n}"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "S01：I have already uploaded a one video on NX23 version.",
-          "S01：That video is on coordinate system",
-          "S01：and what are the different types",
-          "S01：of coordinate system.",
-          "S01：So if you have not checked that video,",
-          "S01：I will giv",
+          "2：字数限制：主标题不多于8个字，副标题不多于12字，总结不多于500字。",
+          "3：严格按照json格式输出，输出json中包含key：tittle、hook、summary",
+          "    [user] 输出语言：zh",
+          "输入的视频文案：",
+          "##",
+          "Hello guys, this is Santosh and welcome to Tech Design. So, in this video, I am going to show you all the different ways of creating the points. So, if you have already worked in any of the CAD tool, I think you are already aware of creating the points and data points are very im",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1782422054967_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782422054967_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 496
+        "height": 605
       },
       "selected": false,
       "dragging": false,
@@ -543,8 +583,8 @@
       "id": "node_1_1782501714759",
       "type": "workflow",
       "position": {
-        "x": -690,
-        "y": 375
+        "x": -705,
+        "y": 630
       },
       "data": {
         "nodeType": "cover",
@@ -560,17 +600,20 @@
           "ai_prompt": "你是一位专业的短视频封面设计师和文生图提示词专家。请根据以下视频内容信息，设计一张吸引人的短视频封面画面，并输出详细的文生图提示词。\n\n要求：\n1. 画面风格：适合短视频平台的视觉风格，色彩鲜明、对比强烈，具有视觉冲击力\n2. 标题字体：主标题使用粗体的毛笔手写体，笔触飘逸，添加少量的粒子消散效果。副标题可以使用更正式的机器字体，字体风格与内容主题匹配。\n3. 标题颜色：根据画面整体色调选择高对比度的颜色，确保可读性。\n4. 标题位置：主标题居中，可横版也可竖版，副标题在主标题下方或者侧面，不遮挡画面主体\n5. 背景融合：标题文字与图片元素自然融合，标题文字可使用阴影、描边增强可读性，\n6. 画面构图：简洁大气，留出标题空间，主体突出\n\n请直接输出文生图提示词（中文），不需要额外解释。提示词应包含画面描述、风格、色调、构图、文字排版等完整信息。提示词使用##包裹。",
           "custom_prompt": "A visually striking short video cover image, cinematic style, vibrant colors, bold composition. Main title \"{title}\" displayed prominently in large bold white text with dark shadow, centered upper area. Subtitle \"{subtitle}\" in smaller elegant font below the main title. Dynamic background with rich textures and depth of field, professional digital art quality, 4K resolution."
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "prompt": "output/cover_prompt_node_1_1782501714759.txt",
+          "text": "A professional YouTube thumbnail for a CAD tutorial, featuring a 3D mechanical part with highlighted points in a NX software interface, high contrast between a dark blue background and bright yellow and white points, main title 'NX点创建详解' in large bold white font centered at the top, subtitle '掌握点创建技巧，提升建模效率' in smaller white font below the main title, studio lighting to emphasize the 3D model, sharp focus, clean and modern digital art style."
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 362
+        "height": 472
       },
       "selected": false,
       "dragging": false,
@@ -580,8 +623,8 @@
       "id": "node_1_1782507205161",
       "type": "workflow",
       "position": {
-        "x": 30,
-        "y": 615
+        "x": 15,
+        "y": 870
       },
       "data": {
         "nodeType": "image_gen",
@@ -599,30 +642,33 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_3x4"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "images": "['output/cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg']",
+          "text": "output/cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg"
+        },
         "error": "",
         "note": "竖图封面",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
-          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=36292",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
+          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=7400",
           "[step_worker] step instance created: S_ImageGen",
           "[step_worker] step_inputs keys=['text', 'image']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1782507205161_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782507205161_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 589
+        "height": 693
       },
-      "selected": false,
+      "selected": true,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -630,8 +676,8 @@
       "id": "node_1_1782509281196",
       "type": "workflow",
       "position": {
-        "x": 870,
-        "y": 465
+        "x": 855,
+        "y": 720
       },
       "data": {
         "nodeType": "image_preview",
@@ -639,7 +685,7 @@
         "config": {
           "fit": "contain"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
@@ -649,7 +695,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 281
+        "height": 354
       },
       "selected": false,
       "dragging": false,
@@ -659,29 +705,31 @@
       "id": "node_1_1782640383627",
       "type": "workflow",
       "position": {
-        "x": -1365,
-        "y": -585
+        "x": 1245,
+        "y": -300
       },
       "data": {
         "nodeType": "video_frame_extract",
         "label": "视频抽帧",
         "config": {
           "video_source": "input_node",
-          "time_point": "6",
+          "time_point": "15",
           "time_mode": "positive",
           "avoid_subtitles": true
         },
-        "status": "pending",
-        "disableExecute": false,
+        "status": "completed",
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "image": "cache/key_frame_node_1_1782640383627.png"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 322
+        "height": 400
       },
       "selected": false,
       "dragging": false,
@@ -691,8 +739,8 @@
       "id": "node_2_1782640528572",
       "type": "workflow",
       "position": {
-        "x": -675,
-        "y": -180
+        "x": -690,
+        "y": 75
       },
       "data": {
         "nodeType": "cover",
@@ -708,17 +756,20 @@
           "ai_prompt": "你是一位专业的短视频封面设计师和文生图提示词专家。请根据以下视频内容信息，设计一张吸引人的短视频封面画面，并输出详细的文生图提示词。\n\n要求：\n1. 画面风格：适合短视频平台的视觉风格，色彩鲜明、对比强烈，具有视觉冲击力\n2. 标题字体：主标题使用粗体大字，醒目突出，字体风格与内容主题匹配\n3. 标题颜色：根据画面整体色调选择高对比度的颜色，确保可读性\n4. 标题位置：主标题居中或偏上，副标题在主标题下方，不遮挡画面主体\n5. 背景融合：标题与背景自然融合，可使用阴影、描边或半透明底色增强可读性\n6. 画面构图：简洁大气，留出标题空间，主体突出\n\n请直接输出文生图提示词（英文），不需要额外解释。提示词应包含画面描述、风格、色调、构图、文字排版等完整信息。",
           "custom_prompt": "任务：\n1：首先，去除画面上的文字水印，保持画面纯净无文字元素；\n2：为画面加上标题和副标题，制作为电影海报；\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“{title}” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“{subtitle}” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "prompt": "output/cover_prompt_node_2_1782640528572.txt",
+          "text": "任务：\n1：首先，去除画面上的文字水印，保持画面纯净无文字元素；\n2：为画面加上标题和副标题，制作为电影海报；\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“NX点创建详解” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“掌握点创建技巧，提升建模效率” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 391
+        "height": 500
       },
       "selected": false,
       "dragging": false,
@@ -728,8 +779,8 @@
       "id": "node_3_1782641542678",
       "type": "workflow",
       "position": {
-        "x": 30,
-        "y": -135
+        "x": 15,
+        "y": 120
       },
       "data": {
         "nodeType": "image_gen",
@@ -738,8 +789,8 @@
           "mode": [
             "img2img"
           ],
-          "interface": "33c78ad1",
-          "model": "doubao-seedream-4-5-251128",
+          "interface": "kieai",
+          "model": "gpt-image-2-image-to-image",
           "resolution": "1K",
           "aspect_ratio": "4:3",
           "num_images": 1,
@@ -747,28 +798,31 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_byfram"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "images": "['output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png']",
+          "text": "output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png"
+        },
         "error": "",
         "note": "横图封面",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
-          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=28216",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
+          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=29276",
           "[step_worker] step instance created: S_ImageGen",
           "[step_worker] step_inputs keys=['image', 'text']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_3_1782641542678_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_3_1782641542678_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 589
+        "height": 698
       },
       "selected": false,
       "dragging": false,
@@ -778,8 +832,8 @@
       "id": "node_5_1782654274362",
       "type": "workflow",
       "position": {
-        "x": 870,
-        "y": -15
+        "x": 855,
+        "y": 240
       },
       "data": {
         "nodeType": "image_preview",
@@ -788,8 +842,8 @@
           "fit": "contain"
         },
         "status": "pending",
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": "",
@@ -797,7 +851,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 281
+        "height": 328
       },
       "selected": false,
       "dragging": false,
@@ -807,7 +861,7 @@
       "id": "node_1_1782672877872",
       "type": "workflow",
       "position": {
-        "x": 4395,
+        "x": 4650,
         "y": 675
       },
       "data": {
@@ -831,11 +885,14 @@
           ],
           "is_original": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "{\n  \"publish_params\": {\n    \"title\": \"NX点创建全攻略：智能推断点，效率倍增\",\n    \"description\": \"本视频由Santosh详解NX软件中3D点创建的多种方法，涵盖推断点、光标位置、现有点等7种技巧。推断点能智能结合多种创建方式，是提升建模效率的关键。通过实例演示操作步骤，帮助你掌握基础技能，增强建模精度和零件复杂度构建能力。\",\n    \"tags\": [\n      \"NX教程\",\n      \"3D建模\",\n      \"点创建\",\n      \"CAD基础\",\n      \"效率提升\"\n    ],\n    \"publish_mode\": \"local_draft\",\n    \"schedule_time\": null,\n    \"is_original\": true,\n    \"video_orientation\": \"landscape\",\n    \"video_path\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\f0b40d97ecfe4355af45c220833bfbae\\\\output/video_with_dub_node_1_1781939413425.mp4\",\n    \"cover_landscape\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\f0b40d97ecfe4355af45c220833bfbae\\\\output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png\",\n    \"cover_portrait\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\f0b40d97ecfe4355af45c220833bfbae\\\\output/cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg\",\n    \"title_affix\": \"\",\n    \"title_affix_mode\": \"suffix\",\n    \"desc_affix\": \"\",\n    \"desc_affix_mode\": \"suffix\",\n    \"platform_type\": 3,\n    \"platform_key\": \"douyin\",\n    \"account_ids\": [\n      \"2\",\n      \"3\",\n      \"4\",\n      \"5\"\n    ]\n  },\n  \"platform_type\": 3,\n  \"total_accounts\": 4,\n  \"success\": 1,\n  \"failed\": 0,\n  \"results\": [\n    {\n      \"status\": \"success\",\n      \"result\": {\n        \"code\": 200,\n        \"data\": {\n          \"id\": 72,\n          \"title\": \"NX点创建全攻略：智能推断点，效率倍增\"\n        }\n      }\n    }\n  ],\n  \"errors\": null\n}",
+          "result_file": "output/publish_result_node_1_1782672877872.json"
+        },
         "error": "",
         "note": "发布平台",
         "workbench_url": "",
@@ -852,7 +909,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 768
+        "height": 877
       },
       "selected": false,
       "dragging": false,
@@ -862,8 +919,8 @@
       "id": "node_1_1782725550457",
       "type": "workflow",
       "position": {
-        "x": -1050,
-        "y": 960
+        "x": -1065,
+        "y": 1215
       },
       "data": {
         "nodeType": "llm_request",
@@ -876,27 +933,30 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "result": "output/LLM_node_1_1782725550457.json",
+          "text": "{\n  \"title\": \"NX点创建全攻略：智能推断点，效率倍增\",\n  \"description\": \"本视频由Santosh详解NX软件中3D点创建的多种方法，涵盖推断点、光标位置、现有点等7种技巧。推断点能智能结合多种创建方式，是提升建模效率的关键。通过实例演示操作步骤，帮助你掌握基础技能，增强建模精度和零件复杂度构建能力。\",\n  \"tags\": [\n    \"NX教程\",\n    \"3D建模\",\n    \"点创建\",\n    \"CAD基础\",\n    \"效率提升\"\n  ]\n}"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
           "视频信息：",
           "##",
           "{",
-          "  \"tittle\": \"NX23草图革新\",",
-          "  \"hook\": \"揭秘新环境三大变化\",",
-          "  \"summary\": \"本视频详细介绍了Siemens NX23版本中草图环境的新变化。主持人Santosh首先回顾了之前关于坐标系统的视频，然后重点讲解了草图编辑器的全面升级。核心变化包括：进入草图时自动显示X轴和Y轴线，可用于辅助操作如镜像；闭合曲线填充颜色，便于识别；尺寸标注不再自动显示，需手动选择对象编辑；几何约束改名为relations，通过选择对象直接应用如垂直、相切等；表达式管理改进，支持手动添加和命名参数以实现灵活设计。视频通过实例演示这些功能",
+          "  \"tittle\": \"NX点创建详解\",",
+          "  \"hook\": \"掌握点创建技巧，提升建模效率\",",
+          "  \"summary\": \"本视频教程由Santosh讲解在NX软件中创建3D点的多种方法。内容涵盖推断点、光标位置、现有点、端点、曲线上点、面上点和两点之间点等常用选项，重点介绍了推断点的智能性，能自动结合多种创建方式，是工作中最常用的技巧。视频强调点在曲面建模中的重要性，有助于构建复杂几何形状，提升零件建模精度。通过实例演示操作步骤，并鼓励观众实践这些方法以增强建模技能。教程结尾提醒，点的创建是CAD建模的基础，熟练掌握能大幅提高工作效率。如有疑问，欢",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1782725550457_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782725550457_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 496
+        "height": 605
       },
       "selected": false,
       "dragging": false,
@@ -906,8 +966,8 @@
       "id": "node_1_1783320818226",
       "type": "workflow",
       "position": {
-        "x": -1380,
-        "y": -1425
+        "x": -1500,
+        "y": -1785
       },
       "data": {
         "nodeType": "translate_task_name",
@@ -915,17 +975,20 @@
         "config": {
           "replace_task_name": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "cache/task_name.txt",
+          "translated": "(03)-UG-NX-初学者创建点_NX-2306教程"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 194
+        "height": 303
       },
       "selected": false,
       "dragging": false,
@@ -935,8 +998,8 @@
       "id": "node_2_1783321957415",
       "type": "workflow",
       "position": {
-        "x": -525,
-        "y": 1305
+        "x": -540,
+        "y": 1560
       },
       "data": {
         "nodeType": "resolve_path",
@@ -944,17 +1007,19 @@
         "config": {
           "relative_path": "cache\\task_name.txt"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "output": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\task_name.txt"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 232
+        "height": 311
       },
       "selected": false,
       "dragging": false,
@@ -964,8 +1029,8 @@
       "id": "node_8_1783325677193",
       "type": "workflow",
       "position": {
-        "x": 465,
-        "y": 1140
+        "x": 540,
+        "y": 1410
       },
       "data": {
         "nodeType": "json_editor",
@@ -975,17 +1040,19 @@
           "value_source": "auto",
           "custom_value": ""
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "json": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\output/LLM_node_1_1782725550457.json"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 358
+        "height": 437
       },
       "selected": false,
       "dragging": false,
@@ -1008,17 +1075,19 @@
           "channels": "1",
           "bitrate": ""
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "audio": "output/transcoded_audio_node_1_1788016251850.wav"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 355
+        "height": 433
       },
       "selected": false,
       "dragging": false,
@@ -1041,17 +1110,19 @@
           "channels": "1",
           "bitrate": "192"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "audio": "output/transcoded_audio_node_2_1788016301322.wav"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 355
+        "height": 433
       },
       "selected": false,
       "dragging": false,
@@ -1068,17 +1139,19 @@
         "nodeType": "asr_result_validate",
         "label": "ASR结果校验",
         "config": {},
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "json": "cache/asr_result_node_2_1788054290141.json"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 153
+        "height": 232
       },
       "selected": false,
       "dragging": false,
@@ -1088,8 +1161,8 @@
       "id": "node_9_1788017295074",
       "type": "workflow",
       "position": {
-        "x": 3210,
-        "y": -735
+        "x": 3015,
+        "y": -540
       },
       "data": {
         "nodeType": "audio_denoise",
@@ -1097,22 +1170,24 @@
         "config": {
           "method": "ffmpeg",
           "noise_reduction_level": 0.6,
-          "highpass_freq": "80",
+          "highpass_freq": "0",
           "lowpass_freq": "0",
           "output_format": "wav",
           "custom_command": ""
         },
-        "status": "pending",
-        "disableExecute": false,
+        "status": "completed",
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "audio": "output/denoised_audio_node_9_1788017295074.wav"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 406
+        "height": 484
       },
       "selected": false,
       "dragging": false,
@@ -1133,7 +1208,7 @@
           "language": "auto",
           "model": "",
           "compute_type": "",
-          "batch_size": 0,
+          "batch_size": "20",
           "word_timestamps": true,
           "vad_onset": "0.3",
           "vad_offset": 0.363,
@@ -1143,27 +1218,29 @@
           "post_alignment": false,
           "post_diarization": false
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "subtitle": "cache/asr_result_node_2_1788054290141.json"
+        },
         "error": "",
         "logLines": [
-          "[ASR PostProcess] diarization_enabled=False, diarization_engine=pyannote",
-          "[ASR PostProcess] VAD was executed internally by ASR engine, skipping",
-          "[ASR PostProcess] Alignment was executed internally by ASR engine, skipping",
-          "[ASR PostProcess] Diarization was executed internally by ASR engine, skipping",
-          "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
-          "[ASR PostProcess] No post-processing needed, returning original result",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_2_1788054290141_result.json, exiting 0"
+          "[ASR] Audio duration: 757.3s",
+          "[ASR] Audio split into 3 segments: [(0.0, 240.836563), (240.836563, 493.976), (493.976, 757.2935)]",
+          "[ASR] 引擎 'moss' 已加载（空闲 5s 自动卸载）",
+          "[ASR] 引擎 'moss' 已卸载（归还内存/显存）",
+          "[ASR] 引擎 'moss' 已加载（空闲 5s 自动卸载）",
+          "[ASR] 引擎 'moss' 已卸载（归还内存/显存）",
+          "[ASR] 引擎 'moss' 已加载（空闲 5s 自动卸载）",
+          "[ASR] 引擎 'moss' 已卸载（归还内存/显存）"
         ],
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 491
+        "height": 570
       },
       "selected": false,
       "dragging": false,
@@ -1173,8 +1250,8 @@
       "id": "node_1_1788461823056",
       "type": "workflow",
       "position": {
-        "x": -1560,
-        "y": 645
+        "x": 1770,
+        "y": -315
       },
       "selected": false,
       "data": {
@@ -1186,17 +1263,19 @@
           "time_mode": "negative",
           "avoid_subtitles": false
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "image": "cache/key_frame_node_1_1788461823056.png"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 322
+        "height": 400
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1216,12 +1295,19 @@
           "mode": "key",
           "key_expr": "text"
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\output\\json2text_node_1_1788530708958.txt"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 273
+        "height": 373
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1252,12 +1338,29 @@
           "post_alignment": true,
           "post_diarization": true
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_2_1788530964170.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[ASR PostProcess] diarization_enabled=True, diarization_engine=pyannote",
+          "[ASR PostProcess] VAD was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Alignment was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Diarization was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
+          "[ASR PostProcess] No post-processing needed, returning original result",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_2_1788530964170_result.json, exiting 0"
+        ]
       },
       "measured": {
         "width": 420,
-        "height": 470
+        "height": 570
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1267,15 +1370,15 @@
       "type": "workflow",
       "position": {
         "x": 4020,
-        "y": -1995
+        "y": -2115
       },
       "selected": false,
       "data": {
         "nodeType": "sentence_split",
         "label": "句子分割",
         "config": {
-          "processing_language": "auto",
-          "max_sentence_length": 30,
+          "processing_language": "zh",
+          "max_sentence_length": "15",
           "use_llm_split": true,
           "split_sentence_ends": true,
           "split_clause_breaks": true,
@@ -1287,15 +1390,193 @@
           "merge_gap_enabled": false,
           "pause_split_enabled": true
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/sentences_node_3_1788531005833.json",
+          "text": "cache/sentences_text_node_3_1788531005833.txt"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 542
+        "height": 672
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1788532246682",
+      "type": "workflow",
+      "position": {
+        "x": -1575,
+        "y": -1425
+      },
+      "data": {
+        "nodeType": "path_to_title",
+        "label": "路径转标题",
+        "config": {
+          "template": "{filename}",
+          "read_from_input": true,
+          "update_task_name": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\path_to_title.txt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 410
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_6_1788533469576",
+      "type": "workflow",
+      "position": {
+        "x": 4035,
+        "y": -1395
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "subtitle_gen",
+        "label": "字幕生成",
+        "config": {
+          "file_prefix": "dub_asr_",
+          "filter_punctuation": true,
+          "punctuation_replace_mode": "space",
+          "processing_language": "from_target"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "original": "output/dub_asr_subtitles_node_6_1788533469576.srt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 460
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_8_1788537377757",
+      "type": "workflow",
+      "position": {
+        "x": 4590,
+        "y": -1905
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr_result_validate",
+        "label": "ASR结果校验",
+        "config": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "cache/sentences_node_3_1788531005833.json"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 232
+      }
+    },
+    {
+      "id": "node_2_1788540079002",
+      "type": "workflow",
+      "position": {
+        "x": 1035,
+        "y": -1935
+      },
+      "data": {
+        "nodeType": "subtitle_align",
+        "label": "译文断句和双语对齐",
+        "config": {
+          "max_subtitle_length": "15"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 211
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_3_1788584414700",
+      "type": "workflow",
+      "position": {
+        "x": 3630,
+        "y": -900
+      },
+      "data": {
+        "nodeType": "track_mix",
+        "label": "音轨混响",
+        "config": {
+          "duration_mode": "main",
+          "main_volume": 1,
+          "main_fade_in": 0.1,
+          "main_fade_out": 0.3,
+          "bgm_volume": 0.9,
+          "bgm_fade_in": 1.4,
+          "bgm_fade_out": 1.5,
+          "bgm_loop": false,
+          "track3_volume": 0.5,
+          "track3_fade_in": 0.3,
+          "track3_fade_out": 0.3,
+          "track3_loop": false,
+          "track4_volume": 0.5,
+          "track4_fade_in": 0.3,
+          "track4_fade_out": 0.3,
+          "track4_loop": false,
+          "audio_format": "wav",
+          "audio_bitrate": "192"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "cache\\track_mix_node_3_1788584414700.wav"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 712
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
     }
   ],
   "edges": [
@@ -1338,7 +1619,8 @@
       "sourceHandle": "out-video",
       "target": "node_3_1781212794939",
       "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1780590163157out-video-node_3_1781212794939in-video"
+      "id": "xy-edge__node_1_1780590163157out-video-node_3_1781212794939in-video",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1383,21 +1665,6 @@
     },
     {
       "type": "smoothstep",
-      "animated": false,
-      "style": {
-        "stroke": "#10b981",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781810867151",
-      "sourceHandle": "out-audio",
-      "target": "node_1_1781939413425",
-      "targetHandle": "in-dub",
-      "id": "xy-edge__node_1_1781810867151out-audio-node_1_1781939413425in-dub",
-      "selected": false
-    },
-    {
-      "type": "smoothstep",
       "style": {
         "stroke": "#3b82f6",
         "strokeWidth": 2,
@@ -1435,7 +1702,8 @@
       "sourceHandle": "out-prompt",
       "target": "node_1_1782507205161",
       "targetHandle": "in-text",
-      "id": "xy-edge__node_1_1782501714759out-prompt-node_1_1782507205161in-text"
+      "id": "xy-edge__node_1_1782501714759out-prompt-node_1_1782507205161in-text",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1448,7 +1716,8 @@
       "sourceHandle": "out-text",
       "target": "node_1_1782509281196",
       "targetHandle": "in-image",
-      "id": "xy-edge__node_1_1782507205161out-text-node_1_1782509281196in-image"
+      "id": "xy-edge__node_1_1782507205161out-text-node_1_1782509281196in-image",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1461,7 +1730,8 @@
       "sourceHandle": "out-result",
       "target": "node_2_1782640528572",
       "targetHandle": "in-json",
-      "id": "xy-edge__node_1_1782422054967out-result-node_2_1782640528572in-json"
+      "id": "xy-edge__node_1_1782422054967out-result-node_2_1782640528572in-json",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1504,7 +1774,8 @@
       "sourceHandle": "out-text",
       "target": "node_5_1782654274362",
       "targetHandle": "in-image",
-      "id": "xy-edge__node_3_1782641542678out-text-node_5_1782654274362in-image"
+      "id": "xy-edge__node_3_1782641542678out-text-node_5_1782654274362in-image",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1543,7 +1814,8 @@
       "sourceHandle": "out-result",
       "target": "node_1_1782725550457",
       "targetHandle": "in-json",
-      "id": "xy-edge__node_1_1782422054967out-result-node_1_1782725550457in-json"
+      "id": "xy-edge__node_1_1782422054967out-result-node_1_1782725550457in-json",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1556,20 +1828,8 @@
       "sourceHandle": "out-result",
       "target": "node_1_1782501714759",
       "targetHandle": "in-json",
-      "id": "xy-edge__node_1_1782422054967out-result-node_1_1782501714759in-json"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ef4444",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780954897405",
-      "sourceHandle": "out-reflect",
-      "target": "node_1_1781200299298",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1780954897405out-reflect-node_1_1781200299298in-subtitle"
+      "id": "xy-edge__node_1_1782422054967out-result-node_1_1782501714759in-json",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1582,7 +1842,8 @@
       "sourceHandle": "out-text",
       "target": "node_1_1782672877872",
       "targetHandle": "in-cover_landscape",
-      "id": "xy-edge__node_3_1782641542678out-text-node_1_1782672877872in-cover_landscape"
+      "id": "xy-edge__node_3_1782641542678out-text-node_1_1782672877872in-cover_landscape",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1602,19 +1863,6 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780590163157",
-      "sourceHandle": "out-video",
-      "target": "node_1_1783320818226",
-      "targetHandle": "in-input",
-      "id": "xy-edge__node_1_1780590163157out-video-node_1_1783320818226in-input"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
         "stroke": "#6366f1",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -1623,20 +1871,8 @@
       "sourceHandle": "out-result",
       "target": "node_2_1783321957415",
       "targetHandle": "in-input",
-      "id": "xy-edge__node_1_1782725550457out-result-node_2_1783321957415in-input"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#f59e0b",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781810867151",
-      "sourceHandle": "out-dub_srt",
-      "target": "node_1_1781939413425",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1781810867151out-dub_srt-node_1_1781939413425in-subtitle"
+      "id": "xy-edge__node_1_1782725550457out-result-node_2_1783321957415in-input",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1649,7 +1885,8 @@
       "sourceHandle": "out-output",
       "target": "node_8_1783325677193",
       "targetHandle": "in-text",
-      "id": "xy-edge__node_2_1783321957415out-output-node_8_1783325677193in-text"
+      "id": "xy-edge__node_2_1783321957415out-output-node_8_1783325677193in-text",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1662,7 +1899,8 @@
       "sourceHandle": "out-result",
       "target": "node_8_1783325677193",
       "targetHandle": "in-json",
-      "id": "xy-edge__node_1_1782725550457out-result-node_8_1783325677193in-json"
+      "id": "xy-edge__node_1_1782725550457out-result-node_8_1783325677193in-json",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1675,7 +1913,8 @@
       "sourceHandle": "out-json",
       "target": "node_1_1782672877872",
       "targetHandle": "in-json",
-      "id": "xy-edge__node_8_1783325677193out-json-node_1_1782672877872in-json"
+      "id": "xy-edge__node_8_1783325677193out-json-node_1_1782672877872in-json",
+      "selected": false
     },
     {
       "type": "smoothstep",
@@ -1756,19 +1995,6 @@
       "target": "node_9_1788017295074",
       "targetHandle": "in-audio",
       "id": "xy-edge__node_2_1781973904798out-background-node_9_1788017295074in-audio"
-    },
-    {
-      "type": "bezier",
-      "style": {
-        "stroke": "#10b981",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_9_1788017295074",
-      "sourceHandle": "out-audio",
-      "target": "node_1_1781939413425",
-      "targetHandle": "in-audio",
-      "id": "xy-edge__node_9_1788017295074out-audio-node_1_1781939413425in-audio"
     },
     {
       "type": "bezier",
@@ -1859,7 +2085,8 @@
       "sourceHandle": "out-image",
       "target": "node_1_1782507205161",
       "targetHandle": "in-image",
-      "id": "xy-edge__node_1_1788461823056out-image-node_1_1782507205161in-image"
+      "id": "xy-edge__node_1_1788461823056out-image-node_1_1782507205161in-image",
+      "selected": false
     },
     {
       "source": "node_2_1788054290141",
@@ -1938,10 +2165,181 @@
         "strokeWidth": 2
       },
       "id": "xy-edge__node_2_1788530964170out-subtitle-node_3_1788531005833in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780590163157",
+      "sourceHandle": "out-video",
+      "target": "node_5_1788532246682",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1780590163157out-video-node_5_1788532246682in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_5_1788532246682",
+      "sourceHandle": "out-text",
+      "target": "node_1_1783320818226",
+      "targetHandle": "in-input",
+      "id": "xy-edge__node_5_1788532246682out-text-node_1_1783320818226in-input"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_6_1788533469576",
+      "sourceHandle": "out-original",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_6_1788533469576out-original-node_1_1781939413425in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788530708958",
+      "sourceHandle": "out-text",
+      "target": "node_1_1782422054967",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_1_1788530708958out-text-node_1_1782422054967in-text",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781200299298",
+      "sourceHandle": "out-original",
+      "target": "node_1_1782640383627",
+      "targetHandle": "in-srt",
+      "id": "xy-edge__node_1_1781200299298out-original-node_1_1782640383627in-srt"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781200299298",
+      "sourceHandle": "out-original",
+      "target": "node_1_1788461823056",
+      "targetHandle": "in-srt",
+      "id": "xy-edge__node_1_1781200299298out-original-node_1_1788461823056in-srt"
+    },
+    {
+      "source": "node_3_1788531005833",
+      "sourceHandle": "out-subtitle",
+      "target": "node_8_1788537377757",
+      "targetHandle": "in-json",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_3_1788531005833out-subtitle-node_8_1788537377757in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_8_1788537377757",
+      "sourceHandle": "out-json",
+      "target": "node_6_1788533469576",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_8_1788537377757out-json-node_6_1788533469576in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1780954897405",
+      "sourceHandle": "out-reflect",
+      "target": "node_2_1788540079002",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_1_1780954897405out-reflect-node_2_1788540079002in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1788540079002",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1781200299298",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_2_1788540079002out-subtitle-node_1_1781200299298in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1781810867151",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1788584414700",
+      "targetHandle": "in-main_audio",
+      "id": "xy-edge__node_1_1781810867151out-audio-node_3_1788584414700in-main_audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_9_1788017295074",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1788584414700",
+      "targetHandle": "in-bgm",
+      "id": "xy-edge__node_9_1788017295074out-audio-node_3_1788584414700in-bgm",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788584414700",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-dub",
+      "id": "xy-edge__node_3_1788584414700out-audio-node_1_1781939413425in-dub"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-04T22:10:45",
-  "revision": 2
+  "updatedAt": "2026-09-05T15:52:56",
+  "revision": 33
 }
