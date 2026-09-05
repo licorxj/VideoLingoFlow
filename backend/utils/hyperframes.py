@@ -41,9 +41,6 @@ WORKFLOW_ROUTES: dict[str, str] = {
     "remotion-to-hyperframes": "Remotion 迁移：把已有 Remotion 合成移植过来",
 }
 
-# 画幅与语言默认值
-ASPECT_CHOICES = ("auto", "16:9", "9:16", "1:1", "4:3", "21:9")
-
 # CLI 默认调用方式：npx hyperframes@latest ...
 DEFAULT_CLI = "npx"
 DEFAULT_PACKAGE = "hyperframes@latest"
@@ -411,34 +408,61 @@ def require_done_payload(text: str, marker: str = DONE_MARKER) -> dict[str, Any]
 _BRIEF_ROUTE_KEYS = ("workflow", "route", "工作流", "路由")
 
 
+def _brief_key_value(line: str) -> tuple[str, str]:
+    """从一行简报文本里提取「键 / 值」。
+
+    兼容三种写法：YAML frontmatter（``workflow: xxx``）、Markdown 表格行
+    （``| workflow | xxx |``）、列表项（``- workflow: xxx``）。
+    """
+    text = line.strip().lstrip("-*").strip()
+    text = text.strip("|").strip()
+    if not text:
+        return "", ""
+    if ":" in text or "：" in text:
+        match = re.match(r"^([^:：]{1,24})\s*[:：]\s*(.+)$", text)
+        if match:
+            return match.group(1).strip(), match.group(2).strip()
+    if "|" in text:
+        cells = [cell.strip() for cell in text.split("|") if cell.strip()]
+        if len(cells) >= 2:
+            return cells[0], cells[1]
+    return "", ""
+
+
+def _clean_route_value(value: str) -> str:
+    """去掉反引号、粗体、引号、括号与可能的斜杠前缀。"""
+    cleaned = re.sub(r"[`*\"'\[\]()（）]", "", value).strip()
+    return cleaned.lstrip("/").strip()
+
+
 def read_brief_route(brief_path: Path) -> str:
     """从 BRIEF.md 中解析已锁定的工作流路由，解析不到返回空串。
 
-    同时兼容 YAML 风格（``workflow: xxx``）与 Markdown 表格/标题中的反引号引用。
+    先按行找 ``workflow`` 类字段（YAML frontmatter / 表格行 / 列表项皆可），
+    没命中再退化为在全文里查找首个已知路由的引用。
     """
     try:
         content = brief_path.read_text(encoding="utf-8", errors="replace")
     except OSError:
         return ""
     lines = content.splitlines()
-    in_frontmatter = lines[:1] == ["---"]
+
+    # frontmatter 区间内的行照常解析，只跳过 --- 分隔行本身
+    in_frontmatter = bool(lines) and lines[0].strip() == "---"
     for index, line in enumerate(lines):
-        if in_frontmatter and index > 0:
+        if in_frontmatter:
+            if index == 0:
+                continue
             if line.strip() == "---":
                 in_frontmatter = False
-            continue
-        stripped = line.strip().lstrip("-*|").strip()
-        for key in _BRIEF_ROUTE_KEYS:
-            match = re.match(rf"^{re.escape(key)}\s*[:：]\s*(.+)$", stripped, re.IGNORECASE)
-            if not match:
                 continue
-            value = re.sub(r"[`*\"'\[\]()]", "", match.group(1)).strip().rstrip("|").strip()
-            if value in WORKFLOW_ROUTES:
-                return value
-            # 形如 `/product-launch-video` 的斜杠写法
-            candidate = value.lstrip("/").strip()
-            if candidate in WORKFLOW_ROUTES:
-                return candidate
+        key, value = _brief_key_value(line)
+        if key.lower() not in _BRIEF_ROUTE_KEYS:
+            continue
+        route = _clean_route_value(value)
+        if route in WORKFLOW_ROUTES:
+            return route
+
     for route in WORKFLOW_ROUTES:
         if f"`/{route}`" in content or f"/{route}" in content:
             return route

@@ -163,6 +163,18 @@ python backend/manager.py 18001 11001   # 自定义端口
 - `social_publish`：社交发布
 - `xiaopai_publish`：小派发布
 
+### 3.8.1 HyperFrames 视频创作（`hyperframes` 分组）
+
+用 HTML 描述合成、用 `npx hyperframes` 渲染成片，按「创意 → 渲染」两步走：
+
+- `hyperframes_creative`：收敛出 `BRIEF.md`；`mode=load` 时加载已有简报复用既有工作流
+- `hyperframes_render`：按 `BRIEF.md` 的 workflow 路由构建合成并渲染成片
+- `hyperframes_cli`：直接执行一条 HyperFrames CLI 子命令（技能安装/抓取/校验/发布等）
+- `hyperframes_agent`：复合节点，直接驱动小 Pi（piagent）框架跑完「创意 → 渲染」
+- `hyperframe_render`：（自定义节点）单文件 HTML 直渲染，不经 BRIEF.md
+
+详见 `hyperframes.md`。
+
 ### 3.9 集成 / 工具
 - `http_request`：HTTP 请求（进程隔离）
 - `email`：邮件
@@ -238,6 +250,7 @@ python backend/manager.py 18001 11001   # 自定义端口
 | `gpu-service.md` | GPU 服务层（lane 调度、显存管理、开关与配置） |
 | `publishing.md` | 社交/平台发布节点与配置 |
 | `skill-mcp-install.md` | 技能节点、MCP 安装节点、外部工具集成 |
+| `hyperframes.md` | HyperFrames 视频创作节点（创意 → 渲染）、技能源码位置与排错 |
 
 ---
 

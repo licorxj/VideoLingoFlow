@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-04 02:51:55  
-> 节点总数：88　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-09-05 20:57:43  
+> 节点总数：94　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -11,15 +11,16 @@
 | 预览节点（`preview`） | 3 |
 | 音频处理节点（`audio`） | 10 |
 | 视频处理节点（`video`） | 14 |
-| AI生成类节点（`ai_gen`） | 17 |
+| AI生成类节点（`ai_gen`） | 16 |
 | 翻译相关节点（`translation`） | 14 |
-| AIGC流程链（`aigc`） | 3 |
+| AIGC流程链（`aigc`） | 4 |
 | 智能体（`agent`） | 2 |
-| 流程控制节点（`flow_control`） | 2 |
+| 流程控制节点（`flow_control`） | 3 |
 | 网络请求类节点（`network_request`） | 4 |
 | 工具类节点（`utility`） | 9 |
 | 文件操作类节点（`file`） | 3 |
 | 组合节点（`group_node`） | 2 |
+| hyperframes（`hyperframes`） | 5 |
 
 ## 节点详情
 
@@ -82,7 +83,6 @@
 | AI封面设计 | `cover` | 根据内容JSON生成封面文生图提示词，支持AI设计和自定义描述两种模式 | thread | 内容JSON(`json`*:json) | 封面提示词(`prompt`:text) |
 | AI生图 | `image_gen` | AI图像生成，支持文生图和图生图模式，集成多种生图接口和模型 | process | 文本输入(`text`:text); 图片输入(`image`:image) | 图片列表(`images`:json); 首张图片(`text`:image) |
 | AI生视频 | `ai_video_gen` | 根据提示词（文本或txt）、图片/图片列表、音频，调用视频生成接口生成视频；提示词前缀会拼接到连线提示词前 | thread | 提示词(`prompt`:text); 图片/图片列表(`images`:image); 音频(`audio`:audio) | 视频(`videos`:video); 视频(首个)(`video`:video); 尾帧(`last_frame`:image) |
-| HyperFrames 渲染 | `hyperframe_render` | 使用 HyperFrames CLI 将 HTML 合成脚本渲染为 MP4 视频 | — | HTML 内容(`html_content`*:text); HTML 文件路径(`html_file`:filepath) | 渲染视频(`video`:video); 渲染结果(`json`:json); 输出信息(`text`:text) |
 | Seedream图层拆分 | `seedream_layer` | 调用 Seedream 图层拆分（img2img + layer_decomposition，需 5.0 Pro）：将一张参考图拆为底图与多个图层（含 z_index/名称/bounding_box 坐标），便于二次编辑。 | process | 提示词(`text`:text); 参考图(`image`:image) | 底图(`base`:image); 图层列表(`layers`:list); 坐标数据(`coords`:json) |
 | Seedream图生图 | `seedream_img2img` | 调用 Seedream 图生图（img2img）：以一张参考图为基础按提示词重绘生成单张图片。 | process | 提示词(`text`:text); 参考图(`image`:image) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream多图融合 | `seedream_fusion` | 调用 Seedream 多图融合（fusion）：融合多张参考图生成单张图片。支持 image1~image5 共 5 个参考图输入口，按实际连接组装成输入列表。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考图5(`image5`:image) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
@@ -123,6 +123,7 @@
 | ComfyUI 生图 | `aigc_comfyui` | 调用本地/局域网 ComfyUI 实例运行工作流，支持文生图/图生图，参数来自「其他能力接口」设置 | thread | 提示词(`text`:text); 参考视频(`reference_video`:video); 首帧(`first_frame`:image); 图片2(`image2`:image); 图片3(`image3`:image); 图片4(`image4`:image); 尾帧(`last_frame`:image) | 产物列表(`images`:any); 第一个产物(`first`:any); 全部产物(`files`:any) |
 | RunningHub 生成 | `aigc_runninghub` | 调用 RunningHub OpenAPI 运行工作流或 AI 应用，生成图片/视频，参数来自「其他能力接口」设置 | process | 提示词(`text`:text); 参考视频(`reference_video`:video); 首帧(`first_frame`:image); 图片2(`image2`:image); 图片3(`image3`:image); 图片4(`image4`:image); 尾帧(`last_frame`:image) | 产物列表(`images`:any); 第一个产物(`first`:any); 全部产物(`files`:any) |
 | 即梦 CLI 生成 | `aigc_jimeng` | 通过本地即梦(dreamina) CLI 生成图片或视频，支持文生图/图生图/文生视频/图生视频/首尾帧视频 | process | 提示词(`text`:text); 参考视频(`reference_video`:video); 首帧(`first_frame`:image); 图片2(`image2`:image); 图片3(`image3`:image); 图片4(`image4`:image); 尾帧(`last_frame`:image) | 产物列表(`images`:any); 第一个产物(`first`:any); 全部产物(`files`:any) |
+| 图片宫格切割 | `image_grid_split` | 把宫格组合图按 N×N 切成单张图片：支持 4/9/16/25 宫格，可设置外框收缩与内部切缝收缩像素，输出切割后的图片路径列表 | thread | 图片(`image`*:image) | 图片列表(`images`:list) |
 
 ### 智能体（`agent`）
 
@@ -136,6 +137,7 @@
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
 | 定时执行 | `timed_delay` | 等待指定时间后继续执行，支持时间点和倒计时两种模式 | thread | 输入(`any`:any) | 输出(`any`:any) |
+| 循环 | `loop` | 接收一个列表作为迭代对象，逐条取出驱动循环体内的子流程执行；每次迭代的产物按序号记录在 manifest 清单中（选中若干已连线节点后创建循环体） | thread | 迭代对象(`items`:json) | 产物清单(`results`:json); 迭代总数(`count`:json) |
 | 运行等待 | `run_wait` | 开启后等待指定时长，超时抛出等待超时错误结束工作流；关闭则跳过并透传输入 | thread | 输入(`input`:any) | 输出(`output`:any) |
 
 ### 网络请求类节点（`network_request`）
@@ -175,3 +177,13 @@
 |------|----|------|-------|---------|---------|
 | 组合 | `groupnode_mtbj91n4` | 组合（组合节点） | — | ASR后处理 / 对齐音源(`gin_1`:audio); ASR后处理 / 人声音源(`gin_2`:audio); 语音识别 (ASR) / ASR音源(`gin_3`:audio) | — |
 | 组合 | `groupnode_mtbj9s8i` | 组合（组合节点） | — | ASR后处理 / 对齐音源(`gin_1`:audio); ASR后处理 / 人声音源(`gin_2`:audio); 语音识别 (ASR) / ASR音源(`gin_3`:audio) | — |
+
+### hyperframes（`hyperframes`）
+
+| 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
+|------|----|------|-------|---------|---------|
+| HyperFrames 创意 | `hyperframes_creative` | 两步走第一步：把 URL / 主题 / PR / 素材收敛成一份 BRIEF.md 创意简报；支持加载已有 BRIEF.md 稳定复用既有工作流，不重复做意图访谈 | process | 素材/主题(`source`:any); 附加素材(`assets`:any); 已有 BRIEF.md(`brief`:filepath) | BRIEF.md(`brief`:filepath); 项目目录(`project_dir`:filepath); 创意摘要(`summary`:text) |
+| HyperFrames 单文件渲染 | `hyperframe_render` | 【自定义】直接把一段 HTML 合成脚本交给 HyperFrames CLI 渲染成片，不经过 BRIEF.md 与工作流路由；成片由工作流驱动时使用「HyperFrames 渲染」节点 | — | HTML 内容(`html_content`*:text); HTML 文件路径(`html_file`:filepath) | 渲染视频(`video`:video); 渲染结果(`json`:json); 输出信息(`text`:text) |
+| HyperFrames 工具 | `hyperframes_cli` | 附属工具调用节点：直接在工作目录执行一条 HyperFrames CLI 命令，覆盖技能安装/体检、工程初始化、网站抓取、Registry 组件、关键帧诊断、校验、升级、预览、渲染与发布 | process | 项目目录(`project_dir`:filepath); 附加输入(`input`:any) | 执行日志(`output`:filepath); 输出文本(`stdout`:text) |
+| HyperFrames 智能体 | `hyperframes_agent` | 复合节点：直接驱动本项目的小 Pi（piagent）框架，一个节点跑完「创意 → 渲染」整条链路；检测到已有 BRIEF.md 时自动按加载模式复用既有工作流 | process | 素材/主题(`source`:any); 附加素材(`assets`:any); 已有 BRIEF.md(`brief`:filepath) | 成片(`video`:video); BRIEF.md(`brief`:filepath); 项目目录(`project_dir`:filepath); 执行摘要(`text`:text) |
+| HyperFrames 渲染 | `hyperframes_render` | 两步走第二步：读取 BRIEF.md，按其中的工作流路由构建 HTML 合成并渲染成片；支持只构建 / 只渲染 / 只校验，可勾选渲染后 publish 出分享链接 | process | BRIEF.md(`brief`:filepath); 项目目录(`project_dir`:filepath); 附加素材(`assets`:any) | 成片(`video`:video); 项目目录(`project_dir`:filepath); BRIEF.md(`brief`:filepath); 发布链接(`url`:url) |

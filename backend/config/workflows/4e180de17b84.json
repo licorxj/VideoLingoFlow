@@ -283,7 +283,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 428
+        "height": 478
       },
       "selected": false,
       "dragging": false,
@@ -526,7 +526,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 402
+        "height": 452
       },
       "selected": false,
       "dragging": false,
@@ -666,9 +666,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 693
+        "height": 698
       },
-      "selected": true,
+      "selected": false,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -689,13 +689,15 @@
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "skipped": true
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 354
+        "height": 434
       },
       "selected": false,
       "dragging": false,
@@ -851,7 +853,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 328
+        "height": 408
       },
       "selected": false,
       "dragging": false,
@@ -2340,6 +2342,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-05T15:52:56",
-  "revision": 33
+  "updatedAt": "2026-09-05T17:15:33",
+  "revision": 34
 }
