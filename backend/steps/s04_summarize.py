@@ -93,11 +93,30 @@ class S04Summarize(BaseStep):
         from backend.llm.llm_client import get_llm_client
 
         llm = get_llm_client()
-        prompt_data = self._build_prompt(text, max_summary_length)
+        # prompt 构建是本地处理（模板渲染），失败与 LLM 请求无关：
+        # 直接抛出真实错误，不进入 LLM 请求重试链路
+        try:
+            prompt_data = self._build_prompt(text, max_summary_length)
+        except Exception as e:
+            print(f"[s04_summarize] prompt build failed (non-LLM error, no retry): {e}", flush=True)
+            raise
+        system_prompt = prompt_data.get("system_prompt") or ""
+        user_prompt = prompt_data.get("user_prompt") or ""
+        if not user_prompt.strip():
+            raise RuntimeError(
+                "[s04_summarize] prompt built empty (non-LLM error): "
+                "check the s04_summarize prompt template"
+            )
+        print(
+            f"[s04_summarize] prompt ready: input_text={len(text)} chars "
+            f"(sent to LLM capped at 8000), user_prompt={len(user_prompt)} chars, "
+            f"system_prompt={len(system_prompt)} chars",
+            flush=True,
+        )
         result = llm.chat(
-            "s04_summarize", 
-            prompt_data["user_prompt"], 
-            system_prompt=prompt_data["system_prompt"],
+            "s04_summarize",
+            user_prompt,
+            system_prompt=system_prompt,
             response_json=True
         )
         if not isinstance(result, dict):

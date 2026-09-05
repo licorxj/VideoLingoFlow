@@ -94,15 +94,23 @@ class Balancer:
         self.db = db
         self._rr_index: dict[int, int] = {}
 
-    async def select_rule(self, strategy: Strategy) -> StrategyRule | None:
+    async def select_rule(
+        self, strategy: Strategy, exclude_rule_ids: set | None = None
+    ) -> StrategyRule | None:
         result = await self.db.execute(
             select(StrategyRule)
             .where(StrategyRule.strategy_id == strategy.id, StrategyRule.is_active == True)
             .order_by(StrategyRule.priority, StrategyRule.id)
         )
-        rules = result.scalars().all()
+        rules = list(result.scalars().all())
         if not rules:
             return None
+
+        # 重试时排除已失败的规则，实现真正的 failover；
+        # 若所有规则都已被排除，则回退为原列表（重试总比直接失败好）
+        if exclude_rule_ids:
+            remaining = [r for r in rules if r.id not in exclude_rule_ids]
+            rules = remaining or rules
 
         method = strategy.lb_strategy
 

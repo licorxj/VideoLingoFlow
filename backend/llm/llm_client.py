@@ -21,6 +21,54 @@ LOG_DIR = os.path.join(
     "output", "llm_logs"
 )
 
+
+class LLMErrorType:
+    """LLM 错误分类。决定错误是否可重试，并在日志中精确标注错误来源。
+
+    只有传输类错误（超时/连接/限流/上游5xx）才会重试；鉴权、参数、解析、
+    配置等错误重试必然复现，必须立即抛出真实错误，避免无意义的反复重试。
+    """
+    TIMEOUT = "timeout"          # 请求超时（可重试）
+    CONNECTION = "connection"    # 连接失败/对端断开等传输错误（可重试）
+    RATE_LIMIT = "rate_limit"    # 429 限流（可重试）
+    SERVER = "server"            # 上游 5xx（可重试）
+    AUTH = "auth"                # 401/403 鉴权失败（不重试）
+    QUOTA = "quota"              # 402 余额/配额不足（不重试）
+    BAD_REQUEST = "bad_request"  # 400/404/413/422 等，如 prompt 超长（不重试）
+    PARSE = "parse"              # 请求成功但响应内容解析失败（不重试）
+    CONFIG = "config"            # 本地配置缺失（不重试）
+    UNKNOWN = "unknown"          # 其他未知错误（不重试，直接暴露真实错误）
+
+
+RETRYABLE_ERROR_TYPES = {
+    LLMErrorType.TIMEOUT,
+    LLMErrorType.CONNECTION,
+    LLMErrorType.RATE_LIMIT,
+    LLMErrorType.SERVER,
+}
+
+
+class LLMRequestError(RuntimeError):
+    """带分类的 LLM 请求异常。
+
+    - error_type / retryable：调用方可据此决定是否重试，非 LLM 传输错误不会被重试
+    - message 保留上游/本地真实错误原文，便于直接定位
+    """
+
+    def __init__(self, message: str, error_type: str = LLMErrorType.UNKNOWN,
+                 status_code: Optional[int] = None,
+                 step: Optional[str] = None, model: Optional[str] = None):
+        super().__init__(message)
+        self.error_type = error_type
+        self.status_code = status_code
+        self.step = step
+        self.model = model
+
+    @property
+    def retryable(self) -> bool:
+        return self.error_type in RETRYABLE_ERROR_TYPES
+
+
 # --- 复用 OpenAI 客户端连接池：按 (base_url, api_key, timeout) 缓存单例 ---
 _CLIENT_CACHE: dict = {}
 _CLIENT_CACHE_LOCK = threading.Lock()
@@ -111,68 +159,67 @@ class LLMClient:
                     _CLIENT_CACHE.pop(next(iter(_CLIENT_CACHE)))
             return client
 
-    @staticmethod
-    def _is_connection_error(exc: Exception) -> bool:
-        """连接级错误（对端重置/关闭连接）应可重试。
+    # --- 错误分类 -----------------------------------------------------------
+    #
+    # 只依据异常类型与 HTTP 状态码归类，不对错误文本做宽泛子串匹配。
+    # 旧版用 "timeout"/"502"/"连接被" 等文本猜测可重试性，会把 prompt 构建、
+    # 响应处理等非 LLM 传输错误误判为请求失败而反复重试，掩盖真实错误。
 
-        连接池复用场景下，上游/网关可能已关闭空闲 keep-alive 连接，
-        复用该连接会收到 RST（如 Windows WinError 10054）。httpx 会在请求
-        失败后将该失效连接移出连接池，重试即用新连接成功。
-        """
-        conn_names = {
-            "ConnectionError", "ConnectionResetError", "RemoteDisconnected",
-            "RemoteProtocolError", "ConnectError", "CloseError",
-            "APIConnectionError", "TransportError",
-        }
-        exc_names = {type(exc).__name__}
-        cause = getattr(exc, "__cause__", None)
-        if cause:
-            exc_names.add(type(cause).__name__)
-        if conn_names & exc_names:
-            return True
-        text = str(exc).lower()
-        return (
-            "10054" in text
-            or "connection reset" in text
-            or "connection aborted" in text
-            or "remote disconnected" in text
-            or "远程主机" in text
-            or "连接被" in text
-        )
+    # 异常类名 → 分类（同时检查 __cause__ 链，覆盖 OpenAI SDK/httpx 的包装异常）
+    _TIMEOUT_NAMES = {
+        "APITimeoutError", "TimeoutError", "ReadTimeout",
+        "ConnectTimeout", "WriteTimeout", "PoolTimeout",
+    }
+    _CONN_NAMES = {
+        "APIConnectionError", "ConnectError", "ConnectionError",
+        "ConnectionResetError", "ConnectionAbortedError", "ConnectionRefusedError",
+        "RemoteDisconnected", "RemoteProtocolError", "ReadError", "WriteError",
+        "TransportError", "SSLError",
+    }
 
     @staticmethod
-    def _is_timeout_error(exc: Exception) -> bool:
-        """Best-effort timeout detection across OpenAI/httpx error types."""
-        exc_names = {type(exc).__name__}
+    def _extract_status(exc: Exception) -> Optional[int]:
+        """从异常或其 response 属性中提取 HTTP 状态码（OpenAI SDK/httpx 均适用）。"""
+        status = getattr(exc, "status_code", None)
+        if isinstance(status, int):
+            return status
+        resp = getattr(exc, "response", None)
+        status = getattr(resp, "status_code", None)
+        return status if isinstance(status, int) else None
+
+    @classmethod
+    def _classify_error(cls, exc: Exception) -> tuple:
+        """返回 (error_type, http_status)。error_type 决定是否可重试。"""
+        status = cls._extract_status(exc)
+        names = {type(exc).__name__}
         cause = getattr(exc, "__cause__", None)
-        if cause:
-            exc_names.add(type(cause).__name__)
-        if {"APITimeoutError", "TimeoutError", "ReadTimeout", "ConnectTimeout"} & exc_names:
-            return True
-        text = str(exc).lower()
-        return "timed out" in text or "timeout" in text
+        if cause is not None:
+            names.add(type(cause).__name__)
+        if names & cls._TIMEOUT_NAMES:
+            return LLMErrorType.TIMEOUT, status
+        if names & cls._CONN_NAMES:
+            return LLMErrorType.CONNECTION, status
+        if isinstance(status, int):
+            if status == 408:
+                return LLMErrorType.TIMEOUT, status
+            if status == 429:
+                return LLMErrorType.RATE_LIMIT, status
+            if status in (401, 403):
+                return LLMErrorType.AUTH, status
+            if status == 402:
+                return LLMErrorType.QUOTA, status
+            if 400 <= status < 500:
+                return LLMErrorType.BAD_REQUEST, status
+            if status >= 500:
+                return LLMErrorType.SERVER, status
+        # 未知错误（响应结构异常、本地处理出错等）一律不重试，直接抛真实错误
+        return LLMErrorType.UNKNOWN, status
 
     @staticmethod
     def _is_retryable_error(exc: Exception) -> bool:
-        """Check if error is retryable: connection error, timeout, or 5xx."""
-        # 连接级错误（对端重置/关闭连接，如 WinError 10054）优先重试
-        if LLMClient._is_connection_error(exc):
-            return True
-        # Timeout errors
-        if LLMClient._is_timeout_error(exc):
-            return True
-        # 5xx server errors (502, 503, 504, etc.)
-        exc_names = {type(exc).__name__}
-        cause = getattr(exc, "__cause__", None)
-        if cause:
-            exc_names.add(type(cause).__name__)
-        if {"InternalServerError", "APIStatusError"} & exc_names:
-            return True
-        status_code = getattr(exc, "status_code", None)
-        if status_code and 500 <= status_code < 600:
-            return True
-        text = str(exc).lower()
-        return "error code: 5" in text or "502" in text or "503" in text or "504" in text
+        """兼容旧调用：错误是否属于可重试的 LLM 传输类错误。"""
+        err_type, _ = LLMClient._classify_error(exc)
+        return err_type in RETRYABLE_ERROR_TYPES
 
     @staticmethod
     def _parse_response_content(content: str, response_json: bool) -> Any:
@@ -236,9 +283,11 @@ class LLMClient:
         """
         api_cfg = self._get_api_config(step_name)
         if not api_cfg["base_url"] or not api_cfg["api_key"]:
-            raise ValueError(
+            # 配置缺失是本地问题，重试无意义，直接给出可定位的错误
+            raise LLMRequestError(
                 f"LLM config incomplete: base_url={api_cfg['base_url']!r}, "
-                "please configure in Settings > LLM"
+                "please configure in Settings > LLM",
+                error_type=LLMErrorType.CONFIG, step=step_name, model=api_cfg.get("model"),
             )
 
         # Build message list
@@ -299,15 +348,37 @@ class LLMClient:
                     _log_parts.append(f"    [{role}] {str(content)[:300]}")
             print("\n".join(_log_parts), flush=True)
 
+        # 请求元信息一行日志：排查超时/路由问题时，可确认实际生效的
+        # base_url、model、超时时间与请求体量（多模态图片不计入字符数）
+        prompt_chars = 0
+        for m in msg_list:
+            c = m.get("content", "")
+            if isinstance(c, str):
+                prompt_chars += len(c)
+            else:
+                prompt_chars += sum(
+                    len(p.get("text", "")) for p in c if isinstance(p, dict) and p.get("type") == "text"
+                )
+        print(
+            f"[LLM] request (step={step_name}, model={step_model}, stream={stream}, "
+            f"response_json={response_json}, timeout={timeout_val}s, "
+            f"prompt_chars={prompt_chars}, base_url={api_cfg['base_url']})",
+            flush=True,
+        )
+
         if stream:
             return self._stream_response(client, kwargs, step_name, prompt, log)
 
-        # Retry loop for timeout and server errors (config-driven)
+        # Retry loop: ONLY transport-level errors (timeout / connection / 429 / 5xx)
+        # are retried. All other errors (auth, bad request, parse failure, config,
+        # unknown) raise immediately with the real cause — retrying them cannot
+        # succeed and only masks the actual problem.
         retry_enabled = api_cfg.get("retry_enabled", True)
         retry_count = api_cfg.get("retry_count", 1) if retry_enabled else 0
 
         last_error = None
         for attempt in range(retry_count + 1):
+            t0 = time.time()
             try:
                 resp = client.chat.completions.create(**kwargs)
                 content = resp.choices[0].message.content or ""
@@ -318,40 +389,61 @@ class LLMClient:
                 try:
                     result = self._parse_response_content(content, response_json)
                 except Exception as parse_err:
-                    raise RuntimeError(
-                        f"LLM response parse failed (step={step_name}, model={step_model}): {parse_err}"
+                    print(
+                        f"[LLM] parse failed, NOT retryable (step={step_name}, "
+                        f"model={step_model}): {parse_err}",
+                        flush=True,
+                    )
+                    raise LLMRequestError(
+                        f"LLM response parse failed (step={step_name}, model={step_model}): {parse_err}",
+                        error_type=LLMErrorType.PARSE, step=step_name, model=step_model,
                     ) from parse_err
                 if log:
                     self._save_log(step_name, prompt, result)
+                print(
+                    f"[LLM] ok (step={step_name}, model={step_model}, "
+                    f"elapsed={time.time() - t0:.1f}s)",
+                    flush=True,
+                )
                 return result
+            except LLMRequestError:
+                raise  # 已分类错误（解析失败等）不再进入重试
             except Exception as e:
-                # Response parse failures are already labelled precisely above;
-                # re-raise without retrying.
-                if "response parse failed" in str(e):
-                    raise
-                if self._is_retryable_error(e):
+                err_type, status = self._classify_error(e)
+                elapsed = time.time() - t0
+                if err_type in RETRYABLE_ERROR_TYPES:
                     last_error = e
                     if attempt < retry_count:
                         wait = 3 * (attempt + 1)
-                        err_type = "Timeout" if self._is_timeout_error(e) else f"Server error ({e})"
                         print(
                             f"[LLM] {err_type} (step={step_name}, model={step_model}), "
-                            f"attempt {attempt + 1}/{retry_count + 1}, retrying in {wait}s...",
+                            f"attempt {attempt + 1}/{retry_count + 1}, "
+                            f"elapsed {elapsed:.1f}s, status={status}, retrying in {wait}s...",
                             flush=True,
                         )
                         time.sleep(wait)
-                    continue
-                # Non-retryable request errors raise immediately
-                raise RuntimeError(
-                    f"LLM request failed (step={step_name}, model={step_model}): {e}"
+                        continue
+                    break  # 可重试错误但重试已耗尽，落到最终报错
+                # 不可重试错误：立即抛出真实错误（保留上游错误原文），绝不重复重试
+                print(
+                    f"[LLM] {err_type} NOT retryable (step={step_name}, model={step_model}, "
+                    f"status={status}, elapsed={elapsed:.1f}s): {str(e)[:300]}",
+                    flush=True,
+                )
+                raise LLMRequestError(
+                    f"LLM request failed (step={step_name}, model={step_model}, "
+                    f"type={err_type}, status={status}): {e}",
+                    error_type=err_type, status_code=status, step=step_name, model=step_model,
                 ) from e
 
         # All retries exhausted
-        err_type = "Timeout" if self._is_timeout_error(last_error) else f"Server error"
-        raise RuntimeError(
-            f"LLM request failed after {retry_count + 1} attempts: {err_type} "
-            f"(step={step_name}, model={step_model})"
-        ) from last_error
+        if last_error is not None:
+            err_type, status = self._classify_error(last_error)
+            raise LLMRequestError(
+                f"LLM request failed after {retry_count + 1} attempts "
+                f"(step={step_name}, model={step_model}, type={err_type}, status={status}): {last_error}",
+                error_type=err_type, status_code=status, step=step_name, model=step_model,
+            ) from last_error
 
     def _stream_response(
         self, client: OpenAI, kwargs: dict, step_name: str, prompt: str, log: bool
@@ -420,14 +512,27 @@ class LLMClient:
                 except Exception as e:
                     last_error = e
                     error_str = str(e)
-                    # Only retry on transient errors (502, 503, 504, timeout, connection errors)
-                    is_transient = LLMClient._is_retryable_error(e)
+                    # 仅重试可重试的 LLM 传输类错误（超时/连接/限流/上游5xx）；
+                    # 鉴权、参数、解析、配置等错误重试必然复现，立即抛出真实错误
+                    err_type = getattr(e, "error_type", None)
+                    if err_type is not None:
+                        is_transient = err_type in RETRYABLE_ERROR_TYPES
+                    else:
+                        is_transient = LLMClient._is_retryable_error(e)
                     if attempt < max_retries and is_transient:
                         wait_time = retry_delay * (2 ** attempt)  # Exponential backoff
-                        print(f"[LLM] 请求失败 (attempt {attempt + 1}/{max_retries + 1}), {wait_time:.1f}s 后重试: {error_str[:100]}")
+                        print(
+                            f"[LLM] 请求失败 (step={step}, attempt {attempt + 1}/{max_retries + 1}), "
+                            f"{wait_time:.1f}s 后重试: {error_str[:120]}"
+                        )
                         time.sleep(wait_time)
                     else:
                         # Non-transient error or max retries reached
+                        if not is_transient:
+                            print(
+                                f"[LLM] non-retryable, fail fast (step={step}): {error_str[:200]}",
+                                flush=True,
+                            )
                         raise
 
         # Always use a fresh local executor to avoid stale/shut-down executor issues

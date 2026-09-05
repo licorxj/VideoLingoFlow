@@ -35,13 +35,19 @@ async def _resolve(strategy_name: str, db: AsyncSession):
 
 
 async def _try_forward(strategy, db, request_body, is_stream):
-    """Try to forward request using balancer with retry logic."""
+    """Try to forward request using balancer with retry logic.
+
+    仅传输层错误（连接失败/读写超时/对端断开）和上游 HTTP 状态错误会重试，
+    并通过 exclude_rule_ids 实现真正的 failover；协议转换、响应处理等
+    非传输错误重试必然复现，立即失败并保留真实错误。
+    """
     balancer = Balancer(db)
     forwarder = Forwarder(db)
     last_error = None
+    failed_rule_ids: set = set()
 
     for attempt in range(strategy.retry_count + 1):
-        rule = await balancer.select_rule(strategy)
+        rule = await balancer.select_rule(strategy, exclude_rule_ids=failed_rule_ids)
         if not rule:
             raise HTTPException(503, detail="No active rules in strategy")
 
@@ -49,33 +55,54 @@ async def _try_forward(strategy, db, request_body, is_stream):
         model = await db.get(Model, rule.model_id)
         if not provider or not model or not provider.is_active or not model.is_active:
             last_error = "Provider or model unavailable"
+            failed_rule_ids.add(rule.id)
             continue
 
         api_key = await balancer.select_key(provider.id, strategy)
         if not api_key:
             last_error = f"No active API key for {provider.name}"
+            failed_rule_ids.add(rule.id)
             continue
 
+        attempt_prefix = (
+            f"[router] strategy={strategy.name} provider={provider.name} "
+            f"model={model.model_id} stream={is_stream}"
+        )
         try:
             if is_stream:
                 return await _handle_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
             else:
                 return await _handle_non_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
-        except (httpx.HTTPStatusError, httpx.RequestError) as e:
-            last_error = str(e)[:500]
-            if isinstance(e, httpx.HTTPStatusError):
-                if e.response.status_code == 429:
-                    api_key.status = "rate_limited"
-                    api_key.last_error = "Rate limited"
-                    await db.commit()
-                elif e.response.status_code in (401, 403):
-                    api_key.status = "inactive"
-                    api_key.last_error = f"Auth error: {e.response.status_code}"
-                    await db.commit()
+        except httpx.HTTPStatusError as e:
+            # 仅流式转发会抛出（非流式的上游错误由 _handle_non_stream 直接返回）
+            last_error = f"{type(e).__name__}: {e}"
+            status = getattr(getattr(e, "response", None), "status_code", None)
+            if status == 429:
+                api_key.status = "rate_limited"
+                api_key.last_error = "Rate limited"
+                await db.commit()
+            elif status in (401, 403):
+                api_key.status = "inactive"
+                api_key.last_error = f"Auth error: {status}"
+                await db.commit()
+            failed_rule_ids.add(rule.id)
+            print(f"{attempt_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} failed: {last_error[:300]}", flush=True)
+            continue
+        except httpx.RequestError as e:
+            # 传输层错误：可重试，并 failover 到下一条规则
+            last_error = f"{type(e).__name__}: {e}"
+            failed_rule_ids.add(rule.id)
+            print(
+                f"{attempt_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
+                f"transport error: {last_error[:300]}",
+                flush=True,
+            )
             continue
         except Exception as e:
-            last_error = str(e)[:500]
-            continue
+            # 非传输错误（协议转换/响应解析/本地配置等）：重试必然复现，立即失败
+            last_error = f"{type(e).__name__}: {e}"
+            print(f"{attempt_prefix} non-retryable error: {last_error[:300]}", flush=True)
+            break
 
     try:
         await forwarder.log_request(
