@@ -225,3 +225,9 @@ htmlcov/
 # Celery
 celerybeat-schedule
 celerybeat.pid
+
+# Local cache / plans (not tracked)
+.zcode/
+
+# Backend tests (not tracked)
+backend/tests/
