@@ -14,12 +14,14 @@ All paths are relative to `PROJECT_ROOT`.
 - AI generation: `backend/steps/s_aigc_comfyui.py`, `backend/steps/s_aigc_jimeng.py`, `backend/steps/s_aigc_runninghub.py`, `backend/steps/s_imagegen.py`.
 - Utility and integration nodes: `backend/steps/s_http_request.py`, `backend/steps/s_llm_request.py`, `backend/steps/s_json_editor.py`, `backend/steps/s_json_to_text.py`, `backend/steps/s_file_rename.py`, `backend/steps/s_video_publish.py`.
 - Editing and workflow-agent nodes: `backend/steps/s_cutia.py`, `backend/steps/s_editor_agent.py`.
+- HyperFrames video authoring (HTML composition → `npx hyperframes` render): `backend/steps/s_hyperframes_base.py`, `backend/steps/s_hyperframes_creative.py`, `backend/steps/s_hyperframes_render.py`, `backend/steps/s_hyperframes_cli.py`, `backend/steps/s_hyperframes_agent.py`; shared helpers in `backend/utils/hyperframes.py`.
 
 ## Skill Documentation Locations
 
 - Built-in agent knowledge documents: `backend/config/agent/*.md`.
 - Project-specific installed skills: `backend/config/agent/skills/`.
   - ElevenLabs 音效爬虫与下载: `backend/config/agent/skills/elevenlabs-sound-effects/SKILL.md` — 对接 ElevenLabs 音效库搜索接口，抓取营销片段详情/URL，支持中文 LLM 翻译与音效下载。
+  - HyperFrames 视频创作: `backend/config/agent/skills/hyperframes/SKILL.md` — 用 HTML 描述合成、用 `npx hyperframes` 渲染成片的入口技能；`references/routes/*.md` 为每个工作流的输入/输出/触发契约。被 HyperFrames 系列工作流节点（`backend/steps/s_hyperframes_*.py`）驱动。
 - User-installed skills are scanned from: `%USERPROFILE%/.claude/skills`, `%USERPROFILE%/.codex/skills`, `%USERPROFILE%/.trae/skills`, `%USERPROFILE%/.agents/skills`, `%USERPROFILE%/.agent/skills`.
 - Project-specific MCP definitions: `backend/config/agent/mcp/`.
 - User-installed MCP definitions are scanned from: `%USERPROFILE%/.claude/mcps`, `%USERPROFILE%/.trae/mcps`, `%USERPROFILE%/.agents/mcps`, `%USERPROFILE%/.agent/mcps`.

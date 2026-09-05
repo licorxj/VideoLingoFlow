@@ -81,6 +81,10 @@ from backend.steps.s_seedance import (
     S_SeedanceTxt2Video, S_SeedanceImg2Video,
     S_SeedanceFlf2Video, S_SeedanceAutoVideo,
 )
+from backend.steps.s_hyperframes_creative import S_HyperFramesCreative
+from backend.steps.s_hyperframes_render import S_HyperFramesRender
+from backend.steps.s_hyperframes_cli import S_HyperFramesCli
+from backend.steps.s_hyperframes_agent import S_HyperFramesAgent
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -228,6 +232,15 @@ _STEPS = {
     "seedream_grid": S_SeedreamGrid(),
     "seedream_websearch": S_SeedreamWebSearch(),
     "seedream_layer": S_SeedreamLayer(),
+    # HyperFrames 系列节点（HTML 合成 → 渲染成片，置于 HyperFrames 节点 分组）
+    "s_hyperframes_creative": S_HyperFramesCreative(),
+    "hyperframes_creative": S_HyperFramesCreative(),
+    "s_hyperframes_render": S_HyperFramesRender(),
+    "hyperframes_render": S_HyperFramesRender(),
+    "s_hyperframes_cli": S_HyperFramesCli(),
+    "hyperframes_cli": S_HyperFramesCli(),
+    "s_hyperframes_agent": S_HyperFramesAgent(),
+    "hyperframes_agent": S_HyperFramesAgent(),
     # Seedance 视频生成能力节点（即梦品牌命名，置于 AI生成类节点 分组）
     "seedance_txt2video": S_SeedanceTxt2Video(),
     "seedance_img2video": S_SeedanceImg2Video(),

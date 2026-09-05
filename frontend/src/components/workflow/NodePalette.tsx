@@ -43,6 +43,7 @@ export default function NodePalette({ onAddNode, collapsed, onToggleCollapse }: 
     agent: false,
     utility: true,
     file: false,
+    hyperframes: true,
   });
   const [managerOpen, setManagerOpen] = useState(false);
   const [nodeRegistry, setNodeRegistry] = useState<NodeTypeDef[]>(getAllNodeTypes());

@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import subprocess
 import time
@@ -20,6 +21,8 @@ from backend.voiceforge.prompting import (
     temperature_for,
 )
 from backend.voiceforge.storage import ensure_project_dirs, resolve_storage_key
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now():
@@ -132,6 +135,51 @@ def task_is_active(conn, task_id: str, project_id: str):
     return bool(row and row["status"] not in {"cancelled", "failed"})
 
 
+def _resolve_emotion_clone_reference(data: dict, sentence_emotion: str, task_id: str | None = None):
+    """根据句子情绪标签，从音色的 emotions_json 中匹配对应情绪的参考音频用于克隆。
+
+    返回 (ref_audio_path, emotion_instruct)：
+      - 命中且参考音频存在 -> 用该情绪专属参考音频 + 该情绪的 instruct 文本
+      - 未命中 / 文件缺失   -> 回退到 (None, "") 交给调用方使用音色主参考音频
+    仅当 mode 为 clone / controllable_clone 时调用（参考音频只用于克隆类模式）；
+    预设/声音设计模式不依赖参考音频，无需匹配。
+    """
+    if data.get("mode") not in ("clone", "controllable_clone") or not sentence_emotion:
+        return None, ""
+    raw = data.get("emotions_json")
+    emotions = []
+    if raw:
+        try:
+            emotions = json.loads(raw) if isinstance(raw, str) else raw
+        except (TypeError, json.JSONDecodeError):
+            emotions = []
+    if not isinstance(emotions, list):
+        emotions = []
+    target = str(sentence_emotion).strip().lower()
+    matched = None
+    for entry in emotions:
+        if not isinstance(entry, dict):
+            continue
+        name = str(entry.get("name") or "").strip().lower()
+        if name and name == target:
+            matched = entry
+            break
+    if not matched:
+        return None, ""
+    audio_key = matched.get("audio_path") or matched.get("reference_storage_key")
+    if not audio_key:
+        return None, ""
+    audio_path = resolve_storage_key(audio_key)
+    if not audio_path.exists() or audio_path.stat().st_size == 0:
+        # 情绪参考音频缺失时回退主参考音频，避免合成失败，并记日志方便排查
+        logger.warning(
+            "情绪参考音频缺失，回退音色主参考音频: task=%s voice_id=%s emotion=%s audio_key=%s",
+            task_id, data.get("voice_id") or data.get("profile_voice_id"), target, audio_key,
+        )
+        return None, ""
+    return str(audio_path), str(matched.get("instruct") or "")
+
+
 def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | None = None, interface_id: str | None = None):
     update_task(task_id, "running", 0.1)
     try:
@@ -140,7 +188,7 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
                 """
                 SELECT s.*, p.default_interface_id, p.default_voice_id, p.default_speed,
                        v.interface_id AS profile_interface_id, v.voice_id AS profile_voice_id, v.mode,
-                       v.reference_storage_key, v.params_json
+                       v.reference_storage_key, v.params_json, v.emotions_json
                 FROM vf_sentences s JOIN vf_projects p ON p.id = s.project_id
                 LEFT JOIN vf_voices v ON v.id = s.voice_profile_id WHERE s.id = ?
                 """,
@@ -172,7 +220,9 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
                 stream.writeframes(b"\x00\x00" * 1600)
         else:
             params = json.loads(data.get("params_json") or "{}")
-            ref_path = resolve_storage_key(data["reference_storage_key"]) if data.get("reference_storage_key") else None
+            # 按句子情绪标签匹配音色对应情绪的参考音频；未命中回退主参考音频
+            emotion_ref_audio, emotion_instruct = _resolve_emotion_clone_reference(data, data.get("emotion"), task_id)
+            ref_path = Path(emotion_ref_audio) if emotion_ref_audio else (resolve_storage_key(data["reference_storage_key"]) if data.get("reference_storage_key") else None)
             engine = get_tts_engine(effective_interface_id)
             max_retries = synthesis_retry_count()
             delay = synthesis_retry_delay()
@@ -188,7 +238,11 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
                         speed=data.get("speed") or data.get("default_speed"),
                         voice=voice_id,
                         voice_design=params.get("voice_design"),
-                        controllable_clone=params.get("controllable_clone"),
+                        controllable_clone=(
+                            f"{params.get('controllable_clone')}；{emotion_instruct}".strip("；")
+                            if emotion_instruct and params.get("controllable_clone")
+                            else (emotion_instruct or params.get("controllable_clone"))
+                        ),
                         ref_text=params.get("ref_text"),
                     )
                     if succeeded and output_path.exists() and output_path.stat().st_size > 0:

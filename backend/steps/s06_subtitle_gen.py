@@ -120,7 +120,7 @@ class S06SubtitleGen(BaseStep):
 
     @classmethod
     def _load_language_puncts(cls, lang: str = "auto") -> Dict[str, set]:
-        """Load punctuation config for a language, falling back to _default."""
+        """Load punctuation config for a language, merging with _common."""
         cache_key = str(lang or "auto")
         if cache_key in cls._PUNCTS_CACHE:
             return cls._PUNCTS_CACHE[cache_key]
@@ -143,9 +143,13 @@ class S06SubtitleGen(BaseStep):
             or all_puncts.get(lang_base)
             or all_puncts.get("_default", {})
         )
+        # 合并 _common 部分的标点（全角+半角）
+        common = all_puncts.get("_common", {})
+        sentence_ends = set(entry.get("sentence_ends", [".", "!", "?"])) | set(common.get("sentence_ends", []))
+        clause_breaks = set(entry.get("clause_breaks", [","])) | set(common.get("clause_breaks", []))
         result = {
-            "sentence_ends": set(entry.get("sentence_ends", [".", "!", "?"])),
-            "clause_breaks": set(entry.get("clause_breaks", [","])),
+            "sentence_ends": sentence_ends,
+            "clause_breaks": clause_breaks,
         }
         cls._PUNCTS_CACHE[cache_key] = result
         return result
@@ -442,12 +446,22 @@ class S06SubtitleGen(BaseStep):
             replace_mode = str(node_cfg.get("punctuation_replace_mode") or "space").strip().lower()
             if replace_mode not in {"space", "remove"}:
                 replace_mode = "space"
+            # 根据 processing_language 配置确定处理语言
+            processing_lang = str(node_cfg.get("processing_language") or "from_source").strip().lower()
+            if processing_lang == "from_source":
+                filter_lang = source_lang
+            elif processing_lang == "from_target":
+                filter_lang = target_lang
+            elif processing_lang and processing_lang != "from_source":
+                filter_lang = processing_lang
+            else:
+                filter_lang = source_lang
             if callback:
-                callback(46, "按语言过滤字幕标点...")
+                callback(46, f"按语言过滤字幕标点 ({filter_lang})...")
             entries = self._apply_punctuation_filter(
                 entries,
-                source_lang=source_lang,
-                target_lang=target_lang,
+                source_lang=filter_lang,
+                target_lang=filter_lang,
                 replace_mode=replace_mode,
             )
 

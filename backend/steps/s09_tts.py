@@ -224,6 +224,7 @@ class S09TTS(BaseStep):
             "mode": tts_mode,
             "engine": node_cfg.get("tts_engine") or config.get("tts.method") or "edge_tts",
             "clone_source": node_cfg.get("clone_source", "fixed"),
+            "cc_colloquial_desc": str(node_cfg.get("cc_colloquial_desc") or "").strip(),
             "ref_audio_path": node_cfg.get("ref_audio_path", ""),
             "ref_audio_roles": [
                 node_cfg.get("ref_audio_role_1", ""),
@@ -481,7 +482,7 @@ class S09TTS(BaseStep):
         """构建音色设计指令
         
         - voice_design模式: 使用对应角色的音色描述 + 朗读语气
-        - controllable_clone模式: 使用TTS任务表中的朗读语气作为指令
+        - controllable_clone模式: 口语化描述(如有)前拼 + TTS任务表中的朗读语气作为指令
         """
         mode = tts_config["mode"]
         tone_desc = seg.get("read_tone_desc", "")
@@ -502,8 +503,11 @@ class S09TTS(BaseStep):
             return role_desc or tone_desc or ""
 
         elif mode == "controllable_clone":
-            # 指令克隆模式：直接使用朗读语气作为指令
-            return tone_desc or ""
+            # 指令克隆模式：口语化描述前拼并补逗号，实现方言口语化配音
+            colloquial = str(tts_config.get("cc_colloquial_desc") or "").strip()
+            if colloquial and tone_desc:
+                return f"{colloquial}，{tone_desc}"
+            return colloquial or tone_desc or ""
 
         return ""
 
