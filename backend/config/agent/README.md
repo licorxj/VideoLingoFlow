@@ -24,6 +24,7 @@ Do not infer a different root from a session directory or a temporary working di
 - `skills-index.md`: project workflow capabilities and the source paths for their implementations.
 - `docs/node_catalog.md`: auto-generated node catalog — every built-in/custom node's category, name, description, inputs/outputs. Regenerate with `python scripts/generate_node_catalog.py`.
 - `docs/capability-index.md`: capability document index used by the general assistant (read on demand).
+- `docs/material-search.md`: material search guide — local asset libraries (images/videos/characters/creation assets/voices/audio), the `local-material-search` skill, and Python/CLI query APIs.
 - `docs/*.md`: role capability documents (node creation, workflow orchestration, task execution, file management, publishing).
 
 The Pi manager loads selected base documents at session creation. Changing a document affects newly created sessions. Role capability documents are selected per assistant in the 小π Agent settings.

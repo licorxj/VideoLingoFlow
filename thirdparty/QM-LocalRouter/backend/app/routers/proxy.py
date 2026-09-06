@@ -44,52 +44,90 @@ async def _try_forward(strategy, db, request_body, is_stream):
     balancer = Balancer(db)
     forwarder = Forwarder(db)
     last_error = None
+    last_rule = None
+    last_provider = None
+    last_model = None
     failed_rule_ids: set = set()
+    log_prefix = f"[router] strategy={strategy.name}"
 
     for attempt in range(strategy.retry_count + 1):
         rule = await balancer.select_rule(strategy, exclude_rule_ids=failed_rule_ids)
         if not rule:
-            raise HTTPException(503, detail="No active rules in strategy")
+            last_error = "No active rules in strategy"
+            print(f"{log_prefix} {last_error}", flush=True)
+            raise HTTPException(503, detail=last_error)
 
         provider = await db.get(Provider, rule.provider_id)
         model = await db.get(Model, rule.model_id)
         if not provider or not model or not provider.is_active or not model.is_active:
-            last_error = "Provider or model unavailable"
+            prov_name = provider.name if provider else f"id={rule.provider_id}"
+            model_name = model.model_id if model else f"id={rule.model_id}"
+            active_flags = ""
+            if provider and not provider.is_active:
+                active_flags += f" provider={prov_name}(inactive)"
+            if model and not model.is_active:
+                active_flags += f" model={model_name}(inactive)"
+            if not provider:
+                active_flags += f" provider_id={rule.provider_id}(not found)"
+            if not model:
+                active_flags += f" model_id={rule.model_id}(not found)"
+            last_error = f"Provider or model unavailable:{active_flags}"
+            last_rule = rule
+            print(
+                f"{log_prefix} attempt {attempt + 1}/{strategy.retry_count + 1}: "
+                f"{last_error}",
+                flush=True,
+            )
             failed_rule_ids.add(rule.id)
             continue
 
         api_key = await balancer.select_key(provider.id, strategy)
         if not api_key:
             last_error = f"No active API key for {provider.name}"
+            last_rule, last_provider, last_model = rule, provider, model
+            print(
+                f"{log_prefix} attempt {attempt + 1}/{strategy.retry_count + 1}: "
+                f"{last_error}",
+                flush=True,
+            )
             failed_rule_ids.add(rule.id)
             continue
 
         attempt_prefix = (
-            f"[router] strategy={strategy.name} provider={provider.name} "
+            f"{log_prefix} provider={provider.name} "
             f"model={model.model_id} stream={is_stream}"
         )
+        last_rule, last_provider, last_model = rule, provider, model
         try:
             if is_stream:
                 return await _handle_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
             else:
                 return await _handle_non_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
         except httpx.HTTPStatusError as e:
-            # 仅流式转发会抛出（非流式的上游错误由 _handle_non_stream 直接返回）
             last_error = f"{type(e).__name__}: {e}"
             status = getattr(getattr(e, "response", None), "status_code", None)
             if status == 429:
                 api_key.status = "rate_limited"
                 api_key.last_error = "Rate limited"
-                await db.commit()
+                try:
+                    await db.commit()
+                except Exception:
+                    pass
             elif status in (401, 403):
                 api_key.status = "inactive"
                 api_key.last_error = f"Auth error: {status}"
-                await db.commit()
+                try:
+                    await db.commit()
+                except Exception:
+                    pass
             failed_rule_ids.add(rule.id)
-            print(f"{attempt_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} failed: {last_error[:300]}", flush=True)
+            print(
+                f"{attempt_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
+                f"HTTP {status}: {last_error[:300]}",
+                flush=True,
+            )
             continue
         except httpx.RequestError as e:
-            # 传输层错误：可重试，并 failover 到下一条规则
             last_error = f"{type(e).__name__}: {e}"
             failed_rule_ids.add(rule.id)
             print(
@@ -99,18 +137,37 @@ async def _try_forward(strategy, db, request_body, is_stream):
             )
             continue
         except Exception as e:
-            # 非传输错误（协议转换/响应解析/本地配置等）：重试必然复现，立即失败
             last_error = f"{type(e).__name__}: {e}"
-            print(f"{attempt_prefix} non-retryable error: {last_error[:300]}", flush=True)
+            print(
+                f"{attempt_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
+                f"non-retryable error: {last_error[:300]}",
+                flush=True,
+            )
             break
 
+    # --- 日志：console 兜底（即使 DB 写入失败也不丢失诊断信息）---
+    model_name = last_model.model_id if last_model else "?"
+    provider_name = last_provider.name if last_provider else "?"
+    print(
+        f"{log_prefix} ALL ATTEMPTS FAILED → 502  "
+        f"provider={provider_name} model={model_name} "
+        f"stream={is_stream} error={str(last_error)[:200]}",
+        flush=True,
+    )
+    # --- 日志：写入 DB（失败不影响返回，仅 console 兜底已记录了诊断信息）---
     try:
         await forwarder.log_request(
-            strategy.id, None, None, str(last_error)[:100],
+            strategy.id,
+            last_provider.id if last_provider else None,
+            None,
+            model_name,
             request_body, 502, 0, is_stream, str(last_error)[:500],
         )
-    except Exception:
-        pass
+    except Exception as log_exc:
+        print(
+            f"{log_prefix} WARNING: failed to write request log to DB: {log_exc}",
+            flush=True,
+        )
 
     raise HTTPException(502, detail=f"All attempts failed: {last_error}")
 
@@ -168,10 +225,22 @@ async def _handle_stream(strategy, rule, provider, model, api_key, request_body,
             await db.commit()
         except Exception as e:
             latency = int((time.monotonic() - start) * 1000)
-            await forwarder.log_request(
-                strategy.id, provider.id, api_key.id, model.model_id,
-                request_body, 500, latency, True, str(e)[:500],
+            print(
+                f"[router] stream error (strategy={strategy.name} "
+                f"provider={provider.name} model={model.model_id} "
+                f"latency={latency}ms): {str(e)[:300]}",
+                flush=True,
             )
+            try:
+                await forwarder.log_request(
+                    strategy.id, provider.id, api_key.id, model.model_id,
+                    request_body, 500, latency, True, str(e)[:500],
+                )
+            except Exception as log_exc:
+                print(
+                    f"[router] WARNING: failed to write stream error log: {log_exc}",
+                    flush=True,
+                )
             yield f"data: {json.dumps({'error': {'message': str(e)[:200]}})}\n\n"
             yield "data: [DONE]\n\n"
 
@@ -187,11 +256,24 @@ async def _handle_non_stream(strategy, rule, provider, model, api_key, request_b
     await db.commit()
 
     if resp.status_code >= 400:
-        await forwarder.log_request(
-            strategy.id, provider.id, api_key.id, model.model_id,
-            request_body, resp.status_code, latency, False, resp.text[:500],
+        error_text = resp.text[:500]
+        print(
+            f"[router] upstream {resp.status_code} "
+            f"(strategy={strategy.name} provider={provider.name} "
+            f"model={model.model_id} latency={latency}ms): {error_text[:200]}",
+            flush=True,
         )
-        return JSONResponse(status_code=resp.status_code, content={"error": {"message": resp.text[:500]}})
+        try:
+            await forwarder.log_request(
+                strategy.id, provider.id, api_key.id, model.model_id,
+                request_body, resp.status_code, latency, False, error_text,
+            )
+        except Exception as log_exc:
+            print(
+                f"[router] WARNING: failed to write upstream error log: {log_exc}",
+                flush=True,
+            )
+        return JSONResponse(status_code=resp.status_code, content={"error": {"message": error_text}})
 
     data = resp.json()
 

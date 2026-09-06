@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import BigInteger, Boolean, DateTime, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, func
+from sqlalchemy import BigInteger, Boolean, DateTime, Float, ForeignKey, Index, Integer, JSON, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -199,6 +199,146 @@ class Quota(TimestampedVersioned, Base):
     quota_key: Mapped[str] = mapped_column(String(64), nullable=False)
     limit_value: Mapped[int] = mapped_column(Integer, nullable=False)
     used_value: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+CREATION_ASSET_KINDS = {"character", "scene_image", "voiceover", "shot_video", "sfx", "bgm", "shot_render", "chapter_render"}
+
+
+class Creation(TimestampedVersioned, Base):
+    """AI 剧集创作项目主表(AGI 项目)。"""
+    __tablename__ = "cp_creations"
+    owner_id: Mapped[str | None] = mapped_column(ForeignKey("cp_users.id", ondelete="SET NULL"))
+    project_id: Mapped[str | None] = mapped_column(ForeignKey("cp_projects.id", ondelete="SET NULL"))
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    genre_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    art_style_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    audience_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    script_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    characters: Mapped[list["CreationCharacter"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
+    chapters: Mapped[list["CreationChapter"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
+    assets: Mapped[list["CreationAsset"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
+
+
+class CreationCharacter(TimestampedVersioned, Base):
+    """创作项目内的人物设定,可通过 character_lib_id 关联公共角色库。"""
+    __tablename__ = "cp_creation_characters"
+    __table_args__ = (
+        UniqueConstraint("creation_id", "name", name="uq_cp_creation_characters_creation_name"),
+        Index("ix_cp_creation_characters_lib", "character_lib_id"),
+    )
+    creation_id: Mapped[str] = mapped_column(ForeignKey("cp_creations.id", ondelete="CASCADE"), nullable=False)
+    character_lib_id: Mapped[str | None] = mapped_column(ForeignKey("cp_characters.id", ondelete="SET NULL"))
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    gender: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    age: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    personality: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    occupation: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    aliases: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    relationship_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    voice_design: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    voice_ref: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    creation: Mapped[Creation] = relationship(back_populates="characters")
+
+
+class CreationChapter(TimestampedVersioned, Base):
+    """创作项目的章节内容。"""
+    __tablename__ = "cp_creation_chapters"
+    __table_args__ = (UniqueConstraint("creation_id", "order_no", name="uq_cp_creation_chapters_creation_order"),)
+    creation_id: Mapped[str] = mapped_column(ForeignKey("cp_creations.id", ondelete="CASCADE"), nullable=False)
+    order_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    original_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    creation: Mapped[Creation] = relationship(back_populates="chapters")
+    shots: Mapped[list["CreationShot"]] = relationship(back_populates="chapter", cascade="all, delete-orphan")
+
+
+class CreationShot(TimestampedVersioned, Base):
+    """章节下的分镜;场景描述与对话(含对话 id)以 JSON 列表存储。"""
+    __tablename__ = "cp_creation_shots"
+    __table_args__ = (UniqueConstraint("chapter_id", "order_no", name="uq_cp_creation_shots_chapter_order"),)
+    chapter_id: Mapped[str] = mapped_column(ForeignKey("cp_creation_chapters.id", ondelete="CASCADE"), nullable=False)
+    order_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    characters: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    scene_descriptions: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    dialogues: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    bgm_design: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    sfx_design: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    chapter: Mapped[CreationChapter] = relationship(back_populates="shots")
+
+
+class CreationAsset(TimestampedVersioned, Base):
+    """项目资产明细,asset_kind 区分:character/scene_image/voiceover/shot_video/sfx/bgm/shot_render/chapter_render。"""
+    __tablename__ = "cp_creation_assets"
+    __table_args__ = (
+        Index("ix_cp_creation_assets_creation_kind", "creation_id", "asset_kind"),
+        Index("ix_cp_creation_assets_chapter_shot", "chapter_id", "shot_id"),
+    )
+    creation_id: Mapped[str] = mapped_column(ForeignKey("cp_creations.id", ondelete="CASCADE"), nullable=False)
+    asset_kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    chapter_id: Mapped[str | None] = mapped_column(ForeignKey("cp_creation_chapters.id", ondelete="SET NULL"))
+    shot_id: Mapped[str | None] = mapped_column(ForeignKey("cp_creation_shots.id", ondelete="SET NULL"))
+    name: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    ref_id: Mapped[str | None] = mapped_column(String(128))
+    paths: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    sequence: Mapped[int | None] = mapped_column(Integer)
+    duration_seconds: Mapped[float | None] = mapped_column(Float)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    metadata_json: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+    creation: Mapped[Creation] = relationship(back_populates="assets")
+
+
+class Character(TimestampedVersioned, Base):
+    """公共角色库(跨项目共享)。"""
+    __tablename__ = "cp_characters"
+    __table_args__ = (Index("ix_cp_characters_origin", "origin_creation_id"),)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    gender: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    age: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    personality: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    occupation: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    aliases: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    voice_design: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    voice_ref: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    images_dir: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
+    origin_creation_id: Mapped[str | None] = mapped_column(ForeignKey("cp_creations.id", ondelete="SET NULL"))
+
+
+class ImageAsset(TimestampedVersioned, Base):
+    """公共图片素材库,path 为项目根相对路径(data/ 内)。"""
+    __tablename__ = "cp_images"
+    path: Mapped[str] = mapped_column(String(1024), nullable=False, unique=True)
+    width: Mapped[int | None] = mapped_column(Integer)
+    height: Mapped[int | None] = mapped_column(Integer)
+    aspect_ratio: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    group_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    custom_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+
+class VideoAsset(TimestampedVersioned, Base):
+    """公共视频素材库,path 为项目根相对路径(data/ 内)。"""
+    __tablename__ = "cp_videos"
+    path: Mapped[str] = mapped_column(String(1024), nullable=False, unique=True)
+    width: Mapped[int | None] = mapped_column(Integer)
+    height: Mapped[int | None] = mapped_column(Integer)
+    duration_seconds: Mapped[float | None] = mapped_column(Float)
+    group_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    custom_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+
+
+class VideoDubWorkspace(TimestampedVersioned, Base):
+    """视频配音工作台工程:视频文件 + 字幕/片段/轨道布局(JSON state)。"""
+    __tablename__ = "cp_videodub_workspaces"
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    video_name: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    video_storage_key: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    duration: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    state: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
 
 CONTROL_PLANE_TABLES = {table.name for table in Base.metadata.tables.values()}

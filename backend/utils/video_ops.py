@@ -64,3 +64,93 @@ def merge_audio_video(video_path: str, audio_path: str, output_path: str):
         output_path
     ]
     subprocess.run(cmd, capture_output=True, timeout=600)
+
+
+def run_ffmpeg_with_progress(cmd, duration: float, callback=None, cancel_callback=None,
+                             timeout: int = 86400, label: str = "处理") -> None:
+    """执行 ffmpeg 命令并按 ``-progress pipe:1`` 输出上报进度。
+
+    ``cmd`` 需已包含 ``-progress pipe:1 -nostats``。协作取消时终止进程并抛出
+    TaskCancelledError；超时或非 0 退出码抛出带 stderr 尾部的 RuntimeError。
+    ``label`` 用于进度/错误文案（如 "转码"、"缩放"）。
+    """
+    import threading
+    import time
+
+    from backend.control_plane.runtime import TaskCancelledError
+
+    proc = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        bufsize=1,
+        encoding="utf-8",
+        errors="replace",
+    )
+    stderr_chunks = []
+    last = {"pct": 0}
+
+    def _progress_reader():
+        try:
+            for line in proc.stdout:
+                s = line.strip()
+                if s.startswith("out_time_ms="):
+                    try:
+                        ms = int(s.split("=", 1)[1])
+                    except ValueError:
+                        continue
+                    cur = ms / 1_000_000.0
+                    pct = min(99, int(cur / duration * 100)) if duration and duration > 0 else last["pct"]
+                    last["pct"] = pct
+                    if callback:
+                        try:
+                            callback(pct, f"{label}中 {cur:.1f}s / {duration:.1f}s")
+                        except Exception:
+                            pass
+                elif s == "progress=end":
+                    last["pct"] = 100
+                    if callback:
+                        try:
+                            callback(100, f"{label}完成")
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+
+    def _stderr_reader():
+        try:
+            for line in proc.stderr:
+                stderr_chunks.append(line)
+        except Exception:
+            pass
+
+    t1 = threading.Thread(target=_progress_reader, daemon=True)
+    t2 = threading.Thread(target=_stderr_reader, daemon=True)
+    t1.start()
+    t2.start()
+
+    elapsed = 0.0
+    while True:
+        rc = proc.poll()
+        if rc is not None:
+            break
+        if cancel_callback is not None and cancel_callback():
+            proc.terminate()
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+            raise TaskCancelledError(f"用户取消{label}")
+        time.sleep(0.5)
+        elapsed += 0.5
+        if elapsed > timeout:
+            proc.kill()
+            raise RuntimeError(f"{label}超时（超过 {int(timeout)} 秒）")
+
+    t1.join(timeout=2)
+    t2.join(timeout=2)
+    stderr_text = "".join(stderr_chunks)
+    if proc.returncode != 0:
+        snippet = stderr_text[-1500:] if stderr_text else ""
+        raise RuntimeError(f"ffmpeg {label}失败（返回码 {proc.returncode}）：\n{snippet}")

@@ -21,12 +21,13 @@ import AudioSelectorDialog from "@/components/AudioSelectorDialog";
 import SkillMcpPickerDialog, { type PickerKind } from "@/components/workflow/SkillMcpPickerDialog";
 import {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
+  Video, UserRound, AudioLines, UserRoundPlus,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, CheckCircle2, Loader2, XCircle, Clock, AlertTriangle, Play,
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
   Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
-  Grid3x3,
+  Grid3x3, Ratio,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
@@ -37,12 +38,14 @@ import { ImageMaskEditor } from "./ImageMaskEditor";
 import { VideoGenNode } from "./VideoGenNode";
 import { SeedanceVideoNode } from "./SeedanceVideoNode";
 import { AudioAssetLibraryNode } from "./AudioAssetLibraryNode";
+import { MaterialLibraryNodeCard } from "@/components/materials/MaterialLibraryNodeCard";
+import { VoiceCharacterNode } from "./VoiceCharacterNode";
 
 const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
-  Eraser, Type, Grid3x3,
+  Eraser, Type, Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
 };
 
 /** 节点头部顶栏：只有在该元素上按下鼠标才允许拖动节点，避免正文内框选/拖动误触移动节点 */
@@ -2739,6 +2742,24 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           config={config}
           onChange={(k, v) => handleConfigChange(k, v)}
         />
+      )}
+      {/* 新建音色角色：设计来源 + TTS 设置 + 多情绪开关 */}
+      {nodeType.id === "voice_character" && (
+        <VoiceCharacterNode
+          config={config}
+          onChange={(k, v) => handleConfigChange(k, v)}
+        />
+      )}
+            {/* 图片/视频/角色/音色素材库：选择素材ID + 卡片预览 */}
+      {(["image_asset_library", "video_asset_library", "character_asset_library", "voice_asset_library"] as const).map((id) =>
+        nodeType.id === id ? (
+          <MaterialLibraryNodeCard
+            key={id}
+            kind={id.replace("_asset_library", "") as "image" | "video" | "character" | "voice"}
+            config={config}
+            onChange={(k, v) => handleConfigChange(k, v)}
+          />
+        ) : null,
       )}
       {/* AI字幕纠错：卡片上设置字数上限与专有名词 */}
       {nodeType.id === "ai_subtitle_correct" && (

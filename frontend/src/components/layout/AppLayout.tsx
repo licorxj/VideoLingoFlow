@@ -15,7 +15,7 @@ function readSidebarCollapsed(): boolean {
 
 export default function AppLayout() {
   const location = useLocation();
-  const isEditor = location.pathname === "/editing";
+  const isEditor = location.pathname === "/editing" || location.pathname === "/voiceforge/video-dub";
   const [sidebarCollapsed, setSidebarCollapsed] = useState(readSidebarCollapsed);
   const [agentState, setAgentState] = useState<"closed" | "booting" | "open" | "minimized">("closed");
   const agentWakeAtRef = useRef(0);

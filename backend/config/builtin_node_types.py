@@ -565,30 +565,134 @@ BUILTIN_NODE_TYPES = [
         "id": "audio_asset_library",
         "name": "音频素材库",
         "execution_domain": "process",
-        "category": "audio",
-        "description": "从 URL、本地路径或晴沐配音谷在线素材库ID获取音频素材，自动下载/复制并重命名到当前工作文件夹。",
+        "category": "asset",
+        "description": "从 URL、本地路径或晴沐配音谷素材库（ID）获取音频素材，下载/复制到当前工作文件夹；输出素材路径与素材全信息 JSON。",
         "icon": "Music",
         "color": "#a855f7",
         "inputs": [
             {"id": "any", "label": "来源", "type": "any", "required": False}
         ],
         "outputs": [
-            {"id": "audio", "label": "音频文件", "type": "audio"},
-            {"id": "path", "label": "文件路径", "type": "filepath"}
+            {"id": "audio", "label": "素材路径", "type": "audio"},
+            {"id": "info", "label": "素材全信息JSON", "type": "json"}
         ],
         "defaultConfig": {
-            "source": ""
-        },
-        "configFields": [
-            {
-                "key": "source",
-                "label": "素材来源",
-                "type": "text",
-                "placeholder": "URL / 本地路径 / 配音谷素材库ID",
-                "rows": 2,
-                "description": "支持：1) 素材直链(http/https)；2) 本地文件或文件夹绝对路径；3) 晴沐配音谷在线素材库ID（chinaZ 详情页链接可直接识别，ElevenLabs 等请复制素材链接）。"
-            }
-        ]
+            "source": "",
+            "asset_name": ""
+        }
+    },
+    {
+        "id": "image_asset_library",
+        "name": "图片素材库",
+        "execution_domain": "process",
+        "category": "asset",
+        "description": "从公共图片素材库选择素材（记录素材ID），执行时回查详情并复制到当前工作文件夹；输出素材路径与素材全信息 JSON。",
+        "icon": "Image",
+        "color": "#74b9ff",
+        "inputs": [
+            {"id": "any", "label": "来源", "type": "any", "required": False}
+        ],
+        "outputs": [
+            {"id": "image", "label": "素材路径", "type": "image"},
+            {"id": "info", "label": "素材全信息JSON", "type": "json"}
+        ],
+        "defaultConfig": {
+            "source": "",
+            "asset_name": ""
+        }
+    },
+    {
+        "id": "video_asset_library",
+        "name": "视频素材库",
+        "execution_domain": "process",
+        "category": "asset",
+        "description": "从公共视频素材库选择素材（记录素材ID），执行时回查详情并复制到当前工作文件夹；输出素材路径与素材全信息 JSON。",
+        "icon": "Video",
+        "color": "#55efc4",
+        "inputs": [
+            {"id": "any", "label": "来源", "type": "any", "required": False}
+        ],
+        "outputs": [
+            {"id": "video", "label": "素材路径", "type": "video"},
+            {"id": "info", "label": "素材全信息JSON", "type": "json"}
+        ],
+        "defaultConfig": {
+            "source": "",
+            "asset_name": ""
+        }
+    },
+    {
+        "id": "character_asset_library",
+        "name": "角色素材库",
+        "execution_domain": "process",
+        "category": "asset",
+        "description": "从公共角色库选择角色（记录角色ID），执行时回查角色详情并把多视角图文件夹复制到工作目录；输出素材路径（图片文件夹）与角色全信息 JSON。",
+        "icon": "UserRound",
+        "color": "#fdcb6e",
+        "inputs": [
+            {"id": "any", "label": "来源", "type": "any", "required": False}
+        ],
+        "outputs": [
+            {"id": "path", "label": "素材路径(图片文件夹)", "type": "filepath"},
+            {"id": "info", "label": "素材全信息JSON", "type": "json"}
+        ],
+        "defaultConfig": {
+            "source": "",
+            "asset_name": ""
+        }
+    },
+    {
+        "id": "voice_asset_library",
+        "name": "音色素材库",
+        "execution_domain": "process",
+        "category": "asset",
+        "description": "从晴沐配音谷音色库选择音色（记录音色ID），执行时回查音色详情并把设计样音复制到工作目录；输出素材路径（试听音频）与音色全信息 JSON。",
+        "icon": "AudioLines",
+        "color": "#a29bfe",
+        "inputs": [
+            {"id": "any", "label": "来源", "type": "any", "required": False}
+        ],
+        "outputs": [
+            {"id": "audio", "label": "素材路径(试听音频)", "type": "audio"},
+            {"id": "info", "label": "素材全信息JSON", "type": "json"}
+        ],
+        "defaultConfig": {
+            "source": "",
+            "asset_name": ""
+        }
+    },
+    {
+        "id": "voice_character",
+        "name": "新建音色角色",
+        "execution_domain": "process",
+        "category": "asset",
+        "description": "LLM 根据角色描述/面板设计生成朗读提示词与TTS指令，合成角色默认音色片段与多情绪片段，并写入配音谷音色库；输出音色ID、主片段音频与全信息JSON。",
+        "icon": "UserRoundPlus",
+        "color": "#e17055",
+        "inputs": [
+            {"id": "description", "label": "角色描述文本", "type": "any", "required": False},
+            {"id": "design_json", "label": "角色设计JSON", "type": "json", "required": False}
+        ],
+        "outputs": [
+            {"id": "voice_id", "label": "音色ID", "type": "text"},
+            {"id": "audio", "label": "音色主片段音频", "type": "audio"},
+            {"id": "info", "label": "音色全信息JSON", "type": "json"}
+        ],
+        "defaultConfig": {
+            "design_source": "input",
+            "panel": {
+                "name": "",
+                "age": "",
+                "personality": "",
+                "dialect": "",
+                "occupation_background": "",
+                "voice_description": ""
+            },
+            "tts_mode": "voice_design",
+            "interface_id": "voxcpm",
+            "reference_audio": "",
+            "generate_emotions": False
+        }
     },
     {
         "id": "asr_postprocess",
@@ -3749,6 +3853,78 @@ BUILTIN_NODE_TYPES.append(
             {"key": "inner_shrink", "label": "内部切割收缩像素", "type": "number",
              "min": 0, "step": 1, "colSpan": "half", "defaultValue": 5,
              "description": "每个内部切缝两侧各向内收缩的像素，用于去掉格间接缝；与图片外边缘重合的边不收缩，默认 5"},
+        ],
+    }
+)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 视频处理节点
+# ─────────────────────────────────────────────────────────────────────────────
+BUILTIN_NODE_TYPES.append(
+    {
+        "id": "video_scale",
+        "name": "视频缩放",
+        "execution_domain": "thread",
+        "category": "video",
+        "description": (
+            "使用 ffmpeg 将视频缩放到预置分辨率（按目标高度等比缩放）或自定义宽高，"
+            "支持输出容器格式与编码质量（CRF）设置"
+        ),
+        "icon": "Ratio",
+        "color": "#ef4444",
+        "inputs": [
+            {"id": "video", "label": "视频", "type": "video", "required": True},
+        ],
+        "outputs": [
+            {"id": "video", "label": "缩放后视频", "type": "video"},
+        ],
+        "defaultConfig": {
+            "scale_preset": "1080p",
+            "custom_width": 1920,
+            "custom_height": 1080,
+            "output_format": "mp4",
+            "video_quality": "medium",
+        },
+        "configFields": [
+            {
+                "key": "scale_preset", "label": "缩放尺寸", "type": "select", "colSpan": "full",
+                "options": [
+                    {"value": "original", "label": "保持原始分辨率"},
+                    {"value": "2160p", "label": "4K（3840×2160）"},
+                    {"value": "1440p", "label": "2K（2560×1440）"},
+                    {"value": "1080p", "label": "1080P（1920×1080）"},
+                    {"value": "720p", "label": "720P（1280×720）"},
+                    {"value": "480p", "label": "480P（854×480）"},
+                    {"value": "360p", "label": "360P（640×360）"},
+                    {"value": "custom", "label": "自定义宽高"},
+                ],
+                "description": "预置档按目标高度等比缩放（宽度自动取偶），非 16:9 素材不变形；自定义档使用精确宽高",
+            },
+            {"key": "custom_width", "label": "自定义宽度(px)", "type": "number",
+             "min": 16, "step": 1, "colSpan": "half", "defaultValue": 1920,
+             "dependsOn": "scale_preset", "dependsValue": "custom"},
+            {"key": "custom_height", "label": "自定义高度(px)", "type": "number",
+             "min": 16, "step": 1, "colSpan": "half", "defaultValue": 1080,
+             "dependsOn": "scale_preset", "dependsValue": "custom"},
+            {
+                "key": "output_format", "label": "输出格式", "type": "select", "colSpan": "half",
+                "options": [
+                    {"value": "mp4", "label": "MP4（H.264 + AAC）"},
+                    {"value": "mkv", "label": "MKV（H.264 + AAC）"},
+                    {"value": "mov", "label": "MOV（H.264 + AAC）"},
+                    {"value": "flv", "label": "FLV（H.264 + AAC）"},
+                    {"value": "webm", "label": "WebM（VP9 + Opus）"},
+                    {"value": "avi", "label": "AVI（MPEG4 + MP3）"},
+                ],
+            },
+            {
+                "key": "video_quality", "label": "编码质量", "type": "select", "colSpan": "half",
+                "options": [
+                    {"value": "high", "label": "高质量（CRF 18）"},
+                    {"value": "medium", "label": "中等（CRF 23）"},
+                    {"value": "low", "label": "低质量（CRF 28）"},
+                ],
+            },
         ],
     }
 )

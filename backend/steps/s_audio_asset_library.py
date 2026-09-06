@@ -2,15 +2,15 @@
 """
 音频素材库节点（Step）
 
-作用：解析前端传入的素材来源（URL / 本地路径 / 晴沐配音谷在线素材库ID），
+作用：解析前端传入的素材来源（URL / 本地路径 / 晴沐配音谷素材库ID），
 将素材下载或复制到当前工作文件夹（task_dir）并重命名。
 
 输入：
-  - 卡片配置 source：URL / 本地文件(夹)绝对路径 / 在线素材库ID
+  - 卡片配置 source：URL / 本地文件(夹)绝对路径 / 素材库素材ID（vf_assets.id）
   - 可选上游 any：作为来源的兜底值（优先使用卡片配置中的 source）
 输出：
-  - audio：素材在 task_dir 中的绝对路径（type=audio，可接入音频类下游节点）
-  - path ：同上文件路径（type=filepath）
+  - audio：素材路径（素材在 task_dir 中的绝对路径，type=audio，可接入音频类下游节点）
+  - info ：素材全信息JSON（来源类型、素材库完整记录、落盘文件信息）
 """
 import os
 import re
@@ -47,7 +47,7 @@ class S_AudioAssetLibrary(BaseStep):
         return name[:120] if len(name) > 120 else name
 
     def _resolve(self, source: str):
-        """返回 (download_or_local_url, base_name, ext_hint)。"""
+        """返回 (download_or_local_url, base_name, ext_hint, vf_info)。vf_info 为素材库完整记录(dict)或 None。"""
         if re.match(r"^https?://", source, re.I):
             url = source
             if "chinaz.com" in url.lower():
@@ -56,20 +56,22 @@ class S_AudioAssetLibrary(BaseStep):
                 dl = detail.get("download_url") or detail.get("audio_url")
                 if not dl:
                     raise ValueError("无法从 chinaZ 详情页解析到下载地址，请改用素材直链")
-                return dl, detail.get("title") or "chinaz_asset", None
-            return url, None, None
+                return dl, detail.get("title") or "chinaz_asset", None, None
+            return url, None, None, None
         # 无协议的 chinaZ 详情页路径
         if "chinaz.com" in source.lower():
             prefixed = "https://" + source if source.startswith("//") else "https://" + source.lstrip("/")
             return self._resolve(prefixed)
         # 本地路径
         if os.path.exists(source):
-            return source, None, None
-        # voiceforge 本地素材库：复制出的内容形如 be0ad3b74d5b459f99ecf96992b2a641.mp3，
-        # 本质是存储键基名 / 文件名 / id，并非可直接访问的绝对路径，需回查 vf_assets 还原真实位置。
-        vf = self._resolve_voiceforge_asset(source)
-        if vf and (re.match(r"^https?://", vf, re.I) or os.path.exists(vf)):
-            return vf, None, None
+            return source, None, None, None
+        # 晴沐配音谷素材库：素材ID / 文件名 / storage_key，回查 vf_assets 还原真实位置与完整信息。
+        vf_info = self._lookup_voiceforge_asset(source)
+        if vf_info:
+            vf = self._asset_access_url(vf_info)
+            if vf and (re.match(r"^https?://", vf, re.I) or os.path.exists(vf)):
+                ext = os.path.splitext(vf_info.get("file_name") or vf)[1].lower() or None
+                return vf, vf_info.get("name") or None, ext, vf_info
         raise ValueError(
             "无法识别该素材库ID。在线素材（如 ElevenLabs）请复制其素材「链接」(audio_url) 而非ID；"
             "chinaZ 素材的ID即详情页链接，可被直接识别；"
@@ -77,15 +79,12 @@ class S_AudioAssetLibrary(BaseStep):
         )
 
     @staticmethod
-    def _resolve_voiceforge_asset(ref: str):
-        """按素材 id / 文件名 / storage_key 在 voiceforge 素材库中定位真实路径。
+    def _lookup_voiceforge_asset(ref: str):
+        """按素材 id / 文件名 / storage_key 在 voiceforge 素材库中检索,返回完整素材记录(dict)或 None。
 
-        本地素材库复制出的内容形如 ``be0ad3b74d5b459f99ecf96992b2a641.mp3``，它本质是素材
-        存储键的基名（或 id + 扩展名），并非可直接访问的绝对路径，因此需要回查 ``vf_assets``
-        表并用 ``storage_key`` 还原真实位置。在线素材（未下载）会回退为源 URL 供下载。
+        本地素材库选择后写入节点卡片的是素材 id（vf_assets.id）；兼容文件名与存储键的写法。
         """
         from backend.voiceforge.database import session, row_to_dict
-        from backend.voiceforge.asset_service import resolve_asset_path
 
         norm = (ref or "").strip()
         if not norm:
@@ -104,10 +103,50 @@ class S_AudioAssetLibrary(BaseStep):
                     ).fetchone()
                 if not row:
                     return None
-                return str(resolve_asset_path(row_to_dict(row)))
+                return row_to_dict(row)
         except Exception:
             # voiceforge 未初始化或查询失败时不影响其它来源解析
             return None
+
+    @staticmethod
+    def _asset_access_url(info: dict):
+        """素材的可访问地址：库内文件用 storage_key 还原绝对路径;在线未下载素材回退源 URL。
+
+        注意 external_path 可能是 http 链接,直接返回原串,不能过 Path(Path 会折叠 //)。
+        """
+        from backend.voiceforge.asset_service import resolve_asset_path
+
+        external = (info.get("external_path") or "").strip()
+        if re.match(r"^https?://", external, re.I):
+            return external
+        try:
+            return str(resolve_asset_path(info))
+        except Exception:
+            return external
+
+    def _asset_info(self, source: str, source_type: str, vf_info, dl_url, dest: Path) -> dict:
+        """组装素材全信息 JSON:来源 + 素材库完整记录 + 落盘文件信息。"""
+        try:
+            size = dest.stat().st_size
+        except OSError:
+            size = None
+        info = {
+            "source": source,
+            "source_type": source_type,
+            "file": {
+                "path": str(dest),
+                "name": dest.name,
+                "size_bytes": size,
+                "from": dl_url,
+            },
+        }
+        if vf_info:
+            record = dict(vf_info)
+            record["absolute_path"] = self._asset_access_url(vf_info)
+            info["asset"] = record
+        else:
+            info["asset"] = None
+        return info
 
     def _target_path(self, task_path: Path, dl_url: str, base_name, ext_hint):
         ext = None
@@ -183,10 +222,11 @@ class S_AudioAssetLibrary(BaseStep):
         if not source and step_inputs.get("any"):
             source = str(step_inputs["any"]).strip()
         if not source:
-            raise ValueError("素材来源为空，请在节点卡片中输入 URL、本地路径或配音谷素材库ID")
+            raise ValueError("素材来源为空，请在节点卡片中输入 URL、本地路径，或从本地素材库选择素材")
 
         report(5, "解析素材来源…")
-        dl_url, base_name, ext_hint = self._resolve(source)
+        dl_url, base_name, ext_hint, vf_info = self._resolve(source)
+        source_type = "voiceforge_asset" if vf_info else ("url" if re.match(r"^https?://", dl_url, re.I) else "local")
 
         task_path = Path(task_dir)
         dest = self._target_path(task_path, dl_url, base_name, ext_hint)
@@ -201,12 +241,12 @@ class S_AudioAssetLibrary(BaseStep):
             else:
                 shutil.copy2(dl_url, str(dest))
 
+        info = self._asset_info(source, source_type, vf_info, dl_url, dest)
         report(100, f"已完成：{dest.name}")
         return {
             "artifacts": [str(dest)],
             "outputs": {
                 "audio": str(dest),
-                "path": str(dest),
-                "audioFileName": dest.name,
+                "info": info,
             },
         }

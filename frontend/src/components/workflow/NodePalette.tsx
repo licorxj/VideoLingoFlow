@@ -13,7 +13,7 @@ import {
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, ChevronDown, ChevronRight, ChevronLeft, GripVertical, Settings2,
   Play, Eye, PanelRightClose, RefreshCw, Sparkles, Share2, ChevronsDownUp, ChevronsUpDown,
-  Captions, SlidersHorizontal, Grid3x3,
+  Captions, SlidersHorizontal, Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +21,7 @@ const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages, AlignLeft,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, Share2, Captions, SlidersHorizontal,
-  Grid3x3,
+  Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
 };
 
 interface Props {
@@ -41,6 +41,7 @@ export default function NodePalette({ onAddNode, collapsed, onToggleCollapse }: 
     flow_control: false,
     network_request: false,
     aigc: false,
+    asset: false,
     agent: false,
     utility: true,
     file: false,

@@ -23,7 +23,8 @@ function errorText(error: any, fallback: string) {
   return error?.message || fallback;
 }
 
-export function AssetLibrary({ embedded = false }: { embedded?: boolean }) {
+export function AssetLibrary({ embedded = false, onPick }: { embedded?: boolean; onPick?: (asset: VoiceForgeAsset) => void }) {
+  const pickMode = Boolean(onPick);
   const [activeType, setActiveType] = useState("bgm");
   const [result, setResult] = useState<AssetListResult>({ assets: [], total: 0, page: 1, page_size: PAGE_SIZE, type_counts: {} });
   const [categories, setCategories] = useState<any[]>([]);
@@ -153,10 +154,12 @@ export function AssetLibrary({ embedded = false }: { embedded?: boolean }) {
 
   const toolbar = (
     <div className="flex flex-wrap items-center gap-2">
-      <Button variant="outline" onClick={() => setCatOpen(true)}>
-        <FolderPlus className="mr-1.5 h-4 w-4" />
-        分类管理
-      </Button>
+      {!pickMode && (
+        <Button variant="outline" onClick={() => setCatOpen(true)}>
+          <FolderPlus className="mr-1.5 h-4 w-4" />
+          分类管理
+        </Button>
+      )}
       <Button variant="outline" onClick={() => void load(page, filters, activeType)}>
         <RefreshCw className="mr-1.5 h-4 w-4" />
         刷新
@@ -165,10 +168,12 @@ export function AssetLibrary({ embedded = false }: { embedded?: boolean }) {
         <Plus className="mr-1.5 h-4 w-4" />
         添加素材
       </Button>
-      <Button variant="secondary" onClick={() => setOnlineOpen(true)}>
-        <Globe className="mr-1.5 h-4 w-4" />
-        在线素材
-      </Button>
+      {!pickMode && (
+        <Button variant="secondary" onClick={() => setOnlineOpen(true)}>
+          <Globe className="mr-1.5 h-4 w-4" />
+          在线素材
+        </Button>
+      )}
     </div>
   );
 
@@ -207,19 +212,21 @@ export function AssetLibrary({ embedded = false }: { embedded?: boolean }) {
       {error && <p className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">{error}</p>}
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
-        <span>共 {result.total} 个素材{selected.length ? ` · 已选 ${selected.length} 个` : ""}</span>
-        <div className="flex gap-2">
-          {selected.length ? (
-            <>
-              <Button size="sm" variant="outline" onClick={toggleAll}>取消选择</Button>
-              <Button size="sm" variant="destructive" onClick={() => void removeSelected()}>
-                <Trash2 className="mr-1 h-3.5 w-3.5" />批量删除
-              </Button>
-            </>
-          ) : (
-            <Button size="sm" variant="outline" onClick={toggleAll} disabled={!result.assets.length}>全选</Button>
-          )}
-        </div>
+        <span>共 {result.total} 个素材{!pickMode && selected.length ? ` · 已选 ${selected.length} 个` : ""}</span>
+        {!pickMode && (
+          <div className="flex gap-2">
+            {selected.length ? (
+              <>
+                <Button size="sm" variant="outline" onClick={toggleAll}>取消选择</Button>
+                <Button size="sm" variant="destructive" onClick={() => void removeSelected()}>
+                  <Trash2 className="mr-1 h-3.5 w-3.5" />批量删除
+                </Button>
+              </>
+            ) : (
+              <Button size="sm" variant="outline" onClick={toggleAll} disabled={!result.assets.length}>全选</Button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className={loading ? "opacity-60 transition-opacity" : ""}>
@@ -232,8 +239,9 @@ export function AssetLibrary({ embedded = false }: { embedded?: boolean }) {
                 selected={selected.includes(asset.id)}
                 onSelect={() => toggleSelect(asset.id)}
                 onToggleFavorite={() => void toggleFavorite(asset)}
-                onEdit={() => beginEdit(asset)}
-                onDelete={() => void remove(asset)}
+                onEdit={pickMode ? undefined : () => beginEdit(asset)}
+                onDelete={pickMode ? undefined : () => void remove(asset)}
+                onPick={onPick ? () => onPick(asset) : undefined}
               />
             ))}
           </div>

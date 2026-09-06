@@ -630,7 +630,7 @@
         "maxTokens": 16384
       }
     ],
-    "checkedAt": 1788443621431,
+    "checkedAt": 1788716626154,
     "lastModified": 1788432042000,
     "etag": "W/\"9e08b40aec8bdd3f07048e0597de5fc2\""
   },
@@ -707,7 +707,7 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1788443621898,
+    "checkedAt": 1788716626538,
     "lastModified": 1787571286000,
     "etag": "W/\"3db76cd3404affdf755b2efc443b74c3\""
   },
@@ -1218,7 +1218,7 @@
         }
       }
     ],
-    "checkedAt": 1788443621362,
+    "checkedAt": 1788716626436,
     "lastModified": 1788432026000,
     "etag": "W/\"82d850ac898f9406a8bedcd62f25e6da\""
   },
@@ -2216,6 +2216,51 @@
         }
       },
       {
+        "id": "gpt-6-astra",
+        "name": "GPT-6 Astra",
+        "api": "openai-responses",
+        "baseUrl": "https://api.openai.com/v1",
+        "provider": "openai",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 10,
+          "output": 50,
+          "cacheRead": 1,
+          "cacheWrite": 12.5,
+          "tiers": [
+            {
+              "inputTokensAbove": 272000,
+              "input": 20,
+              "output": 75,
+              "cacheRead": 2,
+              "cacheWrite": 25
+            }
+          ]
+        },
+        "contextWindow": 272000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsOpenAIGrammarTools": true,
+          "supportsAdditionalTools": true,
+          "supportsToolSearch": true,
+          "supportsExplicitPromptCacheMode": true
+        }
+      },
+      {
         "id": "gpt-realtime-2.1",
         "name": "GPT-Realtime-2.1",
         "api": "openai-responses",
@@ -2439,9 +2484,9 @@
         }
       }
     ],
-    "checkedAt": 1788443621382,
-    "lastModified": 1787740207000,
-    "etag": "W/\"de4430a471bcb862d1abf6d6e78f60c2\""
+    "checkedAt": 1788716627386,
+    "lastModified": 1788552639000,
+    "etag": "W/\"19f6d8bc2ce0b7b34fecb2e606b57a4e\""
   },
   "huggingface": {
     "models": [
@@ -3356,6 +3401,38 @@
         }
       },
       {
+        "id": "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
+        "name": "DeepSeek V4 Flash Vision Exp",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.44,
+          "output": 1.32,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 1048576,
+        "maxTokens": 384000,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": "max"
+        }
+      },
+      {
         "id": "deepseek-ai/DeepSeek-V4-Pro",
         "name": "DeepSeek V4 Pro",
         "api": "openai-completions",
@@ -4162,9 +4239,9 @@
         }
       }
     ],
-    "checkedAt": 1788443622494,
-    "lastModified": 1788432031000,
-    "etag": "W/\"ec4ec2daa97e4573ff583d845e38441a\""
+    "checkedAt": 1788716624590,
+    "lastModified": 1788552629000,
+    "etag": "W/\"c1f6e94b634de8948b873721ec37b8d2\""
   },
   "anthropic": {
     "models": [
@@ -4559,7 +4636,7 @@
         }
       }
     ],
-    "checkedAt": 1788443622192,
+    "checkedAt": 1788716627322,
     "lastModified": 1788432010000,
     "etag": "W/\"5fdc170fdb3eb24c0e164a059918e474\""
   }

@@ -232,6 +232,7 @@ python backend/manager.py 18001 11001   # 自定义端口
 
 - 任务目录：`control_plane_workspaces/<task_id>/`，含 `task.json`（任务元数据/节点状态，兼容副本）、`cache/`、`output/`（权威状态在 `data/control-plane.db`）
 - 控制平面数据库：`data/control-plane.db`（SQLite；Alembic 迁移）
+- 素材库：`cp_images`/`cp_videos`/`cp_characters`/`cp_creation_assets` 在控制面库；音色/音频素材在 `voiceforge_data/voiceforge.db`（查询方式见 `material-search.md`）
 - 模型缓存：`_model_cache/`、`data/workspace/pi-agent-config/models-store.json`
 - 工作流模板：`backend/config/workflows/*.json`
 - 日志：`logs/`
@@ -249,6 +250,7 @@ python backend/manager.py 18001 11001   # 自定义端口
 | `file-management.md` | 产物命名约定、task.json 字段、文件读写工具 |
 | `gpu-service.md` | GPU 服务层（lane 调度、显存管理、开关与配置） |
 | `publishing.md` | 社交/平台发布节点与配置 |
+| `material-search.md` | 本地素材库（图片/视频/角色/创作资产/音色/音频）结构与查询：`local-material-search` 技能、Python/CLI 查询接口、路径与 `vf:` 引用还原约定 |
 | `skill-mcp-install.md` | 技能节点、MCP 安装节点、外部工具集成 |
 | `hyperframes.md` | HyperFrames 视频创作节点（创意 → 渲染）、技能源码位置与排错 |
 

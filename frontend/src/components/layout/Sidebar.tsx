@@ -18,6 +18,7 @@ import {
   Network,
   Users,
   Clapperboard,
+  Images,
   Scissors,
   Mic2,
   Store,
@@ -30,6 +31,7 @@ const NAV_GROUPS = [
     { to: "/history", icon: History, label: "历史项目" },
   ],
   [
+    { to: "/materials", icon: Images, label: "素材库" },
     { to: "/editing", icon: Clapperboard, label: "剪辑工作台" },
     { to: "/voiceforge", icon: Mic2, label: "晴沐配音谷" },
     { to: "/social", icon: Share2, label: "多平台发布" },
