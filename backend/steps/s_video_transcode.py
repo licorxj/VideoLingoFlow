@@ -12,11 +12,9 @@
 - 返回结构 {"artifacts": [...], "outputs": {port: rel_path}}（相对 task_dir 的路径）。
 """
 import os
-import subprocess
-import threading
-import time
 
 from backend.steps.base_step import BaseStep
+from backend.utils.video_ops import get_video_duration, run_ffmpeg_with_progress
 
 
 # 视频/音频编码器下拉值 -> ffmpeg 实际编码器名
@@ -48,22 +46,7 @@ _FORMAT_EXT = {
 
 def _probe_duration(input_path: str) -> float:
     """用 ffprobe 获取视频时长（秒），失败返回 0。"""
-    try:
-        out = subprocess.run(
-            [
-                "ffprobe", "-v", "error",
-                "-show_entries", "format=duration",
-                "-of", "default=noprint_wrappers=1:nokey=1",
-                input_path,
-            ],
-            capture_output=True, text=True, encoding="utf-8", errors="replace",
-            timeout=60,
-        )
-        if out.returncode == 0 and out.stdout.strip():
-            return float(out.stdout.strip())
-    except Exception:
-        pass
-    return 0.0
+    return get_video_duration(input_path)
 
 
 class S_VideoTranscode(BaseStep):
@@ -146,85 +129,12 @@ class S_VideoTranscode(BaseStep):
         return cmd
 
     # ------------------------------------------------------------------
-    # 带进度/取消的 ffmpeg 执行
+    # 带进度/取消的 ffmpeg 执行（公共实现见 backend.utils.video_ops）
     # ------------------------------------------------------------------
     def _run_ffmpeg(self, cmd, duration, callback, cancel_callback, timeout=86400):
-        proc = subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            bufsize=1,
-            encoding="utf-8",
-            errors="replace",
+        run_ffmpeg_with_progress(
+            cmd, duration, callback, cancel_callback, timeout=timeout, label="转码"
         )
-        stderr_chunks = []
-        last = {"pct": 0}
-
-        def _progress_reader():
-            try:
-                for line in proc.stdout:
-                    s = line.strip()
-                    if s.startswith("out_time_ms="):
-                        try:
-                            ms = int(s.split("=", 1)[1])
-                        except ValueError:
-                            continue
-                        cur = ms / 1_000_000.0
-                        pct = min(99, int(cur / duration * 100)) if duration and duration > 0 else last["pct"]
-                        last["pct"] = pct
-                        if callback:
-                            try:
-                                callback(pct, f"转码中 {cur:.1f}s / {duration:.1f}s")
-                            except Exception:
-                                pass
-                    elif s == "progress=end":
-                        last["pct"] = 100
-                        if callback:
-                            try:
-                                callback(100, "转码完成")
-                            except Exception:
-                                pass
-            except Exception:
-                pass
-
-        def _stderr_reader():
-            try:
-                for line in proc.stderr:
-                    stderr_chunks.append(line)
-            except Exception:
-                pass
-
-        t1 = threading.Thread(target=_progress_reader, daemon=True)
-        t2 = threading.Thread(target=_stderr_reader, daemon=True)
-        t1.start()
-        t2.start()
-
-        elapsed = 0.0
-        while True:
-            rc = proc.poll()
-            if rc is not None:
-                break
-            if cancel_callback is not None and cancel_callback():
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                from backend.control_plane.runtime import TaskCancelledError
-                raise TaskCancelledError("用户取消转码")
-            time.sleep(0.5)
-            elapsed += 0.5
-            if elapsed > timeout:
-                proc.kill()
-                raise RuntimeError("转码超时（超过 %d 秒）" % int(timeout))
-
-        t1.join(timeout=2)
-        t2.join(timeout=2)
-        stderr_text = "".join(stderr_chunks)
-        if proc.returncode != 0:
-            snippet = stderr_text[-1500:] if stderr_text else ""
-            raise RuntimeError(f"ffmpeg 转码失败（返回码 {proc.returncode}）：\n{snippet}")
 
     # ------------------------------------------------------------------
     # 断点/产物管理

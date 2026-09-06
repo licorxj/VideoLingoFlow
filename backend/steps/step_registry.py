@@ -73,6 +73,10 @@ from backend.steps.s_image_mask import S_ImageMask
 from backend.steps.s_srt_to_text import S_SrtToText
 from backend.steps.s_ai_videogen import S_AiVideoGen
 from backend.steps.s_audio_asset_library import S_AudioAssetLibrary
+from backend.steps.s_voice_character import S_VoiceCharacter
+from backend.steps.s_material_library import (
+    S_ImageAssetLibrary, S_VideoAssetLibrary, S_CharacterAssetLibrary, S_VoiceAssetLibrary,
+)
 from backend.steps.s_seedream import (
     S_SeedreamTxt2Img, S_SeedreamImg2Img, S_SeedreamFusion,
     S_SeedreamGrid, S_SeedreamWebSearch, S_SeedreamLayer,
@@ -86,6 +90,7 @@ from backend.steps.s_hyperframes_render import S_HyperFramesRender
 from backend.steps.s_hyperframes_cli import S_HyperFramesCli
 from backend.steps.s_hyperframes_agent import S_HyperFramesAgent
 from backend.steps.s_image_grid_split import S_ImageGridSplit
+from backend.steps.s_video_scale import S_VideoScale
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -166,6 +171,8 @@ _STEPS = {
     "video_frame_extract": S_VideoFrameExtract(),
     "s_video_transcode": S_VideoTranscode(),
     "video_transcode": S_VideoTranscode(),
+    "video_scale": S_VideoScale(),
+    "s_video_scale": S_VideoScale(),
     "s_audio_cut_by_subtitle": StepAudioCutBySubtitle(),
     "audio_cut_by_subtitle": StepAudioCutBySubtitle(),
     "s_video_cut_by_subtitle": StepVideoCutBySubtitle(),
@@ -226,6 +233,16 @@ _STEPS = {
     "ai_video_gen": S_AiVideoGen(),
     "s_audio_asset_library": S_AudioAssetLibrary(),
     "audio_asset_library": S_AudioAssetLibrary(),
+    "s_image_asset_library": S_ImageAssetLibrary(),
+    "image_asset_library": S_ImageAssetLibrary(),
+    "s_video_asset_library": S_VideoAssetLibrary(),
+    "video_asset_library": S_VideoAssetLibrary(),
+    "s_character_asset_library": S_CharacterAssetLibrary(),
+    "character_asset_library": S_CharacterAssetLibrary(),
+    "s_voice_asset_library": S_VoiceAssetLibrary(),
+    "voice_asset_library": S_VoiceAssetLibrary(),
+    "s_voice_character": S_VoiceCharacter(),
+    "voice_character": S_VoiceCharacter(),
     # Seedream 生图能力节点（每种能力一个节点，置于 AI生成类节点 分组）
     "seedream_txt2img": S_SeedreamTxt2Img(),
     "seedream_img2img": S_SeedreamImg2Img(),

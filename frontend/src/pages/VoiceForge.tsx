@@ -2,9 +2,11 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
   AudioLines, Download, FileAudio, FileText, FolderOpen, Loader2,
-  CheckSquare, ChevronDown, Copy, Eye, ListMusic, Mic2, Music2, Play, Plus, RefreshCw, Sparkles, Trash2, Upload, UserRound, Volume2, X, CircleAlert, Clock3, Pencil, Search,
+  CheckSquare, ChevronDown, Copy, Eye, ListMusic, Mic2, Music2, Play, Plus, RefreshCw, Sparkles, Trash2, Upload, UserRound, Video, Volume2, X, CircleAlert, Clock3, Pencil, Search,
 } from "lucide-react";
 import { VoiceForgeAnalysis, VoiceForgeAsset, VoiceForgeDashboard, VoiceForgeProject, VoiceForgeSentence, VoiceForgeVoice, voiceForgeApi } from "@/api/voiceforge";
+import { videodubApi, VideoDubWorkspaceSummary } from "@/api/videodub";
+import { loadWorkspace } from "@/components/voiceforge/videodub/persistence";
 import { getWebSocketUrl } from "@/api/ws";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,9 +39,29 @@ export function VoiceForgeHome() {
   const [busyProjectId, setBusyProjectId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [vdWorkspaces, setVdWorkspaces] = useState<VideoDubWorkspaceSummary[]>([]);
+  const [busyWorkspaceId, setBusyWorkspaceId] = useState<string | null>(null);
   const navigate = useNavigate();
   const load = async () => { setLoading(true); try { const [projectResult, dashboardResult] = await Promise.all([voiceForgeApi.projects(search, status || undefined), voiceForgeApi.dashboard()]); setProjects(projectResult.data.projects); setDashboard(dashboardResult.data); } finally { setLoading(false); } };
-  useEffect(() => { load(); }, []);
+  const loadVdWorkspaces = () => { videodubApi.list().then((result) => setVdWorkspaces(result.data.workspaces || [])).catch(() => setVdWorkspaces([])); };
+  useEffect(() => { load(); loadVdWorkspaces(); }, []);
+  const openVdWorkspace = async (workspace: VideoDubWorkspaceSummary) => {
+    setBusyWorkspaceId(workspace.id);
+    const result = await loadWorkspace(workspace.id);
+    setBusyWorkspaceId(null);
+    if (result.ok) navigate("/voiceforge/video-dub");
+    else window.alert(result.error || "打开工程失败");
+  };
+  const removeVdWorkspace = async (workspace: VideoDubWorkspaceSummary) => {
+    if (!window.confirm(`删除视频配音工程「${workspace.name}」？其视频与音频文件将一并删除。`)) return;
+    setBusyWorkspaceId(workspace.id);
+    try {
+      await videodubApi.remove(workspace.id);
+      loadVdWorkspaces();
+    } finally {
+      setBusyWorkspaceId(null);
+    }
+  };
   const beginEdit = (project: VoiceForgeProject) => { setEditing(project); setEditName(project.name); setEditDescription(project.description || ""); };
   const saveProject = async () => { if (!editing || !editName.trim()) return; setBusyProjectId(editing.id); try { await voiceForgeApi.updateProject(editing.id, { name: editName.trim(), description: editDescription, version: editing.version }); setEditing(null); await load(); } finally { setBusyProjectId(null); } };
   const removeProject = async (project: VoiceForgeProject) => { if (!confirm(`删除项目“${project.name}”？其章节、句子、任务和音频将一并删除。`)) return; setBusyProjectId(project.id); try { await voiceForgeApi.deleteProject(project.id); dropRouteCache(`/voiceforge/projects/${project.id}`); await load(); } finally { setBusyProjectId(null); } };
@@ -182,6 +204,52 @@ export function VoiceForgeHome() {
               ))}
             </TableBody>
           </Table>
+        )}
+      </section>
+      <section className="border border-border/60 bg-card">
+        <div className="flex items-center justify-between border-b border-border/60 p-4">
+          <div className="flex items-center gap-2 text-sm font-semibold">
+            <Video className="h-4 w-4 text-primary" />
+            视频配音工程
+            <span className="text-xs font-normal text-muted-foreground">{vdWorkspaces.length}</span>
+          </div>
+          <Button variant="outline" size="sm" asChild>
+            <Link to="/voiceforge/video-dub">
+              <Video className="mr-1.5 h-4 w-4" />
+              进入视频配音
+            </Link>
+          </Button>
+        </div>
+        {!vdWorkspaces.length ? (
+          <p className="p-6 text-center text-sm text-muted-foreground">
+            还没有保存的视频配音工程：在「视频配音」中添加视频、导入字幕后点击「保存工程」，就会显示在这里。
+          </p>
+        ) : (
+          <ul className="divide-y divide-border/50">
+            {vdWorkspaces.map((workspace) => (
+              <li key={workspace.id} className="flex items-center gap-3 p-4">
+                <Video className="h-4 w-4 flex-none text-muted-foreground" />
+                <button
+                  type="button"
+                  onClick={() => void openVdWorkspace(workspace)}
+                  className="min-w-0 flex-1 text-left"
+                  title="载入该工程并进入视频配音工作台"
+                >
+                  <span className="block truncate font-medium">{workspace.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                    {workspace.video_name || "无视频"} · {workspace.subtitle_count} 条字幕 · 更新于 {formatDate(workspace.updated_at)}
+                  </span>
+                </button>
+                <Button size="sm" variant="ghost" onClick={() => void openVdWorkspace(workspace)} disabled={busyWorkspaceId === workspace.id} title="载入该工程">
+                  {busyWorkspaceId === workspace.id ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Play className="mr-1 h-3.5 w-3.5" />}
+                  打开
+                </Button>
+                <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive" onClick={() => void removeVdWorkspace(workspace)} disabled={busyWorkspaceId === workspace.id} title="删除该工程">
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
       <ProjectCreateDialog open={createOpen} onClose={() => setCreateOpen(false)} onCreated={(projectId) => navigate(`/voiceforge/projects/${projectId}`)} />
@@ -405,7 +473,7 @@ function OverviewItem({ icon: Icon, label, value, detail, tone = "default" }: { 
 function ProjectStatus({ status }: { status: string }) { const values: Record<string, { label: string; variant: "outline" | "info" | "success" | "warning" }> = { draft: { label: "草稿", variant: "outline" }, processing: { label: "制作中", variant: "info" }, completed: { label: "已完成", variant: "success" }, archived: { label: "已归档", variant: "warning" } }; const item = values[status] || { label: status, variant: "outline" as const }; return <Badge variant={item.variant}>{item.label}</Badge>; }
 function progressPercent(project: VoiceForgeProject) { return project.sentence_count ? Math.round(((project.done_count || 0) / project.sentence_count) * 100) : 0; }
 function formatDuration(seconds: number) { if (!seconds) return "0 秒"; const minutes = Math.floor(seconds / 60); const remainder = Math.round(seconds % 60); return minutes ? `${minutes} 分 ${remainder} 秒` : `${remainder} 秒`; }
-function formatDate(value: string) { const date = new Date(value.replace(" ", "T")); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(date); }
+function formatDate(value: string | null) { if (!value) return "—"; const date = new Date(value.replace(" ", "T")); return Number.isNaN(date.getTime()) ? value : new Intl.DateTimeFormat("zh-CN", { month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" }).format(date); }
 
 
 function AnalysisPanel({ analysis, selected, onToggle, onApply, onClose, applying }: { analysis: VoiceForgeAnalysis; selected: string[]; onToggle: (name: string) => void; onApply: () => void; onClose: () => void; applying: boolean }) {

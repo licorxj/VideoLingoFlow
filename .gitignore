@@ -183,6 +183,9 @@ frontend/src/components/settings/*.trae-tmp
 net_check.py
 download_moss.py
 /npm
+verify_align.py
+sanitize_configs.py
+start-prod.bat
 
 # Debug session notes
 debug-*.md

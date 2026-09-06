@@ -1,0 +1,261 @@
+{
+  "id": "c86ee83c5580",
+  "name": "软件宣发视频制作",
+  "description": "hyperframe宣传视频制作",
+  "nodes": [
+    {
+      "id": "node_1_1788682606968",
+      "type": "workflow",
+      "position": {
+        "x": 960,
+        "y": 225
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 491
+      }
+    },
+    {
+      "id": "node_2_1788682616200",
+      "type": "workflow",
+      "position": {
+        "x": 1545,
+        "y": 390
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "file_load",
+        "label": "文件加载",
+        "config": {
+          "filePath": "Y:/VideoLingoLc/_backup/产品宣传短视频策划方案.md"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "filepath": "Y:\\VideoLingoLc\\_backup\\产品宣传短视频策划方案.md"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 284
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1788682640602",
+      "type": "workflow",
+      "position": {
+        "x": 2085,
+        "y": 225
+      },
+      "data": {
+        "nodeType": "hyperframes_creative",
+        "label": "HyperFrames 创意",
+        "config": {
+          "mode": "create",
+          "subject": "VideoLingoFlow 产品宣传短视频，制作策划详见输入素材",
+          "brief_path": "",
+          "workflow": "product-launch-video",
+          "run_mode": "autonomous",
+          "style_preset": "科技风",
+          "aspect": "16:9",
+          "language": "中文",
+          "project_dir": "",
+          "update_skills": true,
+          "skills_timeout": 600,
+          "settle_timeout": 1800,
+          "cli_command": "npx",
+          "cli_package": "hyperframes@latest",
+          "extra_instruction": "补充:1:软件logo：\"X:\\PCTMoveData\\Pictures\\logo\\VLF\\long-tou.png\"\n2：软件名称VideoLingoFlow ，中文名称：流连视听，发布版本2.2.8\n3：官网地址：https://www.licorxj.online/home\n4：Windows全量包下载：\n夸克：https://pan.quark.cn/s/b53ec157469e\n度盘： https://pan.baidu.com/s/19YzunwZo7UezBD9V9FPgjQ?pwd=tg9m\ngithub地址：https://github.com/licorxj/VideoLingoFlow"
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "brief": "cache/hyperframes_node_3_1788682640602/BRIEF.md",
+          "project_dir": "cache/hyperframes_node_3_1788682640602",
+          "summary": "90秒科技风产品发布片，以'工具碎片化→VideoLingoFlow操作系统'对比叙事，五拍节奏展示节点编排、AI对话、团队协作三大核心能力，粒子数据流动画贯穿全片。"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\fee9d6a771114ac2bbf35205c63cc0ea\\cache\\.step_node_3_1788682640602_result.json, exiting 0",
+          "[step_worker] start node_type=hyperframes_creative node_id=node_3_1788682640602 pid=32580",
+          "[step_worker] step instance created: S_HyperFramesCreative",
+          "[step_worker] step_inputs keys=['assets']",
+          "[step_worker] node_config keys=['mode', 'subject', 'brief_path', 'workflow', 'run_mode', 'style_preset', 'aspect', 'language', 'project_dir', 'update_skills', 'skills_timeout', 'settle_timeout', 'cli_command', 'cli_package', 'extra_instruction']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\fee9d6a771114ac2bbf35205c63cc0ea, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\fee9d6a771114ac2bbf35205c63cc0ea\\cache\\.step_node_3_1788682640602_result.json, exiting 0"
+        ],
+        "note": "做创意",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 1084
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1788683544296",
+      "type": "workflow",
+      "position": {
+        "x": 2745,
+        "y": 270
+      },
+      "data": {
+        "nodeType": "hyperframes_render",
+        "label": "HyperFrames 渲染",
+        "config": {
+          "stage": "build_and_render",
+          "workflow": "",
+          "brief_path": "",
+          "output_name": "output.mp4",
+          "output_path": "",
+          "publish": true,
+          "project_dir": "",
+          "update_skills": false,
+          "skills_timeout": 600,
+          "settle_timeout": 3600,
+          "cli_command": "npx",
+          "cli_package": "hyperframes@latest",
+          "extra_instruction": "log放大显示，并做由大到小的动画过渡。元素做大一些，不要集中在画面中央，太小无法阅读"
+        },
+        "status": "running",
+        "progress": 48,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "logLines": [
+          "[step_worker] start node_type=hyperframes_render node_id=node_5_1788683544296 pid=48304",
+          "[step_worker] step instance created: S_HyperFramesRender",
+          "[step_worker] step_inputs keys=['brief', 'project_dir', 'assets']",
+          "[step_worker] node_config keys=['stage', 'workflow', 'brief_path', 'output_name', 'output_path', 'publish', 'project_dir', 'update_skills', 'skills_timeout', 'settle_timeout', 'cli_command', 'cli_package', 'extra_instruction']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\fee9d6a771114ac2bbf35205c63cc0ea, kwargs=['callback', 'cancel_callback'])"
+        ],
+        "disableExecute": true,
+        "note": "构建以及渲染",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 836
+      },
+      "selected": true,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1788682606968",
+      "sourceHandle": "out-no_input",
+      "target": "node_2_1788682616200",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_1_1788682606968out-no_input-node_2_1788682616200in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1788682616200",
+      "sourceHandle": "out-filepath",
+      "target": "node_3_1788682640602",
+      "targetHandle": "in-assets",
+      "id": "xy-edge__node_2_1788682616200out-filepath-node_3_1788682640602in-assets"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788682640602",
+      "sourceHandle": "out-brief",
+      "target": "node_5_1788683544296",
+      "targetHandle": "in-brief",
+      "id": "xy-edge__node_3_1788682640602out-brief-node_5_1788683544296in-brief"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788682640602",
+      "sourceHandle": "out-project_dir",
+      "target": "node_5_1788683544296",
+      "targetHandle": "in-project_dir",
+      "id": "xy-edge__node_3_1788682640602out-project_dir-node_5_1788683544296in-project_dir"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788682640602",
+      "sourceHandle": "out-summary",
+      "target": "node_5_1788683544296",
+      "targetHandle": "in-assets",
+      "id": "xy-edge__node_3_1788682640602out-summary-node_5_1788683544296in-assets"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-06T16:22:16",
+  "updatedAt": "2026-09-07T02:29:46",
+  "revision": 4
+}

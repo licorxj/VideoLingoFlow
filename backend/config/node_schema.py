@@ -12,6 +12,7 @@ NODE_CATEGORIES = [
     {"value": "flow_control", "label": "流程控制节点", "color": "#6366f1", "icon": "GitBranch"},
     {"value": "network_request", "label": "网络请求类节点", "color": "#0f766e", "icon": "Globe"},
     {"value": "aigc", "label": "AIGC流程链", "color": "#22c55e", "icon": "Boxes"},
+    {"value": "asset", "label": "素材库", "color": "#84cc16", "icon": "Library"},
     {"value": "agent", "label": "智能体", "color": "#a855f7", "icon": "Bot"},
     {"value": "utility", "label": "工具类节点", "color": "#f59e0b", "icon": "Wrench"},
     {"value": "file", "label": "文件操作类节点", "color": "#f97316", "icon": "FolderOpen"},

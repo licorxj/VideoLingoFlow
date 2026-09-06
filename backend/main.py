@@ -19,7 +19,7 @@ from starlette.background import BackgroundTask
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Scope, Receive, Send
 
-from backend.api import tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup
+from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub
 from backend.control_plane import runtime_flags
 from backend.utils.observability import correlation_id
 
@@ -199,6 +199,8 @@ app.include_router(prompts.router, tags=["prompts"])
 app.include_router(subtitle_presets.router, prefix="/api/subtitle-presets", tags=["subtitle-presets"])
 app.include_router(subtitle_preview.router, prefix="/api/subtitle-preview", tags=["subtitle-preview"])
 app.include_router(voiceforge.router, prefix="/api/voiceforge", tags=["voiceforge"])
+app.include_router(videodub.router, prefix="/api/videodub", tags=["videodub"])
+app.include_router(materials.router, prefix="/api/materials", tags=["materials"])
 app.include_router(voiceforge_ws.router, prefix="/ws/voiceforge", tags=["voiceforge-websocket"])
 app.include_router(lcwr.router, tags=["lcwr"])
 app.include_router(qm_mail.router, tags=["qm-mail"])

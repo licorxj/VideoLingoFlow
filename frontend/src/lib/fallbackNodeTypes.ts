@@ -4288,6 +4288,103 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
       }
     ],
     "isBuiltIn": true
+  },
+  {
+    "id": "video_scale",
+    "name": "视频缩放",
+    "category": "video",
+    "description": "使用 ffmpeg 将视频缩放到预置分辨率（按目标高度等比缩放）或自定义宽高，支持输出容器格式与编码质量（CRF）设置",
+    "icon": "Ratio",
+    "color": "#ef4444",
+    "inputs": [
+      {
+        "id": "video",
+        "label": "视频",
+        "type": "video",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "video",
+        "label": "缩放后视频",
+        "type": "video"
+      }
+    ],
+    "defaultConfig": {
+      "scale_preset": "1080p",
+      "custom_width": 1920,
+      "custom_height": 1080,
+      "output_format": "mp4",
+      "video_quality": "medium"
+    },
+    "configFields": [
+      {
+        "key": "scale_preset",
+        "label": "缩放尺寸",
+        "type": "select",
+        "colSpan": "full",
+        "options": [
+          { "value": "original", "label": "保持原始分辨率" },
+          { "value": "2160p", "label": "4K（3840×2160）" },
+          { "value": "1440p", "label": "2K（2560×1440）" },
+          { "value": "1080p", "label": "1080P（1920×1080）" },
+          { "value": "720p", "label": "720P（1280×720）" },
+          { "value": "480p", "label": "480P（854×480）" },
+          { "value": "360p", "label": "360P（640×360）" },
+          { "value": "custom", "label": "自定义宽高" }
+        ],
+        "description": "预置档按目标高度等比缩放（宽度自动取偶），非 16:9 素材不变形；自定义档使用精确宽高"
+      },
+      {
+        "key": "custom_width",
+        "label": "自定义宽度(px)",
+        "type": "number",
+        "min": 16,
+        "step": 1,
+        "colSpan": "half",
+        "defaultValue": 1920,
+        "dependsOn": "scale_preset",
+        "dependsValue": "custom"
+      },
+      {
+        "key": "custom_height",
+        "label": "自定义高度(px)",
+        "type": "number",
+        "min": 16,
+        "step": 1,
+        "colSpan": "half",
+        "defaultValue": 1080,
+        "dependsOn": "scale_preset",
+        "dependsValue": "custom"
+      },
+      {
+        "key": "output_format",
+        "label": "输出格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          { "value": "mp4", "label": "MP4（H.264 + AAC）" },
+          { "value": "mkv", "label": "MKV（H.264 + AAC）" },
+          { "value": "mov", "label": "MOV（H.264 + AAC）" },
+          { "value": "flv", "label": "FLV（H.264 + AAC）" },
+          { "value": "webm", "label": "WebM（VP9 + Opus）" },
+          { "value": "avi", "label": "AVI（MPEG4 + MP3）" }
+        ]
+      },
+      {
+        "key": "video_quality",
+        "label": "编码质量",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          { "value": "high", "label": "高质量（CRF 18）" },
+          { "value": "medium", "label": "中等（CRF 23）" },
+          { "value": "low", "label": "低质量（CRF 28）" }
+        ]
+      }
+    ],
+    "isBuiltIn": true
   }
 ];
 

@@ -22,6 +22,7 @@ All paths are relative to `PROJECT_ROOT`.
 - Project-specific installed skills: `backend/config/agent/skills/`.
   - ElevenLabs 音效爬虫与下载: `backend/config/agent/skills/elevenlabs-sound-effects/SKILL.md` — 对接 ElevenLabs 音效库搜索接口，抓取营销片段详情/URL，支持中文 LLM 翻译与音效下载。
   - HyperFrames 视频创作: `backend/config/agent/skills/hyperframes/SKILL.md` — 用 HTML 描述合成、用 `npx hyperframes` 渲染成片的入口技能；`references/routes/*.md` 为每个工作流的输入/输出/触发契约。被 HyperFrames 系列工作流节点（`backend/steps/s_hyperframes_*.py`）驱动。
+  - 本地素材搜索: `backend/config/agent/skills/local-material-search/SKILL.md` — 跨库检索本地素材（图片/视频/公共角色/创作项目资产/音色/音效背景音乐），支持按类、按分组、按标签、按描述模糊查找，输出统一 JSON。
 - User-installed skills are scanned from: `%USERPROFILE%/.claude/skills`, `%USERPROFILE%/.codex/skills`, `%USERPROFILE%/.trae/skills`, `%USERPROFILE%/.agents/skills`, `%USERPROFILE%/.agent/skills`.
 - Project-specific MCP definitions: `backend/config/agent/mcp/`.
 - User-installed MCP definitions are scanned from: `%USERPROFILE%/.claude/mcps`, `%USERPROFILE%/.trae/mcps`, `%USERPROFILE%/.agents/mcps`, `%USERPROFILE%/.agent/mcps`.

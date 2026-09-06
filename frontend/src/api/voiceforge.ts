@@ -135,6 +135,7 @@ export type VoiceForgeAsset = {
   duration?: number;
   description: string;
   external_path?: string;
+  abs_path?: string;
   sample_rate?: number;
   channels?: number;
   format?: string;

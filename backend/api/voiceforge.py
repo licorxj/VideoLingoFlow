@@ -1576,7 +1576,20 @@ def list_assets(
             conn, asset_type, category, tag, is_favorite, min_duration, max_duration, search, page, page_size
         )
         counts = asset_service.type_counts(conn)
+    for item in items:
+        item["abs_path"] = _asset_abs_path(item)
     return {"assets": items, "total": total, "page": page, "page_size": page_size, "type_counts": counts}
+
+
+def _asset_abs_path(item: dict) -> str:
+    """优先返回素材文件的真实绝对路径(库内文件),外部登记素材回退其登记的外部路径。"""
+    try:
+        candidate = resolve_storage_key(item["storage_key"])
+        if candidate.is_file():
+            return str(candidate)
+    except Exception:
+        pass
+    return item.get("external_path") or ""
 
 
 @router.get("/assets/type-counts")

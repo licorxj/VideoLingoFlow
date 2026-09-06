@@ -15,19 +15,23 @@ export function AssetCard({
   onToggleFavorite,
   onEdit,
   onDelete,
+  onPick,
 }: {
   asset: VoiceForgeAsset;
   selected: boolean;
   onSelect: () => void;
   onToggleFavorite: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
+  onEdit?: () => void;
+  onDelete?: () => void;
+  /** 提供“选择”按钮:选择模式下隐藏勾选框与编辑/删除,用于从弹窗直接挑选素材 */
+  onPick?: () => void;
 }) {
   const color = ASSET_TYPE_COLORS[asset.asset_type] || "#a29bfe";
   const [copied, setCopied] = useState(false);
 
   const copyPath = async () => {
-    const value = asset.external_path || asset.file_name || "";
+    // 复制真实文件的绝对路径;外部登记素材回退其登记路径
+    const value = asset.abs_path || asset.external_path || asset.file_name || "";
     if (!value) return;
     try {
       await navigator.clipboard.writeText(value);
@@ -48,7 +52,7 @@ export function AssetCard({
       <div className="h-1 w-full" style={{ background: color }} />
       <div className="flex flex-1 flex-col p-4">
         <div className="flex items-start gap-2">
-          <input type="checkbox" checked={selected} onChange={onSelect} className="mt-1 h-4 w-4 accent-[var(--primary)]" />
+          {!onPick && <input type="checkbox" checked={selected} onChange={onSelect} className="mt-1 h-4 w-4 accent-[var(--primary)]" />}
           <div className="min-w-0 flex-1">
             <h3 className="truncate text-sm font-semibold">{asset.name}</h3>
             <p className="mt-0.5 truncate text-xs text-muted-foreground">
@@ -76,21 +80,35 @@ export function AssetCard({
         </div>
         <audio controls preload="none" src={voiceForgeApi.assetStreamUrl(asset.id)} className="mt-3 h-8 w-full" />
         <div className="mt-3 flex items-center justify-end gap-1 border-t border-border/50 pt-2">
+          {onPick && (
+            <button
+              type="button"
+              onClick={onPick}
+              className="mr-auto flex items-center gap-1 rounded px-2.5 py-1 text-xs font-medium bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              <Check className="h-3 w-3" />
+              选择
+            </button>
+          )}
           <button
             type="button"
             onClick={() => void copyPath()}
-            title={asset.external_path || "无外部路径"}
+            title={asset.abs_path || asset.external_path || "无可用路径"}
             className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
           >
             {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
             {copied ? "已复制" : "复制路径"}
           </button>
-          <button type="button" onClick={onEdit} className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
-            <Pencil className="h-3 w-3" />编辑
-          </button>
-          <button type="button" onClick={onDelete} className="flex items-center gap-1 rounded px-2 py-1 text-xs text-destructive/80 hover:bg-destructive/10 hover:text-destructive">
-            <Trash2 className="h-3 w-3" />删除
-          </button>
+          {onEdit && (
+            <button type="button" onClick={onEdit} className="flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground">
+              <Pencil className="h-3 w-3" />编辑
+            </button>
+          )}
+          {onDelete && (
+            <button type="button" onClick={onDelete} className="flex items-center gap-1 rounded px-2 py-1 text-xs text-destructive/80 hover:bg-destructive/10 hover:text-destructive">
+              <Trash2 className="h-3 w-3" />删除
+            </button>
+          )}
         </div>
       </div>
     </article>

@@ -12,12 +12,14 @@ import Logs from "./pages/Logs";
 import SocialPublish from "./pages/SocialPublish";
 import LLMRouter from "./pages/llm-router";
 import EditingWorkbench from "./pages/EditingWorkbench";
+import MaterialLibrary from "./pages/MaterialLibrary";
 import Collaboration from "./pages/Collaboration";
 import Community from "./pages/Community";
 import Guide from "./pages/Guide";
 import { VoiceForgeAssets, VoiceForgeHome, VoiceForgeSettings, VoiceForgeVoices, VoiceForgeWorkspace } from "./pages/VoiceForge";
 import { VoiceForgeLayout } from "./components/voiceforge/VoiceForgeLayout";
-import { SceneDesignPlaceholder, VideoDubPlaceholder } from "./components/voiceforge/VoiceForgePlaceholders";
+import { SceneDesignPlaceholder } from "./components/voiceforge/VoiceForgePlaceholders";
+import { VideoDubbingPage } from "./components/voiceforge/videodub/VideoDubbingPage";
 import { ensureControlSession } from "./api/controlPlane";
 import { useControlStore } from "./stores/controlStore";
 import { useSubscriptionStore } from "./stores/subscriptionStore";
@@ -97,13 +99,14 @@ export default function App() {
           <Route path="/history" element={<History />} />
           <Route path="/social" element={<SocialPublish />} />
           <Route path="/editing" element={<EditingWorkbench />} />
+          <Route path="/materials" element={<MaterialLibrary />} />
           <Route path="/voiceforge" element={<VoiceForgeLayout />}>
             <Route index element={<VoiceForgeHome />} />
             <Route path="projects/:projectId" element={<VoiceForgeWorkspace />} />
             <Route path="voices" element={<VoiceForgeVoices />} />
             <Route path="assets" element={<VoiceForgeAssets />} />
             <Route path="settings" element={<VoiceForgeSettings />} />
-            <Route path="video-dub" element={<VideoDubPlaceholder />} />
+            <Route path="video-dub" element={<VideoDubbingPage />} />
             <Route path="scene-design" element={<SceneDesignPlaceholder />} />
           </Route>
           <Route path="/settings" element={<Settings />} />

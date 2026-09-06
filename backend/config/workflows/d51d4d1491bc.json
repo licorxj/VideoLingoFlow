@@ -1,0 +1,816 @@
+{
+  "id": "d51d4d1491bc",
+  "name": "素材库调取示例",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1788688875196",
+      "type": "workflow",
+      "position": {
+        "x": 1905,
+        "y": 1155
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 491
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1788688891863",
+      "type": "workflow",
+      "position": {
+        "x": 2700,
+        "y": 540
+      },
+      "data": {
+        "nodeType": "audio_asset_library",
+        "label": "音频素材库",
+        "config": {
+          "source": "4da5ab7872d143d2a2f71fda1c892149",
+          "asset_name": "优美钢琴循环音乐背景"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\优美钢琴循环音乐背景.mp3",
+          "info": {
+            "source": "4da5ab7872d143d2a2f71fda1c892149",
+            "source_type": "voiceforge_asset",
+            "file": {
+              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\优美钢琴循环音乐背景.mp3",
+              "name": "优美钢琴循环音乐背景.mp3",
+              "size_bytes": 879386,
+              "from": "Y:\\VideoLingoLc\\voiceforge_data\\bgm\\be0ad3b74d5b459f99ecf96992b2a641.mp3"
+            },
+            "asset": {
+              "id": "4da5ab7872d143d2a2f71fda1c892149",
+              "name": "优美钢琴循环音乐背景",
+              "asset_type": "bgm",
+              "category": "",
+              "storage_key": "bgm/be0ad3b74d5b459f99ecf96992b2a641.mp3",
+              "file_name": "be0ad3b74d5b459f99ecf96992b2a641.mp3",
+              "file_size": 879386,
+              "mime_type": "audio/mpeg",
+              "duration": 27.480813,
+              "description": "淡淡忧伤，循环旋律",
+              "legacy_source_id": "https://sc.chinaz.com/yinxiao/240118502810.htm",
+              "legacy_import_batch_id": "elevenlabs",
+              "created_at": "2026-08-27 17:48:17",
+              "updated_at": "2026-08-27 17:48:17",
+              "external_path": "",
+              "sample_rate": null,
+              "channels": null,
+              "format": null,
+              "is_favorite": 0,
+              "path_key": "bgm/be0ad3b74d5b459f99ecf96992b2a641.mp3",
+              "tags": [
+                "钢琴曲",
+                "轻柔音乐",
+                "动听音乐"
+              ],
+              "absolute_path": "Y:\\VideoLingoLc\\voiceforge_data\\bgm\\be0ad3b74d5b459f99ecf96992b2a641.mp3"
+            }
+          }
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\cache\\.step_node_3_1788688891863_result.json, exiting 0",
+          "[step_worker] start node_type=audio_asset_library node_id=node_3_1788688891863 pid=33844",
+          "[step_worker] step instance created: S_AudioAssetLibrary",
+          "[step_worker] step_inputs keys=[]",
+          "[step_worker] node_config keys=['source', 'asset_name']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\cache\\.step_node_3_1788688891863_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 485
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_5_1788688996515",
+      "type": "workflow",
+      "position": {
+        "x": 3255,
+        "y": 570
+      },
+      "data": {
+        "nodeType": "json_visual_editor",
+        "label": "JSON可视化编辑",
+        "config": {
+          "enable_copy": true,
+          "edited_json": ""
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 242
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1788708063502",
+      "type": "workflow",
+      "position": {
+        "x": 2670,
+        "y": 1125
+      },
+      "data": {
+        "nodeType": "image_asset_library",
+        "label": "图片素材库",
+        "config": {
+          "source": "6dcc19ce346c4207ad1ba7f8c9e478f3",
+          "asset_name": "",
+          "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Cmaterials%5Cimages%5C017208759a364df8be3ca3c659f9a95d.png"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "image": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\asset.png",
+          "info": {
+            "source": "6dcc19ce346c4207ad1ba7f8c9e478f3",
+            "source_type": "local",
+            "kind": "image",
+            "asset": {
+              "path": "data/materials/images/017208759a364df8be3ca3c659f9a95d.png",
+              "width": 1024,
+              "height": 1024,
+              "aspect_ratio": "1:1",
+              "group_tags": [
+                "动物，宠物"
+              ],
+              "custom_tags": [
+                "狗，"
+              ],
+              "description": "胖狗大头特写",
+              "id": "6dcc19ce346c4207ad1ba7f8c9e478f3",
+              "version": 1,
+              "created_at": "2026-09-05T23:24:11",
+              "updated_at": "2026-09-05T23:24:11",
+              "absolute_path": "Y:\\VideoLingoLc\\data\\materials\\images\\017208759a364df8be3ca3c659f9a95d.png"
+            },
+            "file": {
+              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\asset.png",
+              "name": "asset.png",
+              "size_bytes": 1307728,
+              "copied": true,
+              "from": "Y:\\VideoLingoLc\\data\\materials\\images\\017208759a364df8be3ca3c659f9a95d.png"
+            }
+          }
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\cache\\.step_node_1_1788708063502_result.json, exiting 0",
+          "[step_worker] start node_type=image_asset_library node_id=node_1_1788708063502 pid=40080",
+          "[step_worker] step instance created: S_ImageAssetLibrary",
+          "[step_worker] step_inputs keys=[]",
+          "[step_worker] node_config keys=['source', 'asset_name', 'preview']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\cache\\.step_node_1_1788708063502_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 579
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "n_mtpymzdx5lqt",
+      "type": "workflow",
+      "position": {
+        "x": 3240,
+        "y": 1155
+      },
+      "data": {
+        "nodeType": "json_visual_editor",
+        "label": "JSON可视化编辑",
+        "config": {
+          "enable_copy": true,
+          "edited_json": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "output/json_visual_edit_n_mtpymzdx5lqt.json"
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 341
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1788708205073",
+      "type": "workflow",
+      "position": {
+        "x": 2625,
+        "y": 1800
+      },
+      "data": {
+        "nodeType": "video_asset_library",
+        "label": "视频素材库",
+        "config": {
+          "source": "e0ff4a581b6f4d9b8582a003926eac4a",
+          "asset_name": "",
+          "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Cmaterials%5Cvideos%5C420621ff592343da956f747a1628b189.mp4"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 480
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1788708246778",
+      "type": "workflow",
+      "position": {
+        "x": 2595,
+        "y": 2355
+      },
+      "data": {
+        "nodeType": "character_asset_library",
+        "label": "角色素材库",
+        "config": {
+          "source": "",
+          "asset_name": ""
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 275
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_4_1788708271657",
+      "type": "workflow",
+      "position": {
+        "x": 3090,
+        "y": 2730
+      },
+      "data": {
+        "nodeType": "voice_asset_library",
+        "label": "音色素材库",
+        "config": {
+          "source": "",
+          "asset_name": ""
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 320
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_5_1788708331880",
+      "type": "workflow",
+      "position": {
+        "x": 2550,
+        "y": 2685
+      },
+      "data": {
+        "nodeType": "voice_character",
+        "label": "新建音色角色",
+        "config": {
+          "design_source": "panel",
+          "panel": {
+            "name": "李可",
+            "age": "28岁",
+            "personality": "性格沉稳，乐于表达，思路清晰，理性",
+            "dialect": "",
+            "occupation_background": "科技博主，十年的编程经验，走在时代科技的前沿",
+            "voice_description": "热情奔放，表达清晰，音色清脆，语速较快"
+          },
+          "tts_mode": "voice_design",
+          "interface_id": "8dc074bb",
+          "reference_audio": "",
+          "generate_emotions": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "voice_id": "7e862128865a498c9c9dfca0e54ea984",
+          "audio": "Y:\\VideoLingoLc\\voiceforge_data\\voices\\7e862128865a498c9c9dfca0e54ea984\\design.wav",
+          "info": {
+            "voice": {
+              "id": "7e862128865a498c9c9dfca0e54ea984",
+              "name": "李可",
+              "display_name": "李可",
+              "interface_id": "8dc074bb",
+              "voice_id": "",
+              "mode": "voice_design",
+              "language": "zh-CN",
+              "description": "性格沉稳，乐于表达，思路清晰，理性；科技博主，十年的编程经验，走在时代科技的前沿",
+              "reference_storage_key": "",
+              "preview_storage_key": "",
+              "status": "ready",
+              "legacy_source_id": null,
+              "legacy_import_batch_id": null,
+              "created_at": "2026-09-06 15:31:54",
+              "updated_at": "2026-09-06 15:31:54",
+              "legacy_engine": null,
+              "legacy_voice_key": null,
+              "gender": "",
+              "voice_age": "28岁",
+              "voice_pitch": "",
+              "dialect": "",
+              "is_cloned": 0,
+              "is_builtin": 0,
+              "design_text": "热情奔放，表达清晰，音色清脆，语速较快；年轻男性，28岁，音色清脆明亮，语速较快，语气热情理性。可插入[Uhm]或[Surprise-wa]等标签。",
+              "voice_group": "",
+              "sample_storage_key": "voices/7e862128865a498c9c9dfca0e54ea984/design.wav",
+              "embedding_storage_key": null,
+              "preview_text": "从编程到AI，科技改变生活，我是李可为你解读。",
+              "tags": [
+                "音色角色"
+              ],
+              "params": {
+                "voice_design": "年轻男性，28岁，音色清脆明亮，语速较快，语气热情理性。可插入[Uhm]或[Surprise-wa]等标签。",
+                "controllable_clone": "年轻男性，28岁，音色清脆明亮，语速较快，语气热情理性。可插入[Uhm]或[Surprise-wa]等标签。"
+              },
+              "emotions": [
+                {
+                  "name": "兴奋",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/兴奋.wav",
+                  "text": "哇！AI技术又突破了，未来太令人兴奋了！",
+                  "engine": "8dc074bb",
+                  "instruct": "兴奋地，语速快，音调高，[excitedly]"
+                },
+                {
+                  "name": "冷漠",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/冷漠.wav",
+                  "text": "这些科技新闻，对我没什么吸引力。",
+                  "engine": "8dc074bb",
+                  "instruct": "冷漠，平淡，[indifferent]"
+                },
+                {
+                  "name": "哀伤",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/哀伤.wav",
+                  "text": "那个项目取消了，我感到深深的哀伤。",
+                  "engine": "8dc074bb",
+                  "instruct": "哀伤，语速慢，[sorrowful]"
+                },
+                {
+                  "name": "哀求",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/哀求.wav",
+                  "text": "拜托，教教我这个技术吧，我哀求你了。",
+                  "engine": "8dc074bb",
+                  "instruct": "哀求，恳求，[pleading]"
+                },
+                {
+                  "name": "喃喃自语",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/喃喃自语.wav",
+                  "text": "嗯，这段代码该怎么优化呢...喃喃自语。",
+                  "engine": "8dc074bb",
+                  "instruct": "喃喃自语，轻声，[muttering]"
+                },
+                {
+                  "name": "平静",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/平静.wav",
+                  "text": "今天平静地聊聊科技趋势。",
+                  "engine": "8dc074bb",
+                  "instruct": "平静，平和，[calm]"
+                },
+                {
+                  "name": "心灰意冷",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/心灰意冷.wav",
+                  "text": "努力了这么久还是失败，我心灰意冷。",
+                  "engine": "8dc074bb",
+                  "instruct": "心灰意冷，无力，[discouraged]"
+                },
+                {
+                  "name": "悲伤",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/悲伤.wav",
+                  "text": "这个项目失败了，我感到很难过。",
+                  "engine": "8dc074bb",
+                  "instruct": "悲伤，语速慢，[sigh]"
+                },
+                {
+                  "name": "惊讶",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/惊讶.wav",
+                  "text": "什么？AI能自己写代码了？太惊讶了！",
+                  "engine": "8dc074bb",
+                  "instruct": "惊讶，音调升高，[surprised]"
+                },
+                {
+                  "name": "打情骂俏",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/打情骂俏.wav",
+                  "text": "你这么聪明，是不是也懂编程呀？",
+                  "engine": "8dc074bb",
+                  "instruct": "打情骂俏，调情，[flirty]"
+                },
+                {
+                  "name": "活泼",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/活泼.wav",
+                  "text": "看这个新APP，太有趣了，我来演示！",
+                  "engine": "8dc074bb",
+                  "instruct": "活泼，语速快，音调高，[playful]"
+                },
+                {
+                  "name": "温柔",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/温柔.wav",
+                  "text": "科技应该温柔地改变我们的生活。",
+                  "engine": "8dc074bb",
+                  "instruct": "温柔，声音柔和，[softly]"
+                },
+                {
+                  "name": "热情",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/热情.wav",
+                  "text": "我热情推荐这个AI工具，它改变了我的工作！",
+                  "engine": "8dc074bb",
+                  "instruct": "热情，声音热情，[enthusiastic]"
+                },
+                {
+                  "name": "疑问",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/疑问.wav",
+                  "text": "未来AI会取代程序员吗？我很疑问。",
+                  "engine": "8dc074bb",
+                  "instruct": "疑问，音调升高，[questioning]"
+                },
+                {
+                  "name": "神秘",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/神秘.wav",
+                  "text": "这个AI的秘密，只有少数人知道哦。",
+                  "engine": "8dc074bb",
+                  "instruct": "神秘，压低声音，[whispering]"
+                },
+                {
+                  "name": "紧张",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/紧张.wav",
+                  "text": "等一下就要上台演讲了，好紧张啊。",
+                  "engine": "8dc074bb",
+                  "instruct": "紧张，语速快，声音紧，[nervous]"
+                },
+                {
+                  "name": "自信",
+                  "audio_path": "voices/7e862128865a498c9c9dfca0e54ea984/emotions/自信.wav",
+                  "text": "以我十年经验，我有信心解决这个问题。",
+                  "engine": "8dc074bb",
+                  "instruct": "自信，声音坚定，[confident]"
+                }
+              ],
+              "legacy_params": {}
+            },
+            "design": {
+              "design_source": "panel",
+              "character": {
+                "name": "李可",
+                "age": "28岁",
+                "personality": "性格沉稳，乐于表达，思路清晰，理性",
+                "occupation_background": "科技博主，十年的编程经验，走在时代科技的前沿",
+                "voice_description": "热情奔放，表达清晰，音色清脆，语速较快"
+              },
+              "character_info": "- 姓名:李可\n- 年龄:28岁\n- 性格:性格沉稳，乐于表达，思路清晰，理性\n- 职业和背景:科技博主，十年的编程经验，走在时代科技的前沿\n- 音色描述:热情奔放，表达清晰，音色清脆，语速较快",
+              "mode": "voice_design",
+              "interface_id": "8dc074bb",
+              "sample_text": "从编程到AI，科技改变生活，我是李可为你解读。",
+              "instruct": "年轻男性，28岁，音色清脆明亮，语速较快，语气热情理性。可插入[Uhm]或[Surprise-wa]等标签。",
+              "reference_audio": "",
+              "generate_emotions": true,
+              "emotions": [
+                {
+                  "emotion": "兴奋",
+                  "text": "哇！AI技术又突破了，未来太令人兴奋了！",
+                  "instruct": "兴奋地，语速快，音调高，[excitedly]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_兴奋.wav"
+                },
+                {
+                  "emotion": "冷漠",
+                  "text": "这些科技新闻，对我没什么吸引力。",
+                  "instruct": "冷漠，平淡，[indifferent]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_冷漠.wav"
+                },
+                {
+                  "emotion": "哀伤",
+                  "text": "那个项目取消了，我感到深深的哀伤。",
+                  "instruct": "哀伤，语速慢，[sorrowful]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_哀伤.wav"
+                },
+                {
+                  "emotion": "哀求",
+                  "text": "拜托，教教我这个技术吧，我哀求你了。",
+                  "instruct": "哀求，恳求，[pleading]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_哀求.wav"
+                },
+                {
+                  "emotion": "喃喃自语",
+                  "text": "嗯，这段代码该怎么优化呢...喃喃自语。",
+                  "instruct": "喃喃自语，轻声，[muttering]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_喃喃自语.wav"
+                },
+                {
+                  "emotion": "平静",
+                  "text": "今天平静地聊聊科技趋势。",
+                  "instruct": "平静，平和，[calm]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_平静.wav"
+                },
+                {
+                  "emotion": "心灰意冷",
+                  "text": "努力了这么久还是失败，我心灰意冷。",
+                  "instruct": "心灰意冷，无力，[discouraged]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_心灰意冷.wav"
+                },
+                {
+                  "emotion": "悲伤",
+                  "text": "这个项目失败了，我感到很难过。",
+                  "instruct": "悲伤，语速慢，[sigh]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_悲伤.wav"
+                },
+                {
+                  "emotion": "惊讶",
+                  "text": "什么？AI能自己写代码了？太惊讶了！",
+                  "instruct": "惊讶，音调升高，[surprised]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_惊讶.wav"
+                },
+                {
+                  "emotion": "打情骂俏",
+                  "text": "你这么聪明，是不是也懂编程呀？",
+                  "instruct": "打情骂俏，调情，[flirty]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_打情骂俏.wav"
+                },
+                {
+                  "emotion": "活泼",
+                  "text": "看这个新APP，太有趣了，我来演示！",
+                  "instruct": "活泼，语速快，音调高，[playful]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_活泼.wav"
+                },
+                {
+                  "emotion": "温柔",
+                  "text": "科技应该温柔地改变我们的生活。",
+                  "instruct": "温柔，声音柔和，[softly]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_温柔.wav"
+                },
+                {
+                  "emotion": "热情",
+                  "text": "我热情推荐这个AI工具，它改变了我的工作！",
+                  "instruct": "热情，声音热情，[enthusiastic]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_热情.wav"
+                },
+                {
+                  "emotion": "疑问",
+                  "text": "未来AI会取代程序员吗？我很疑问。",
+                  "instruct": "疑问，音调升高，[questioning]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_疑问.wav"
+                },
+                {
+                  "emotion": "神秘",
+                  "text": "这个AI的秘密，只有少数人知道哦。",
+                  "instruct": "神秘，压低声音，[whispering]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_神秘.wav"
+                },
+                {
+                  "emotion": "紧张",
+                  "text": "等一下就要上台演讲了，好紧张啊。",
+                  "instruct": "紧张，语速快，声音紧，[nervous]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_紧张.wav"
+                },
+                {
+                  "emotion": "自信",
+                  "text": "以我十年经验，我有信心解决这个问题。",
+                  "instruct": "自信，声音坚定，[confident]",
+                  "task_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_自信.wav"
+                }
+              ],
+              "failed_emotions": [
+                "愤怒（TTS 合成失败（接口 8dc074bb）：代码又出错了，真是气死我了！…）",
+                "恐惧（TTS 合成失败（接口 8dc074bb）：这个AI的安全问题让我感到害怕。…）",
+                "开心（TTS 合成失败（接口 8dc074bb）：我的新程序成功运行了，心情真好！…）",
+                "严肃（TTS 合成失败（接口 8dc074bb）：我们必须严肃对待数据隐私问题。…）",
+                "慵懒（TTS 合成失败（接口 8dc074bb）：嗯，今天不想写代码，就想躺着看科技新闻。…）",
+                "轻快（TTS 合成失败（接口 8dc074bb）：这个编程小技巧，学起来真轻松！…）",
+                "低沉（TTS 合成失败（接口 8dc074bb）：科技发展太快，有时让人感到低沉。…）",
+                "喜悦（TTS 合成失败（接口 8dc074bb）：终于完成这个项目了，喜悦溢于言表！…）",
+                "忧郁（TTS 合成失败（接口 8dc074bb）：科技让连接更便捷，但也带来忧郁。…）",
+                "害羞（TTS 合成失败（接口 8dc074bb）：这是我第一次公开代码，有点害羞呢。…）",
+                "坚定（TTS 合成失败（接口 8dc074bb）：无论多难，我都坚定走在科技前沿。…）",
+                "得意（TTS 合成失败（接口 8dc074bb）：哈哈，我独自修复了这个bug，真得意！…）",
+                "讽刺（TTS 合成失败（接口 8dc074bb）：又一个科技噱头，真是讽刺啊。…）",
+                "讨好（TTS 合成失败（接口 8dc074bb）：大家喜欢我的视频吗？我会更努力的！…）",
+                "自卑（TTS 合成失败（接口 8dc074bb）：和那些大神比，我还差得远，有点自卑。…）",
+                "疯癫（TTS 合成失败（接口 8dc074bb）：我突然有个疯狂的想法，AI可以做这个！…）",
+                "饶有兴致（TTS 合成失败（接口 8dc074bb）：这个新框架真有趣，我饶有兴致地研究。…）",
+                "耳语（TTS 合成失败（接口 8dc074bb）：告诉你一个小秘密，这个技术还没公开哦。…）",
+                "吟唱（TTS 合成失败（接口 8dc074bb）：科技如歌，吟唱未来无限可能。…）"
+              ]
+            },
+            "files": {
+              "main_clip": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design\\李可_main.wav",
+              "clips_dir": "Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\voice_design"
+            }
+          }
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] node_config keys=['design_source', 'panel', 'tts_mode', 'interface_id', 'reference_audio', 'generate_emotions']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b, kwargs=['callback', 'cancel_callback'])",
+          "[LLM] request (step=s_voice_character, model=vlf-01, stream=False, response_json=True, timeout=150s, prompt_chars=748, base_url=http://localhost:8800/v1)",
+          "[LLM] ok (step=s_voice_character, model=vlf-01, elapsed=37.3s)",
+          "[LLM] request (step=s_voice_character, model=vlf-01, stream=False, response_json=True, timeout=150s, prompt_chars=795, base_url=http://localhost:8800/v1)",
+          "[LLM] ok (step=s_voice_character, model=vlf-01, elapsed=92.6s)",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\b13a9ef534bf4e97b5ccb3a167b6927b\\cache\\.step_node_5_1788708331880_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 937
+      },
+      "selected": true,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788688875196",
+      "sourceHandle": "out-no_input",
+      "target": "node_3_1788688891863",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1788688875196out-no_input-node_3_1788688891863in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1788688891863",
+      "sourceHandle": "out-info",
+      "target": "node_5_1788688996515",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_3_1788688891863out-info-node_5_1788688996515in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788688875196",
+      "sourceHandle": "out-no_input",
+      "target": "node_1_1788708063502",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1788688875196out-no_input-node_1_1788708063502in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788708063502",
+      "sourceHandle": "out-info",
+      "target": "n_mtpymzdx5lqt",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1788708063502out-info-n_mtpymzdx5lqtin-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788688875196",
+      "sourceHandle": "out-no_input",
+      "target": "node_2_1788708205073",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1788688875196out-no_input-node_2_1788708205073in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788688875196",
+      "sourceHandle": "out-no_input",
+      "target": "node_3_1788708246778",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1788688875196out-no_input-node_3_1788708246778in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1788688875196",
+      "sourceHandle": "out-no_input",
+      "target": "node_5_1788708331880",
+      "targetHandle": "in-description",
+      "id": "xy-edge__node_1_1788688875196out-no_input-node_5_1788708331880in-description"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_5_1788708331880",
+      "sourceHandle": "out-voice_id",
+      "target": "node_4_1788708271657",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_5_1788708331880out-voice_id-node_4_1788708271657in-any"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-06T18:01:57",
+  "updatedAt": "2026-09-06T23:37:24",
+  "revision": 5
+}
