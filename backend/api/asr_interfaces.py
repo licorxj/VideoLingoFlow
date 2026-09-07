@@ -14,6 +14,8 @@ from typing import Optional, List, Any
 
 from backend.asr.asr_interface_manager import get_asr_interface_manager
 
+from backend.config.credential_store import mask_deep
+
 router = APIRouter()
 
 ASR_TEST_DIR = os.path.join(
@@ -52,13 +54,13 @@ class ASRTestRequest(BaseModel):
 @router.get("")
 async def list_interfaces():
     mgr = get_asr_interface_manager()
-    return {"interfaces": mgr.list_all()}
+    return {"interfaces": mask_deep(mgr.list_raw())}
 
 
 @router.get("/enabled")
 async def list_enabled():
     mgr = get_asr_interface_manager()
-    return {"interfaces": mgr.get_enabled()}
+    return {"interfaces": mask_deep(mgr.get_enabled_raw())}
 
 
 @router.get("/models")
@@ -100,17 +102,17 @@ async def get_asr_config_fields():
 @router.get("/{iface_id}")
 async def get_interface(iface_id: str):
     mgr = get_asr_interface_manager()
-    iface = mgr.get(iface_id)
+    iface = mgr.get_raw(iface_id)
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return {"interface": iface}
+    return {"interface": mask_deep(iface)}
 
 
 @router.post("")
 async def create_interface(req: ASRInterfaceCreate):
     mgr = get_asr_interface_manager()
     iface = mgr.create(req.model_dump())
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.put("/{iface_id}")
@@ -119,7 +121,7 @@ async def update_interface(iface_id: str, req: ASRInterfaceUpdate):
     iface = mgr.update(iface_id, req.model_dump(exclude_none=True))
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.delete("/{iface_id}")
@@ -136,7 +138,7 @@ async def toggle_interface(iface_id: str, enabled: bool = True):
     iface = mgr.toggle(iface_id, enabled)
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.post("/reload")

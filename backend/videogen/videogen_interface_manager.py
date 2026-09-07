@@ -9,6 +9,8 @@ import threading
 import importlib
 import requests
 
+from backend.config.credential_store import merge_preserving_masked, resolve_deep
+
 logger = logging.getLogger(__name__)
 
 
@@ -64,11 +66,19 @@ class VideoGenInterfaceManager:
             self._load()
         return list(self.interfaces.keys())
 
-    def list_all(self):
+    def list_raw(self):
+        """返回未解析密钥引用的原始接口定义（供展示/下发前端使用，引用名原样保留）。"""
         return list(self.interfaces.values())
 
-    def get(self, iface_id):
+    def get_raw(self, iface_id):
         return self.interfaces.get(iface_id)
+
+    def list_all(self):
+        return [resolve_deep(i) for i in self.interfaces.values()]
+
+    def get(self, iface_id):
+        iface = self.interfaces.get(iface_id)
+        return resolve_deep(iface) if iface is not None else None
 
     def create(self, data):
         with self._lock:
@@ -87,6 +97,10 @@ class VideoGenInterfaceManager:
                 raise ValueError(f"接口不存在: {iface_id}")
             iface = self.interfaces[iface_id]
             iface.update({k: v for k, v in data.items() if k != "id"})
+            if "config" in data:
+                iface["config"] = merge_preserving_masked(
+                    iface.get("config") or {}, data.get("config") or {}
+                )
             self._save()
             return iface
 

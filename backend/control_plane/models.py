@@ -341,4 +341,19 @@ class VideoDubWorkspace(TimestampedVersioned, Base):
     state: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
 
 
+class Credential(TimestampedVersioned, Base):
+    """第三方能力密钥。
+
+    配置文件只保存引用名（``secret://NAME``），真实值存放在本表。
+    该表位于用户私有数据库，不随软件分发、不会被 git 更新覆盖。
+    """
+    __tablename__ = "cp_credentials"
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    value: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    purpose: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # 多 key 轮询：value 为 JSON 数组（兼容历史纯文本单 key）；新建默认开启
+    rotate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    current_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
 CONTROL_PLANE_TABLES = {table.name for table in Base.metadata.tables.values()}

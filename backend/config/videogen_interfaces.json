@@ -16,7 +16,7 @@
         "sdk_package": "",
         "sdk_module": "backend.videogen.sdk.wuli_video_wrapper",
         "sdk_function": "generate",
-        "sdk_api_key": "",
+        "sdk_api_key": "secret://WULI_VIDEO_SDK_API_KEY",
         "default_model": "可灵 3.0",
         "model_options": [
           "通义万相 2.7",

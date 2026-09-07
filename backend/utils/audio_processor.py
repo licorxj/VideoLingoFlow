@@ -8,13 +8,70 @@ import subprocess
 import json
 import math
 import os
+from backend.config.config_manager import config
 from backend.utils.audio_segmenter import get_audio_output_settings
+
+# x264 支持的编码速度预设
+X264_SPEED_PRESETS = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower")
+# NVENC (h264_nvenc) 的速度预设映射
+NVENC_SPEED_PRESETS = {
+    "ultrafast": "p1", "superfast": "p2", "veryfast": "p2", "faster": "p3",
+    "fast": "p4", "medium": "p5", "slow": "p6", "slower": "p7",
+}
+# 质量档位对应的 CRF 值
+QUALITY_CRF = {"high": 18, "medium": 23, "low": 28}
+
+
+def get_ffmpeg_timeout(default: float = 600) -> float:
+    """读取全局配置中的 ffmpeg 超时时间（秒）"""
+    try:
+        val = float(config.get("video.ffmpeg_timeout", default) or default)
+        return val if val > 0 else default
+    except Exception:
+        return default
+
+
+def get_encoder_args(quality: str, encode_preset: str = None, gpu_accel=None) -> list:
+    """根据质量档位 + 全局配置构建视频编码参数。
+
+    Args:
+        quality: 质量预设 ("copy", "high", "medium", "low")
+        encode_preset: 编码速度预设（None 则读全局配置 video.encode_preset）
+        gpu_accel: 是否显卡加速（None 则读全局配置 video.gpu_accel）
+
+    Returns:
+        ffmpeg 编码参数列表，如 ["-c:v", "libx264", "-preset", "fast", "-crf", "23"]
+    """
+    if quality == "copy":
+        return ["-c:v", "copy"]
+
+    crf = QUALITY_CRF.get(quality, 23)
+
+    if encode_preset is None:
+        encode_preset = config.get("video.encode_preset", "medium")
+    speed = str(encode_preset or "medium").lower()
+    if speed not in X264_SPEED_PRESETS:
+        speed = "medium"
+
+    if gpu_accel is None:
+        gpu_accel = config.get("video.gpu_accel", False)
+    if isinstance(gpu_accel, str):
+        gpu_accel = gpu_accel.lower() in ("true", "1", "yes")
+
+    if gpu_accel:
+        # NVIDIA NVENC 硬编码
+        return [
+            "-c:v", "h264_nvenc",
+            "-preset", NVENC_SPEED_PRESETS.get(speed, "p5"),
+            "-rc", "vbr", "-cq", str(crf), "-b:v", "0",
+        ]
+    return ["-c:v", "libx264", "-preset", speed, "-crf", str(crf)]
 
 
 def get_audio_duration(audio_path: str) -> float:
     """获取音频文件时长（秒）"""
     cmd = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", audio_path]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe failed: {result.stderr}")
     
@@ -25,7 +82,7 @@ def get_audio_duration(audio_path: str) -> float:
 def get_video_duration(video_path: str) -> float:
     """获取视频文件时长（秒）"""
     cmd = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", video_path]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe failed: {result.stderr}")
     
@@ -63,7 +120,7 @@ def prepare_bgm(bgm_path: str, target_duration: float, output_path: str) -> str:
             output_path
         ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
     
@@ -89,7 +146,7 @@ def adjust_volume(audio_path: str, volume: float, output_path: str) -> str:
         output_path
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
     
@@ -132,7 +189,7 @@ def apply_fade(audio_path: str, fade_in: float, fade_out: float, duration: float
             output_path
         ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
     
@@ -264,7 +321,7 @@ def mix_audio(
             "-b:a", f"{output_settings['bitrate']}k",
             output_path
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
         if result.returncode != 0:
             raise RuntimeError(f"ffmpeg failed: {result.stderr}")
         return output_path
@@ -283,7 +340,7 @@ def mix_audio(
         output_path
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     if result.returncode != 0:
         # 如果使用了 [0:a] 但失败，可能是音频流损坏，去掉原始音频重试
         if has_audio and "[0:a]" in filter_complex and (bgm_path or dub_path):
@@ -316,58 +373,62 @@ def mute_video_audio(video_path: str, output_path: str) -> str:
         output_path
     ]
     
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
     
     return output_path
 
 
-# 质量预设
-QUALITY_PRESETS = {
-    "copy": {"vcodec": "copy", "extra": []},
-    "high": {"vcodec": "libx264", "extra": ["-preset", "slow", "-crf", "18"]},
-    "medium": {"vcodec": "libx264", "extra": ["-preset", "medium", "-crf", "23"]},
-    "low": {"vcodec": "libx264", "extra": ["-preset", "fast", "-crf", "28"]},
-}
-
-
-def encode_video_with_quality(video_path: str, ass_path: str, quality: str, output_path: str) -> str:
+def encode_video_with_quality(
+    video_path: str,
+    ass_path: str,
+    quality: str,
+    output_path: str,
+    encode_preset: str = None,
+    gpu_accel=None,
+    timeout: float = None,
+) -> str:
     """带字幕烧录的视频编码
-    
+
     Args:
         video_path: 输入视频路径
         ass_path: ASS字幕文件路径
         quality: 质量预设 ("copy", "high", "medium", "low")
         output_path: 输出视频路径
-    
+        encode_preset: 编码速度预设（None 则读全局配置 video.encode_preset）
+        gpu_accel: 是否显卡加速（None 则读全局配置 video.gpu_accel）
+        timeout: 超时时间秒（None 则读全局配置 video.ffmpeg_timeout）
+
     Returns:
         输出文件路径
     """
-    # 获取质量预设
-    preset = QUALITY_PRESETS.get(quality, QUALITY_PRESETS["medium"])
-    
     # "copy"模式无法使用字幕滤镜，回退到"medium"
     if quality == "copy":
-        preset = QUALITY_PRESETS["medium"]
-    
+        quality = "medium"
+
+    # 构建编码参数（编码速度 / 显卡加速由配置或参数决定）
+    encoder_args = get_encoder_args(quality, encode_preset=encode_preset, gpu_accel=gpu_accel)
+
     # 转义ASS路径中的特殊字符（用于ffmpeg subtitles滤镜）
     escaped_ass = ass_path.replace("\\", "/").replace(":", "\\:")
-    
+
     # 构建ffmpeg命令
     cmd = [
         "ffmpeg", "-y",
         "-i", video_path,
         "-vf", f"subtitles='{escaped_ass}'",
-        "-c:v", preset["vcodec"],
-        *preset["extra"],
+        *encoder_args,
         "-c:a", "aac",
         "-b:a", "192k",
         output_path
     ]
-    
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+
+    result = subprocess.run(
+        cmd, capture_output=True, text=True,
+        timeout=float(timeout) if timeout else get_ffmpeg_timeout(),
+    )
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
-    
+
     return output_path

@@ -153,6 +153,7 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   image_gen: "封面生成",
   publish: "发布",
   cutia: "剪辑",
+  cutia_render: "剪辑渲染",
   s_resolve_path: "路径解析",
   s_file_rename: "文件重命名",
   s_sentence_preprocess: "句预处理",

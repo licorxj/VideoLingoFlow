@@ -16,6 +16,8 @@ from backend.ocr.ocr_rapidocr import (
     SIZES_BY_VERSION,
 )
 
+from backend.config.credential_store import mask_deep
+
 router = APIRouter()
 
 OCR_TEST_DIR = os.path.join(
@@ -54,7 +56,7 @@ class OCRTestRequest(BaseModel):
 @router.get("")
 async def list_interfaces():
     mgr = get_ocr_interface_manager()
-    return {"interfaces": mgr.list_all()}
+    return {"interfaces": mask_deep(mgr.list_raw())}
 
 
 @router.get("/enabled")
@@ -82,17 +84,17 @@ async def get_ocr_config_fields():
 @router.get("/{iface_id}")
 async def get_interface(iface_id: str):
     mgr = get_ocr_interface_manager()
-    iface = mgr.get(iface_id)
+    iface = mgr.get_raw(iface_id)
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return {"interface": iface}
+    return {"interface": mask_deep(iface)}
 
 
 @router.post("")
 async def create_interface(req: OCRInterfaceCreate):
     mgr = get_ocr_interface_manager()
     iface = mgr.create(req.model_dump())
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.put("/{iface_id}")
@@ -104,7 +106,7 @@ async def update_interface(iface_id: str, req: OCRInterfaceUpdate):
     # 配置变更后释放引擎缓存，下次识别按新配置重建
     from backend.ocr.ocr_factory import clear_cache
     clear_cache()
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.delete("/{iface_id}")
@@ -121,7 +123,7 @@ async def toggle_interface(iface_id: str, enabled: bool = True):
     iface = mgr.toggle(iface_id, enabled)
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.post("/reload")

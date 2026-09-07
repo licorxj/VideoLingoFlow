@@ -77,7 +77,8 @@ def get_node_schema() -> dict:
 
 def validate_node_type_data(data: dict) -> None:
     """Validate node definition payload against the shared schema."""
-    category = data.get("category", "process")
+    # 默认值同样必须是白名单内的合法分类（历史值 "process" 不在白名单，会导致缺省时 400）
+    category = data.get("category", "utility")
     if category not in ALLOWED_NODE_CATEGORIES:
         raise ValueError(f"Invalid node category: {category}")
 

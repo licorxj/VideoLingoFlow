@@ -13,8 +13,19 @@ const QUALITY_OPTIONS = [
   { label: "低质量(CRF28)", value: "low" },
 ];
 
+const ENCODE_PRESET_OPTIONS = [
+  { label: "均衡(medium)", value: "medium" },
+  { label: "快速(fast)", value: "fast" },
+  { label: "更快(faster)", value: "faster" },
+  { label: "最快(veryfast)", value: "veryfast" },
+  { label: "慢速高压缩(slow)", value: "slow" },
+];
+
 export default function VideoProcess() {
   const [defaultQuality, setDefaultQuality] = useState("medium");
+  const [encodePreset, setEncodePreset] = useState("medium");
+  const [gpuAccel, setGpuAccel] = useState(false);
+  const [ffmpegTimeout, setFfmpegTimeout] = useState(600);
   const [bgmVolume, setBgmVolume] = useState(0.3);
   const [dubVolume, setDubVolume] = useState(0.8);
   const [fadeIn, setFadeIn] = useState(0.5);
@@ -32,6 +43,9 @@ export default function VideoProcess() {
   useEffect(() => {
     const keys = [
       "video.default_quality",
+      "video.encode_preset",
+      "video.gpu_accel",
+      "video.ffmpeg_timeout",
       "bgm.volume",
       "bgm.dub_volume",
       "bgm.fade_in",
@@ -45,8 +59,11 @@ export default function VideoProcess() {
       "video.speed.fast_limit",
     ];
     Promise.all(keys.map((k) => client.get(`/api/settings/${k}`)))
-      .then(([q, bv, dv, fi, fo, tl, sm, sx, gt, mv, sl, fl]) => {
+      .then(([q, ep, ga, ft, bv, dv, fi, fo, tl, sm, sx, gt, mv, sl, fl]) => {
         if (q.data?.value) setDefaultQuality(q.data.value);
+        if (ep.data?.value !== undefined) setEncodePreset(ep.data.value);
+        if (ga.data?.value !== undefined) setGpuAccel(ga.data.value === true || ga.data.value === "true");
+        if (ft.data?.value !== undefined) setFfmpegTimeout(+ft.data.value || 600);
         if (bv.data?.value !== undefined) setBgmVolume(bv.data.value);
         if (dv.data?.value !== undefined) setDubVolume(dv.data.value);
         if (fi.data?.value !== undefined) setFadeIn(fi.data.value);
@@ -107,6 +124,56 @@ export default function VideoProcess() {
             ))}
           </select>
         </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className={labelCls}>编码速度</label>
+            <select
+              className={cn(inputCls, "appearance-none")}
+              value={encodePreset}
+              onChange={(e) => {
+                setEncodePreset(e.target.value);
+                saveImmediate("video.encode_preset", e.target.value);
+              }}
+            >
+              {ENCODE_PRESET_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>编码超时时间 (秒)</label>
+            <input
+              type="number"
+              min={60}
+              step={60}
+              className={inputCls}
+              value={ffmpegTimeout}
+              onChange={(e) => setFfmpegTimeout(+e.target.value)}
+              onBlur={() => save("video.ffmpeg_timeout", ffmpegTimeout)}
+            />
+          </div>
+        </div>
+        <label className="flex items-center gap-3 cursor-pointer group">
+          <div className="relative">
+            <input
+              type="checkbox"
+              checked={gpuAccel}
+              onChange={(e) => {
+                setGpuAccel(e.target.checked);
+                saveImmediate("video.gpu_accel", e.target.checked);
+              }}
+              className="peer sr-only"
+            />
+            <div className="w-9 h-5 bg-muted rounded-full peer-checked:bg-primary transition-colors duration-200" />
+            <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-background rounded-full shadow-sm peer-checked:translate-x-4 transition-transform duration-200" />
+          </div>
+          <span className="text-sm group-hover:text-foreground transition-colors">
+            使用显卡加速 (NVIDIA NVENC)
+          </span>
+        </label>
+        <p className="text-[11px] text-muted-foreground">
+          编码速度越快文件压缩率越低；显卡加速需 NVIDIA 显卡，长视频建议开启并适当调大超时时间
+        </p>
       </div>
 
       {/* BGM settings card */}

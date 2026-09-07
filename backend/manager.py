@@ -22,6 +22,9 @@ MANAGER_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 18001
 BACKEND_PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 11001
 SOCIAL_BACKEND_PORT = 5409
 SOCIAL_FRONTEND_PORT = 5173
+
+# 控制面 worker 软停机：给在途任务留出完成时间，超时后再强杀（单位秒，可调）
+CONTROL_PLANE_SOFT_SHUTDOWN_TIMEOUT = int(os.environ.get("CONTROL_PLANE_SOFT_SHUTDOWN_TIMEOUT", "300"))
 SOCIAL_MCP_PORT = 5410
 LLM_ROUTER_PORT = 8800
 CUTIA_PORT = 4100
@@ -558,6 +561,8 @@ def start_backend():
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     python_exe = _get_python()
     env = _setup_env()
+    # 无头剪辑渲染器需要与后端同源访问 /cutia 代理，故把主后端端口透传给子进程
+    env["VIDEOLINGO_BACKEND_PORT"] = str(BACKEND_PORT)
 
     listener_host = _listener_host(env)
     cmd = [
@@ -1426,6 +1431,53 @@ def start_voiceforge_worker():
         print(f"[Manager] Failed to start VoiceForge worker: {exc}")
 
 
+def _celery_warm_shutdown(timeout: int = 30) -> bool:
+    """通过 Celery control 协议请求 worker 暖停机（完成在途任务后退出）。
+
+    返回 True 表示指令已成功下发；失败（如 broker 不可达、app 加载异常）返回 False。
+    """
+    try:
+        python_exe = _get_python()
+        env = _setup_env()
+        result = subprocess.run(
+            [python_exe, "-m", "celery", "-A", "backend.control_plane.celery_runtime:celery_app",
+             "control", "shutdown"],
+            cwd=_project_root(),
+            env=env,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+        )
+        if result.returncode != 0:
+            print(f"[Manager] Celery 暖停机指令返回非零: {result.stderr.strip()[:200]}")
+            return False
+        return True
+    except Exception as exc:
+        print(f"[Manager] Celery 暖停机指令失败（将回退为信号方式）: {exc}")
+        return False
+
+
+def _soft_signal_shutdown(proc) -> None:
+    """向进程组发送软停机信号：Windows 用 Ctrl+C，POSIX 用 SIGTERM，触发 Celery 暖停机。"""
+    try:
+        if os.name == "nt":
+            # worker 以 CREATE_NEW_PROCESS_GROUP 启动，属于独立进程组，可直接发送 Ctrl+C
+            os.kill(proc.pid, signal.CTRL_C_EVENT)
+        else:
+            os.kill(proc.pid, signal.SIGTERM)
+    except Exception as exc:
+        print(f"[Manager] 发送软停机信号失败: {exc}")
+
+
+def _wait_for_exit(proc, timeout: float) -> bool:
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if proc.poll() is not None:
+            return True
+        time.sleep(1)
+    return proc.poll() is not None
+
+
 @_serialized
 def start_control_plane_worker():
     global _control_plane_worker_process, _control_plane_worker_start_time
@@ -1447,7 +1499,7 @@ def start_control_plane_worker():
     ):
         print("[Manager] Control-plane worker queues already have a consumer, skipping start")
         return
-    concurrency = env.get("CELERY_CONTROL_PLANE_CONCURRENCY", "4")
+    concurrency = _control_plane_concurrency(env)
     cmd = [python_exe, "-m", "celery", "-A", "backend.control_plane.celery_runtime:celery_app", "worker", "--loglevel=INFO", "--hostname=control-plane@%h", "--pool=threads", f"--concurrency={concurrency}", "--queues=videolingo_cpu,videolingo_gpu,videolingo_llm,videolingo_tts,videolingo_io"]
     try:
         proc = subprocess.Popen(cmd, cwd=project_root, env=env, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
@@ -1462,27 +1514,53 @@ def start_control_plane_worker():
 
 
 @_serialized
-def stop_control_plane_worker():
+def stop_control_plane_worker(soft: bool = False):
     global _control_plane_worker_process, _control_plane_worker_start_time
     _desired["control_plane_worker"] = False
     with _lock:
         proc = _control_plane_worker_process
         _control_plane_worker_process = None
         _control_plane_worker_start_time = 0
-    if proc is not None:
-        _kill_existing_process(proc)
-        print("[Manager] Control-plane worker stopped")
+    if proc is None or proc.poll() is not None:
+        return
+    if soft:
+        print("[Manager] 软停机 control-plane worker（等待在途任务完成）...")
+        # 优先用 Celery control 协议请求暖停机；失败再回退为 OS 信号
+        if not _celery_warm_shutdown():
+            _soft_signal_shutdown(proc)
+        if _wait_for_exit(proc, timeout=CONTROL_PLANE_SOFT_SHUTDOWN_TIMEOUT):
+            print("[Manager] control-plane worker 已软停机")
+            return
+        print("[Manager] 软停机超时，回退为强杀")
+    _kill_existing_process(proc)
+    print("[Manager] Control-plane worker stopped")
 
 
 @_serialized
-def restart_control_plane_worker():
-    stop_control_plane_worker()
-    time.sleep(1)
+def restart_control_plane_worker(soft: bool = True):
+    # 软停机：先让在途任务完成再退出，避免强杀中断任务
+    stop_control_plane_worker(soft=soft)
+    # stop 已阻塞至进程退出（或已强杀），无需额外 sleep，直接拉起新 worker
     start_control_plane_worker()
 
 
 def _gpu_service_enabled_in(env: dict[str, str]) -> bool:
     return env.get("GPU_SERVICE_ENABLED", "0").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _control_plane_concurrency(env: dict[str, str]) -> int:
+    """从 config.yaml 的 batch.max_concurrent_tasks 读取 worker 并发数；异常时回退到环境变量或默认 4。"""
+    try:
+        from backend.config.config_manager import config as _cfg
+
+        value = _cfg.get("batch.max_concurrent_tasks", 4)
+        return max(1, int(value))
+    except Exception:
+        pass
+    try:
+        return max(1, int(env.get("CELERY_CONTROL_PLANE_CONCURRENCY", "4")))
+    except (ValueError, TypeError):
+        return 4
 
 
 @_serialized

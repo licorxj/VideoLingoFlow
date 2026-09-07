@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { videogenInterfacesApi, VideoGenInterface, VideoGenInterfaceConfig } from "@/api/videogenInterfaces";
 import { cn } from "@/lib/utils";
 import { X, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { SecretField } from "@/components/shared/SecretPicker";
 
 const inputCls = "w-full px-3.5 py-2.5 border border-border/60 rounded-xl bg-background/50 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-200 outline-none";
 const labelCls = "text-xs font-medium text-muted-foreground uppercase tracking-wider";
@@ -259,10 +260,7 @@ export default function VideoGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
               <input className={cn(inputCls, "mt-1.5")} value={config.sdk_function || "generate"} onChange={(e) => updateConfig({ sdk_function: e.target.value })} />
             </div>
           </div>
-          <div>
-            <label className={labelCls}>SDK API Key</label>
-            <input className={cn(inputCls, "mt-1.5")} type="password" value={config.sdk_api_key || ""} onChange={(e) => updateConfig({ sdk_api_key: e.target.value })} />
-          </div>
+          <SecretField label="SDK API Key" value={config.sdk_api_key || ""} onChange={(v) => updateConfig({ sdk_api_key: v })} />
         </div>
       )}
 
@@ -274,10 +272,7 @@ export default function VideoGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
             <label className={labelCls}>API URL</label>
             <input className={cn(inputCls, "mt-1.5")} value={config.api_url || ""} onChange={(e) => updateConfig({ api_url: e.target.value })} />
           </div>
-          <div>
-            <label className={labelCls}>API Key</label>
-            <input className={cn(inputCls, "mt-1.5")} type="password" value={config.api_key || ""} onChange={(e) => updateConfig({ api_key: e.target.value })} />
-          </div>
+          <SecretField label="API Key" value={config.api_key || ""} onChange={(v) => updateConfig({ api_key: v })} />
         </div>
       )}
 

@@ -10,6 +10,30 @@ _yaml = YAML()
 _yaml.preserve_quotes = True
 
 
+def _resolve_secret(value: Any) -> Any:
+    """把 ``secret://NAME`` 形式的引用还原为数据库中的真实密钥。
+
+    非引用值原样返回；数据库不可用时降级为原样返回，避免阻塞启动。
+    """
+    if isinstance(value, str):
+        if not value.startswith("secret://"):
+            return value
+        try:
+            from backend.config.credential_store import resolve
+
+            return resolve(value)
+        except Exception:
+            return value
+    if isinstance(value, (dict, list)):
+        try:
+            from backend.config.credential_store import resolve_deep
+
+            return resolve_deep(value)
+        except Exception:
+            return value
+    return value
+
+
 class ConfigManager:
     """Thread-safe YAML config manager. Reads on every get() call for live updates."""
 
@@ -46,7 +70,9 @@ class ConfigManager:
         with _config_lock:
             data = self._load()
         value = self._traverse(data, key.split("."))
-        return default if value is None else value
+        if value is None:
+            return default
+        return _resolve_secret(value)
 
     def set(self, key: str, value: Any) -> bool:
         with _config_lock:

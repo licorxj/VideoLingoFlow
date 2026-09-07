@@ -25,8 +25,8 @@
 {
     "id": "srt_to_json",                       # 节点类型唯一 id（字符串）
     "name": "SRT 字幕转 JSON",                 # 展示名
-    "execution_domain": "thread",              # 见 A.4
-    "category": "tools",                       # 分组 key（见文件顶部 CATEGORIES）
+    "execution_domain": "thread",              # 见 A.4（只有 thread / process 两种有效取值）
+    "category": "utility",                     # 分组 key，必须是白名单之一（见 A.2.1）
     "description": "把 SRT 字幕转成 ASR 结果格式 JSON",
     "icon": "...",                             # 前端图标标识
     "color": "...",                            # 前端卡片主题色
@@ -43,28 +43,42 @@
         {
             "key": "target_fps",
             "label": "目标帧率",
-            "type": "number",                  # text/number/slider/select/toggle/textarea 等
-            "default": 30,
+            "type": "number",                  # 见 A.2.1 白名单
             "min": 1, "max": 60, "step": 1,
         },
         {
             "key": "mode",
             "label": "模式",
             "type": "select",
-            "options": [                       # select 用 options
+            "options": [                       # select 用 options（必填）
                 {"label": "最长时长", "value": "longest"},
                 {"label": "主音轨为准", "value": "main"},
             ],
-            "default": "longest",
         },
     ],
 }
 ```
 
+#### A.2.1 受控枚举（白名单）
+
+后端校验层 `backend/config/node_schema.py` 定义了三份白名单；**自定义节点（走 API）必须遵守，内置节点也建议遵守**：
+
+| 项 | 合法取值 |
+|---|---|
+| `category` | `io`、`preview`、`audio`、`video`、`ai_gen`、`translation`、`flow_control`、`network_request`、`aigc`、`asset`、`agent`、`utility`、`file`、`group_node`、`hyperframes` |
+| 端口 `type` | `video`、`audio`、`audio_manifest`、`json`、`pandas`、`subtitle`、`text`、`image`、`url`、`filepath`、`preview`、`any` |
+| `configFields.type` | `text`、`textarea`、`select`、`multiselect`、`checkbox`、`toggle`、`chips`、`file`、`language-select`、`api-select`、`slider`、`number`、`button` |
+
+前端 `PortType`（`frontend/src/lib/workflowTypes.ts`）比后端多两个：`list`、`filepath` 已在后端白名单，`list` 仅前端/内置节点可用。**连线兼容性**（`canConnect`）：type 相同即可连，`any` 可连任意；另有 `subtitle→json`、`list→json`、`image↔list` 三条兼容规则。
+
+前端渲染还支持 `hotwords`、`voice-select`、`account-select`、`audio-selector`、`datetime-local`、`date`、`time` 等字段类型，但**不在后端白名单**，仅内置节点可用。
+
 **命名要点（易错点）：**
 - 输入/输出端口用 `id`（如 `"subtitle"`），不要写成 `name`。
-- 设置面板用 `configFields`，默认值放 `defaultConfig`（不是 `default_config` / `form_schema`）。
-- 端口 `type` 用受控类型（`filepath` / `subtitle` / `audio` / `text` / `json` / `video` 等），同类型端口才能连线。
+- 设置面板用 `configFields`，默认值**统一放 `defaultConfig`**；`configFields` 项内**不要写 `default`**（前端不读该字段，且自定义节点会因 schema 校验被拒）。
+- 端口 `type` 用受控类型（`filepath` / `subtitle` / `audio` / `text` / `json` / `video` 等），同类型端口才能连线；不要用 `file`（历史遗留值，不在任何白名单）。
+- `category` 不要写 `tools` / `process` / `input` 等不在白名单的值。
+- `colSpan` 等排版属性仅内置节点可用，自定义节点带上会被 schema 拒绝。
 
 ### A.3 后端 Step 实现
 
@@ -133,15 +147,19 @@ class S_SrtToJson(BaseStep):
   - `self._node_config`：节点 `data.config`（`BaseStep` 未预设默认值，用 `getattr(self, "_node_config", {}) or {}` 安全读取）。
   - `self._step_inputs`：连线解析后的输入，键为输入端口 `id`，值为文件路径字符串或列表。
 - 进度上报：在 `run` 内调用 `callback(percent: int, message: str)`（若非 None）。
-- 协作取消：按需调用 `cancel_callback()`（若提供），返回 True 表示已取消。
+- 协作取消：按需调用 `cancel_callback()`（若提供），返回 True 表示已取消。**注意**：`step_worker` 用 `inspect.signature` 判断，只有 `run` 签名里显式声明了 `cancel_callback` 才会注入；另外 `callback` 内部也会检查取消标记文件，所以耗时循环里定期调用 `callback` 同样能响应取消。
+- 子进程域（`process`）下：`callback` 写 `@PROGRESS@|pct|msg` 行协议；步骤内的 `print` 会被包装成 `@LOG@|msg` 转发到任务事件流，**请放心打日志**（排查卡死时是唯一线索）。结果由 `step_worker` 以 **JSON** 写入 `result_path`（旧版 pickle 已废弃，仅读取 `.pkl` 时做兼容），父线程再读取。
 - 产物命名约定：`{base}_{node_id}{ext}`（如 `asr_result_a1b2c3.json`）。读取用模块级函数 `find_artifact(directory, base_name)` 反查（见 `file-management.md`），不要硬编码完整文件名。
 - `BaseStep` 另提供 `rollback(task_dir)` / `clear_artifact(task_dir)`（按 `artifacts` 清理）与 `_all_exist(task_dir, files)`。
 
 ### A.4 execution_domain（执行域）
 
-- `thread`：在线程池内执行（绝大多数节点）。
-- `process`：在独立子进程执行（`control_plane/step_worker.py` 以 `python -m ...` 启动），用于重型/长时推理以释放 GIL、隔离崩溃。
-- `llm`：以 LLM 调用方式执行（部分 LLM 类节点）。
+- `thread`：在线程池内执行（默认，绝大多数节点）。
+- `process`：在独立子进程执行（`control_plane/step_worker.py` 以 `python -m backend.control_plane.step_worker <args.json>` 启动），用于重型/长时推理以释放 GIL、隔离崩溃、可被硬停止。
+
+**运行时只认这两个值**（`workflow_runtime._execution_domain()`），取 `process` 走子进程，其余一律按 `thread` 处理。优先级：节点 `data.config.execution_domain` > 环境变量 `PROCESS_DOMAIN_EXTRA` > `builtin_node_types.py` 的定义。
+
+> 历史遗留：仓库中有 2 个节点（`ai_punctuate`、`ai_subtitle_correct`）写着 `execution_domain="llm"`，运行时等价于 `thread`。**新节点不要使用该值**（旧文档说的 `llm` 执行域并不存在）。
 
 GPU 计算**不是**一个执行域。GPU 类节点（`asr` / `vocal_separation` / `track_separation`）仍声明为 `process` 或 `thread`，运行时根据 `GPU_SERVICE_MANAGED_NODE_TYPES` 决定交给 GPU 服务层显存 lane（见 `gpu-service.md`）。
 
@@ -162,7 +180,14 @@ _STEPS = {
 
 必须同时加上 `s_<name>` 与 `<node_type_id>` 两个 key（前者兼容旧引用，后者是节点连线实际使用的）。完成后前端即可连线运行该节点。
 
-`backend/engine/thread_scheduler.py` 里另有一份遗留的 `BUILTIN_STEP_REGISTRY`（节点 id → (module, class)），服务于旧的 ThreadScheduler 线程池路径；控制平面执行路径不需要改它，新增节点只改 `step_registry._STEPS` 即可。
+补充要点：
+
+- 未注册会报 `ValueError: 未知工作流节点: <id>`（`step_worker.py` / `workflow_runtime._run_node`）。
+- **正常例外**：`input`、`loop` 不在 `_STEPS` 中，由运行时特殊分支/循环运行时处理。（`aigc_runninghub`、`aigc_jimeng` 此前漏注册，现已补入 `_STEPS`。）
+- 并发/循环迭代场景请通过 `new_step_instance(node_type)` 取**独立实例**，不要复用 `_STEPS` 里的单例（单例会被写入 `_node_id`/`_node_config`/`_step_inputs`，并发下互相覆盖）。
+- 同步更新前端兜底表 `frontend/src/lib/fallbackNodeTypes.ts`（后端 API 不可用时前端依赖它；当前已有 37 个内置节点缺失）。
+
+`backend/engine/thread_scheduler.py` 里另有一份遗留的 `BUILTIN_STEP_REGISTRY`（节点 id → (module, class)）与 `PROCESS_ISOLATED_NODE_TYPES`（仅 `{asr, vocal_separation, track_separation, http_request}`），服务于旧的 ThreadScheduler 线程池路径；控制平面执行路径不需要改它，新增节点只改 `step_registry._STEPS` 即可。
 
 ---
 
@@ -181,24 +206,44 @@ _STEPS = {
   "id": "my_custom_node",
   "name": "我的自定义节点",
   "isBuiltIn": false,
-  "execution_domain": "process",
-  "category": "tools",
+  "category": "utility",
   "inputs":  [{"id": "in",  "label": "输入", "type": "filepath", "required": true}],
   "outputs": [{"id": "out", "label": "输出", "type": "filepath"}],
   "defaultConfig": {},
   "configFields": [{"key": "cmd", "label": "命令", "type": "text"}],
   "execType": "python",
-  "execCode": "import os, json\nprint(json.dumps({'outputs': {'out': ...}}))",
-  "execFile": ""
+  "execCode": "produced['out'] = os.path.join(cache_dir, 'out.txt')",
+  "execFile": "",
+  "execTimeout": 300
 }
 ```
 
-`execType` 取值（`control_plane/custom_node_runtime.py`）：
-- `python`：执行内联 `execCode`，或运行 `execFile` 指向的脚本。
-- `shell`：执行 `execCode` 里的 shell 命令。
-- `llm`：按 `execCode` 作为提示词发起 LLM 调用。
+> 自定义节点**不需要也不生效** `execution_domain` 字段：控制平面只要 `get_step_instance()` 返回 None 就走 `custom_node_runtime`，不再判断执行域（`workflow_runtime._run_node`）。自定义脚本本身已由 `custom_node_runtime` 用 `subprocess.run` 在子进程执行。
 
-运行时机：自定义节点在执行工作流时由控制平面派发到 Celery worker，再经 `custom_node_runtime.run_custom_node(...)` 在子进程里执行，与内置节点走同一套产物/进度/取消机制。
+`execType` 取值（`control_plane/custom_node_runtime.py`）：
+
+- `python`：执行内联 `execCode`，或运行 `execFile` 指向的脚本（相对路径按 `codeDir` 解析）。
+  - 内联代码会被包裹成脚本：预置 `produced = {}`、`task_dir`、`cache_dir`、`node_id`、`node_config`、`step_inputs`（别名 `config` / `inputs`），执行结束后把 `produced` 以 JSON 写入 `OUTPUTS_JSON_PATH`。
+  - **返回端口值要写 `produced['<端口id>'] = <路径或值>`**，不要 `print(json.dumps(...))`（早期文档示例有误，现在不生效）。
+- `shell`：执行 `execCode` 里的 shell 命令（`shell=True`，cwd 为任务目录）。
+- `llm`：以 `execCode` 为提示词（用 `{key}` 占位符替换 `step_inputs` + `node_config`）发起一次 LLM 调用，结果写入 `cache/<node_id>_llm_output.txt`，输出端口固定为 `text`。
+
+运行时环境变量：`TASK_DIR`、`CACHE_DIR`、`NODE_ID`、`NODE_CONFIG_JSON`、`STEP_INPUTS_JSON`、`OUTPUTS_JSON_PATH`，外加 `INPUT_<端口ID大写>`、`CONFIG_<配置KEY大写>`。`execTimeout` 为秒（缺省 300，且必须 ≥1）；产物默认取 `cache/<node_id>_*` 文件。
+
+**必过的后端校验**（`backend/config/node_schema.py::validate_node_type_data`，create/update/import 都会调用）：
+
+- `category`、端口 `type`、`configFields.type` 必须在 A.2.1 的白名单内；`select`/`chips` 必须有 `options`；`api-select` 必须有 `apiEndpoint` 或 `apiUrl`；`slider`/`number` 的 `min`/`max`/`step` 必须是数字；`execTimeout` ≥ 1。
+- `python` 节点必须提供 `execCode` 或 `execFile`；`shell`/`llm` 必须提供 `execCode`。
+- `kind=group` 的 `category` 必须为 `group_node`（子图 ≥2 节点），`kind=loop` 必须为 `flow_control`（子图 ≥1 节点），两者不得声明 `execType`。
+- 坑：`NodeTypeConfig.category` 的**默认值 `"process"` 不在白名单内**，建节点时必须显式传合法分类，否则 400。
+
+**导入/导出（`POST /api/node-types/import`、`/export`）**：
+
+- 与内置节点 ID 同名的包，非重命名导入会被 400 拒绝；应改用 `renameTo` **「重命名导入」**以新 ID 安装。
+- 包内 `execFile` 必须是 ZIP 成员（Python 节点缺 `execFile` 且缺 `execCode` 也会被拒）；导出时绝对路径会被规范化为包内相对路径。
+- 包内含 `requirements.txt` 会**直接 400 拒绝导入**，依赖必须由部署环境预装。
+
+运行时机：自定义节点在执行工作流时由控制平面派发到 Celery worker，再经 `custom_node_runtime.run_custom_node(...)` 执行，与内置节点共用同一套产物命名、进度与取消机制。
 
 ---
 
@@ -217,11 +262,13 @@ _STEPS = {
 
 ## D. 新增内置节点 Checklist
 
-1. 在 `builtin_node_types.py` 的 `BUILTIN_NODE_TYPES` 追加节点定义 dict：端口用 `id`（不是 `name`）；`configFields` 描述设置项；默认值放 `defaultConfig`；选对 `execution_domain`（thread/process/llm）与 `category`。
-2. 在 `backend/steps/` 新建 `s_<name>.py`，子类化 `BaseStep`，实现 `step_id` / `check_artifact` / `validate_inputs` / `run`。`run(self, task_dir, callback=None, cancel_callback=None)` 通过 `self._step_inputs` / `self._node_config` / `self._node_id` 取运行时数据（均用 `getattr(..., {}) or {}` 安全读取）；产物写入 `os.path.join(task_dir, "cache", ...)`，文件名带 `_<node_id>` 后缀，用 `find_artifact` 反查；返回 `{"artifacts": [...], "outputs": {...}}`。
-3. 在 `step_registry.py` 的 `_STEPS` 注册两个 key：`"s_<name>"` 与 `"<node_type_id>"`。
-4. 若占受限资源，在 `workflow_runtime.py` 的 `RESOURCE_BY_NODE_TYPE` 等登记表补充。
-5. 重启后端（manager 守护），前端 `GET /api/node-types` 会带出新节点，可拖拽连线执行。
+1. 在 `builtin_node_types.py` 的 `BUILTIN_NODE_TYPES` 追加节点定义 dict：端口用 `id`（不是 `name`）；`configFields` 描述设置项（不要写 `default`）；默认值放 `defaultConfig`；`category` 与端口 `type` 取 A.2.1 白名单值；`execution_domain` 只取 `thread` / `process`（重型/网络类选 `process`）。
+2. 在 `backend/steps/` 新建 `s_<name>.py`，子类化 `BaseStep`，实现 `step_id` / `check_artifact` / `validate_inputs` / `run`。`run(self, task_dir, callback=None, cancel_callback=None)` 通过 `self._step_inputs` / `self._node_config` / `self._node_id` 取运行时数据（均用 `getattr(..., {}) or {}` 安全读取）；产物写入 `os.path.join(task_dir, "cache", ...)`，文件名带 `_<node_id>` 后缀，用 `find_artifact` 反查；返回 `{"artifacts": [...], "outputs": {...}}`（`outputs` 的 key 必须等于输出端口 id）。耗时循环内定期调用 `callback` 以便响应取消。
+3. 在 `step_registry.py` 的 `_STEPS` 注册两个 key：`"s_<name>"` 与 `"<node_type_id>"`；并发/循环场景改用 `new_step_instance()` 取独立实例。
+4. （建议）同步 `frontend/src/lib/fallbackNodeTypes.ts` 的兜底定义。
+5. 若占受限资源，在 `workflow_runtime.py` 的 `RESOURCE_BY_NODE_TYPE` / `RESOURCE_FREE_NODE_TYPES` / `GPU_SERVICE_MANAGED_NODE_TYPES` 补充。
+6. 重启后端（manager 守护），前端 `GET /api/node-types` 会带出新节点，可拖拽连线执行。
+7. 提交前运行 `python scripts/generate_node_catalog.py` 重新生成 `docs/node_catalog.md`，保持节点名录与代码同步。
 
 ---
 

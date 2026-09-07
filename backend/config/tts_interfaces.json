@@ -103,7 +103,8 @@
         "timeout": 600,
         "voice_options": [
           "Junhao"
-        ]
+        ],
+        "sdk_api_key": "secret://MIMO_KEY"
       }
     },
     {
@@ -355,14 +356,14 @@
         "voice_list_key": "",
         "model_options": [],
         "sdk_extra_args": {
-          "api_key": "",
+          "api_key": "secret://MIMO_KEY",
           "api_url": "https://api.xiaomimimo.com/v1"
         },
         "custom_params": [],
         "max_concurrent": 3,
         "timeout": 300,
         "voice_options": [],
-        "sdk_api_key": ""
+        "sdk_api_key": "secret://MIMO_KEY"
       }
     },
     {
@@ -459,7 +460,7 @@
         "api_url": "http://localhost:8854",
         "text_param": "text",
         "ref_audio_param": "ref_audio_path",
-        "speed_param": "",
+        "speed_param": "speed",
         "body_type": "form",
         "is_async": true,
         "modes": {
@@ -793,7 +794,7 @@
       "type": "sdk",
       "builtin": false,
       "enabled": true,
-      "description": "【推荐值：****】本地-网易有道开源 Confucius4-TTS（本地API端口8857），14语言零样本声音克隆，22050Hz，需先启动 confucius4_api_server",
+      "description": "【推荐值：*****】克隆首选-本地-网易有道开源 Confucius4-TTS（本地API端口8857），14语言零样本声音克隆，22050Hz，需先启动 confucius4_api_server",
       "config": {
         "sdk_package": "",
         "sdk_module": "backend.tts.sdk.confucius4_wrapper",
@@ -836,13 +837,74 @@
           "top_p": 0.8,
           "top_k": 30,
           "num_beams": 3,
-          "repetition_penalty": 10.0,
+          "repetition_penalty": 10,
           "n_timesteps": 25,
           "inference_cfg_rate": 0.7
         },
-        "custom_params": [],
-        "max_concurrent": 1,
-        "timeout": 600,
+        "custom_params": [
+          {
+            "key": "temperature",
+            "default": "0.8",
+            "description": "范围 0.1–2.0。值越低越稳定/保守，越高越发散。   # 语音克隆建议 0.7–1.0；过低可能让韵律呆板，过高可能出现异常音。"
+          },
+          {
+            "key": "top_p",
+            "default": "0.8",
+            "description": "范围 0.0–1.0。越小越保守（0.8 较稳）。与 top_k 同时生效，取两者交集"
+          },
+          {
+            "key": "top_k",
+            "default": "30",
+            "description": "范围 0–100。0 表示关闭 top_k（只看 top_p）。典型 20–50。"
+          },
+          {
+            "key": "num_beams",
+            "default": "1",
+            "description": "beam=1 即贪心解码，比 beam=3 快约 2–3×，语音质量基本无损（克隆场景差异极小）。   # - 若发现个别样本音质下降/吞字，可回到 2–3（代价是 T2S 阶段变慢）。"
+          },
+          {
+            "key": "repetition_penalty",
+            "default": "10.0",
+            "description": "范围 1.0–20.0。TTS 常用 8–12；过低易重复，过高易断裂/丢字。"
+          },
+          {
+            "key": "max_length",
+            "default": "1520",
+            "description": "决定单次可生成的最长内容；超出会被分段。1520 对多数长文本足够。"
+          },
+          {
+            "key": "n_timesteps",
+            "default": "15",
+            "description": "官方/旧默认 = 25；本处已降为 15。   # - 每步一次 DiT 前向，是 S2A 主要耗时。15 步相比 25 步提速约 1.5–2.5×，音质几乎无感"
+          },
+          {
+            "key": "inference_cfg_rate",
+            "default": "0.7",
+            "description": "范围 0.0–2.0。越大越贴近参考音/提示，过小会发散。克隆常用 0.5–0.7。"
+          },
+          {
+            "key": "max_text_tokens_per_segment",
+            "default": "80",
+            "description": "长文本会被切成多段分别合成，段间用 cross_fade 拼接。   # 80 为较稳值；调大可减少分段（少切接痕迹）但单段更慢、更占显存；调小反之"
+          },
+          {
+            "key": "cross_fade_duration",
+            "default": "0.3",
+            "description": "段间交叉淡入淡出时长（秒）。拼接相邻音频段以消除接缝爆音。   # 0.1–0.5 均可；过大会吞掉句尾/句头，过小接缝可能可闻。"
+          },
+          {
+            "key": "edge_fade_duration",
+            "default": "0.1",
+            "description": "单段首尾边缘淡入淡出时长（秒）。避免段落起止处的爆音/截断感。"
+          },
+          {
+            "key": "edge_pad_duration",
+            "default": "0.1",
+            "description": "单段首尾静音填充时长（秒）。给模型留出首尾边界，减少开头/结尾被截断。"
+          }
+        ],
+        "max_concurrent": "3",
+        "timeout": "300",
         "voice_options": []
       }
     },
@@ -860,7 +922,7 @@
         "sdk_voice_list_function": "list_voices",
         "text_param": "input_text",
         "ref_audio_param": "speaker_audio_path",
-        "speed_param": "duration_factor",
+        "speed_param": "speed",
         "voice": "",
         "model": "IndexTTS-2.5",
         "modes": {
@@ -894,9 +956,101 @@
           "emo_control_method": "reference",
           "emo_vector": "",
           "emotion_alpha": 1.0,
-          "text_normalization": true
+          "text_normalization": true,
+          "interval_silence": 200,
+          "max_text_tokens_per_segment": 120,
+          "use_random": false,
+          "do_sample": true,
+          "top_p": 0.9,
+          "top_k": 50,
+          "temperature": 1.0,
+          "num_beams": 1,
+          "repetition_penalty": 1.2,
+          "length_penalty": 1.0,
+          "max_mel_tokens": 3000
         },
-        "custom_params": [],
+        "custom_params": [
+          {
+            "key": "speed",
+            "default": "1.0",
+            "description": "语速因子（>1 加快，<1 放慢，建议 0.5~2.0）"
+          },
+          {
+            "key": "lang",
+            "default": "zh",
+            "description": "语言：zh(中文)/en(英语)/ja(日语)/es(西班牙语)/zhen(中英混读)"
+          },
+          {
+            "key": "emo_control_method",
+            "default": "reference",
+            "description": "情感控制方式：reference(参考音频情感)/vector(情感向量)/instruct(指令情感)"
+          },
+          {
+            "key": "emo_vector",
+            "default": "",
+            "description": "8维情感向量 JSON（vector模式），如 [0,0,0.8,0,0,0,0,0]"
+          },
+          {
+            "key": "emotion_alpha",
+            "default": "1.0",
+            "description": "情感强度 0~1（instruct/vector 有效）"
+          },
+          {
+            "key": "interval_silence",
+            "default": "200",
+            "description": "句间停顿毫秒数"
+          },
+          {
+            "key": "max_text_tokens_per_segment",
+            "default": "120",
+            "description": "每段最大 token 数"
+          },
+          {
+            "key": "use_random",
+            "default": "false",
+            "description": "每次随机采样（同一文本声音略有差异）"
+          },
+          {
+            "key": "do_sample",
+            "default": "true",
+            "description": "是否采样"
+          },
+          {
+            "key": "top_p",
+            "default": "0.9",
+            "description": "nucleus 采样阈值"
+          },
+          {
+            "key": "top_k",
+            "default": "50",
+            "description": "top-k 采样数量"
+          },
+          {
+            "key": "temperature",
+            "default": "1.0",
+            "description": "采样温度"
+          },
+          {
+            "key": "num_beams",
+            "default": "1",
+            "description": "beam 宽度"
+          },
+          {
+            "key": "repetition_penalty",
+            "default": "1.2",
+            "description": "重复惩罚"
+          },
+          {
+            "key": "length_penalty",
+            "default": "1.0",
+            "description": "长度惩罚"
+          },
+          {
+            "key": "max_mel_tokens",
+            "default": "3000",
+            "description": "最大生成 mel token 数"
+          }
+        ],
         "max_concurrent": 1,
         "timeout": 600,
         "voice_options": []

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { settingsApi } from "@/api/settings";
 import { Brain, Link, Key, Layers, Zap, Loader2, Info, ExternalLink, Wrench } from "lucide-react";
 import PromptEditor from "./PromptEditor";
+import { SecretField } from "@/components/shared/SecretPicker";
 
 const STEPS = [
   { id: "default_model", name: "默认模型" },
@@ -153,22 +154,14 @@ export default function LLMSettings() {
                 自定义大模型的 API 地址，所有阶段的 LLM 请求将发送到此地址
               </p>
             </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                API Key
-              </label>
-              <div className="relative mt-2">
-                <Key className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground/50" />
-                <input
-                  type="password"
-                  className="w-full pl-10 pr-3.5 py-2.5 border border-border/60 rounded-xl bg-background/50 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-200 outline-none"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  onBlur={() => settingsApi.update("llm.api_key", apiKey)}
-                  placeholder="your-api-key"
-                />
-              </div>
-            </div>
+            <SecretField
+              label="API Key"
+              value={apiKey}
+              onChange={(v) => {
+                setApiKey(v);
+                settingsApi.update("llm.api_key", v);
+              }}
+            />
           </div>
         )}
       </div>

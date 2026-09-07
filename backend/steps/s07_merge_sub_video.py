@@ -73,6 +73,12 @@ class S07MergeSubVideo(BaseStep):
         if isinstance(primary_on_top, str):
             primary_on_top = primary_on_top.lower() in ("true", "1", "yes")
         video_quality = str(self._get_config("default_quality", self._get_config("video_quality", "medium")))
+        # 编码速度预设 / 显卡加速 / 超时时间（节点配置优先，其次全局配置）
+        encode_preset = str(self._get_config("encode_preset", "medium"))
+        gpu_accel = self._get_config("gpu_accel", False)
+        if isinstance(gpu_accel, str):
+            gpu_accel = gpu_accel.lower() in ("true", "1", "yes")
+        ffmpeg_timeout = float(self._get_config("ffmpeg_timeout", 600) or 600)
         bgm_path = step_inputs.get("audio") or self._get_config("bgm_path", "")
         dub_path = step_inputs.get("dub") or self._get_config("dub_path", "")
         bgm_path = self._resolve_input_path(task_dir, bgm_path)
@@ -87,7 +93,7 @@ class S07MergeSubVideo(BaseStep):
             mute_original = mute_original.lower() in ("true", "1", "yes")
 
         if callback:
-            callback(5, f"配置: 质量={video_quality}")
+            callback(5, f"配置: 质量={video_quality}, 编码速度={encode_preset}, 显卡加速={'开' if gpu_accel else '关'}, 超时={ffmpeg_timeout:.0f}s")
 
         # 2. Find video and subtitles
         video_path = self._resolve_input_path(
@@ -143,7 +149,10 @@ class S07MergeSubVideo(BaseStep):
         final_output = os.path.join(output_dir, output_filename)
 
         audio_processor.encode_video_with_quality(
-            video_path, ass_path, video_quality, temp_video
+            video_path, ass_path, video_quality, temp_video,
+            encode_preset=encode_preset,
+            gpu_accel=gpu_accel,
+            timeout=ffmpeg_timeout,
         )
 
         # 5. Audio mixing (if BGM or dubbing provided, or mute_original is enabled)

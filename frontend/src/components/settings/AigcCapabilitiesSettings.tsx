@@ -11,6 +11,7 @@ import {
   Loader2,
   AlertTriangle,
 } from "lucide-react";
+import { SecretField } from "@/components/shared/SecretPicker";
 
 type ProviderState = Record<string, any>;
 
@@ -280,22 +281,18 @@ function RunninghubCard({ value, status, saving, testing, onChange, onTest }: Ca
           onBlur={(e) => onChange({ base_url: e.target.value.trim() })}
         />
       </Field>
-      <Field label="API Key（标准模型接口）" hint="用于 /task/openapi/ai-app/run 等标准模型接口">
-        <input
-          type="password"
-          className={inputCls}
-          defaultValue={value.api_key}
-          onBlur={(e) => onChange({ api_key: e.target.value.trim() })}
-        />
-      </Field>
-      <Field label="钱包 API Key（账户余额）" hint="用于工作流提交 /task/openapi/create 的鉴权">
-        <input
-          type="password"
-          className={inputCls}
-          defaultValue={value.wallet_api_key}
-          onBlur={(e) => onChange({ wallet_api_key: e.target.value.trim() })}
-        />
-      </Field>
+      <SecretField
+        label="API Key（标准模型接口）"
+        hint="用于 /task/openapi/ai-app/run 等标准模型接口"
+        value={value.api_key || ""}
+        onChange={(v) => onChange({ api_key: v })}
+      />
+      <SecretField
+        label="钱包 API Key（账户余额）"
+        hint="用于工作流提交 /task/openapi/create 的鉴权"
+        value={value.wallet_api_key || ""}
+        onChange={(v) => onChange({ wallet_api_key: v })}
+      />
       <Field label="轮询总超时（秒）">
         <input
           type="number"

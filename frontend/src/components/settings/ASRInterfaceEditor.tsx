@@ -3,6 +3,7 @@ import { asrInterfacesApi, ASRInterface, ASRInterfaceConfig } from "@/api/asrInt
 import { cn } from "@/lib/utils";
 import { Upload, X, FileAudio, Settings2, Languages } from "lucide-react";
 import VoiceLanguagePicker from "@/components/shared/VoiceLanguagePicker";
+import { SecretField } from "@/components/shared/SecretPicker";
 
 const EMPTY_LOCAL: ASRInterfaceConfig = {
   api_url: "",
@@ -253,10 +254,7 @@ export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) 
                 <input className={cn(inputCls, "w-full")} value={config.sdk_package || ""} onChange={(e) => uc("sdk_package", e.target.value)} placeholder="可选 pip 包名" />
                 <p className="text-[11px] text-muted-foreground mt-1">可选，当模块路径为空时使用</p>
               </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">API 密钥</label>
-                <input className={cn(inputCls, "w-full")} value={config.sdk_api_key || ""} onChange={(e) => uc("sdk_api_key", e.target.value)} placeholder="可选" type="password" />
-              </div>
+              <SecretField label="API 密钥" value={config.sdk_api_key || ""} onChange={(v) => uc("sdk_api_key", v)} />
               <div className="col-span-2">
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">语言列表获取函数 (sdk_language_list_function)</label>
                 <input className={cn(inputCls, "w-full")} value={config.sdk_language_list_function || ""} onChange={(e) => uc("sdk_language_list_function", e.target.value)} placeholder="可选：获取支持语言列表的函数名" />
@@ -269,10 +267,7 @@ export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) 
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">API 地址 *</label>
                 <input className={cn(inputCls, "w-full")} value={config.api_url || ""} onChange={(e) => uc("api_url", e.target.value)} placeholder="http://localhost:8800" />
               </div>
-              <div>
-                <label className="text-xs font-medium text-muted-foreground mb-1.5 block">API 密钥</label>
-                <input className={cn(inputCls, "w-full")} value={config.api_key || ""} onChange={(e) => uc("api_key", e.target.value)} placeholder="可选" type="password" />
-              </div>
+              <SecretField label="API 密钥" value={config.api_key || ""} onChange={(v) => uc("api_key", v)} />
               <div>
                 <label className="text-xs font-medium text-muted-foreground mb-1.5 block">接口端点</label>
                 <input className={cn(inputCls, "w-full")} value={config.endpoint || ""} onChange={(e) => uc("endpoint", e.target.value)} placeholder="/v1/audio/transcriptions" />

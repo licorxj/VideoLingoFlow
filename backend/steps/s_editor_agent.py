@@ -41,16 +41,50 @@ class S_EditorAgent(BaseStep):
             instruction,
             str(config.get("expert_role") or "auto"),
             snapshot.get("revision"),
+            imagegen_iface_id=config.get("imagegen_iface_id") or None,
+            imagegen_model=config.get("imagegen_model") or None,
+            videogen_iface_id=config.get("videogen_iface_id") or None,
+            videogen_model=config.get("videogen_model") or None,
         )
         if run.get("status") != "completed":
             raise RuntimeError(run.get("error") or "剪辑 AI Agent 执行失败")
-        output_path = os.path.join(task_dir, "output", f"editor_agent_{getattr(self, '_node_id', 'result')}.json")
-        with open(output_path, "w", encoding="utf-8") as handle:
+        output_dir = os.path.join(task_dir, "output")
+        os.makedirs(output_dir, exist_ok=True)
+        node_id = getattr(self, "_node_id", "result")
+
+        # 运行记录：工具调用轨迹，便于回溯 AI 的编辑过程
+        artifacts_path = os.path.join(output_dir, f"editor_agent_{node_id}.json")
+        with open(artifacts_path, "w", encoding="utf-8") as handle:
             json.dump(run, handle, ensure_ascii=False, indent=2)
+
+        # 剪辑项目快照：含时间线、素材与修订号，供下游「剪辑渲染」等节点消费
+        latest = repository.snapshot(task_id)
+        project_path = os.path.join(output_dir, f"editor_project_{node_id}.json")
+        with open(project_path, "w", encoding="utf-8") as handle:
+            json.dump(
+                {
+                    "taskId": task_id,
+                    "revision": latest.get("revision"),
+                    "project": latest.get("project"),
+                    "assets": latest.get("assets"),
+                },
+                handle,
+                ensure_ascii=False,
+                indent=2,
+            )
+
+        # 执行结果文本
+        result_path = os.path.join(output_dir, f"editor_agent_result_{node_id}.txt")
+        with open(result_path, "w", encoding="utf-8") as handle:
+            handle.write(str(run.get("content") or "已完成项目分析和编辑。"))
+
         if callback:
             callback(100, "剪辑项目已更新")
         return {
-            "project": os.path.join(task_dir, "editor", "project.json"),
-            "artifacts": output_path,
-            "result": run.get("content", ""),
+            "artifacts": [artifacts_path, result_path],
+            "outputs": {
+                "project": project_path,
+                "artifacts": artifacts_path,
+                "result": result_path,
+            },
         }

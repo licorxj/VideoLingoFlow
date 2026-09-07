@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { X, Settings2 } from "lucide-react";
 import client from "@/api/client";
 import VoiceManagePanel from "./VoiceManagePanel";
+import { SecretField, isSecretRowKey } from "@/components/shared/SecretPicker";
 
 const EMPTY_LOCAL: TTSInterfaceConfig = {
   api_url: "",
@@ -317,11 +318,22 @@ export default function TTSInterfaceEditor({ iface, onSaved, onCancel }: Props) 
           <div className="space-y-3">
             {getParamRows().map((row) => (
               <div key={row.key}>
-                <div className="flex items-center gap-2 mb-1.5">
-                  <div className="text-sm font-medium">{row.label}</div>
-                  <code className="text-[11px] text-muted-foreground font-mono">{row.key}</code>
-                </div>
-                <input className={inputCls} value={(config as any)[row.key] ?? ""} onChange={(e) => uc(row.key, e.target.value)} placeholder={row.description} />
+                {isSecretRowKey(row.key) ? (
+                  <SecretField
+                    label={row.label}
+                    hint={row.description}
+                    value={(config as any)[row.key] ?? ""}
+                    onChange={(v) => uc(row.key, v)}
+                  />
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <div className="text-sm font-medium">{row.label}</div>
+                      <code className="text-[11px] text-muted-foreground font-mono">{row.key}</code>
+                    </div>
+                    <input className={inputCls} value={(config as any)[row.key] ?? ""} onChange={(e) => uc(row.key, e.target.value)} placeholder={row.description} />
+                  </>
+                )}
               </div>
             ))}
           </div>
