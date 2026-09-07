@@ -123,7 +123,7 @@ class VideoGenInterfaceManager:
             return enabled
 
     def get_enabled(self):
-        return [i for i in self.interfaces.values() if i.get("enabled", True)]
+        return [resolve_deep(i) for i in self.interfaces.values() if i.get("enabled", True)]
 
     def get_engine_ids(self):
         return [i["id"] for i in self.interfaces.values() if i.get("enabled", True)]

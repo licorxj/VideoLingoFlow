@@ -95,11 +95,7 @@ def _resolve_refs(value, task_dir: str = ""):
 
 
 def _get_api_key_from_env_or_interface() -> str:
-    """API Key 优先级：环境变量 ARK_API_KEY > Seedance 视频接口配置（sdk_api_key / api_key）。"""
-    from backend.videogen.sdk import seedance_sdk
-    api_key = seedance_sdk._get_api_key("")
-    if api_key:
-        return api_key
+    """API Key 优先级：Seedance 接口配置（sdk_api_key / api_key，密钥库解析值）> 环境变量 ARK_API_KEY 兜底。"""
     try:
         from backend.videogen.videogen_interface_manager import (
             get_videogen_interface_manager,
@@ -117,7 +113,8 @@ def _get_api_key_from_env_or_interface() -> str:
                     return key
     except Exception as e:
         logger.warning("读取 Seedance 接口配置失败: %s", e)
-    return ""
+    from backend.videogen.sdk import seedance_sdk
+    return seedance_sdk._get_api_key("")
 
 
 def _history_path(task_dir: str, node_id: str) -> str:

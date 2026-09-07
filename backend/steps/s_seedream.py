@@ -88,11 +88,11 @@ def _copy_seed(src: str, cache_dir: str, name_stem: str) -> str:
 
 
 def _get_api_key_from_env_or_interface() -> str:
-    """API Key 优先级：环境变量 ARK_API_KEY > Seedream 接口配置（config.sdk_api_key / api_key）。"""
-    from backend.imagegen.sdk import seedream_sdk
-    api_key = seedream_sdk._get_api_key("")
-    if api_key:
-        return api_key
+    """API Key 优先级：Seedream 接口配置（sdk_api_key / api_key，密钥库解析值）> 环境变量 ARK_API_KEY 兜底。
+
+    接口配置优先：绑定在「密钥管理」的 key 是用户当前维护的真实值，
+    本机环境变量可能是历史遗留的无效 key，只作未配置接口时的兜底。
+    """
     try:
         from backend.imagegen.imagegen_interface_manager import (
             get_imagegen_interface_manager,
@@ -110,7 +110,8 @@ def _get_api_key_from_env_or_interface() -> str:
                     return key
     except Exception as e:
         logger.warning("读取 Seedream 接口配置失败: %s", e)
-    return ""
+    from backend.imagegen.sdk import seedream_sdk
+    return seedream_sdk._get_api_key("")
 
 
 def _resolve_refs(value, task_dir: str = ""):

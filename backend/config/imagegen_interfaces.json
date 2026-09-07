@@ -893,7 +893,7 @@
         "sdk_package": "",
         "sdk_module": "backend.imagegen.sdk.seedream_wrapper",
         "sdk_function": "generate",
-        "sdk_api_key": "",
+        "sdk_api_key": "secret://HUOSHAN_KEY",
         "default_model": "doubao-seedream-4-5-251128",
         "model_options": [
           "doubao-seedream-5-0-pro-260128",

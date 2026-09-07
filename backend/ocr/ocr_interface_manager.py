@@ -117,7 +117,7 @@ class OCRInterfaceManager:
 
     def get_enabled(self):
         with self._lock:
-            return [i for i in self._interfaces.values() if i.get("enabled")]
+            return [resolve_deep(i) for i in self._interfaces.values() if i.get("enabled")]
 
     def get_engine_ids(self):
         with self._lock:
