@@ -106,8 +106,12 @@ def _family(model: str) -> dict:
 
 
 def _get_api_key(api_key: str = "") -> str:
-    """API Key 取值优先级: 函数参数 > 环境变量 ARK_API_KEY。"""
-    return os.environ.get("ARK_API_KEY", "") or api_key
+    """API Key 取值优先级: 函数参数（接口配置解析值）> 环境变量 ARK_API_KEY 兜底。
+
+    注意参数必须优先：调用方传入的是密钥库（DB）解析出的最新值，
+    本机环境变量可能是历史遗留的无效 key，不应覆盖它。
+    """
+    return api_key or os.environ.get("ARK_API_KEY", "")
 
 
 def _headers(api_key: str) -> dict:
