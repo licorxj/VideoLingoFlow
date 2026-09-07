@@ -534,17 +534,9 @@ def install_thirdparty(py: Path, force: bool) -> None:
 # ---------------------------------------------------------------------------
 def bootstrap_config() -> None:
     print("\n[8/9] 配置引导")
-    # 运行时配置文件（可能含密钥）：正式文件缺失时，从 git 分发的脱敏版 *.temp 还原为正式文件名
-    for target, temp_src in [
-        (ROOT / "backend" / "config" / "config.yaml", ROOT / "backend" / "config" / "config.yaml.temp"),
-        (ROOT / "backend" / "config" / "asr_interfaces.json", ROOT / "backend" / "config" / "asr_interfaces.json.temp"),
-        (ROOT / "backend" / "config" / "tts_interfaces.json", ROOT / "backend" / "config" / "tts_interfaces.json.temp"),
-        (ROOT / "backend" / "config" / "imagegen_interfaces.json", ROOT / "backend" / "config" / "imagegen_interfaces.json.temp"),
-        (ROOT / "backend" / "config" / "videogen_interfaces.json", ROOT / "backend" / "config" / "videogen_interfaces.json.temp"),
-    ]:
-        if not target.exists() and temp_src.exists():
-            shutil.copy2(temp_src, target)
-            ok(f"已从脱敏版本 {temp_src.name} 还原为 {target.name}")
+    # 运行时配置（config.yaml / *_interfaces.json）随 git 直接分发，
+    # 其中不含明文密钥（只有 secret://NAME 引用），无需脱敏还原步骤；
+    # 首次安装后如需密钥，在「设置 → 密钥管理」中配置即可。
 
     runtime = ROOT / ".runtime"
     local_env = runtime / "local_env.bat"

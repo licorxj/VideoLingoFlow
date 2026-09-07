@@ -61,7 +61,9 @@ class NodeTypeConfig(BaseModel):
     id: str
     name: str
     version: str = "1.0.0"
-    category: str = "process"
+    # 注意：默认值必须在 node_schema.ALLOWED_NODE_CATEGORIES 白名单内
+    # （"process" 不在白名单，缺省会导致 validate_node_type_data 报 400）
+    category: str = "utility"
     description: str = ""
     icon: str = "Wrench"
     color: str = "#6b7280"

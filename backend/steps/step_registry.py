@@ -9,6 +9,13 @@ from backend.steps.s_asr_stages import S_ASRRecognize, S_ASRPostProcess
 from backend.steps.s_audio_denoise import StepAudioDenoise
 from backend.steps.s_audio_cut_by_subtitle import StepAudioCutBySubtitle
 from backend.steps.s_aigc_comfyui import S_AIGC_ComfyUI
+from backend.steps.s_aigc_runninghub import S_AIGC_RunningHub
+from backend.steps.s_aigc_jimeng import S_AIGC_Jimeng
+from backend.steps.s_agi_comic import (
+    S_AGI_Project, S_AGI_Character, S_AGI_Voice, S_AGI_Scene, S_AGI_Chapter, S_AGI_Shot,
+    S_AGI_ShotFrames, S_AGI_ShotVideo, S_AGI_ShotDub,
+    S_AGI_ShotExport, S_AGI_ChapterExport,
+)
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
 from backend.steps.s_asr_result_validate import S_ASRResultValidate
@@ -59,6 +66,7 @@ from backend.steps.s_video_split import S_VideoSplit
 from backend.steps.s_video_region_crop import S_VideoRegionCrop
 from backend.steps.s_video_region_composite import S_VideoRegionComposite
 from backend.steps.s_cutia import S_Cutia
+from backend.steps.s_cutia_render import S_CutiaRender
 from backend.steps.s_lcwr_watermark_removal import S_LcwrWatermarkRemoval
 from backend.steps.s_media_to_url import S_MediaToUrl
 from backend.steps.s_online_watermark_removal import S_OnlineWatermarkRemoval
@@ -167,6 +175,21 @@ _STEPS = {
     "s_imagegen": S_ImageGen(),
     "image_gen": S_ImageGen(),
     "aigc_comfyui": S_AIGC_ComfyUI(),
+    "aigc_runninghub": S_AIGC_RunningHub(),
+    "s_aigc_runninghub": S_AIGC_RunningHub(),
+    "aigc_jimeng": S_AIGC_Jimeng(),
+    "s_aigc_jimeng": S_AIGC_Jimeng(),
+    "agi_project": S_AGI_Project(),
+    "agi_character": S_AGI_Character(),
+    "agi_voice": S_AGI_Voice(),
+    "agi_scene": S_AGI_Scene(),
+    "agi_chapter": S_AGI_Chapter(),
+    "agi_shot": S_AGI_Shot(),
+    "agi_shot_frames": S_AGI_ShotFrames(),
+    "agi_shot_video": S_AGI_ShotVideo(),
+    "agi_shot_dub": S_AGI_ShotDub(),
+    "agi_shot_export": S_AGI_ShotExport(),
+    "agi_chapter_export": S_AGI_ChapterExport(),
     "s_video_frame_extract": S_VideoFrameExtract(),
     "video_frame_extract": S_VideoFrameExtract(),
     "s_video_transcode": S_VideoTranscode(),
@@ -209,6 +232,8 @@ _STEPS = {
     "video_region_composite": S_VideoRegionComposite(),
     "s_cutia": S_Cutia(),
     "cutia": S_Cutia(),
+    "s_cutia_render": S_CutiaRender(),
+    "cutia_render": S_CutiaRender(),
     "s_lcwr_watermark_removal": S_LcwrWatermarkRemoval(),
     "lcwr_watermark_removal": S_LcwrWatermarkRemoval(),
     "s_media_to_url": S_MediaToUrl(),

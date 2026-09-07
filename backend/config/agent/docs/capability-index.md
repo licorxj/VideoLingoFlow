@@ -76,7 +76,10 @@ python backend/manager.py 18001 11001   # 自定义端口
 | 任务/工作区记录 | `backend/control_plane/workflow_runtime.py`（写 task.json 到 `control_plane_workspaces/<task_id>/`） |
 | 节点注册表 | `backend/steps/step_registry.py` |
 | 节点类型定义（前端展示） | `backend/config/builtin_node_types.py` |
+| 节点定义校验（分类/端口/字段白名单） | `backend/config/node_schema.py` |
+| 自定义节点定义与运行时 | `backend/config/node_types/*.json` + `backend/control_plane/custom_node_runtime.py` |
 | 步骤基类 | `backend/steps/base_step.py`（`BaseStep`） |
+| 前端节点兜底表（API 不可用时） | `frontend/src/lib/fallbackNodeTypes.ts` |
 | GPU 服务层 | `backend/gpu_service/*`（`manager.py`/`lane.py`/`jobs.py`/`config.py`/`client.py`） |
 | 自定义节点运行时 | `backend/control_plane/custom_node_runtime.py` |
 | 前端工作流编辑器 | `frontend/src/components/workflow/*` |
@@ -88,131 +91,150 @@ python backend/manager.py 18001 11001   # 自定义端口
 
 系统由**节点（node）**组成工作流。每个节点在 `builtin_node_types.py` 定义展示元数据（名称/分类/输入/输出/表单/执行域），在 `step_registry.py` 映射到具体的 `S_*` Step 类。
 
-**节点总数随版本增长，当前 80+ 个**（不要硬编码旧数字）。完整定义以 `builtin_node_types.py` 为准；**所有节点最新、最权威的清单见 `docs/node_catalog.md`**（按分组表格罗列每个节点的 id / 名称 / 描述 / 执行域 / 输入 / 输出接口，含自定义节点）。新增或修改节点后，在 `PROJECT_ROOT` 下运行 `python scripts/generate_node_catalog.py` 即可按最新节点定义重新生成该名录。按职能分组（类名 ↔ Step 映射见 `step_registry.py`）：
+**当前内置节点 108 个**（另有 3 个自定义节点：`groupnode_mtbj91n4`、`groupnode_mtbj9s8i`、`hyperframe_render`；合计 111 个，数量随版本增长，不要硬编码旧数字）。完整定义以 `builtin_node_types.py` 为准；**权威清单见 `docs/node_catalog.md`**（按分组表格罗列 id / 名称 / 描述 / 执行域 / 输入 / 输出接口，含自定义节点，总计 111 个），新增或修改节点后在 `PROJECT_ROOT` 下运行 `python scripts/generate_node_catalog.py` 重新生成。
 
-### 3.1 输入 / 获取
-- `platform_download`：从平台链接下载视频
-- `search_video`：搜索视频
-- `media_to_url`：本地媒体转可访问 URL
+下面按 `category`（后端白名单值）分组罗列**真实存在**的节点（`·子进程` 表示 `execution_domain="process"`；`·未注册` 表示尚未注册进 `step_registry._STEPS`）：
 
-### 3.2 语音识别（ASR）
-- `asr`：语音识别（WhisperX，GPU 服务接管）
-- `s02_asr`：ASR 第二阶段/细粒度
-- `demucs_separation`：人声/伴奏分离（usic 分离）
-- `vocal_separation`：人声分离（GPU 服务接管）
-- `track_separation`：音轨分离（GPU 服务接管）
+#### 输入输出（`io`）
+- `archive_artifacts`：产物文件归档
+- `file_load`：文件加载
+- `input`：输入 ·未注册
+- `output`：输出
+- `text_input`：文本输入框
+
+#### 预览（`preview`）
+- `image_compare`：图片对比
+- `image_preview`：图片预览器
+- `video_preview`：视频预览器
+
+#### 音频处理（`audio`）
+- `audio_cut_by_subtitle`：按字幕切割音频
+- `audio_denoise`：降噪
 - `audio_transcode`：音频转码
+- `extract_audio`：音频分离
+- `merge_audio`：音视频配音对齐
+- `merge_dub`：配音拼接
+- `track_mix`：音轨混流
+- `track_separation`：音轨分离 ·子进程
+- `vocal_separation`：人声分离 ·子进程
 
-### 3.3 字幕 / 文本处理
-- `sentence_split`：断句
-- `subtitle_recognition`：字幕识别（OCR）
-- `subtitle_position_search`：字幕位置检测
-- `subtitle_translate`：字幕翻译
-- `subtitle_theme`：字幕主题/风格
-- `reorder_subtitles`：字幕重排
-- `subtitle_editor`：字幕编辑
-- `json_visual_editor`：JSON 可视化编辑
-- `text_editor`：文本编辑
+#### 视频处理（`video`）
+- `cutia`：Cutia 交互剪辑
+- `lcwr_watermark_removal`：LCWR 去水印 ·子进程
+- `merge_dub_video`：音视频合成
+- `merge_sub_video`：字幕烧录
+- `online_watermark_removal`：在线去水印去字幕
+- `subtitle_position_search`：OCR 字幕查找
+- `subtitle_recognition`：OCR 字幕识别
+- `video_cut_by_subtitle`：按字幕切割视频
+- `video_frame_extract`：视频抽帧
+- `video_region_composite`：视频区域贴片
+- `video_region_crop`：视频截取区域
+- `video_scale`：视频缩放
+- `video_split`：视频切割
+- `video_transcode`：视频转码
+- `watermark`：水印添加
 
-### 3.4 翻译 / LLM
-- `summarize`：摘要
-- `translate`：翻译
-- `llm_request`：通用 LLM 调用
-- `text_optimize`：文本润色
-- `term_extract`：术语抽取
-- `glossary`：术语表
-- `term_translate`：术语翻译
+#### AI 生成（`ai_gen`）
+- `ai_video_gen`：AI 生视频
+- `cover`：AI 封面设计
+- `image_gen`：AI 生图 ·子进程
+- `image_mask`：图片蒙版
+- `llm_request`：通用 LLM 请求 ·子进程
+- `seedance_autovideo` / `seedance_flf2video` / `seedance_img2video` / `seedance_txt2video`：即梦生视频系列 ·子进程
+- `seedream_fusion` / `seedream_grid` / `seedream_img2img` / `seedream_layer` / `seedream_txt2img` / `seedream_websearch`：Seedream 生图系列 ·子进程
+- `tts`：语音合成 ·子进程
 
-### 3.5 配音（TTS）与说话人
-- `tts`：文本转语音（占用 tts 资源令牌）
-- `dub_task`：配音任务（占用 tts 资源令牌）
-- `dub_video`：视频配音
-- `speaker_recognition`：说话人识别（pyannote）
-- `align_dub`：配音对齐
-- `subtitle_matcher`：字幕匹配
-- `vc`：变声
-- `tts_srt`：字幕驱动 TTS
-- `tts_merge`：TTS 合并
-- `moss_tts`：Moss TTS
-- `tts_interface`：TTS 接口配置
+#### 翻译相关（`translation`）
+- `ai_punctuate`：AI 标点补全
+- `ai_subtitle_correct`：AI 字幕纠错
+- `asr`：语音识别 ·子进程
+- `asr_postprocess`：ASR 后处理 ·子进程
+- `asr_recognize`：ASR 识别 ·子进程
+- `asr_result_validate`：ASR 结果校验
+- `dub_task`：生成配音任务
+- `sentence_preprocess`：断句预处理
+- `sentence_split`：句子分割
+- `subtitle_align`：译文断句和双语对齐
+- `subtitle_gen`：字幕生成
+- `summarize`：内容总结 ·子进程
+- `translate`：逐句翻译 ·子进程
+- `translate_task_name`：翻译项目名称
 
-### 3.6 媒体合成 / 剪辑
-- `merge_audio_video`：音视频合并
-- `video_compose`：视频合成
-- `video_transition`：转场
-- `watermark`：水印
-- `lcwr_watermark_removal`：LCWR 去水印
-- `online_watermark_removal`：在线去水印
-- `video_enhance`：画质增强
-- `video_ocr`：视频 OCR
-- `format_convert`：格式转换
-- `video_segment`：视频切片
-- `video_concat`：视频拼接
-- `video_crop`：裁剪
-- `video_speed`：倍速
-- `add_bgm`：添加背景音乐
-
-### 3.7 视觉 / AIGC
-- `subtitle_detect`：字幕检测
-- `text2video`：文生视频（AIGC）
-- `image2video`：图生视频
-- `image_gen`：图像生成
-
-### 3.8 发布 / 社交
-- `publish`：发布
-- `social_publish`：社交发布
-- `xiaopai_publish`：小派发布
-
-### 3.8.1 HyperFrames 视频创作（`hyperframes` 分组）
-
-用 HTML 描述合成、用 `npx hyperframes` 渲染成片，按「创意 → 渲染」两步走：
-
-- `hyperframes_creative`：收敛出 `BRIEF.md`；`mode=load` 时加载已有简报复用既有工作流
-- `hyperframes_render`：按 `BRIEF.md` 的 workflow 路由构建合成并渲染成片
-- `hyperframes_cli`：直接执行一条 HyperFrames CLI 子命令（技能安装/抓取/校验/发布等）
-- `hyperframes_agent`：复合节点，直接驱动小 Pi（piagent）框架跑完「创意 → 渲染」
-- `hyperframe_render`：（自定义节点）单文件 HTML 直渲染，不经 BRIEF.md
-
-详见 `hyperframes.md`。
-
-### 3.9 集成 / 工具
-- `http_request`：HTTP 请求（进程隔离）
-- `email`：邮件
-- `qm_virtual_mailbox`：企业邮虚拟邮箱
-- `code_runner`：代码执行
-- `skill`：技能节点
-- `web_crawler`：网页爬取
-- `browser`：浏览器操作
-- `search`：搜索
-- `agent`：智能体（pi_agent）
-- `mcp`：MCP 工具
-- `mcp_install`：MCP 安装
-
-### 3.10 控制流 / 工作流
-- `workflow`：子工作流
-- `condition`：条件分支
-- `loop`：循环
-- `merge`：合并
-- `delay`：延时
+#### 流程控制（`flow_control`）
+- `loop`：循环 ·未注册
 - `run_wait`：运行等待
-- `comment`：注释
-- `input`：输入变量
-- `output`：输出变量
+- `timed_delay`：定时执行
 
-> **Frontend-only 节点**（无后端 Step，仅前端展示/预览）：
-> `video_preview`、`image_preview`
+#### 网络请求（`network_request`）
+- `http_request`：网络请求 ·子进程
+- `media_to_url`：媒体转链接
+- `platform_download`：平台视频下载 ·子进程
+- `qm_virtual_mailbox`：QM 虚拟邮箱
 
-> **进程隔离节点**（`PROCESS_ISOLATED_NODE_TYPES`，在独立子进程运行以释放 GIL）：
-> `asr`、`vocal_separation`、`track_separation`、`http_request`
+#### AIGC 流程链（`aigc`）
+- `aigc_comfyui`：ComfyUI 生图
+- `aigc_jimeng`：即梦 CLI 生成 ·子进程
+- `aigc_runninghub`：RunningHub 生成 ·子进程
+- `agi_project`：项目立项·剧本创作（起始节点：创建项目 + LLM 故事骨架，creation_id 贯穿下游）
+- `agi_character`：人物资产创作（LLM 生成人物设定，发布公共角色库 + 多视角图）
+- `agi_voice`：人物音色生产 ·子进程（按 voice_design 合成音色样本→vf 引用→绑定人物 voice_ref）
+- `agi_scene`：场景资产创作 ·子进程（场景概念图）
+- `agi_chapter`：章节剧本（LLM 生成章节）
+- `agi_shot`：分镜剧本（LLM 生成分镜）
+- `agi_shot_frames`：分镜首尾帧 ·子进程（首/尾帧图，整章批处理，角色/场景参考图注入）
+- `agi_shot_video`：分镜视频制作 ·子进程（图生视频，整章批处理，画面+运镜提示词）
+- `agi_shot_dub`：分镜配音 ·子进程（逐句 TTS 音色克隆 + 拼接，整章批处理，同步产出 SRT）
+- `agi_shot_export`：分镜导出 ·子进程（视频+配音/BGM/音效混流，可烧录字幕，整章批处理）
+- `agi_chapter_export`：章节导出 ·子进程（分镜成片拼接）
+- `image_grid_split`：图片宫格切割
+
+#### 素材库（`asset`，均 ·子进程）
+- `audio_asset_library`、`image_asset_library`、`video_asset_library`、`character_asset_library`、`voice_asset_library`、`voice_character`
+
+#### 智能体（`agent`）
+- `editor_agent`：剪辑 AI Agent ·子进程
+- `pi_agent`：小 Pi 通用智能体 ·子进程
+
+#### 工具（`utility`）
+- `json_editor`：JSON 编辑
+- `json_to_text`：JSON 转文本
+- `json_visual_editor`：JSON 可视化编辑
+- `output_merge_list`：输出合并为列表
+- `srt_to_json`：SRT 字幕转 JSON
+- `srt_to_text`：SRT 转文本
+- `subtitle_editor`：字幕编辑
+- `text_editor`：文本编辑
+- `video_publish`：视频发布 ·子进程
+
+#### 文件操作（`file`）
+- `file_rename`：文件改名
+- `path_to_title`：路径转标题
+- `resolve_path`：取文件路径
+
+#### HyperFrames（`hyperframes`，均 ·子进程）
+- `hyperframes_creative`：创意（产出 `BRIEF.md`）
+- `hyperframes_render`：按 `BRIEF.md` 渲染成片
+- `hyperframes_cli`：HyperFrames CLI 工具
+- `hyperframes_agent`：复合节点，驱动小 Pi 跑完「创意 → 渲染」
+- `hyperframe_render`（自定义节点）：单文件 HTML 直渲染，不经 `BRIEF.md`
+
+> **Frontend-only / 透传节点**（无实际后端逻辑，映射到 `PassthroughStep`）：`video_preview`、`image_preview`、`image_compare`。
+
+> **子进程隔离节点**：控制平面按 `execution_domain="process"` 判定，当前共 44 个（上面标注 `·子进程` 的那些；数量随版本增长，以 `docs/node_catalog.md` 为准）。
+> 旧 `backend/engine/thread_scheduler.py` 里的 `PROCESS_ISOLATED_NODE_TYPES = {asr, vocal_separation, track_separation, http_request}` 属于**遗留线程池路径**，不是控制平面的判定依据。
 
 ### 3.11 执行域（execution_domain）
 
-节点类型定义中每个节点带 `execution_domain` 字段，取值：
+节点类型定义中每个节点带 `execution_domain` 字段，**运行时只认两种取值**（`workflow_runtime._execution_domain()`）：
 - **`thread`**：在线程池中执行（默认，绝大多数节点）
-- **`process`**：在独立子进程中执行（重型/长时推理，避免阻塞 uvicorn 事件循环）
-- **`llm`**：以 LLM 调用方式执行（部分 LLM 类节点）
+- **`process`**：在独立子进程中执行（`python -m backend.control_plane.step_worker <args.json>`），用于重型/长时推理，可硬停止
 
-> 注意：**没有 `gpu` 执行域**。GPU 计算由"GPU 服务层"接管（见 `gpu-service.md`），节点本身仍声明为 `process` 或 `thread`，运行时根据 `GPU_SERVICE_MANAGED_NODE_TYPES` 决定把 ASR/分离类任务交给 GPU lane。
+优先级：节点 `data.config.execution_domain` > 环境变量 `PROCESS_DOMAIN_EXTRA` > 内置类型定义。
+
+> 历史遗留：`ai_punctuate`、`ai_subtitle_correct` 写着 `execution_domain="llm"`，运行时等价于 `thread`，**新节点不要使用该值**。
+> 自定义节点不受此字段影响（走 `custom_node_runtime`）。
+> **没有 `gpu` 执行域**：GPU 计算由 GPU 服务层接管（见 `gpu-service.md`），节点仍声明 `process`/`thread`，运行时按 `GPU_SERVICE_MANAGED_NODE_TYPES` 交给 GPU lane。
 
 ---
 
@@ -221,7 +243,7 @@ python backend/manager.py 18001 11001   # 自定义端口
 工作流运行时按节点类型分配**资源令牌**，避免本地资源被压垮（`workflow_runtime.py`）：
 
 - `RESOURCE_BY_NODE_TYPE`：`asr`/`vocal_separation`/`track_separation` → `gpu` 令牌；`tts`/`dub_task` → `tts` 令牌
-- `RESOURCE_FREE_NODE_TYPES`：纯网络/API 调用节点（`llm_request`、`summarize`、`translate`、`sentence_split`、`http_request`、`platform_download`）不占本地计算令牌，可多任务并发
+- `RESOURCE_FREE_NODE_TYPES`：纯网络/API 调用节点（`llm_request`、`summarize`、`translate`、`sentence_split`、`http_request`、`platform_download`）以及循环容器 `loop` 不占本地计算令牌，可多任务并发
 - `GPU_SERVICE_MANAGED_NODE_TYPES`：`{asr, vocal_separation, track_separation}` 启用 GPU 服务后，显存调度交给服务层，worker 侧不再扣 gpu 令牌（避免双重限流）
 
 并发由 **Celery worker 进程数 + 资源令牌** 共同决定（`ThreadScheduler` 的 `max_workers=3` 属于遗留 engine 线程池路径，不在当前控制平面执行链路中）。`request_cancel` 可终止任务及其子进程。
@@ -261,6 +283,10 @@ python backend/manager.py 18001 11001   # 自定义端口
 1. **不要**用 `python backend/main.py` 单独启动来"验证任务"——缺依赖会失败，应走 `manager.py` 或对应 `*.bat`。
 2. **端口**：调用业务 API 用 `11001`；调用 Manager 用 `18001`；**不要**假设 8000。
 3. **加节点**：必须同时改 `builtin_node_types.py`（展示）与 `step_registry.py`（映射），否则节点不可运行。详见 `node-creation.md`。
-4. **GPU 节点**：不要让 worker 与 GPU 服务双重限流；遵循 `GPU_SERVICE_MANAGED_NODE_TYPES` 约定。
-5. **任务产物**：文件名遵循 `{base}_{node_id}{ext}` 约定，用 `find_artifact()` 反查，详见 `file-management.md`。
-6. **改动后**：关注 `read_lints` / 类型检查，保持 `backend/requirements.txt` 与 `data/workspace/pi-agent-config/models-store.json` 一致。
+   - `category`、端口 `type`、`configFields.type` 必须取自 `node_schema.py` 的白名单（自定义节点走 API 会被强校验）；
+   - `execution_domain` 只有 `thread` / `process` 两种有效值，不要写 `llm` / `gpu`；
+   - 建议同步 `frontend/src/lib/fallbackNodeTypes.ts`。
+4. **不要臆造节点 id**：使用节点前先在 `docs/node_catalog.md` 或 `builtin_node_types.py` 核对，历史文档中曾出现大量不存在的 id。
+5. **GPU 节点**：不要让 worker 与 GPU 服务双重限流；遵循 `GPU_SERVICE_MANAGED_NODE_TYPES` 约定。
+6. **任务产物**：文件名遵循 `{base}_{node_id}{ext}` 约定，用 `find_artifact()` 反查，详见 `file-management.md`。
+7. **改动后**：关注 `read_lints` / 类型检查，保持 `backend/requirements.txt` 与 `data/workspace/pi-agent-config/models-store.json` 一致。

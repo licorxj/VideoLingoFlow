@@ -2699,6 +2699,40 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
             "label": "叙事导演"
           }
         ]
+      },
+      {
+        "key": "imagegen_iface_id",
+        "label": "生图接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/imagegen-interfaces/enabled",
+        "placeholder": "自动（按能力选择）"
+      },
+      {
+        "key": "imagegen_model",
+        "label": "生图模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "dependsOn": "imagegen_iface_id",
+        "apiEndpoint": "/api/imagegen-interfaces/{imagegen_iface_id}/models-for-node?mode=txt2img",
+        "placeholder": "跟随接口默认"
+      },
+      {
+        "key": "videogen_iface_id",
+        "label": "生视频接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/videogen-interfaces/enabled",
+        "placeholder": "自动（按能力选择）"
+      },
+      {
+        "key": "videogen_model",
+        "label": "生视频模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "dependsOn": "videogen_iface_id",
+        "apiEndpoint": "/api/videogen-interfaces/{videogen_iface_id}/models-for-node?mode=t2v",
+        "placeholder": "跟随接口默认"
       }
     ],
     "isBuiltIn": true
@@ -2737,10 +2771,116 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "id": "video",
         "label": "剪辑成片",
         "type": "video"
+      },
+      {
+        "id": "project",
+        "label": "剪辑项目",
+        "type": "json"
       }
     ],
     "defaultConfig": {},
     "configFields": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "cutia_render",
+    "name": "剪辑渲染",
+    "category": "process",
+    "description": "无头加载剪辑项目并渲染导出成片，无需人工打开剪辑工作台",
+    "icon": "Clapperboard",
+    "color": "#f97316",
+    "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑项目",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "video",
+        "label": "渲染成片",
+        "type": "video"
+      }
+    ],
+    "defaultConfig": {
+      "export_format": "mp4",
+      "quality": "high",
+      "fps": 0,
+      "include_audio": true,
+      "browser_channel": "",
+      "timeout_minutes": 60
+    },
+    "configFields": [
+      {
+        "key": "export_format",
+        "label": "导出格式",
+        "type": "select",
+        "options": [
+          {
+            "value": "mp4",
+            "label": "MP4 (H.264)"
+          },
+          {
+            "value": "webm",
+            "label": "WebM (VP9)"
+          }
+        ]
+      },
+      {
+        "key": "quality",
+        "label": "画质",
+        "type": "select",
+        "options": [
+          {
+            "value": "low",
+            "label": "低（体积最小）"
+          },
+          {
+            "value": "medium",
+            "label": "中（均衡）"
+          },
+          {
+            "value": "high",
+            "label": "高（推荐）"
+          },
+          {
+            "value": "very_high",
+            "label": "极高（体积最大）"
+          }
+        ]
+      },
+      {
+        "key": "fps",
+        "label": "帧率",
+        "type": "number",
+        "min": 0,
+        "max": 60,
+        "colSpan": "half",
+        "placeholder": "0 表示跟随项目设置"
+      },
+      {
+        "key": "include_audio",
+        "label": "包含音频",
+        "type": "checkbox",
+        "colSpan": "half"
+      },
+      {
+        "key": "browser_channel",
+        "label": "浏览器通道",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空用内置 Chromium；需要 H.264 可填 chrome"
+      },
+      {
+        "key": "timeout_minutes",
+        "label": "超时（分钟）",
+        "type": "number",
+        "min": 1,
+        "max": 720,
+        "colSpan": "half"
+      }
+    ],
     "isBuiltIn": true
   },
   {

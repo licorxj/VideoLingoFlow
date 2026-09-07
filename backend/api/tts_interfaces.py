@@ -15,6 +15,8 @@ from typing import Optional, List, Any
 
 from backend.tts.tts_interface_manager import get_tts_interface_manager
 
+from backend.config.credential_store import mask_deep
+
 router = APIRouter()
 voice_router = APIRouter()  # Separate router for /tts-voices endpoints
 
@@ -85,7 +87,7 @@ class TTSTestRequest(BaseModel):
 @router.get("")
 async def list_interfaces():
     mgr = get_tts_interface_manager()
-    return {"interfaces": mgr.list_all()}
+    return {"interfaces": mask_deep(mgr.list_raw())}
 
 
 @router.get("/enabled")
@@ -110,17 +112,17 @@ async def list_by_mode(mode: str):
 @router.get("/{iface_id}")
 async def get_interface(iface_id: str):
     mgr = get_tts_interface_manager()
-    iface = mgr.get(iface_id)
+    iface = mgr.get_raw(iface_id)
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return {"interface": iface}
+    return {"interface": mask_deep(iface)}
 
 
 @router.post("")
 async def create_interface(req: TTSInterfaceCreate):
     mgr = get_tts_interface_manager()
     iface = mgr.create(req.model_dump())
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.put("/{iface_id}")
@@ -129,7 +131,7 @@ async def update_interface(iface_id: str, req: TTSInterfaceUpdate):
     iface = mgr.update(iface_id, req.model_dump(exclude_none=True))
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.delete("/{iface_id}")
@@ -146,7 +148,7 @@ async def toggle_interface(iface_id: str, enabled: bool = True):
     iface = mgr.toggle(iface_id, enabled)
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return {"success": True, "interface": iface}
+    return {"success": True, "interface": mask_deep(iface)}
 
 
 @router.post("/reload")

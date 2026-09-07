@@ -64,6 +64,6 @@ export const editorApi = {
   getProject: (taskId: string) => client.get<EditorSnapshot>(`/api/editor/tasks/${taskId}/project`),
   saveProject: (taskId: string, project: Record<string, any>, revision: number) => client.put<EditorSnapshot>(`/api/editor/tasks/${taskId}/project`, { project, expected_revision: revision }),
   assetUrl: (taskId: string, assetId: string) => `${client.defaults.baseURL}/api/editor/tasks/${encodeURIComponent(taskId)}/assets/${encodeURIComponent(assetId)}/stream`,
-  runAgent: (taskId: string, payload: { content: string; expert_role: string; expected_revision: number }) => client.post<AgentRun>(`/api/editor/tasks/${taskId}/agent/runs`, payload),
+  runAgent: (taskId: string, payload: { content: string; expert_role: string; expected_revision: number; imagegen_iface_id?: string; imagegen_model?: string; videogen_iface_id?: string; videogen_model?: string }) => client.post<AgentRun>(`/api/editor/tasks/${taskId}/agent/runs`, payload),
   updateCutia: () => client.post<CutiaUpdateResult>("/api/cutia/update", undefined, { timeout: 150000 }),
 };

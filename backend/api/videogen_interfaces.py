@@ -13,6 +13,8 @@ from backend.videogen.videogen_interface_manager import get_videogen_interface_m
 
 logger = logging.getLogger(__name__)
 
+from backend.config.credential_store import mask_deep
+
 router = APIRouter()
 
 
@@ -92,7 +94,7 @@ class VideoGenTestVideoRequest(BaseModel):
 @router.get("/")
 async def list_videogen_interfaces():
     mgr = get_videogen_interface_manager()
-    return {"interfaces": mgr.list_all()}
+    return {"interfaces": mask_deep(mgr.list_raw())}
 
 
 @router.get("/enabled")
@@ -104,10 +106,10 @@ async def list_enabled_videogen_interfaces():
 @router.get("/{iface_id}")
 async def get_videogen_interface(iface_id: str):
     mgr = get_videogen_interface_manager()
-    iface = mgr.get(iface_id)
+    iface = mgr.get_raw(iface_id)
     if not iface:
         raise HTTPException(status_code=404, detail="接口不存在")
-    return iface
+    return mask_deep(iface)
 
 
 @router.post("/reload")
@@ -133,7 +135,7 @@ async def create_videogen_interface(data: VideoGenInterfaceCreate):
     mgr = get_videogen_interface_manager()
     try:
         iface = mgr.create(data.dict())
-        return {"success": True, "interface": iface}
+        return {"success": True, "interface": mask_deep(iface)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -143,7 +145,7 @@ async def update_videogen_interface(iface_id: str, data: VideoGenInterfaceUpdate
     mgr = get_videogen_interface_manager()
     try:
         iface = mgr.update(iface_id, data.dict(exclude_unset=True))
-        return {"success": True, "interface": iface}
+        return {"success": True, "interface": mask_deep(iface)}
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -438,7 +440,7 @@ def _resolve_videogen_config(mgr, iface_id=None, sdk_module=None, config=None):
         iface = mgr.get(iface_id)
         if not iface:
             raise HTTPException(status_code=404, detail="接口不存在")
-        return iface.get("config", {})
+        return mask_deep(iface.get("config", {}))
     if sdk_module:
         for i in mgr.get_enabled():
             if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:

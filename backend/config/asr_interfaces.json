@@ -34,7 +34,7 @@
         "max_duration": 1800,
         "diarize": true,
         "diarize_model": "pyannote/speaker-diarization-community-1",
-        "hf_token": "",
+        "hf_token": "secret://WHISPERX_LOCAL_HF_TOKEN",
         "num_speakers": 0,
         "min_speakers": 0,
         "max_speakers": 0,
@@ -356,7 +356,7 @@
         "max_duration": 1800,
         "sdk_module": "backend.asr.asr_mimo",
         "sdk_function": "transcribe",
-        "sdk_api_key": "",
+        "sdk_api_key": "secret://MIMO_KEY",
         "model_options": [
           "mimo-v2.5-asr"
         ],
@@ -473,7 +473,7 @@
         "hotwords": "",
         "num_speakers": 0,
         "use_itn": true,
-        "max_duration": 600,
+        "max_duration": 300,
         "model_options": [
           "openmoss/MOSS-Transcribe-Diarize"
         ],

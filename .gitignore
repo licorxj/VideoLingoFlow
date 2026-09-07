@@ -4,13 +4,12 @@
 .env.*.local
 .env.temp
 
-# Runtime config files — 真实运行文件含密钥，不上传；
-# 脱敏上传版本为同名 *.temp（安装时由 install.py 还原为正式名）
-backend/config/asr_interfaces.json
-backend/config/tts_interfaces.json
-backend/config/config.yaml
-backend/config/imagegen_interfaces.json
-backend/config/videogen_interfaces.json
+# 运行时配置（config.yaml / *_interfaces.json）直接跟踪：
+# 密钥统一存用户私有数据库，配置文件中只有 secret://NAME 引用，不含明文。
+# 历史的 *.temp 脱敏版已废弃，禁止再入库
+*.temp
+# 迁移/编辑产生的本地备份含历史明文密钥，禁止入库
+backend/config/*.bak
 
 # Python
 __pycache__/
@@ -201,6 +200,10 @@ Thumbs.db
 credentials.json
 secrets.json
 api_keys.json
+# kie.ai pricing session tokens (real API key + browser session token)
+kieai_sdk/pricing_config.json
+# kie.ai pricing disk cache (generated, may contain fetched data)
+kieai_sdk/prices_cache.json
 # 第三方社交发布运行时凭据数据（cookie / 账号数据）
 **/cookies/
 **/cookiesFile/

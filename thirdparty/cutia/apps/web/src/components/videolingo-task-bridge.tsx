@@ -3,6 +3,9 @@
 import { useEffect, useRef } from "react";
 import { useEditor } from "@/hooks/use-editor";
 import { storageService } from "@/services/storage/service";
+import { getExportFileExtension, getExportMimeType } from "@/lib/export";
+import { DEFAULT_EXPORT_OPTIONS } from "@/constants/export-constants";
+import type { ExportFormat, ExportQuality } from "@/types/export";
 import type { MediaType } from "@/types/assets";
 import type { TProject } from "@/types/project";
 
@@ -43,6 +46,16 @@ type RequestSaveMessage = {
 	taskId: string;
 };
 
+type RequestExportMessage = {
+	type: "videolingo:request-export";
+	version: number;
+	taskId: string;
+	format?: ExportFormat;
+	quality?: ExportQuality;
+	fps?: number;
+	includeAudio?: boolean;
+};
+
 function isLoadTaskProjectMessage(value: unknown): value is LoadTaskProjectMessage {
 	return Boolean(
 		value &&
@@ -73,6 +86,16 @@ function isRequestSaveMessage(value: unknown): value is RequestSaveMessage {
 			(value as RequestSaveMessage).type === "videolingo:request-save" &&
 			(value as RequestSaveMessage).version === TASK_PROJECT_BRIDGE_VERSION &&
 			typeof (value as RequestSaveMessage).taskId === "string",
+	);
+}
+
+function isRequestExportMessage(value: unknown): value is RequestExportMessage {
+	return Boolean(
+		value &&
+			typeof value === "object" &&
+			(value as RequestExportMessage).type === "videolingo:request-export" &&
+			(value as RequestExportMessage).version === TASK_PROJECT_BRIDGE_VERSION &&
+			typeof (value as RequestExportMessage).taskId === "string",
 	);
 }
 
@@ -131,6 +154,103 @@ async function fetchMediaAsset(taskId: string, asset: TaskAsset): Promise<Blob> 
 		}
 	}
 	throw lastError instanceof Error ? lastError : new Error(`Failed to load ${asset.name}`);
+}
+
+type ExportStatusSink = (type: string, payload?: Record<string, unknown>) => void;
+
+async function uploadExportedVideo({
+	taskId,
+	buffer,
+	format,
+	projectName,
+}: {
+	taskId: string;
+	buffer: ArrayBuffer;
+	format: ExportFormat;
+	projectName?: string;
+}): Promise<{ name?: string }> {
+	const extension = getExportFileExtension({ format });
+	const mimeType = getExportMimeType({ format });
+	const fileName = `${projectName || "edited-video"}${extension}`;
+	const formData = new FormData();
+	formData.append("file", new File([buffer], fileName, { type: mimeType }));
+	formData.append("extension", extension);
+
+	const response = await fetch(
+		`${getApiBaseUrl()}/api/editor/tasks/${encodeURIComponent(taskId)}/exports`,
+		{ method: "POST", body: formData },
+	);
+	if (!response.ok) {
+		throw new Error((await response.text()) || "Failed to archive export");
+	}
+	const result = (await response.json()) as { asset?: { name?: string } };
+	return result.asset ?? {};
+}
+
+async function runHeadlessExport({
+	editor,
+	taskId,
+	format,
+	quality,
+	fps,
+	includeAudio,
+	postStatus,
+}: {
+	editor: ReturnType<typeof useEditor>;
+	taskId: string;
+	format: ExportFormat;
+	quality: ExportQuality;
+	fps?: number;
+	includeAudio: boolean;
+	postStatus: ExportStatusSink;
+}): Promise<void> {
+	const project = editor.project.getActiveOrNull();
+	if (!project || project.metadata.id !== taskId) {
+		postStatus("videolingo:export-failed", {
+			message: "Cutia 尚未加载该任务项目",
+		});
+		return;
+	}
+
+	postStatus("videolingo:export-started");
+	try {
+		const result = await editor.project.export({
+			options: {
+				format,
+				quality,
+				fps: fps && fps > 0 ? fps : project.settings.fps,
+				includeAudio,
+				onProgress: ({ progress }) =>
+					postStatus("videolingo:export-progress", { progress }),
+				onCancel: () => false,
+			},
+		});
+
+		if (result.cancelled) {
+			postStatus("videolingo:export-cancelled");
+			return;
+		}
+
+		if (!result.success || !result.buffer) {
+			postStatus("videolingo:export-failed", {
+				message: result.error || "Export failed",
+			});
+			return;
+		}
+
+		postStatus("videolingo:export-uploading");
+		const asset = await uploadExportedVideo({
+			taskId,
+			buffer: result.buffer,
+			format,
+			projectName: project.metadata.name,
+		});
+		postStatus("videolingo:export-complete", { asset });
+	} catch (error) {
+		postStatus("videolingo:export-failed", {
+			message: error instanceof Error ? error.message : "Export failed",
+		});
+	}
 }
 
 export function VideoLingoTaskBridge() {
@@ -233,6 +353,23 @@ export function VideoLingoTaskBridge() {
 					return;
 				}
 				void saveToServerRef.current();
+				return;
+			}
+			if (isRequestExportMessage(event.data)) {
+				if (event.data.taskId !== taskIdRef.current) {
+					postStatus("videolingo:export-failed", { message: "任务未匹配" });
+					return;
+				}
+				const { taskId, format, quality, fps, includeAudio } = event.data;
+				void runHeadlessExport({
+					editor,
+					taskId,
+					format: format ?? DEFAULT_EXPORT_OPTIONS.format,
+					quality: quality ?? DEFAULT_EXPORT_OPTIONS.quality,
+					fps,
+					includeAudio: includeAudio ?? true,
+					postStatus,
+				});
 				return;
 			}
 			if (!isLoadTaskProjectMessage(event.data)) {

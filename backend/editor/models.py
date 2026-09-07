@@ -52,6 +52,10 @@ class AgentRunRequest(BaseModel):
     auto_mode: bool = False
     expected_revision: int | None = None
     manual_config: dict[str, str] | None = None
+    imagegen_iface_id: str | None = None
+    imagegen_model: str | None = None
+    videogen_iface_id: str | None = None
+    videogen_model: str | None = None
 
 
 class AgentApprovalRequest(BaseModel):

@@ -5,6 +5,7 @@ import {
   SeparationInterfaceConfig,
 } from "@/api/separationInterfaces";
 import { X, Save, Plus, Trash2, Check } from "lucide-react";
+import { SecretField, isSecretRowKey } from "@/components/shared/SecretPicker";
 
 interface Props {
   iface?: SeparationInterface | null;
@@ -321,6 +322,13 @@ export default function SeparationInterfaceEditor({
                       </option>
                     ))}
                   </select>
+                ) : isSecretRowKey(row.key) ? (
+                  <SecretField
+                    label={row.label}
+                    hint={row.desc}
+                    value={(config as any)[row.key] ?? ""}
+                    onChange={(v) => uc(row.key, v)}
+                  />
                 ) : (
                   <input
                     type="text"

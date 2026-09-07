@@ -664,3 +664,41 @@ class EditorProjectRepository:
             assets.append(asset.model_dump())
             self._write_json(self.assets_path(task_id), {"assets": assets, "updatedAt": self._utc_now()})
         return asset
+
+    def register_asset(
+        self,
+        task_id: str,
+        path: Path,
+        asset_type: str = "video",
+        source: str = "agent_generated",
+        duration: float | None = None,
+        width: int | None = None,
+        height: int | None = None,
+    ) -> AssetRecord:
+        """注册一个 Agent 生成的资产（TTS / ASR / 生图 / 生视频）。
+
+        与 ``register_export`` 的区别：支持任意媒体类型，并可写入探测到的
+        时长与尺寸，使时间线工具能按真实时长摆放元素。
+        """
+        self.validate_task_id(task_id)
+        root = self.task_dir(task_id)
+        if asset_type not in {"video", "audio", "image", "subtitle"}:
+            asset_type = "video"
+        asset = AssetRecord(
+            id=uuid.uuid4().hex,
+            name=path.name,
+            type=asset_type,
+            relative_path=path.relative_to(root).as_posix(),
+            source=source,
+            size=path.stat().st_size,
+            mime_type=mimetypes.guess_type(path.name)[0],
+            duration=duration,
+            width=width,
+            height=height,
+            recommended=True,
+        )
+        with self._lock_for(task_id):
+            assets = self._load_assets(task_id)
+            assets.append(asset.model_dump())
+            self._write_json(self.assets_path(task_id), {"assets": assets, "updatedAt": self._utc_now()})
+        return asset

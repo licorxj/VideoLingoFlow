@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { Layers, Plus, RefreshCw, Play, Inbox, Square } from "lucide-react";
+import { Layers, Plus, RefreshCw, Play, Inbox, Square, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { batchApi, BatchDetail, RuntimeStatus } from "@/api/batch";
+import { managerApi } from "@/api/manager";
 import CreateBatchDialog from "@/components/batch/CreateBatchDialog";
 import BatchGroupCard from "@/components/batch/BatchGroupCard";
 import BatchRuntimePanel from "@/components/batch/BatchRuntimePanel";
@@ -74,6 +75,7 @@ export default function BatchWorkshop() {
   const [maxConcurrent, setMaxConcurrent] = useState(3);
   const [taskStartInterval, setTaskStartInterval] = useState(0);
   const [configLoading, setConfigLoading] = useState(false);
+  const [restartingWorker, setRestartingWorker] = useState(false);
   const [runtimeStatus, setRuntimeStatus] = useState<RuntimeStatus | null>(null);
 
   const loadBatches = useCallback(async () => {
@@ -144,6 +146,18 @@ export default function BatchWorkshop() {
       showAlert(e?.response?.data?.detail || "更新配置失败");
     } finally {
       setConfigLoading(false);
+    }
+  };
+
+  const handleRestartControlPlaneWorker = async () => {
+    setRestartingWorker(true);
+    try {
+      await managerApi.restartControlPlaneWorker();
+      showAlert("已发送软重启请求，在途任务完成后将自动拉起新 Worker（可能需要等待当前任务结束）", "success");
+    } catch (e: any) {
+      showAlert(e?.message || "重启失败");
+    } finally {
+      setRestartingWorker(false);
     }
   };
 
@@ -279,6 +293,17 @@ export default function BatchWorkshop() {
           />
           <span className="text-xs text-muted-foreground">秒</span>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto"
+          onClick={handleRestartControlPlaneWorker}
+          disabled={configLoading || restartingWorker}
+        >
+          <RotateCcw className={cn("mr-1.5 h-4 w-4", restartingWorker && "animate-spin")} />
+          重启进程生效
+        </Button>
       </div>
 
       <BatchRuntimePanel runtime={effectiveRuntimeStatus} loading={loading && !runtimeStatus} />

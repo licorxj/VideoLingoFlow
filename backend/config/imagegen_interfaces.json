@@ -17,7 +17,7 @@
         "sdk_package": "dashscope",
         "sdk_module": "backend.imagegen.sdk.bailian_wrapper",
         "sdk_function": "generate",
-        "sdk_api_key": "",
+        "sdk_api_key": "secret://BAILIAN_SDK_API_KEY",
         "default_model": "wan2.7-image-pro",
         "model_options": [
           "wan2.7-image-pro",
@@ -239,6 +239,8 @@
         },
         "model_list_url": "",
         "model_list_key": "",
+        "response_format": "url",
+        "output_format": "",
         "balance_endpoint": "",
         "modes": {
           "txt2img": {
@@ -288,7 +290,7 @@
         "sdk_package": "",
         "sdk_module": "backend.imagegen.sdk.kieai_wrapper",
         "sdk_function": "generate",
-        "sdk_api_key": "",
+        "sdk_api_key": "secret://KIEAI_API_KEY",
         "default_model": "seedream/5-lite-text-to-image",
         "model_options": [
           "seedream/5-lite-text-to-image",
@@ -434,7 +436,8 @@
             "price": "",
             "resolutions": [
               "2K",
-              "4K"
+              "4K",
+              "1K"
             ],
             "aspect_ratios": [
               "1:1",
@@ -454,7 +457,8 @@
             "price": "",
             "resolutions": [
               "2K",
-              "4K"
+              "4K",
+              "1K"
             ],
             "aspect_ratios": [
               "1:1",
@@ -548,6 +552,8 @@
         },
         "model_list_url": "",
         "model_list_key": "",
+        "response_format": "url",
+        "output_format": "",
         "balance_endpoint": "api/v1/chat/credit",
         "modes": {
           "txt2img": {
@@ -597,7 +603,7 @@
         "sdk_package": "",
         "sdk_module": "backend.imagegen.sdk.wuli_wrapper",
         "sdk_function": "generate",
-        "sdk_api_key": "",
+        "sdk_api_key": "secret://WULI_SDK_API_KEY",
         "default_model": "Qwen Image 2.0",
         "model_options": [
           "智能IMAGE 2",
@@ -836,6 +842,8 @@
         },
         "model_list_url": "",
         "model_list_key": "",
+        "response_format": "url",
+        "output_format": "",
         "balance_endpoint": "",
         "modes": {
           "txt2img": {

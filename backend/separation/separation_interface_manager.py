@@ -5,6 +5,8 @@ import uuid
 import threading
 from typing import Dict, Any
 
+from backend.config.credential_store import merge_preserving_masked, resolve_deep
+
 INTERFACES_FILE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "config", "separation_interfaces.json"
@@ -39,13 +41,23 @@ class SeparationInterfaceManager:
             self._interfaces = {}
             self._load()
 
-    def list_all(self):
+    def list_raw(self):
+        """返回未解析密钥引用的原始接口定义（供展示/下发前端使用，引用名原样保留）。"""
         with self._lock:
             return list(self._interfaces.values())
 
-    def get(self, iface_id):
+    def get_raw(self, iface_id):
         with self._lock:
             return self._interfaces.get(iface_id)
+
+    def list_all(self):
+        with self._lock:
+            return [resolve_deep(i) for i in self._interfaces.values()]
+
+    def get(self, iface_id):
+        with self._lock:
+            iface = self._interfaces.get(iface_id)
+            return resolve_deep(iface) if iface is not None else None
 
     def create(self, data):
         with self._lock:
@@ -71,13 +83,17 @@ class SeparationInterfaceManager:
             if iface.get("builtin"):
                 for key in ["description", "config"]:
                     if key in data:
-                        iface[key] = data[key]
+                        iface[key] = (
+                            merge_preserving_masked(iface.get("config") or {}, data["config"] or {})
+                            if key == "config"
+                            else data[key]
+                        )
             else:
                 for key in ["name", "type", "enabled", "description"]:
                     if key in data:
                         iface[key] = data[key]
                 if "config" in data:
-                    iface["config"] = data["config"]
+                    iface["config"] = merge_preserving_masked(iface.get("config") or {}, data["config"] or {})
             self._save()
             return iface
 

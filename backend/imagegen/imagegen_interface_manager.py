@@ -5,6 +5,8 @@ import uuid
 import threading
 from typing import Optional, Dict, List, Any
 
+from backend.config.credential_store import merge_preserving_masked, resolve_deep
+
 INTERFACES_FILE = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
     "config", "imagegen_interfaces.json"
@@ -40,13 +42,23 @@ class ImageGenInterfaceManager:
             self._interfaces = {}
             self._load()
 
-    def list_all(self):
+    def list_raw(self):
+        """返回未解析密钥引用的原始接口定义（供展示/下发前端使用，引用名原样保留）。"""
         with self._lock:
             return list(self._interfaces.values())
 
-    def get(self, iface_id):
+    def get_raw(self, iface_id):
         with self._lock:
             return self._interfaces.get(iface_id)
+
+    def list_all(self):
+        with self._lock:
+            return [resolve_deep(i) for i in self._interfaces.values()]
+
+    def get(self, iface_id):
+        with self._lock:
+            iface = self._interfaces.get(iface_id)
+            return resolve_deep(iface) if iface is not None else None
 
     def create(self, data):
         with self._lock:
@@ -76,7 +88,7 @@ class ImageGenInterfaceManager:
                 if key in data:
                     iface[key] = data[key]
             if "config" in data:
-                iface["config"] = data["config"]
+                iface["config"] = merge_preserving_masked(iface.get("config") or {}, data["config"] or {})
             self._interfaces[iface_id] = iface
             self._save()
             return iface
@@ -285,6 +297,8 @@ class ImageGenInterfaceManager:
 
     def _build_sdk_params(self, cfg, prompt, output_dir, **kwargs):
         """Build parameters for SDK-based engines."""
+        # 密钥取值兜底：优先 sdk_api_key，历史数据可能填在 api_key，避免键位错位导致取空
+        sdk_key = cfg.get("sdk_api_key") or cfg.get("api_key", "")
         return {
             "type": "sdk",
             "package": cfg.get("sdk_package", ""),
@@ -300,7 +314,7 @@ class ImageGenInterfaceManager:
             "ref_images": kwargs.get("ref_images", []),
             "extra_args": {
                 **cfg.get("sdk_extra_args", {}),
-                **({"api_key": cfg["sdk_api_key"]} if cfg.get("sdk_api_key") else {}),
+                **({"api_key": sdk_key} if sdk_key else {}),
             },
             "timeout": cfg.get("timeout", 120),
         }

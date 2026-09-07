@@ -4,13 +4,14 @@ from pydantic import BaseModel
 from typing import Any
 
 from backend.config.config_manager import config
+from backend.config.credential_store import mask_deep
 
 router = APIRouter()
 
 
 @router.get("")
 async def get_settings():
-    return {"config": config.get_all()}
+    return {"config": mask_deep(config.get_all())}
 
 
 @router.get("/{key:path}")

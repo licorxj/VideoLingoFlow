@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-05 20:57:43  
-> 节点总数：94　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-09-07 22:04:20  
+> 节点总数：112　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -9,17 +9,18 @@
 |------|-------|
 | 输入输出节点（`io`） | 5 |
 | 预览节点（`preview`） | 3 |
-| 音频处理节点（`audio`） | 10 |
-| 视频处理节点（`video`） | 14 |
+| 音频处理节点（`audio`） | 9 |
+| 视频处理节点（`video`） | 16 |
 | AI生成类节点（`ai_gen`） | 16 |
 | 翻译相关节点（`translation`） | 14 |
-| AIGC流程链（`aigc`） | 4 |
+| AIGC流程链（`aigc`） | 15 |
 | 智能体（`agent`） | 2 |
 | 流程控制节点（`flow_control`） | 3 |
 | 网络请求类节点（`network_request`） | 4 |
 | 工具类节点（`utility`） | 9 |
 | 文件操作类节点（`file`） | 3 |
 | 组合节点（`group_node`） | 2 |
+| asset（`asset`） | 6 |
 | hyperframes（`hyperframes`） | 5 |
 
 ## 节点详情
@@ -54,17 +55,17 @@
 | 音轨分离 | `track_separation` | 将音频分离为6轨：人声/贝斯/鼓/吉他/钢琴/其他 | process | 音频(`audio`*:audio) | 人声(`vocals`:audio); 贝斯(`bass`:audio); 鼓(`drums`:audio); 吉他(`guitar`:audio); 钢琴(`piano`:audio); 其他(`other`:audio) |
 | 音轨混响 | `track_mix` | 将最多四路音频（主音轨、背景音乐、音轨3、音轨4）按设置的响度、淡入淡出与循环混合后输出。总时长支持「最长」或「以主音轨为准」两种模式。主音轨固定不循环，其余音轨可循环以填充总时长。 | thread | 主音轨(`main_audio`*:audio); 背景音乐(`bgm`:audio); 音轨3(`track3`:audio); 音轨4(`track4`:audio) | 混音结果(`audio`:audio) |
 | 音频分离 | `extract_audio` | 从视频中分离提取音频 | thread | 视频(`video`*:video) | 音频(`audio`:audio) |
-| 音频素材库 | `audio_asset_library` | 从 URL、本地路径或晴沐配音谷在线素材库ID获取音频素材，自动下载/复制并重命名到当前工作文件夹。 | process | 来源(`any`:any) | 音频文件(`audio`:audio); 文件路径(`path`:filepath) |
 | 音频质量转码 | `audio_transcode` | 转换音频格式、采样率、位深、声道和码率 | thread | 音频(`audio`*:audio) | 转码音频(`audio`:audio) |
 
 ### 视频处理节点（`video`）
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| Cutia 交互剪辑 | `cutia` | 将上游素材载入 Cutia，等待手工剪辑并导出成片后继续工作流 | thread | 视频(`video`:video); 音频(`audio`:audio); 图片(`image`:image); 字幕(`subtitle`:subtitle) | 剪辑成片(`video`:video) |
+| Cutia 交互剪辑 | `cutia` | 将上游素材载入 Cutia，等待手工剪辑并导出成片后继续工作流 | thread | 视频(`video`:video); 音频(`audio`:audio); 图片(`image`:image); 字幕(`subtitle`:subtitle) | 剪辑成片(`video`:video); 剪辑项目(`project`:json) |
 | LCWR 去水印 | `lcwr_watermark_removal` | 调用 LCWR 本地 API 去除视频/图片中的水印与字幕。需先安装并启动 LCWR 软件（下载地址：https://qinmuzhifang.feishu.cn/wiki/IkBVwfe72iEVLTkhVQ0cW0mvnBc），右键「启动LCWR-API.bat」以管理员身份运行本地 API（默认 http://localhost:1120） | process | 视频(`video`:video); 图片(`image`:image) | 视频(`video`:video); 图片(`image`:image) |
 | OCR字幕查找 | `subtitle_position_search` | 定位视频字幕区域：支持 OCR 自动查找（输出标注帧与相对坐标 JSON），也可手动框选字幕位置并设置片头片尾跳过时间 | thread | 视频(`video`:video) | 标注帧(`image`:image); 字幕坐标JSON(`json`:json) |
 | OCR字幕识别 | `subtitle_recognition` | 按字幕区域坐标用 OCR 识别字幕内容与时间轴，输出 ASR 格式结果 JSON | thread | 视频(`video`*:video); 字幕区域坐标(`json`:json) | 识别结果JSON(ASR)(`subtitle`:json) |
+| 剪辑渲染 | `cutia_render` | 无头加载剪辑项目并渲染导出成片，无需人工打开剪辑工作台 | thread | 剪辑项目(`project`:json) | 渲染成片(`video`:video) |
 | 在线去水印去字幕 | `online_watermark_removal` | 晴沐智坊提供的在线高质量去除视频中的水印服务，使用前确保注册登录晴沐智坊账号，使用将消耗软件的通用积分，确保积分足够视频消耗，1.3分钱每秒。详情访问晴沐hub：https://www.licorxj.online/capability-hub | thread | 媒体详情JSON(`url_json`:json) | 去水印视频(`video`:video); 任务记录(`json`:json) |
 | 字幕烧录 | `merge_sub_video` | 将字幕烧录到视频 | thread | 视频(`video`*:video); 字幕(`subtitle`*:subtitle); 背景音乐(`audio`:audio); 配音音频(`dub`:audio) | 字幕视频(`video`:video) |
 | 按字幕切割视频 | `video_cut_by_subtitle` | 按 srt 字幕或句子 json 的时间轴切割视频，输出片段清单 json 与各视频片段 | thread | 视频(`video`*:video); SRT字幕(`srt`:subtitle); 句子JSON(`json`:json) | 切割信息(`json`:json); 视频片段清单(`video_segments`:json) |
@@ -73,6 +74,7 @@
 | 视频区域贴片 | `video_region_composite` | 将「视频截取区域」产出的局部视频按坐标贴回主视频。贴片大于区域时自动缩放，主/贴片编码不一致时统一重编码后贴合。 | thread | 主视频(`main_video`*:video); 贴片视频(`patch_video`*:video); 贴片坐标(`patch_json`*:json) | 贴合后视频(`video`:video) |
 | 视频截取区域 | `video_region_crop` | 从大分辨率视频中截取指定区域与时段，输出局部视频与坐标 JSON，供「视频区域贴片」节点贴回原视频做局部处理。 | thread | 视频(`video`*:video) | 截取区域视频(`video`:video); 截取坐标(`json`:json) |
 | 视频抽帧 | `video_frame_extract` | 从视频指定时间点提取帧图片，支持避开字幕 | thread | 视频(`video`:video); 字幕(`srt`:subtitle) | 帧图片(`image`:image) |
+| 视频缩放 | `video_scale` | 使用 ffmpeg 将视频缩放到预置分辨率（按目标高度等比缩放）或自定义宽高，支持输出容器格式与编码质量（CRF）设置 | thread | 视频(`video`*:video) | 缩放后视频(`video`:video) |
 | 视频转码 | `video_transcode` | 使用 ffmpeg 对视频进行转码，支持容器格式、视频/音频编码、码率、分辨率、帧率、编码速度档与像素格式等参数配置 | thread | 视频(`video`*:video) | 转码视频(`video`:video) |
 | 音视频合成 | `merge_dub_video` | 将输入音频合成到视频，可设置原视频是否静音、输入音频的响度与淡入淡出。 | thread | 视频(`video`*:video); 音频(`audio`*:audio) | 合成后视频(`video`:video) |
 
@@ -122,8 +124,19 @@
 |------|----|------|-------|---------|---------|
 | ComfyUI 生图 | `aigc_comfyui` | 调用本地/局域网 ComfyUI 实例运行工作流，支持文生图/图生图，参数来自「其他能力接口」设置 | thread | 提示词(`text`:text); 参考视频(`reference_video`:video); 首帧(`first_frame`:image); 图片2(`image2`:image); 图片3(`image3`:image); 图片4(`image4`:image); 尾帧(`last_frame`:image) | 产物列表(`images`:any); 第一个产物(`first`:any); 全部产物(`files`:any) |
 | RunningHub 生成 | `aigc_runninghub` | 调用 RunningHub OpenAPI 运行工作流或 AI 应用，生成图片/视频，参数来自「其他能力接口」设置 | process | 提示词(`text`:text); 参考视频(`reference_video`:video); 首帧(`first_frame`:image); 图片2(`image2`:image); 图片3(`image3`:image); 图片4(`image4`:image); 尾帧(`last_frame`:image) | 产物列表(`images`:any); 第一个产物(`first`:any); 全部产物(`files`:any) |
+| 人物资产创作 | `agi_character` | AI 漫剧·人物资产创作：用 LLM 生成人物设定并写入创作项目，可发布到公共角色库并生成多视角图 | thread | 创作项目ID(`creation_id`:any); 创意简介(`text`:text) | 创作项目ID(`creation_id`:text); 人物设定(`characters`:json); 角色立绘(`images`:any) |
+| 人物音色生产 | `agi_voice` | AI 漫剧·人物音色生产：按人物 voice_design 合成音色样本，登记到音频素材库（vf: 引用）并绑定人物 voice_ref，打通分镜配音的音色克隆链路 | process | 创作项目ID(`creation_id`:any); 样本台词模板(可选)(`text`:text) | 创作项目ID(`creation_id`:text); 音色清单(`voices`:json); 样本音频(`audio`:audio) |
+| 分镜剧本 | `agi_shot` | AI 漫剧·分镜剧本：为章节生成分镜（出场人物/场景/对话/音效设计）并写入 | thread | 章节ID(`chapter_id`:any); 分镜指引(`text`:text) | 章节ID(`chapter_id`:text); 分镜ID列表(`shot_ids`:json); 分镜内容(`shots`:json) |
+| 分镜导出 | `agi_shot_export` | AI 漫剧·分镜导出：分镜视频+配音+BGM/音效混流成片，可烧录 SRT 字幕（可整章批处理），登记 shot_render 资产 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 分镜视频(`video`:video); 配音(`audio`:audio); 背景音乐(`bgm`:audio); 音效(`sfx`:audio); SRT字幕(可选)(`subtitle`:any) | 分镜ID(`shot_id`:text); 分镜成片(`render`:video); 分镜ID列表(`shot_ids`:json); 成片列表(`renders`:json) |
+| 分镜视频制作 | `agi_shot_video` | AI 漫剧·分镜视频制作：以首/尾帧 + 画面描述(场景+运镜)做图生视频（可整章批处理），登记为 shot_video 资产 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 首帧(`first_frame`:image); 尾帧(`last_frame`:image); 视频提示词(可选)(`text`:text) | 分镜ID(`shot_id`:text); 分镜视频(`video`:video); 分镜ID列表(`shot_ids`:json); 视频列表(`videos`:json) |
+| 分镜配音 | `agi_shot_dub` | AI 漫剧·分镜配音：按分镜对话逐句 TTS（依人物 voice_ref 音色克隆，可整章批处理），拼接配音并同步产出 SRT 字幕 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 分镜视频(可选)(`video`:video); 背景音乐(可选)(`bgm`:audio) | 分镜ID(`shot_id`:text); 配音片段(`audio`:audio); 配音信息(`voiceover`:json); 分镜ID列表(`shot_ids`:json); 配音列表(`audios`:json); SRT字幕列表(`subtitles`:json) |
+| 分镜首尾帧 | `agi_shot_frames` | AI 漫剧·分镜首尾帧：为分镜生成首/尾帧概念图（可整章批处理），注入角色多视角图/场景图作为参考图保证一致性 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 首帧(可选)(`first_frame`:image); 尾帧(可选)(`last_frame`:image) | 分镜ID(`shot_id`:text); 首帧(`first_frame`:image); 尾帧(`last_frame`:image); 分镜ID列表(`shot_ids`:json); 首帧列表(`first_frames`:json); 尾帧列表(`last_frames`:json); 帧图(`images`:any) |
 | 即梦 CLI 生成 | `aigc_jimeng` | 通过本地即梦(dreamina) CLI 生成图片或视频，支持文生图/图生图/文生视频/图生视频/首尾帧视频 | process | 提示词(`text`:text); 参考视频(`reference_video`:video); 首帧(`first_frame`:image); 图片2(`image2`:image); 图片3(`image3`:image); 图片4(`image4`:image); 尾帧(`last_frame`:image) | 产物列表(`images`:any); 第一个产物(`first`:any); 全部产物(`files`:any) |
 | 图片宫格切割 | `image_grid_split` | 把宫格组合图按 N×N 切成单张图片：支持 4/9/16/25 宫格，可设置外框收缩与内部切缝收缩像素，输出切割后的图片路径列表 | thread | 图片(`image`*:image) | 图片列表(`images`:list) |
+| 场景资产创作 | `agi_scene` | AI 漫剧·场景资产创作：生成关键场景描述并生成场景概念图，登记为 scene_image 资产 | process | 创作项目ID(`creation_id`:any); 补充描述(`text`:text) | 创作项目ID(`creation_id`:text); 场景清单(`scenes`:json); 场景图(`images`:any) |
+| 章节剧本 | `agi_chapter` | AI 漫剧·章节剧本：为创作项目生成若干章节（标题/原文/简述）并写入 | thread | 创作项目ID(`creation_id`:any); 章节指引(`text`:text) | 创作项目ID(`creation_id`:text); 章节ID(`chapter_id`:text); 章节ID列表(`chapter_ids`:json); 章节内容(`chapters`:json) |
+| 章节导出 | `agi_chapter_export` | AI 漫剧·章节导出：拼接本章全部分镜成片为一个章节视频，登记 chapter_render 资产 | process | 章节ID(`chapter_id`:any); 分镜成片列表(可选)(`renders`:any); 单视频(可选)(`video`:video) | 章节ID(`chapter_id`:text); 章节成片(`render`:video) |
+| 项目立项·剧本创作 | `agi_project` | AI 漫剧·起始节点：创建创作项目并用 LLM 打好故事骨架（世界观/大纲/总剧本），产出 creation_id 贯穿下游全部节点 | thread | 创意/要求(`text`:text) | 创作项目ID(`creation_id`:text); 项目骨架(`project`:json) |
 
 ### 智能体（`agent`）
 
@@ -177,6 +190,17 @@
 |------|----|------|-------|---------|---------|
 | 组合 | `groupnode_mtbj91n4` | 组合（组合节点） | — | ASR后处理 / 对齐音源(`gin_1`:audio); ASR后处理 / 人声音源(`gin_2`:audio); 语音识别 (ASR) / ASR音源(`gin_3`:audio) | — |
 | 组合 | `groupnode_mtbj9s8i` | 组合（组合节点） | — | ASR后处理 / 对齐音源(`gin_1`:audio); ASR后处理 / 人声音源(`gin_2`:audio); 语音识别 (ASR) / ASR音源(`gin_3`:audio) | — |
+
+### asset（`asset`）
+
+| 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
+|------|----|------|-------|---------|---------|
+| 图片素材库 | `image_asset_library` | 从公共图片素材库选择素材（记录素材ID），执行时回查详情并复制到当前工作文件夹；输出素材路径与素材全信息 JSON。 | process | 来源(`any`:any) | 素材路径(`image`:image); 素材全信息JSON(`info`:json) |
+| 新建音色角色 | `voice_character` | LLM 根据角色描述/面板设计生成朗读提示词与TTS指令，合成角色默认音色片段与多情绪片段，并写入配音谷音色库；输出音色ID、主片段音频与全信息JSON。 | process | 角色描述文本(`description`:any); 角色设计JSON(`design_json`:json) | 音色ID(`voice_id`:text); 音色主片段音频(`audio`:audio); 音色全信息JSON(`info`:json) |
+| 视频素材库 | `video_asset_library` | 从公共视频素材库选择素材（记录素材ID），执行时回查详情并复制到当前工作文件夹；输出素材路径与素材全信息 JSON。 | process | 来源(`any`:any) | 素材路径(`video`:video); 素材全信息JSON(`info`:json) |
+| 角色素材库 | `character_asset_library` | 从公共角色库选择角色（记录角色ID），执行时回查角色详情并把多视角图文件夹复制到工作目录；输出素材路径（图片文件夹）与角色全信息 JSON。 | process | 来源(`any`:any) | 素材路径(图片文件夹)(`path`:filepath); 素材全信息JSON(`info`:json) |
+| 音色素材库 | `voice_asset_library` | 从晴沐配音谷音色库选择音色（记录音色ID），执行时回查音色详情并把设计样音复制到工作目录；输出素材路径（试听音频）与音色全信息 JSON。 | process | 来源(`any`:any) | 素材路径(试听音频)(`audio`:audio); 素材全信息JSON(`info`:json) |
+| 音频素材库 | `audio_asset_library` | 从 URL、本地路径或晴沐配音谷素材库（ID）获取音频素材，下载/复制到当前工作文件夹；输出素材路径与素材全信息 JSON。 | process | 来源(`any`:any) | 素材路径(`audio`:audio); 素材全信息JSON(`info`:json) |
 
 ### hyperframes（`hyperframes`）
 

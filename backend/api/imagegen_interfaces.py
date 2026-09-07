@@ -11,6 +11,8 @@ from pydantic import BaseModel
 from backend.imagegen.imagegen_interface_manager import get_imagegen_interface_manager
 from backend.imagegen.imagegen_factory import get_imagegen_engine, clear_cache
 
+from backend.config.credential_store import mask_deep
+
 router = APIRouter()
 _executor = ThreadPoolExecutor(max_workers=2)
 
@@ -72,7 +74,7 @@ def _run_generate_sync(engine, prompt, output_dir, **kwargs):
 @router.get("/")
 async def list_interfaces():
     mgr = get_imagegen_interface_manager()
-    return {"interfaces": mgr.list_all()}
+    return {"interfaces": mask_deep(mgr.list_raw())}
 
 
 @router.get("/enabled")
@@ -84,10 +86,10 @@ async def list_enabled():
 @router.get("/{iface_id}")
 async def get_interface(iface_id: str):
     mgr = get_imagegen_interface_manager()
-    iface = mgr.get(iface_id)
+    iface = mgr.get_raw(iface_id)
     if not iface:
         raise HTTPException(404, "Interface not found")
-    return iface
+    return mask_deep(iface)
 
 
 @router.post("/")
@@ -95,7 +97,7 @@ async def create_interface(data: ImageGenInterfaceCreate):
     mgr = get_imagegen_interface_manager()
     iface = mgr.create(data.dict(exclude_none=True))
     clear_cache()
-    return iface
+    return mask_deep(iface)
 
 
 @router.put("/{iface_id}")
@@ -105,7 +107,7 @@ async def update_interface(iface_id: str, data: ImageGenInterfaceUpdate):
     if not iface:
         raise HTTPException(404, "Interface not found")
     clear_cache()
-    return iface
+    return mask_deep(iface)
 
 
 @router.delete("/{iface_id}")
@@ -125,7 +127,7 @@ async def toggle_interface(iface_id: str, body: dict = None):
     if not iface:
         raise HTTPException(404, "Interface not found")
     clear_cache()
-    return iface
+    return mask_deep(iface)
 
 
 @router.post("/reload")
@@ -396,7 +398,7 @@ def _resolve_imagegen_config(mgr, iface_id=None, sdk_module=None, config=None):
         iface = mgr.get(iface_id)
         if not iface:
             raise HTTPException(status_code=404, detail="接口不存在")
-        return iface.get("config", {})
+        return mask_deep(iface.get("config", {}))
     if sdk_module:
         for i in mgr.get_enabled():
             if (i.get("config", {}) or {}).get("sdk_module") == sdk_module:

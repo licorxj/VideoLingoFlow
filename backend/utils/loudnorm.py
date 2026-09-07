@@ -8,6 +8,8 @@ Two-pass approach:
 import json
 import subprocess
 
+from backend.utils.audio_processor import get_ffmpeg_timeout
+
 
 def _analyze(audio_path: str) -> dict:
     """Run ffmpeg pass 1 to analyze loudness and return measured values."""
@@ -16,7 +18,7 @@ def _analyze(audio_path: str) -> dict:
         "-af", "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json",
         "-f", "null", "-"
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     stderr = result.stderr
 
     # Find the last complete JSON block in stderr
@@ -75,6 +77,6 @@ def normalize_loudness(audio_path: str, target_lufs: float = -16.0, output_path:
         "-af", loudnorm_filter,
         "-c:a", "pcm_s16le", output_path
     ]
-    subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
 
     return output_path

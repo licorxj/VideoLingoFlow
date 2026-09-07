@@ -120,6 +120,12 @@ class LLMClient:
             "retry_count": retry_count,
         }
 
+    @staticmethod
+    def _is_local_router(base_url: str) -> bool:
+        """Check if the router URL points to the local machine."""
+        lower = base_url.lower()
+        return "localhost" in lower or "127.0.0.1" in lower
+
     def _make_client(self, api_cfg: dict) -> OpenAI:
         """Create (or reuse from cache) an OpenAI client with timeout.
 
@@ -314,6 +320,28 @@ class LLMClient:
             else:
                 msg_list.append({"role": "user", "content": prompt})
 
+        # --- DirectRouter path: in-process routing, skip HTTP gateway ---
+        llm_cfg = self._get_llm_config_snapshot()
+        use_direct = (
+            llm_cfg.get("use_router")
+            and llm_cfg.get("direct_router", True)
+            and self._is_local_router(api_cfg["base_url"])
+        )
+        if use_direct:
+            return self._direct_chat(
+                step_name=step_name,
+                strategy_name=api_cfg["model"],
+                msg_list=msg_list,
+                response_json=response_json,
+                stream=stream,
+                log=log,
+                temperature=temperature,
+                timeout_val=api_cfg.get("timeout", 120),
+                retry_enabled=api_cfg.get("retry_enabled", True),
+                retry_count=api_cfg.get("retry_count", 1),
+            )
+
+        # --- Legacy path: OpenAI SDK → HTTP gateway → upstream ---
         client = self._make_client(api_cfg)
         step_model = api_cfg["model"]
         timeout_val = api_cfg.get("timeout", 120)
@@ -459,6 +487,153 @@ class LLMClient:
                 yield delta.content
         if log:
             self._save_log(step_name, prompt, full_content)
+
+    def _direct_chat(
+        self,
+        step_name: str,
+        strategy_name: str,
+        msg_list: list,
+        response_json: bool,
+        stream: bool,
+        log: bool,
+        temperature: Optional[float],
+        timeout_val: float,
+        retry_enabled: bool,
+        retry_count: int,
+    ) -> Any:
+        """In-process routing via DirectRouter: skip localhost HTTP gateway.
+
+        Args:
+            step_name: Original step name for logging (e.g. 's04_summarize').
+            strategy_name: Mapped strategy/router name (e.g. 'vlf-04').
+        """
+        from backend.llm.direct_router import get_direct_router
+        router = get_direct_router()
+
+        # Build request body for the upstream API
+        request_body: dict[str, Any] = {"messages": msg_list}
+        if response_json and not stream:
+            request_body["response_format"] = {"type": "json_object"}
+        if temperature is not None:
+            request_body["temperature"] = temperature
+
+        effective_retry = retry_count if retry_enabled else 0
+
+        # Prompt size for diagnostics
+        prompt_chars = 0
+        for m in msg_list:
+            c = m.get("content", "")
+            if isinstance(c, str):
+                prompt_chars += len(c)
+            elif isinstance(c, list):
+                prompt_chars += sum(
+                    len(p.get("text", "")) for p in c
+                    if isinstance(p, dict) and p.get("type") == "text"
+                )
+
+        print(
+            f"[LLM] direct (step={step_name}, strategy={strategy_name}, stream={stream}, "
+            f"response_json={response_json}, timeout={timeout_val}s, "
+            f"prompt_chars={prompt_chars})",
+            flush=True,
+        )
+
+        last_error = None
+        for attempt in range(effective_retry + 1):
+            t0 = time.time()
+            try:
+                data = router.forward(
+                    strategy_name, request_body,
+                    timeout=timeout_val, is_stream=stream,
+                )
+                elapsed = time.time() - t0
+
+                if stream:
+                    # DirectRouter.forward returns the parsed JSON for non-stream.
+                    # Streaming is not yet supported via direct mode — fall through
+                    # to the regular response path.
+                    pass
+
+                content = ""
+                choices = data.get("choices", [])
+                if choices:
+                    content = choices[0].get("message", {}).get("content", "") or ""
+
+                try:
+                    result = self._parse_response_content(content, response_json)
+                except Exception as parse_err:
+                    print(
+                        f"[LLM] direct parse failed (step={step_name}): {parse_err}",
+                        flush=True,
+                    )
+                    raise LLMRequestError(
+                        f"LLM response parse failed (step={step_name}): {parse_err}",
+                        error_type=LLMErrorType.PARSE, step=step_name,
+                    ) from parse_err
+
+                if log:
+                    self._save_log(step_name, "", result)
+                print(
+                    f"[LLM] direct ok (step={step_name}, elapsed={elapsed:.1f}s)",
+                    flush=True,
+                )
+                return result
+
+            except LLMRequestError:
+                raise
+            except Exception as e:
+                # DirectRouter routing/config errors → CONFIG (not retryable)
+                try:
+                    from backend.llm.direct_router import DirectRouterError
+                    if isinstance(e, DirectRouterError):
+                        print(
+                            f"[LLM] direct config error NOT retryable (step={step_name}): {e}",
+                            flush=True,
+                        )
+                        raise LLMRequestError(
+                            f"DirectRouter config error (step={step_name}): {e}",
+                            error_type=LLMErrorType.CONFIG, step=step_name,
+                        ) from e
+                except LLMRequestError:
+                    raise
+                except ImportError:
+                    pass
+
+                err_type, status = self._classify_error(e)
+                elapsed = time.time() - t0
+                if err_type in RETRYABLE_ERROR_TYPES:
+                    last_error = e
+                    if attempt < effective_retry:
+                        wait = 3 * (attempt + 1)
+                        print(
+                            f"[LLM] direct {err_type} (step={step_name}), "
+                            f"attempt {attempt + 1}/{effective_retry + 1}, "
+                            f"elapsed {elapsed:.1f}s, status={status}, retrying in {wait}s...",
+                            flush=True,
+                        )
+                        time.sleep(wait)
+                        continue
+                    break
+                # Non-retryable: raise immediately with real cause
+                print(
+                    f"[LLM] direct {err_type} NOT retryable "
+                    f"(step={step_name}, status={status}, elapsed={elapsed:.1f}s): "
+                    f"{str(e)[:300]}",
+                    flush=True,
+                )
+                raise LLMRequestError(
+                    f"DirectRouter failed (step={step_name}, type={err_type}, status={status}): {e}",
+                    error_type=err_type, status_code=status, step=step_name,
+                ) from e
+
+        # Retries exhausted
+        if last_error is not None:
+            err_type, status = self._classify_error(last_error)
+            raise LLMRequestError(
+                f"DirectRouter failed after {effective_retry + 1} attempts "
+                f"(step={step_name}, type={err_type}, status={status}): {last_error}",
+                error_type=err_type, status_code=status, step=step_name,
+            ) from last_error
 
     def batch_chat(
         self,

@@ -326,29 +326,25 @@ def _load_task_node_config(task_dir: str, node_type: str = "asr") -> Dict[str, A
 
 
 def _load_default_interface_config(engine_id: str) -> Dict[str, Any]:
-    """Load the default config for a given ASR interface from asr_interfaces.json."""
-    iface_path = os.path.join(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-        "config", "asr_interfaces.json",
-    )
-    if not os.path.exists(iface_path):
-        return {}
+    """Load the default config for a given ASR interface via the interface manager.
+
+    通过 manager 读取（而非直接解析 JSON），保证 `secret://NAME` 密钥引用
+    会被还原为真实值后再传给 ASR 引擎。
+    """
     try:
-        with open(iface_path, "r", encoding="utf-8-sig") as f:
-            data = json.load(f)
+        from backend.asr.asr_interface_manager import get_asr_interface_manager
+
+        iface = get_asr_interface_manager().get(engine_id) or {}
     except Exception:
         return {}
-    for iface in data.get("interfaces", []):
-        if iface.get("id") == engine_id:
-            cfg = dict(iface.get("config", {}))
-            # 兼容接口配置把 key 存在 sdk_api_key 字段（部分云引擎 UI 字段名），
-            # 统一归一为 api_key 供引擎 transcribe 接收；与测试路径逻辑保持一致。
-            if not cfg.get("api_key"):
-                sdk_key = cfg.get("sdk_api_key")
-                if sdk_key:
-                    cfg["api_key"] = sdk_key
-            return cfg
-    return {}
+    cfg = dict(iface.get("config", {}))
+    # 兼容接口配置把 key 存在 sdk_api_key 字段（部分云引擎 UI 字段名），
+    # 统一归一为 api_key 供引擎 transcribe 接收；与测试路径逻辑保持一致。
+    if not cfg.get("api_key"):
+        sdk_key = cfg.get("sdk_api_key")
+        if sdk_key:
+            cfg["api_key"] = sdk_key
+    return cfg
 
 
 def _resolve_engine_id(task_cfg: Dict[str, Any]) -> str:

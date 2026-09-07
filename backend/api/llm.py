@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from backend.config.config_manager import config
+from backend.config.credential_store import mask_deep
 from backend.llm.llm_client import get_llm_client
 
 router = APIRouter()
@@ -15,14 +16,14 @@ router = APIRouter()
 @router.get("/config")
 async def get_llm_config():
     """Get current LLM configuration."""
-    return {
+    return mask_deep({
         "base_url": config.get("llm.base_url") or "",
         "api_key": config.get("llm.api_key") or "",
         "max_concurrent": config.get("llm.max_concurrent") or 10,
         "timeout": config.get("llm.timeout") or 120,
         "enable_step_models": config.get("llm.enable_step_models") is not False,
         "step_models": config.get("llm.step_models") or {},
-    }
+    })
 
 
 @router.get("/presets")

@@ -15,7 +15,17 @@ service = EditorAgentService()
 
 @router.post("/tasks/{task_id}/agent/runs")
 async def start_agent_run(task_id: str, request: AgentRunRequest):
-    run = service.execute(task_id, request.content, request.expert_role, request.expected_revision, request.manual_config)
+    run = service.execute(
+        task_id,
+        request.content,
+        request.expert_role,
+        request.expected_revision,
+        request.manual_config,
+        request.imagegen_iface_id,
+        request.imagegen_model,
+        request.videogen_iface_id,
+        request.videogen_model,
+    )
     return run
 
 

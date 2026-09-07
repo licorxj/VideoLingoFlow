@@ -98,7 +98,14 @@ def _load_confucius4_config():
         logger.warning(f"Confucius4-TTS: failed to load config overrides: {e}")
 
     _CONFIG_CACHE["confucius4_tts"] = values
-    return values
+    # 缓存保存原始值（可能是 secret:// 引用），返回前解析为真实密钥，
+    # 既保证密钥更新后无需重启生效，又避免把解析结果固化进进程级缓存。
+    try:
+        from backend.config.credential_store import resolve_deep
+
+        return resolve_deep(values)
+    except Exception:
+        return values
 
 
 def _resolve(key, arg):

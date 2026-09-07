@@ -1,11 +1,11 @@
 # 版本号
-version: "2.2.0"
+version: "2.2.8"
 
 # ============ General ============
 general:
   target_language: "zh"
   source_language: "auto"
-  max_sentence_length: 18
+  max_sentence_length: 16
   max_subtitle_length: 30
   use_llm_split: true
   split_by_punct: true
@@ -14,22 +14,25 @@ general:
   reflect_translate: true
   custom_styles: []
   merge_min_duration: 0.2
-  merge_max_gap: 0.2
-  pause_split_threshold: 2
+  merge_max_gap: 0.1
+  pause_split_threshold: 1.5
   split_on_speaker: false
 
 # ============ LLM ============
 llm:
-  use_router: true
+  use_router: false
   router_url: "http://localhost:8800/v1"
-  router_api_key: ""
-  base_url: ""
-  api_key: ""
+  router_api_key: "secret://LLM_ROUTER_API_KEY"
+  # 进程内直连路由器（跳过 localhost HTTP 网关，直接读 router DB + 直连上游 API）
+  # 仅当 router_url 指向 localhost 时生效；设为 false 回退到 HTTP 网关
+  direct_router: true
+  base_url: "http://localhost:8800/v1"
+  api_key: "secret://LLM_API_KEY"
   max_concurrent: 10
-  max_request_chars: 3000
-  timeout: 120
+  max_request_chars: 5000
+  timeout: 150
   retry_enabled: true
-  retry_count: 1
+  retry_count: 3
   enable_step_models: true
   # Per-step model name overrides (step name is used as model name by default)
   step_models:
@@ -61,27 +64,24 @@ pi:
 # ============ TTS ============
 
 tts:
-  method: "8dc074bb"
+  method: "confucius4_tts"
   edge_tts:
     voice: "zh-CN-YunjianNeural"
 
 # ============ ASR ============
 asr:
-  engine: funasr_nano
+  engine: moss
 
   post_process:
     diarization:
-      engine: diarize
+      engine: pyannote
       enabled: true
     vad:
-      engine: webrtc
+      engine: silero
       enabled: true
     alignment:
       enabled: true
       engine: whisperx
-    punctuation:
-      engine: ct_punc
-      enabled: true
 
 # ============ Subtitle Style ============
 subtitle:
@@ -91,17 +91,23 @@ subtitle:
   shadow: 1
   margin_v: 30
   default_preset: "英-中-下中-001"
-  primary_on_top: false
+  primary_on_top: true
 
 # ============ Video Processing ============
 video:
   default_quality: "copy"
+  # 编码速度预设 (x264: medium/fast/faster/veryfast/slow 等)
+  encode_preset: "medium"
+  # 显卡加速 (NVIDIA NVENC)，开启后使用 h264_nvenc 编码
+  gpu_accel: true
+  # ffmpeg 编码/混音超时时间（秒）
+  ffmpeg_timeout: 800
   target_lufs: -14
   watermark:
     enabled: false
   speed:
-    min: 0.98
-    max: 1.25
+    min: 1
+    max: 1.4
     gap_threshold: 0.1
     match_video_speed: true
     slow_limit: 0.8
@@ -128,8 +134,8 @@ advanced:
 
 # ============ Batch ============
 batch:
-  max_concurrent_tasks: 3
-  task_start_interval: 5.0
+  max_concurrent_tasks: 2
+  task_start_interval: 10.0
 audio:
   cut_extend_time: 0.05
   denoise_enabled: false
@@ -139,16 +145,12 @@ audio:
   bitrate: 320
   bit_depth: 32
 imagegen:
-  method: bailian
-  default_t2i_model: "z-image-turbo"
-  default_i2i_model: "wan2.7-image"
+  method: 33c78ad1
+  default_t2i_model: "doubao-seedream-5-0-lite-260128"
+  default_i2i_model: "doubao-seedream-5-0-lite-260128"
 separation:
   method: demucs
   model: htdemucs
-
-# ============ OCR ============
-ocr:
-  method: rapidocr
 
 # ============ Social 更新 ============
 social_update:
@@ -164,3 +166,8 @@ aigc:
     bin: ''
     use_wsl: false
     timeout: 120
+videogen:
+  method: wuli_video
+  default_t2v_model: 'Happy Horse 1.1'
+  default_i2v_model: '通义万相 2.7'
+  default_v2v_model: 'Happy Horse 1.1'

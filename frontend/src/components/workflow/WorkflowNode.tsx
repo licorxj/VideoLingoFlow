@@ -963,12 +963,16 @@ function ApiSelectField({ field, value, config, onConfigChange }: { field: Confi
             if (field.key === "compute_type" && resData.compute_types_by_engine) {
               optionsMap = resData.compute_types_by_engine;
             }
-            const items: string[] = optionsMap[engineKey] || [];
-            allItems = items.map((m: string) => ({ value: m, label: m, description: "" }));
-            if (!engineKey) {
-              const merged: Record<string, boolean> = {};
-              for (const arr of Object.values(optionsMap) as string[][]) {
-                for (const m of arr) { if (!merged[m]) { merged[m] = true; allItems.push({ value: m, label: m, description: "" }); } }
+            if (Array.isArray(optionsMap)) {
+              allItems = mapOptionList(optionsMap);
+            } else {
+              const items: string[] = optionsMap[engineKey] || [];
+              allItems = items.map((m: string) => ({ value: m, label: m, description: "" }));
+              if (!engineKey) {
+                const merged: Record<string, boolean> = {};
+                for (const arr of Object.values(optionsMap) as string[][]) {
+                  for (const m of arr) { if (!merged[m]) { merged[m] = true; allItems.push({ value: m, label: m, description: "" }); } }
+                }
               }
             }
           }

@@ -3,6 +3,8 @@ import subprocess
 import os
 from typing import Optional
 
+from backend.utils.audio_processor import get_ffmpeg_timeout
+
 
 def get_video_duration(path: str) -> float:
     """Get video duration in seconds."""
@@ -63,7 +65,7 @@ def merge_audio_video(video_path: str, audio_path: str, output_path: str):
         "-map", "0:v:0", "-map", "1:a:0",
         output_path
     ]
-    subprocess.run(cmd, capture_output=True, timeout=600)
+    subprocess.run(cmd, capture_output=True, timeout=get_ffmpeg_timeout())
 
 
 def run_ffmpeg_with_progress(cmd, duration: float, callback=None, cancel_callback=None,

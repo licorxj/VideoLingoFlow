@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from typing import Any, Dict, Optional
 
 from backend.config.config_manager import config
+from backend.config.credential_store import mask_deep
 from backend.aigc.comfyui_service import ComfyUIService
 from backend.aigc.runninghub_service import RunningHubService
 from backend.aigc.jimeng_service import JimengService, jimeng_cli_executable
@@ -52,7 +53,7 @@ def _merge_defaults(aigc: dict) -> dict:
 
 @router.get("/config")
 async def get_aigc_config():
-    return {"config": _merge_defaults(_get_aigc_config())}
+    return {"config": mask_deep(_merge_defaults(_get_aigc_config()))}
 
 
 class AIGCConfigUpdate(BaseModel):
@@ -69,7 +70,7 @@ async def update_aigc_config(req: AIGCConfigUpdate):
     sub.update(req.values)
     aigc[req.provider] = sub
     config.set("aigc", aigc)
-    return {"config": _merge_defaults(aigc)}
+    return {"config": mask_deep(_merge_defaults(aigc))}
 
 
 @router.get("/status")
