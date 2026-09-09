@@ -29,7 +29,7 @@ llm:
   base_url: "http://localhost:8800/v1"
   api_key: "secret://LLM_API_KEY"
   max_concurrent: 10
-  max_request_chars: 3000
+  max_request_chars: 6000
   timeout: 300
   retry_enabled: true
   retry_count: 1

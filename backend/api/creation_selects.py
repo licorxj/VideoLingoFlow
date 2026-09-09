@@ -3,22 +3,48 @@
 供工作流节点 configFields 的 api-select 消费，前端会以当前节点其他配置值
 替换端点中的 ``{creation_id}`` / ``{chapter_id}`` 占位符实现联动：
 
+- ``GET /api/creation/style-presets``               风格预设下拉(立项节点)
 - ``GET /api/creation/list``                        项目下拉
 - ``GET /api/creation/{creation_id}/chapters``      章节下拉
 - ``GET /api/creation/{creation_id}/shots?chapter_id=``  分镜下拉(可按章节过滤)
 - ``GET /api/creation/{creation_id}/tree``          项目骨架全量树(浏览项目页)
+- ``PUT /api/creation/chapters/{chapter_id}``       人工审改章节(标题/摘要/格式化剧本文本)
 
 媒体文件预览统一复用 ``/api/files/stream?path=<绝对路径>``。
 """
 
 import os
+from typing import Optional
 from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from backend import creation as agi
 
 router = APIRouter(prefix="/api/creation", tags=["creation-selects"])
+
+
+class ChapterUpdate(BaseModel):
+    """人工审改章节：浏览弹窗「编辑」保存的字段（任选其一，空串会清空）。"""
+
+    title: Optional[str] = None
+    summary: Optional[str] = None
+    original_text: Optional[str] = None
+
+
+@router.put("/chapters/{chapter_id}")
+def update_chapter(chapter_id: str, data: ChapterUpdate) -> dict:
+    """人工审改：更新章节标题 / 摘要 / 格式化剧本文本（``original_text``）。"""
+    fields = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not fields:
+        raise HTTPException(status_code=400, detail="没有可更新的字段")
+    try:
+        return agi.update_chapter(chapter_id, **fields)
+    except agi.NotFoundError:
+        raise HTTPException(status_code=404, detail=f"章节不存在: {chapter_id}")
+    except agi.ValidationError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 def _require_creation(creation_id: str) -> None:
@@ -26,6 +52,23 @@ def _require_creation(creation_id: str) -> None:
         agi.get_creation(creation_id)
     except agi.NotFoundError:
         raise HTTPException(status_code=404, detail=f"创作项目不存在: {creation_id}")
+
+
+@router.get("/style-presets")
+def list_style_presets():
+    """风格预设列表（立项节点「风格预设」下拉）：内置在前，其余按创建时间。"""
+    return [
+        {
+            "id": p["id"],
+            "name": p["name"],
+            "art_style": p.get("art_style") or "",
+            "genre_tags": p.get("genre_tags") or [],
+            "audience_tags": p.get("audience_tags") or [],
+            "description": p.get("description") or "",
+            "is_builtin": bool(p.get("is_builtin")),
+        }
+        for p in agi.list_style_presets()
+    ]
 
 
 @router.get("/list")

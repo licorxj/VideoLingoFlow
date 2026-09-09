@@ -23,6 +23,9 @@ class S_SrtToText(BaseStep):
         if isinstance(raw, list):
             raw = raw[0] if raw else None
         path = raw if isinstance(raw, str) else None
+        # 连线注入的路径可能是相对路径（相对 task_dir），需拼接到任务目录再判断
+        if path and not os.path.isabs(path):
+            path = os.path.join(task_dir, path)
         return bool(path) and os.path.isfile(path)
 
     def run(self, task_dir, callback=None, cancel_callback=None):
@@ -34,6 +37,9 @@ class S_SrtToText(BaseStep):
         if isinstance(raw, list):
             raw = raw[0] if raw else None
         srt_path = raw if isinstance(raw, str) else None
+        # 连线注入的路径可能是相对路径（相对 task_dir），需拼接到任务目录再判断
+        if srt_path and not os.path.isabs(srt_path):
+            srt_path = os.path.join(task_dir, srt_path)
         if not srt_path or not os.path.isfile(srt_path):
             raise ValueError(
                 "SRT 转文本失败：未提供有效的字幕文件路径（step_inputs['subtitle'] 为空或文件不存在）"

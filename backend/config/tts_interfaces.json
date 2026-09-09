@@ -904,7 +904,7 @@
           }
         ],
         "max_concurrent": "3",
-        "timeout": "300",
+        "timeout": "600",
         "voice_options": []
       }
     },

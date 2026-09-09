@@ -22,10 +22,10 @@
 import uuid
 from pathlib import Path
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from backend.control_plane.database import session_scope
-from backend.control_plane.models import CREATION_ASSET_KINDS, ChapterStitch, Creation, CreationAsset, CreationChapter, CreationCharacter, CreationProp, CreationScene, CreationShot
+from backend.control_plane.models import CREATION_ASSET_KINDS, ChapterStitch, Creation, CreationAsset, CreationChapter, CreationCharacter, CreationProp, CreationScene, CreationShot, GenerationTask, StylePreset
 from backend.creation import audio_refs, paths
 from backend.creation.common import NotFoundError, ValidationError, ensure_tag_list, row_to_dict
 
@@ -39,6 +39,10 @@ _ASSET_FIELDS = {"name", "ref_id", "paths", "sequence", "duration_seconds", "des
 _CHAPTER_STITCH_FIELDS = {"transition", "transition_duration", "resolution", "aspect_ratio",
                           "make_cover", "cover_duration", "cover_image", "sources", "output",
                           "duration_seconds"}
+_STYLE_PRESET_FIELDS = {"name", "art_style", "genre_tags", "audience_tags", "description", "is_builtin"}
+_GENERATION_TASK_FIELDS = {"chapter_id", "kind", "target_type", "target_id", "step_id",
+                           "interface", "model", "mode", "prompt", "upstream_task_id",
+                           "status", "result", "error", "duration_ms"}
 
 
 def _new_dialogue_id() -> str:
@@ -140,10 +144,24 @@ def set_script(creation_id: str, script_text: str) -> dict:
 
 
 def delete_creation(creation_id: str) -> None:
-    """删除项目及其人物、章节、分镜、资产明细。"""
+    """删除项目及其人物、章节、分镜、资产明细（软删除，数据可恢复）。
+
+    级联软删所有子表，避免已删除项目下的章节/分镜/资产仍出现在列表中。
+    """
     with session_scope() as session:
-        row = _require_creation(session, creation_id)
-        session.delete(row)
+        _require_creation(session, creation_id)
+        now = func.now()
+        chapter_ids = select(CreationChapter.id).where(CreationChapter.creation_id == creation_id)
+        # 分镜通过章节级联软删（shot 无 creation_id 字段）
+        session.execute(
+            update(CreationShot).where(CreationShot.chapter_id.in_(chapter_ids)).values(deleted_at=now)
+        )
+        for model in (CreationChapter, CreationCharacter, CreationScene, CreationProp,
+                      CreationAsset, ChapterStitch, GenerationTask):
+            session.execute(
+                update(model).where(model.creation_id == creation_id).values(deleted_at=now)
+            )
+        session.execute(update(Creation).where(Creation.id == creation_id).values(deleted_at=now))
 
 
 # ---------------------------------------------------------------- 项目人物
@@ -229,7 +247,7 @@ def remove_creation_character(character_id: str) -> None:
         row = session.get(CreationCharacter, character_id)
         if row is None:
             raise NotFoundError(f"项目人物不存在: {character_id}")
-        session.delete(row)
+        session.execute(update(CreationCharacter).where(CreationCharacter.id == character_id).values(deleted_at=func.now()))
 
 
 def publish_character_to_library(creation_character_id: str, *, tags=None) -> dict:
@@ -325,12 +343,13 @@ def update_chapter(chapter_id: str, **fields) -> dict:
 
 
 def remove_chapter(chapter_id: str) -> None:
-    """删除章节及其下全部分镜。"""
+    """删除章节及其下全部分镜（软删除）。"""
     with session_scope() as session:
         row = session.get(CreationChapter, chapter_id)
         if row is None:
             raise NotFoundError(f"章节不存在: {chapter_id}")
-        session.delete(row)
+        session.execute(update(CreationShot).where(CreationShot.chapter_id == chapter_id).values(deleted_at=func.now()))
+        session.execute(update(CreationChapter).where(CreationChapter.id == chapter_id).values(deleted_at=func.now()))
 
 
 # ---------------------------------------------------------------- 场景资产
@@ -407,7 +426,7 @@ def remove_scene(scene_id: str) -> None:
         row = session.get(CreationScene, scene_id)
         if row is None:
             raise NotFoundError(f"场景不存在: {scene_id}")
-        session.delete(row)
+        session.execute(update(CreationScene).where(CreationScene.id == scene_id).values(deleted_at=func.now()))
 
 
 # ---------------------------------------------------------------- 道具资产
@@ -498,7 +517,7 @@ def remove_prop(prop_id: str) -> None:
         row = session.get(CreationProp, prop_id)
         if row is None:
             raise NotFoundError(f"道具不存在: {prop_id}")
-        session.delete(row)
+        session.execute(update(CreationProp).where(CreationProp.id == prop_id).values(deleted_at=func.now()))
 
 
 # ---------------------------------------------------------------- 分镜
@@ -528,7 +547,7 @@ def add_shot(
 ) -> dict:
     """新增分镜;order_no 缺省时追加到末尾。
 
-    characters 接受姓名列表或 [{"name": .., "character_lib_id": ..}];dialogues
+    characters 接受姓名列表或 [{"name": .., "id": .., "character_lib_id": ..}];dialogues
     接受 (人物, 内容) 元组或 {"character": .., "content": ..} 字典,缺省时自动
     生成 dialogue_id。
     """
@@ -636,7 +655,7 @@ def remove_shot(shot_id: str) -> None:
         row = session.get(CreationShot, shot_id)
         if row is None:
             raise NotFoundError(f"分镜不存在: {shot_id}")
-        session.delete(row)
+        session.execute(update(CreationShot).where(CreationShot.id == shot_id).values(deleted_at=func.now()))
 
 
 # ---------------------------------------------------------------- 资产明细
@@ -744,7 +763,7 @@ def remove_asset(asset_id: str) -> None:
         row = session.get(CreationAsset, asset_id)
         if row is None:
             raise NotFoundError(f"项目资产不存在: {asset_id}")
-        session.delete(row)
+        session.execute(update(CreationAsset).where(CreationAsset.id == asset_id).values(deleted_at=func.now()))
 
 
 def add_chapter_stitch(creation_id: str, chapter_id: str, **fields) -> dict:
@@ -796,6 +815,163 @@ def get_chapter_stitch(stitch_id: str) -> dict:
         return row_to_dict(row)
 
 
+def add_generation_task(creation_id: str, **fields) -> dict:
+    """登记一次生成调用（生图/生视频/TTS）到生成任务台账。
+
+    kind: image / video / tts；target_type: shot / character / scene / prop / chapter。
+    result 为产物路径 JSON 字符串；失败时 status=failed 并写入 error。
+    """
+    unknown = set(fields) - _GENERATION_TASK_FIELDS
+    if unknown:
+        raise ValidationError(f"不支持的生成任务字段: {sorted(unknown)}")
+    kind = str(fields.get("kind") or "").strip()
+    if kind not in {"image", "video", "tts"}:
+        raise ValidationError(f"未知生成类型 {kind},可选: image/video/tts")
+    with session_scope() as session:
+        if creation_id:
+            _require_creation(session, creation_id)
+        row = GenerationTask(
+            id=str(uuid.uuid4()),
+            creation_id=creation_id or None,
+            chapter_id=str(fields.get("chapter_id") or "") or None,
+            kind=kind,
+            target_type=str(fields.get("target_type") or ""),
+            target_id=str(fields.get("target_id") or ""),
+            step_id=str(fields.get("step_id") or ""),
+            interface=str(fields.get("interface") or ""),
+            model=str(fields.get("model") or ""),
+            mode=str(fields.get("mode") or ""),
+            prompt=str(fields.get("prompt") or ""),
+            upstream_task_id=str(fields.get("upstream_task_id") or "") or None,
+            status=str(fields.get("status") or "success"),
+            result=str(fields.get("result") or ""),
+            error=str(fields.get("error") or ""),
+            duration_ms=int(fields.get("duration_ms") or 0),
+        )
+        session.add(row)
+        session.flush()
+        return row_to_dict(row)
+
+
+def list_generation_tasks(creation_id: str = "", *, kind: str = "", target_type: str = "",
+                          target_id: str = "", status: str = "", step_id: str = "",
+                          limit: int = 200) -> list[dict]:
+    """查询生成任务台账（默认按时间倒序，最新在前）。"""
+    with session_scope() as session:
+        stmt = select(GenerationTask)
+        if creation_id:
+            stmt = stmt.where(GenerationTask.creation_id == creation_id)
+        if kind:
+            stmt = stmt.where(GenerationTask.kind == kind)
+        if target_type:
+            stmt = stmt.where(GenerationTask.target_type == target_type)
+        if target_id:
+            stmt = stmt.where(GenerationTask.target_id == target_id)
+        if status:
+            stmt = stmt.where(GenerationTask.status == status)
+        if step_id:
+            stmt = stmt.where(GenerationTask.step_id == step_id)
+        rows = session.scalars(stmt.order_by(GenerationTask.created_at.desc()).limit(limit)).all()
+        return [row_to_dict(r) for r in rows]
+
+
+def get_generation_task(task_id: str) -> dict:
+    with session_scope() as session:
+        row = session.get(GenerationTask, task_id)
+        if row is None:
+            raise NotFoundError(f"生成任务不存在: {task_id}")
+        return row_to_dict(row)
+
+
+def update_generation_task(task_id: str, **fields) -> dict:
+    unknown = set(fields) - _GENERATION_TASK_FIELDS
+    if unknown:
+        raise ValidationError(f"不支持更新的字段: {sorted(unknown)}")
+    with session_scope() as session:
+        row = session.get(GenerationTask, task_id)
+        if row is None:
+            raise NotFoundError(f"生成任务不存在: {task_id}")
+        for key, value in fields.items():
+            setattr(row, key, value)
+        session.flush()
+        return row_to_dict(row)
+
+
+# ---------------------------------------------------------------- 风格预设库
+
+
+def add_style_preset(name: str, **fields) -> dict:
+    """新增风格预设（题材/画风/受众组合），name 全局唯一。"""
+    name = str(name or "").strip()
+    if not name:
+        raise ValidationError("风格预设名称不能为空")
+    unknown = set(fields) - _STYLE_PRESET_FIELDS
+    if unknown:
+        raise ValidationError(f"不支持的风格预设字段: {sorted(unknown)}")
+    with session_scope() as session:
+        if session.scalar(select(StylePreset.id).where(StylePreset.name == name)):
+            raise ValidationError(f"已存在同名风格预设: {name}")
+        row = StylePreset(
+            id=str(uuid.uuid4()),
+            name=name,
+            art_style=str(fields.get("art_style") or ""),
+            genre_tags=ensure_tag_list(fields.get("genre_tags")),
+            audience_tags=ensure_tag_list(fields.get("audience_tags")),
+            description=str(fields.get("description") or ""),
+            is_builtin=bool(fields.get("is_builtin")),
+        )
+        session.add(row)
+        session.flush()
+        return row_to_dict(row)
+
+
+def list_style_presets() -> list[dict]:
+    """风格预设列表：内置在前，其余按创建时间升序。"""
+    with session_scope() as session:
+        rows = session.scalars(
+            select(StylePreset).order_by(StylePreset.is_builtin.desc(), StylePreset.created_at)
+        ).all()
+        return [row_to_dict(r) for r in rows]
+
+
+def get_style_preset(preset_id: str) -> dict:
+    with session_scope() as session:
+        row = session.get(StylePreset, preset_id)
+        if row is None:
+            raise NotFoundError(f"风格预设不存在: {preset_id}")
+        return row_to_dict(row)
+
+
+def update_style_preset(preset_id: str, **fields) -> dict:
+    unknown = set(fields) - _STYLE_PRESET_FIELDS
+    if unknown:
+        raise ValidationError(f"不支持更新的字段: {sorted(unknown)}")
+    with session_scope() as session:
+        row = session.get(StylePreset, preset_id)
+        if row is None:
+            raise NotFoundError(f"风格预设不存在: {preset_id}")
+        if "name" in fields:
+            name = str(fields["name"] or "").strip()
+            if not name:
+                raise ValidationError("风格预设名称不能为空")
+            if session.scalar(select(StylePreset.id).where(
+                    StylePreset.name == name, StylePreset.id != preset_id)):
+                raise ValidationError(f"已存在同名风格预设: {name}")
+            fields["name"] = name
+        for key, value in fields.items():
+            setattr(row, key, value)
+        session.flush()
+        return row_to_dict(row)
+
+
+def delete_style_preset(preset_id: str) -> None:
+    with session_scope() as session:
+        row = session.get(StylePreset, preset_id)
+        if row is None:
+            raise NotFoundError(f"风格预设不存在: {preset_id}")
+        session.execute(update(StylePreset).where(StylePreset.id == preset_id).values(deleted_at=func.now()))
+
+
 def export_creation(creation_id: str) -> dict:
     """一次性导出项目全部数据(主表+人物+章节含分镜+资产明细),供 AI 创作流程取数。"""
     return get_creation(creation_id, with_detail=True)
@@ -828,6 +1004,11 @@ def _require_chapter(session, creation_id: str, chapter_id: str) -> CreationChap
 
 
 def _normalize_shot_characters(entries) -> list:
+    """分镜人物结构化：接受姓名字符串或 ``{"name", "id", "character_lib_id"}``。
+
+    ``id`` 为项目人物 id（``cp_creation_characters.id``），实现分镜↔人物强关联；
+    ``character_lib_id`` 为公共角色库引用（可选）。
+    """
     result = []
     for entry in entries or []:
         if isinstance(entry, str):
@@ -836,11 +1017,13 @@ def _normalize_shot_characters(entries) -> list:
                 result.append(name)
         elif isinstance(entry, dict) and str(entry.get("name", "")).strip():
             normalized = {"name": str(entry["name"]).strip()}
+            if str(entry.get("id") or "").strip():
+                normalized["id"] = str(entry["id"]).strip()
             if entry.get("character_lib_id"):
                 normalized["character_lib_id"] = entry["character_lib_id"]
             result.append(normalized)
         else:
-            raise ValidationError(f"分镜人物格式应为姓名或 {{name, character_lib_id}}: {entry!r}")
+            raise ValidationError(f"分镜人物格式应为姓名或 {{name, id, character_lib_id}}: {entry!r}")
     return result
 
 

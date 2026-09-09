@@ -30,7 +30,7 @@
 |---|---|---|---|
 | 1 | **分镜生产字段 + 状态机** ✅已完成 | `cp_creation_shots` 增列 `shot_type / angle / movement / duration_seconds / status / image_prompt / video_prompt`；`agi_shot` 按量化规则产出；媒体节点生成前后回写 status；另补 **四层状态机**：`cp_creation_chapters`/`cp_creation_characters` 增 `status` 列，`agi_chapter`/`agi_shot` 按序幂等复用就绪项、单镜节点已存在资产则跳过（断点续跑），`agi_extract`/`agi_prompt` 也落 status | 模型迁移 + agi_shot + 媒体四件套 + agi_chapter/agi_extract/agi_prompt |
 | 2 | **资产提取模式** ✅已完成 | `agi_character / agi_scene` 增加 `mode: 生成/从剧本提取`；提取模式以格式化剧本为输入，同名合并（场景按 地点+时间段）；并新增 `agi_extract` 一次性提取人物/场景/道具 | agi_character / agi_scene / agi_extract |
-| 3 | **格式化剧本中间产物** | `agi_deepen` 产出规范剧本（`## S01 \| 内景·地点 \| 时间` + 动作段 + 对白格式）写入章节，作为提取与拆解的规范输入，浏览页可人工审改 | agi_deepen + 浏览弹窗 |
+| 3 | **格式化剧本中间产物** ✅已完成 | `agi_deepen` 产出规范剧本（`## S01 \| 内景·地点 \| 时间` + 动作段 + 对白格式）写入章节 `original_text`；`agi_extract/agi_shot` 以此为规范输入；浏览弹窗（`CreationBrowserDialog`）章节卡展示「格式化剧本」并支持人工审改（`PUT /api/creation/chapters/{id}` 更新标题/摘要/剧本文本） | agi_deepen + 浏览弹窗 + 审改接口 |
 | 4 | **提示词模板库** ✅已完成 | Drama 技能提示词改造为本项目 MD 模板，节点调用 LLM 时注入 system prompt | `backend/config/drama_prompts/` + 6 个 LLM 节点 |
 
 ### P1 — 可运营性
@@ -38,10 +38,10 @@
 | # | 改进项 | 落地内容 |
 |---|---|---|
 | 5 | 提示词沉淀 ✅已完成 | 人物/场景/分镜增 `final_prompt` 列（`agi_prompt` 节点生成并回写，可人工改）；运行时拼装作初值 |
-| 6 | 生成任务台账 | 新表 `cp_generation_tasks`（kind/目标 id/interface/model/prompt/上游 task_id/结果/错误/耗时）；媒体节点每次生成登记；支持单分镜重试 |
+| 6 | 生成任务台账 ✅已完成 | 新表 `cp_generation_tasks`（kind/目标 id/interface/model/prompt/上游 task_id/结果/错误/耗时）；`_gen_images`/`_gen_video`/`_tts` 统一登记（线程上下文透传目标），失败留 error；`retry_failed` 只重跑失败分镜并串联 `upstream_task_id` |
 | 7 | 道具资产 ✅已完成 | 新表 `cp_creation_props` + 提取产出 + 白底单品图 |
-| 8 | 风格预设库 | `style_presets` 表 + 立项节点选预设 |
-| 9 | 分镜关联结构化 | shots 增 `scene_id`；characters 由名字数组升级为 `{name, id}`（含迁移脚本） |
+| 8 | 风格预设库 ✅已完成 | 新表 `cp_style_presets`（name/art_style/genre_tags/audience_tags/description/is_builtin）+ 迁移预置 4 个内置预设；立项节点新增「风格预设」下拉（`/api/creation/style-presets`），选中后自动带出题材/受众并写入【画风锁定】供下游生图取用，节点显式标签优先 |
+| 9 | 分镜关联结构化 ✅已完成 | shots 增 `scene_id`（已有列，本轮补写入）；`agi_shot` 按人物名/别名解析 id 写出 `{name, id}`，并按 (地点+时间)→地点 解析 `scene_id`；`_normalize_shot_characters` 支持保留 `id`；迁移 `20260909_09` 数据迁移存量分镜（名字数组→对象 + scene_id 回填） |
 
 ### P2 — 增强
 
@@ -50,7 +50,7 @@
 | 10 | 按章节锁定生成配置（换模型不重跑全项目） ✅已完成 |
 | 11 | 角色图 `seed_value` + `reference_images`（重生成一致性） ✅已完成 |
 | 12 | 章节拼接历史表（可重拼、转场） ✅已完成 |
-| 13 | 全表软删除 |
+| 13 | 全表软删除 ✅已完成 | 全部创作域模型（含公共素材库）继承 `SoftDeleteMixin`；`database.do_orm_execute` 监听器统一为 `SoftDeleteMixin` 实体附加 `deleted_at IS NULL` 过滤（查询已删除数据用 `session.info["include_deleted"]=True`）；`delete_creation`/`remove_chapter` 级联软删子表，各 `remove_*/delete_*` 改为软删；迁移 `20260909_11` 为 13 张表补 `deleted_at` |
 
 ---
 

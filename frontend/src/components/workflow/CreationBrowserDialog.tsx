@@ -4,7 +4,7 @@ import client from "@/api/client";
 import {
   X, RefreshCw, Network, BookOpen, Users, Clapperboard, Scissors,
   Image as ImageIcon, Film, Mic2, AudioLines, Loader2, AlertTriangle,
-  LayoutGrid, ArrowLeft,
+  LayoutGrid, ArrowLeft, Pencil, Save,
 } from "lucide-react";
 
 /** 文本固定框：限定高度内部滚动，避免长文撑爆版面 */
@@ -105,6 +105,84 @@ function MediaStrip({ urls, kind, onZoom }: {
           onPointerDown={(e) => e.stopPropagation()}
           className="w-48 h-8" />
       ))}
+    </div>
+  );
+}
+
+/** 章节「人工审改」弹层：编辑标题/摘要/格式化剧本文本并保存 */
+function ChapterEditor({ chapter, onCancel, onSaved }: {
+  chapter: Chapter;
+  onCancel: () => void;
+  onSaved: () => void;
+}) {
+  const [title, setTitle] = useState(chapter.title || "");
+  const [summary, setSummary] = useState(chapter.summary || "");
+  const [text, setText] = useState(chapter.original_text || "");
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+
+  const dirty = (): Record<string, string> => {
+    const out: Record<string, string> = {};
+    if (title !== (chapter.title || "")) out.title = title;
+    if (summary !== (chapter.summary || "")) out.summary = summary;
+    if (text !== (chapter.original_text || "")) out.original_text = text;
+    return out;
+  };
+
+  const save = () => {
+    const patch = dirty();
+    if (!Object.keys(patch).length) { onCancel(); return; }
+    setSaving(true);
+    setErr("");
+    client.put(`/api/creation/chapters/${chapter.id}`, patch)
+      .then(onSaved)
+      .catch((e) => { setErr(e?.response?.data?.detail || e?.message || "保存失败"); })
+      .finally(() => setSaving(false));
+  };
+
+  const INP = "w-full rounded-md border border-border/50 bg-muted/40 px-2 py-1.5 text-xs focus:outline-none focus:border-primary/60";
+  return (
+    <div className="fixed inset-0 z-[10020] bg-black/60 flex items-center justify-center p-6"
+      onClick={(e) => { e.stopPropagation(); onCancel(); }}>
+      <div className="w-[72vw] max-w-3xl h-[82vh] flex flex-col rounded-xl border border-border/60 bg-background shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50 bg-muted/30 flex-shrink-0">
+          <BookOpen className="w-4 h-4 text-amber-500" />
+          <span className="text-sm font-semibold truncate">
+            人工审改 · {chapter.title || `第${chapter.order_no}章`}
+          </span>
+          <span className="text-[10px] text-muted-foreground">保存后下游提取/拆解以修改后的剧本为准</span>
+          <button type="button" onClick={onCancel}
+            className="ml-auto p-1.5 rounded-md hover:bg-muted text-muted-foreground" title="取消">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="flex-1 overflow-auto p-4 space-y-3">
+          <div>
+            <div className="text-[11px] font-semibold text-foreground/80 mb-1">标题</div>
+            <input className={INP} value={title} onChange={(e) => setTitle(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-[11px] font-semibold text-foreground/80 mb-1">摘要</div>
+            <textarea className={INP + " h-20 resize-y"} value={summary} onChange={(e) => setSummary(e.target.value)} />
+          </div>
+          <div>
+            <div className="text-[11px] font-semibold text-foreground/80 mb-1">剧本正文（格式化剧本）</div>
+            <textarea className={INP + " h-52 resize-y font-mono text-[12px] leading-relaxed"}
+              value={text} onChange={(e) => setText(e.target.value)} spellCheck={false} />
+          </div>
+          {err && <div className="text-xs text-amber-600">{err}</div>}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-border/50 bg-muted/30 flex-shrink-0">
+          <button type="button" onClick={onCancel}
+            className="px-3 py-1.5 rounded-md text-xs border border-border/50 hover:bg-muted">取消</button>
+          <button type="button" onClick={save} disabled={saving}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-60">
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            保存
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -235,6 +313,8 @@ export default function CreationBrowserDialog({ open, onClose, creationId }: {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [zoom, setZoom] = useState("");
+  /** 正在「人工审改」的章节（非空时显示编辑弹层） */
+  const [editing, setEditing] = useState<Chapter | null>(null);
   /** 视图：map=思维导图（单项目） / grid=项目列表首页（多宫格） */
   const [view, setView] = useState<"map" | "grid">("map");
   /** 从项目列表点入的项目（覆盖节点绑定的 creationId） */
@@ -445,8 +525,21 @@ export default function CreationBrowserDialog({ open, onClose, creationId }: {
                       {(tree.chapters || []).map((ch) => (
                         <div key={ch.id} className={LEAF_TICK}>
                           <div className={`${CARD} w-64`}>
-                            <div className="text-xs font-semibold">{ch.title}</div>
-                            <TextBlock text={ch.summary || ch.original_text || ""} />
+                            <div className="flex items-center gap-1">
+                              <div className="text-xs font-semibold flex-1 truncate" title={ch.title}>{ch.title}</div>
+                              <button type="button"
+                                onClick={(e) => { e.stopPropagation(); setEditing(ch); }}
+                                className="p-1 rounded-md hover:bg-muted text-muted-foreground" title="人工审改（编辑剧本/摘要）">
+                                <Pencil className="w-3 h-3" />
+                              </button>
+                            </div>
+                            {ch.summary ? <TextBlock text={ch.summary} /> : null}
+                            {ch.original_text ? (
+                              <div className="mt-1">
+                                <SectionTitle text="格式化剧本" />
+                                <TextBlock text={ch.original_text} />
+                              </div>
+                            ) : null}
                           </div>
                           <div className={BRANCH + " mt-2"}>
                             {(ch.shots || []).map((s) => (
@@ -508,6 +601,15 @@ export default function CreationBrowserDialog({ open, onClose, creationId }: {
           )}
         </div>
       </div>
+
+      {/* 章节人工审改 */}
+      {editing && (
+        <ChapterEditor
+          chapter={editing}
+          onCancel={() => setEditing(null)}
+          onSaved={() => { setEditing(null); load(); }}
+        />
+      )}
 
       {/* 图片放大预览 */}
       {zoom && (

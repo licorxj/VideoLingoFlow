@@ -20,7 +20,7 @@ depends_on = None
 def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
-    if "cp_chapter_stitch" in set(inspector.get_tables()):
+    if "cp_chapter_stitch" in set(inspector.get_table_names()):
         return
     op.create_table(
         "cp_chapter_stitch",
@@ -49,7 +49,7 @@ def upgrade() -> None:
 def downgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
-    if "cp_chapter_stitch" not in set(inspector.get_tables()):
+    if "cp_chapter_stitch" not in set(inspector.get_table_names()):
         return
     op.drop_index("ix_cp_chapter_stitch_chapter", table_name="cp_chapter_stitch")
     op.drop_table("cp_chapter_stitch")

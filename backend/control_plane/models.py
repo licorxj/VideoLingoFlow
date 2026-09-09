@@ -20,6 +20,17 @@ class TimestampedVersioned:
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
 
 
+class SoftDeleteMixin:
+    """软删除：deleted_at 非空即视为已删除。
+
+    查询过滤由 ``backend.control_plane.database`` 的 ``do_orm_select`` 监听器统一
+    施加（``with_loader_criteria``），无需在每个查询里手写条件；需要连已删除数据
+    一起读取时，在该 session 上设置 ``session.info["include_deleted"] = True``。
+    """
+
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
 class User(TimestampedVersioned, Base):
     __tablename__ = "cp_users"
     username: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
@@ -204,7 +215,7 @@ class Quota(TimestampedVersioned, Base):
 CREATION_ASSET_KINDS = {"character", "scene_image", "prop_image", "voiceover", "shot_video", "sfx", "bgm", "shot_render", "chapter_render", "chapter_cover"}
 
 
-class Creation(TimestampedVersioned, Base):
+class Creation(SoftDeleteMixin, TimestampedVersioned, Base):
     """AI 剧集创作项目主表(AGI 项目)。"""
     __tablename__ = "cp_creations"
     owner_id: Mapped[str | None] = mapped_column(ForeignKey("cp_users.id", ondelete="SET NULL"))
@@ -223,7 +234,7 @@ class Creation(TimestampedVersioned, Base):
     assets: Mapped[list["CreationAsset"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
 
 
-class CreationCharacter(TimestampedVersioned, Base):
+class CreationCharacter(SoftDeleteMixin, TimestampedVersioned, Base):
     """创作项目内的人物设定,可通过 character_lib_id 关联公共角色库。"""
     __tablename__ = "cp_creation_characters"
     __table_args__ = (
@@ -248,7 +259,7 @@ class CreationCharacter(TimestampedVersioned, Base):
     creation: Mapped[Creation] = relationship(back_populates="characters")
 
 
-class CreationChapter(TimestampedVersioned, Base):
+class CreationChapter(SoftDeleteMixin, TimestampedVersioned, Base):
     """创作项目的章节内容。"""
     __tablename__ = "cp_creation_chapters"
     __table_args__ = (UniqueConstraint("creation_id", "order_no", name="uq_cp_creation_chapters_creation_order"),)
@@ -264,7 +275,7 @@ class CreationChapter(TimestampedVersioned, Base):
     shots: Mapped[list["CreationShot"]] = relationship(back_populates="chapter", cascade="all, delete-orphan")
 
 
-class CreationScene(TimestampedVersioned, Base):
+class CreationScene(SoftDeleteMixin, TimestampedVersioned, Base):
     """创作项目内的场景资产;可复用并生成固定视角概念图。"""
     __tablename__ = "cp_creation_scenes"
     __table_args__ = (
@@ -283,7 +294,7 @@ class CreationScene(TimestampedVersioned, Base):
     creation: Mapped[Creation] = relationship(back_populates="scenes")
 
 
-class CreationProp(TimestampedVersioned, Base):
+class CreationProp(SoftDeleteMixin, TimestampedVersioned, Base):
     """创作项目内的道具资产;推动剧情且值得单独生图。"""
     __tablename__ = "cp_creation_props"
     __table_args__ = (
@@ -302,7 +313,7 @@ class CreationProp(TimestampedVersioned, Base):
     creation: Mapped[Creation] = relationship(back_populates="props")
 
 
-class CreationShot(TimestampedVersioned, Base):
+class CreationShot(SoftDeleteMixin, TimestampedVersioned, Base):
     """章节下的分镜;场景描述与对话(含对话 id)以 JSON 列表存储。"""
     __tablename__ = "cp_creation_shots"
     __table_args__ = (UniqueConstraint("chapter_id", "order_no", name="uq_cp_creation_shots_chapter_order"),)
@@ -329,7 +340,7 @@ class CreationShot(TimestampedVersioned, Base):
     scene: Mapped[CreationScene] = relationship("CreationScene")
 
 
-class CreationAsset(TimestampedVersioned, Base):
+class CreationAsset(SoftDeleteMixin, TimestampedVersioned, Base):
     """项目资产明细,asset_kind 区分:character/scene_image/voiceover/shot_video/sfx/bgm/shot_render/chapter_render。"""
     __tablename__ = "cp_creation_assets"
     __table_args__ = (
@@ -350,7 +361,7 @@ class CreationAsset(TimestampedVersioned, Base):
     creation: Mapped[Creation] = relationship(back_populates="assets")
 
 
-class ChapterStitch(TimestampedVersioned, Base):
+class ChapterStitch(SoftDeleteMixin, TimestampedVersioned, Base):
     """章节拼接历史：记录每次章节导出(章节成片)的拼接配置、有序分镜成片源列表与产物路径。
 
     支持「可重拼」——用户可复用历史记录中的分镜成片源，仅更换转场/封面/分辨率重新拼接，
@@ -373,7 +384,47 @@ class ChapterStitch(TimestampedVersioned, Base):
     duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
-class Character(TimestampedVersioned, Base):
+class GenerationTask(SoftDeleteMixin, TimestampedVersioned, Base):
+    """生成任务台账：登记每次生图/生视频/TTS 调用，供运营排查与单分镜重试。
+
+    kind: image / video / tts；target_type: shot / character / scene / prop / chapter。
+    upstream_task_id 串联重试链（重试产生的新记录指向被重试的失败记录）。
+    """
+    __tablename__ = "cp_generation_tasks"
+    __table_args__ = (
+        Index("ix_cp_generation_tasks_creation_kind", "creation_id", "kind"),
+        Index("ix_cp_generation_tasks_target", "target_type", "target_id"),
+    )
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    creation_id: Mapped[str | None] = mapped_column(ForeignKey("cp_creations.id", ondelete="CASCADE"))
+    chapter_id: Mapped[str | None] = mapped_column(String(36))
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    target_type: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    target_id: Mapped[str] = mapped_column(String(36), nullable=False, default="")
+    step_id: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    interface: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    model: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    mode: Mapped[str] = mapped_column(String(32), nullable=False, default="")
+    prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    upstream_task_id: Mapped[str | None] = mapped_column(String(36))
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="success")
+    result: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    error: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class StylePreset(SoftDeleteMixin, TimestampedVersioned, Base):
+    """风格预设库：立项时可复用的题材/画风/受众组合（内置预设 + 用户自定义）。"""
+    __tablename__ = "cp_style_presets"
+    name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+    art_style: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    genre_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    audience_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    is_builtin: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+
+
+class Character(SoftDeleteMixin, TimestampedVersioned, Base):
     """公共角色库(跨项目共享)。"""
     __tablename__ = "cp_characters"
     __table_args__ = (Index("ix_cp_characters_origin", "origin_creation_id"),)
@@ -390,7 +441,7 @@ class Character(TimestampedVersioned, Base):
     origin_creation_id: Mapped[str | None] = mapped_column(ForeignKey("cp_creations.id", ondelete="SET NULL"))
 
 
-class ImageAsset(TimestampedVersioned, Base):
+class ImageAsset(SoftDeleteMixin, TimestampedVersioned, Base):
     """公共图片素材库,path 为项目根相对路径(data/ 内)。"""
     __tablename__ = "cp_images"
     path: Mapped[str] = mapped_column(String(1024), nullable=False, unique=True)
@@ -402,7 +453,7 @@ class ImageAsset(TimestampedVersioned, Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
-class VideoAsset(TimestampedVersioned, Base):
+class VideoAsset(SoftDeleteMixin, TimestampedVersioned, Base):
     """公共视频素材库,path 为项目根相对路径(data/ 内)。"""
     __tablename__ = "cp_videos"
     path: Mapped[str] = mapped_column(String(1024), nullable=False, unique=True)
