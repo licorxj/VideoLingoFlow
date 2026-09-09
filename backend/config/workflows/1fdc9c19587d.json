@@ -17,7 +17,7 @@
           "selectedTypes": [
             "video"
           ],
-          "videoPath": "M:\\视频下载\\西门子UG-NX-初学者教程-数控软件\\01-Unigraphics NX Co-ordinate System, CSYS for Beginners ｜｜ NX 2306 Tutorials.webm",
+          "videoPath": "M:/视频下载/配音二创/1_《让子弹飞》姜文、葛优经典对白，精炼台词，饱含深意！.mp4",
           "source_language": "en",
           "target_language": "zh",
           "copyInputs": true,
@@ -30,11 +30,12 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\input_video.webm",
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\input_video.mp4",
           "languages": {
             "source_language": "en",
             "target_language": "zh"
-          }
+          },
+          "no_input": ""
         },
         "error": "",
         "workbench_url": "",
@@ -42,10 +43,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 563
+        "height": 564
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1780650299385",
@@ -76,39 +78,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 308
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_1_1781200299298",
-      "type": "workflow",
-      "position": {
-        "x": 735,
-        "y": -1020
-      },
-      "data": {
-        "nodeType": "subtitle_gen",
-        "label": "字幕生成",
-        "config": {
-          "file_prefix": "tran_",
-          "audioPath": "",
-          "videoPath": "",
-          "subtitlePath": "",
-          "url": ""
-        },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": "",
-        "workbench_url": "",
-        "disableExecute": false
-      },
-      "measured": {
-        "width": 420,
-        "height": 237
+        "height": 310
       },
       "selected": false,
       "dragging": false
@@ -140,7 +110,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 428
+        "height": 478
       },
       "selected": false,
       "dragging": false
@@ -149,14 +119,14 @@
       "id": "node_1_1781645240103",
       "type": "workflow",
       "position": {
-        "x": 1965,
-        "y": -1755
+        "x": 2520,
+        "y": -2025
       },
       "data": {
         "nodeType": "tts",
         "label": "语音合成 (TTS)",
         "config": {
-          "tts_engine": "8dc074bb",
+          "tts_engine": "confucius4_tts",
           "tts_mode": [
             "clone"
           ],
@@ -171,68 +141,78 @@
           "subtitlePath": "",
           "url": "",
           "ref_audio_path": "M:/音色包/不同年龄人群音色/热门音色/鹿玉青年.wav",
-          "overwrite_generate": true,
-          "voice_role_1": "白桦"
+          "overwrite_generate": false,
+          "voice_role_1": "白桦",
+          "cc_colloquial_desc": ""
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": "",
         "logLines": [
+          "  - 调速重生成完成: 2/2 段",
           "[S09] 分析变速倍数",
-          "  - 需要变速: 45 段",
-          "  - 超出最大变速(1.25x): 28 段",
-          "[S09] 最终溢出段数: 28",
-          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\dub_task_node_1_1781709944783.json",
-          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\dub_task_node_1_1781709944783.csv",
+          "  - 需要变速: 39 段（加速/溢出 0 段，减速填充 2 段）",
+          "[S09] 最终溢出段数: 0",
+          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\dub_task_node_1_1781709944783.json",
+          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\dub_task_node_1_1781709944783.csv",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 456
+        "height": 586
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781709944783",
       "type": "workflow",
       "position": {
-        "x": 1320,
-        "y": -1590
+        "x": 1965,
+        "y": -1935
       },
       "data": {
         "nodeType": "dub_task",
         "label": "生成配音任务",
         "config": {
           "ai_read_tone": true,
-          "normalize_chinese_read_text": true,
+          "normalize_chinese_read_text": false,
           "ai_dialect_colloquial": false,
-          "dialect_name": "四川话",
+          "dialect_name": "东北话",
           "audioPath": "",
           "videoPath": "",
           "subtitlePath": "",
-          "url": ""
+          "url": "",
+          "speed_predict_reduce": false
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 224
+        "height": 442
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781810867151",
@@ -246,8 +226,8 @@
         "label": "音频合并",
         "config": {
           "video_speed_adjust": false,
-          "speed_min": "0.98",
-          "speed_max": "1.4",
+          "speed_min": "0.9",
+          "speed_max": "2",
           "gap_threshold": "0.5",
           "fast_limit": "1.5",
           "audioPath": "",
@@ -256,20 +236,27 @@
           "url": "",
           "audio_format": "wav"
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/dub_node_1_1781810867151.wav",
+          "dub_srt": "output/dub_node_1_1781810867151.srt",
+          "dub_bilingual_srt": "output/dub_bilingual_node_1_1781810867151.srt",
+          "配音任务单": "cache\\dub_task_node_1_1781709944783.csv",
+          "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\input_video.mp4"
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 521
+        "height": 755
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781939413425",
@@ -284,8 +271,8 @@
         "config": {
           "video_quality": "copy",
           "bgm_volume": 0.65,
-          "dub_volume": 0.8,
-          "fade_in": 0.5,
+          "dub_volume": 0.9,
+          "fade_in": 0.2,
           "fade_out": 0.5,
           "preset_id": "单语-白-半透底",
           "mute_original": true,
@@ -294,20 +281,23 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_with_dub_node_1_1781939413425.mp4"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 553
+        "height": 655
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1781973904798",
@@ -337,11 +327,21 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": false,
+        "logLines": [
+          "[step_worker] start node_type=vocal_separation node_id=node_2_1781973904798 pid=40356",
+          "[step_worker] step instance created: StepVocalSeparation",
+          "[step_worker] step_inputs keys=['audio']",
+          "[step_worker] node_config keys=['method', 'format', 'audioPath', 'videoPath', 'subtitlePath', 'url', 'model']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd, kwargs=['callback', 'cancel_callback'])",
+          "[VocalSeparation] Using upstream audio: Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\output/extracted_audio_node_1_1780650299385.wav",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs', 'output_vocals', 'output_background']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\.step_node_2_1781973904798_result.json, exiting 0"
+        ]
       },
       "measured": {
         "width": 420,
-        "height": 466
+        "height": 469
       },
       "selected": false,
       "dragging": false
@@ -368,9 +368,9 @@
           "subtitlePath": "",
           "url": ""
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
         "outputs": {},
         "error": "",
         "workbench_url": "",
@@ -378,7 +378,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 209
+        "height": 478
       },
       "selected": false,
       "dragging": false
@@ -412,7 +412,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 433
+        "height": 439
       },
       "selected": false,
       "dragging": false
@@ -446,7 +446,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 433
+        "height": 439
       },
       "selected": false,
       "dragging": false
@@ -480,137 +480,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 484
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_1_1786046579815",
-      "type": "workflow",
-      "position": {
-        "x": 150,
-        "y": -1350
-      },
-      "data": {
-        "nodeType": "sentence_preprocess",
-        "label": "断句预处理",
-        "config": {
-          "method": "punct",
-          "split_on_speaker": true,
-          "llm_max_chars": "2000",
-          "processing_language": "from_input"
-        },
-        "status": "completed",
-        "disableExecute": true,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/asr_result.json",
-          "word_index": "cache/word_index.json"
-        },
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 491
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_2_1787654223924",
-      "type": "workflow",
-      "position": {
-        "x": 135,
-        "y": -825
-      },
-      "data": {
-        "nodeType": "sentence_split",
-        "label": "句子分割",
-        "config": {
-          "processing_language": "from_input",
-          "max_sentence_length": "15",
-          "use_llm_split": true,
-          "split_sentence_ends": true,
-          "split_clause_breaks": true,
-          "merge_min_duration": "0.1",
-          "merge_max_gap": "0.05",
-          "pause_split_threshold": "1.5",
-          "split_on_speaker": true,
-          "merge_short_enabled": true,
-          "merge_gap_enabled": false,
-          "pause_split_enabled": true
-        },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/sentences_node_2_1787654223924.json",
-          "text": "cache/sentences_text_node_2_1787654223924.txt"
-        },
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 672
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_2_1787215768626",
-      "type": "workflow",
-      "position": {
-        "x": -375,
-        "y": -1170
-      },
-      "data": {
-        "nodeType": "asr_postprocess",
-        "label": "ASR后处理",
-        "config": {
-          "run_vad": true,
-          "run_alignment": true,
-          "run_diarization": false,
-          "force_rerun": true,
-          "vad_engine": "silero",
-          "vad_onset": 0.5,
-          "vad_offset": 0.363,
-          "alignment_engine": "whisperx",
-          "alignment_model": "",
-          "dtype": "",
-          "diarize_engine": "pyannote",
-          "diarize_model": "",
-          "num_speakers": "",
-          "min_speakers": "",
-          "max_speakers": ""
-        },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/asr_postprocessed_node_2_1787215768626.json"
-        },
-        "error": "",
-        "workbench_url": "",
-        "logLines": [
-          "[Pipeline] all stages done",
-          "[ASR-PP] [5/6] pipeline returned, segments=65",
-          "[ASR-PP] [6/6] normalizing and clamping result...",
-          "[ASR-PP] [6/6] audio_duration=903.86",
-          "[ASR-PP] [6/6] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\asr_postprocessed_node_2_1787215768626.json",
-          "[ASR-PP] === run() END segments=65 ===",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_2_1787215768626_result.json, exiting 0"
-        ]
-      },
-      "measured": {
-        "width": 420,
-        "height": 575
+        "height": 490
       },
       "selected": false,
       "dragging": false
@@ -626,7 +496,7 @@
         "nodeType": "asr",
         "label": "语音识别 (ASR)",
         "config": {
-          "engine": "mimo_asr",
+          "engine": "moss",
           "language": "auto",
           "model": "",
           "compute_type": "",
@@ -636,9 +506,9 @@
           "vad_offset": 0.363,
           "hotwords_enabled": false,
           "hotwords": "",
-          "post_vad": false,
-          "post_alignment": false,
-          "post_diarization": false
+          "post_vad": true,
+          "post_alignment": true,
+          "post_diarization": true
         },
         "status": "completed",
         "disableExecute": false,
@@ -649,72 +519,48 @@
         },
         "error": "",
         "logLines": [
-          "[ASR PostProcess] diarization_enabled=False, diarization_engine=pyannote",
+          "[ASR PostProcess] diarization_enabled=True, diarization_engine=pyannote",
           "[ASR PostProcess] VAD was executed internally by ASR engine, skipping",
           "[ASR PostProcess] Alignment was executed internally by ASR engine, skipping",
           "[ASR PostProcess] Diarization was executed internally by ASR engine, skipping",
           "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
           "[ASR PostProcess] No post-processing needed, returning original result",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1787828965709_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\.step_node_1_1787828965709_result.json, exiting 0"
         ],
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 552
+        "height": 570
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
-      "id": "node_1_1787830624387",
+      "id": "node_1_1787844335859",
       "type": "workflow",
       "position": {
-        "x": 135,
-        "y": -1785
+        "x": 180,
+        "y": -1755
       },
       "data": {
-        "nodeType": "ai_subtitle_correct",
-        "label": "AI字幕纠错",
-        "config": {
-          "maxChars": "5000",
-          "properNouns": ""
-        },
+        "nodeType": "asr_result_validate",
+        "label": "ASR结果校验",
+        "config": {},
         "status": "completed",
-        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "output": "output/asr_corrected_node_1_1787830624387.json",
-          "text": "output/asr_corrected_node_1_1787830624387.txt"
+          "json": "cache/asr_result_node_1_1787828965709.json"
         },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 353
-      },
-      "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_1_1787844335859",
-      "type": "workflow",
-      "position": {
-        "x": 750,
-        "y": -1230
-      },
-      "data": {
-        "nodeType": "asr_result_validate",
-        "label": "ASR结果校验",
-        "config": {},
-        "status": "pending"
-      },
-      "measured": {
-        "width": 420,
-        "height": 132
+        "height": 231
       },
       "selected": false,
       "dragging": false
@@ -723,37 +569,56 @@
       "id": "node_7_1787845973112",
       "type": "workflow",
       "position": {
-        "x": 1305,
-        "y": -975
+        "x": 1335,
+        "y": -1035
       },
       "data": {
         "nodeType": "llm_request",
         "label": "通用LLM请求",
         "config": {
-          "model": "",
-          "system_prompt": "你是一个台词二创专家，根据输入的台词，和限定的风格，对台词进行二创，要求如下：\n1、逐句改写，二创后的句式和句子长度尽量保持与原始句子长度一致；\n2、情绪起伏曲线需要尽量与原文保存一致；\n3、严格按照以下json格式输出：\n[\n  {\n    \"id\": \"1\",\n    \"start\": 11.938,\n    \"end\": 12.098,\n    \"text\": \"原文句子\",\n    \"direct\": \"改写句子\"\n  },\n ****\n]",
-          "user_prompt": "二创主题：两个男人因为昨晚喝酒没有放倒对方而争执狡辩。\n\n原文：\n\"\"\"\n{input_json}\n\"\"\"",
+          "model": "vlf-create",
+          "system_prompt": "你是一个台词二创专家，根据输入的台词，和限定的风格，对台词进行二创，要求如下：\n1、逐句改写，二创后的句式和句子长度尽量保持与原始句子长度一致，字数偏差不能超过10%；\n2、情绪起伏曲线需要尽量与原文保存一致；\n3、严格按照以下json格式输出：\n[\n  {\n    \"id\": \"1\",\n    \"start\": 11.938,\n    \"end\": 12.098,\n    \"text\": \"原文句子\",\n    \"direct\": \"改写句子\"\n    \"speaker\":\"说话人id\"\n  },\n ****\n]",
+          "user_prompt": "二创主题：两个男人在探讨如何巧妙的追求村里面的王寡妇。诙谐幽默搞笑风格，姜文的电影台词风格。\n\n原文：\n\"\"\"\n{input_json}\n\"\"\"",
           "temperature": 0.7,
           "response_json": true,
-          "log_request": false
+          "log_request": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
-        "note": "台词改写"
+        "note": "台词改写",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "result": "output/LLM_node_7_1787845973112.json",
+          "text": "[\n  {\n    \"id\": 1,\n    \"start\": 0.14,\n    \"end\": 0.82,\n    \"text\": \"晚了\",\n    \"direct\": \"晚了\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 2,\n    \"start\": 1.22,\n    \"end\": 4.56,\n    \"text\": \"前几任县长把额城的税收到九十年以后了\",\n    \"direct\": \"前几个追求者把王寡妇心伤到九十年后了\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 3,\n    \"start\": 4.82,\n    \"end\": 6.47,\n    \"text\": \"也就是他妈的西历\",\n    \"direct\": \"也就是他妈的西历\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 4,\n    \"start\": 6.81,\n    \"end\": 7.92,\n    \"text\": \"二零一零年了\",\n    \"direct\": \"二零一零年了\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 5,\n    \"start\": 8.01,\n    \"end\": 9.22,\n    \"text\": \"咱们来错地方了\",\n    \"direct\": \"咱们来错村子了\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 6,\n    \"start\": 9.71,\n    \"end\": 11.46,\n    \"text\": \"我倒是觉得这个地方不错\",\n    \"direct\": \"我倒是觉得这个寡妇不错\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 7,\n    \"start\": 11.51,\n    \"end\": 13.11,\n    \"text\": \"百姓成穷鬼了\",\n    \"direct\": \"男人成光棍了\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 8,\n    \"start\": 13.28,\n    \"end\": 14.59,\n    \"text\": \"没油水可榨了\",\n    \"direct\": \"没机会可钻了\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 9,\n    \"start\": 14.62,\n    \"end\": 17.18,\n    \"text\": \"老子从来就没想刮穷鬼的钱\",\n    \"direct\": \"老子从来就没想泡穷鬼的妞\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 10,\n    \"start\": 17.22,\n    \"end\": 19.44,\n    \"text\": \"不刮穷鬼的钱你收谁的呀\",\n    \"direct\": \"不追穷鬼的妞你泡谁的呀\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 11,\n    \"start\": 19.47,\n    \"end\": 20.78,\n    \"text\": \"谁有钱挣谁的\",\n    \"direct\": \"谁有本追谁的\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 12,\n    \"start\": 20.98,\n    \"end\": 21.88,\n    \"text\": \"当过县长吗\",\n    \"direct\": \"追过寡妇吗\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 13,\n    \"start\": 22.46,\n    \"end\": 22.88,\n    \"text\": \"没有\",\n    \"direct\": \"没有\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 14,\n    \"start\": 23.16,\n    \"end\": 23.98,\n    \"text\": \"我告诉告诉你\",\n    \"direct\": \"我告诉告诉你\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 15,\n    \"start\": 24.71,\n    \"end\": 26.94,\n    \"text\": \"县长上任得巧立名目\",\n    \"direct\": \"追求寡妇得巧立名目\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 16,\n    \"start\": 27.08,\n    \"end\": 28.22,\n    \"text\": \"拉拢豪绅\",\n    \"direct\": \"拉拢村长\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 17,\n    \"start\": 28.26,\n    \"end\": 29.28,\n    \"text\": \"交税捐款\",\n    \"direct\": \"送礼请客\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 18,\n    \"start\": 29.34,\n    \"end\": 30.38,\n    \"text\": \"他们交了\",\n    \"direct\": \"他们送了\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 19,\n    \"start\": 30.46,\n    \"end\": 32.18,\n    \"text\": \"才能让百姓跟着交钱\",\n    \"direct\": \"才能让村民跟着送礼\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 20,\n    \"start\": 32.26,\n    \"end\": 33.22,\n    \"text\": \"得钱之后\",\n    \"direct\": \"得手之后\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 21,\n    \"start\": 33.31,\n    \"end\": 35.42,\n    \"text\": \"豪绅的钱如数奉还\",\n    \"direct\": \"村长的礼如数奉还\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 22,\n    \"start\": 35.71,\n    \"end\": 37.94,\n    \"text\": \"百姓的钱三七分成\",\n    \"direct\": \"村民的礼三七分成\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 23,\n    \"start\": 38.02,\n    \"end\": 39.42,\n    \"text\": \"怎么才七成啊\",\n    \"direct\": \"怎么才七成啊\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 24,\n    \"start\": 39.46,\n    \"end\": 41.14,\n    \"text\": \"七成是人家的\",\n    \"direct\": \"七成是人家的\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 25,\n    \"start\": 41.82,\n    \"end\": 44.06,\n    \"text\": \"能得三成还得看黄四郎的脸色\",\n    \"direct\": \"能得三成还得看王寡妇的脸色\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 26,\n    \"start\": 44.11,\n    \"end\": 45.02,\n    \"text\": \"谁的脸色\",\n    \"direct\": \"谁的脸色\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 27,\n    \"start\": 45.42,\n    \"end\": 45.84,\n    \"text\": \"他\",\n    \"direct\": \"她\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 28,\n    \"start\": 46.31,\n    \"end\": 46.94,\n    \"text\": \"他\",\n    \"direct\": \"她\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 29,\n    \"start\": 47.02,\n    \"end\": 48.82,\n    \"text\": \"我大老远的来一趟\",\n    \"direct\": \"我大老远的来一趟\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 30,\n    \"start\": 49.11,\n    \"end\": 51.42,\n    \"text\": \"就是为了看他的脸色\",\n    \"direct\": \"就是为了看她的脸色\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 31,\n    \"start\": 51.82,\n    \"end\": 52.24,\n    \"text\": \"对\",\n    \"direct\": \"对\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 32,\n    \"start\": 54.42,\n    \"end\": 56.78,\n    \"text\": \"我好不容易截了趟火车\",\n    \"direct\": \"我好不容易混进这村子\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 33,\n    \"start\": 56.82,\n    \"end\": 57.46,\n    \"text\": \"当了县长\",\n    \"direct\": \"当了村长\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 34,\n    \"start\": 57.51,\n    \"end\": 57.86,\n    \"text\": \"对\",\n    \"direct\": \"对\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 35,\n    \"start\": 57.91,\n    \"end\": 59.26,\n    \"text\": \"我还得拉拢豪绅\",\n    \"direct\": \"我还得拉拢村长\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 36,\n    \"start\": 59.31,\n    \"end\": 59.66,\n    \"text\": \"对\",\n    \"direct\": \"对\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 37,\n    \"start\": 59.71,\n    \"end\": 60.94,\n    \"text\": \"还得巧立名目\",\n    \"direct\": \"还得巧立名目\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 38,\n    \"start\": 60.98,\n    \"end\": 61.34,\n    \"text\": \"对\",\n    \"direct\": \"对\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 39,\n    \"start\": 61.42,\n    \"end\": 62.98,\n    \"text\": \"还得看他妈的脸色\",\n    \"direct\": \"还得看她妈的脸色\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 40,\n    \"start\": 63.02,\n    \"end\": 63.38,\n    \"text\": \"对\",\n    \"direct\": \"对\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 41,\n    \"start\": 63.42,\n    \"end\": 65.06,\n    \"text\": \"我不成了跪着要饭的了吗\",\n    \"direct\": \"我不成了跪着讨老婆了吗\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 42,\n    \"start\": 65.11,\n    \"end\": 66.34,\n    \"text\": \"那你要这么说\",\n    \"direct\": \"那你要这么说\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 43,\n    \"start\": 66.51,\n    \"end\": 69.06,\n    \"text\": \"买官当县长还真就是跪着要饭的\",\n    \"direct\": \"追求寡妇还真就是跪着讨老婆的\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 44,\n    \"start\": 69.11,\n    \"end\": 69.86,\n    \"text\": \"就这\",\n    \"direct\": \"就这\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 45,\n    \"start\": 69.91,\n    \"end\": 71.82,\n    \"text\": \"多少人想跪还没这门子呢\",\n    \"direct\": \"多少人想追还没这门子呢\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 46,\n    \"start\": 77.98,\n    \"end\": 78.74,\n    \"text\": \"我问问你\",\n    \"direct\": \"我问问你\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 47,\n    \"start\": 80.31,\n    \"end\": 83.26,\n    \"text\": \"我为什么要上山当土匪\",\n    \"direct\": \"我为什么要一直单着身\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 48,\n    \"start\": 85.94,\n    \"end\": 87.74,\n    \"text\": \"我就是腿脚不利索\",\n    \"direct\": \"我就是放不下脸面\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 49,\n    \"start\": 87.78,\n    \"end\": 88.74,\n    \"text\": \"跪不下去\",\n    \"direct\": \"低不下头\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 50,\n    \"start\": 89.54,\n    \"end\": 91.26,\n    \"text\": \"原来你是想站着挣钱\",\n    \"direct\": \"原来你是想站着追她\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 51,\n    \"start\": 91.31,\n    \"end\": 92.46,\n    \"text\": \"那还是回山里吧\",\n    \"direct\": \"那还是打光棍吧\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 52,\n    \"start\": 92.51,\n    \"end\": 93.14,\n    \"text\": \"哎\",\n    \"direct\": \"哎\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 53,\n    \"start\": 93.54,\n    \"end\": 94.86,\n    \"text\": \"这我就不明白了\",\n    \"direct\": \"这我就不明白了\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 54,\n    \"start\": 95.42,\n    \"end\": 97.26,\n    \"text\": \"我已经当了县长了\",\n    \"direct\": \"我已经开始追她了\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 55,\n    \"start\": 97.31,\n    \"end\": 98.98,\n    \"text\": \"怎么还不如个土匪啊\",\n    \"direct\": \"怎么还不如光棍啊\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 56,\n    \"start\": 99.02,\n    \"end\": 100.74,\n    \"text\": \"百姓眼里你是县长\",\n    \"direct\": \"村民眼里你是村长\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 57,\n    \"start\": 101.66,\n    \"end\": 103.02,\n    \"text\": \"可是黄四郎眼里\",\n    \"direct\": \"可是王寡妇眼里\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 58,\n    \"start\": 103.66,\n    \"end\": 105.06,\n    \"text\": \"你就是跪着要饭的\",\n    \"direct\": \"你就是跪着要饭的\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 59,\n    \"start\": 106.06,\n    \"end\": 107.11,\n    \"text\": \"挣钱嘛\",\n    \"direct\": \"追她嘛\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 60,\n    \"start\": 107.18,\n    \"end\": 107.94,\n    \"text\": \"生意\",\n    \"direct\": \"情事\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 61,\n    \"start\": 108.62,\n    \"end\": 109.38,\n    \"text\": \"不寒碜\",\n    \"direct\": \"不丢人\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 62,\n    \"start\": 109.42,\n    \"end\": 110.02,\n    \"text\": \"寒碜\",\n    \"direct\": \"丢人\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 63,\n    \"start\": 111.22,\n    \"end\": 112.26,\n    \"text\": \"很他妈寒碜\",\n    \"direct\": \"很他妈丢人\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 64,\n    \"start\": 112.31,\n    \"end\": 114.66,\n    \"text\": \"那你是想站着还是想挣钱呢\",\n    \"direct\": \"那你是想站着还是想追她呢\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 65,\n    \"start\": 114.82,\n    \"end\": 116.02,\n    \"text\": \"我是想站着\",\n    \"direct\": \"我是想站着\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 66,\n    \"start\": 116.71,\n    \"end\": 117.74,\n    \"text\": \"还把钱挣了\",\n    \"direct\": \"还把她追了\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 67,\n    \"start\": 117.78,\n    \"end\": 118.34,\n    \"text\": \"挣不成\",\n    \"direct\": \"追不成\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 68,\n    \"start\": 118.54,\n    \"end\": 119.14,\n    \"text\": \"挣不成\",\n    \"direct\": \"追不成\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 69,\n    \"start\": 119.18,\n    \"end\": 119.78,\n    \"text\": \"挣不成\",\n    \"direct\": \"追不成\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 70,\n    \"start\": 121.58,\n    \"end\": 122.14,\n    \"text\": \"这个\",\n    \"direct\": \"这个\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 71,\n    \"start\": 122.71,\n    \"end\": 123.54,\n    \"text\": \"能不能挣钱\",\n    \"direct\": \"能不能追她\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 72,\n    \"start\": 123.58,\n    \"end\": 124.06,\n    \"text\": \"能挣\",\n    \"direct\": \"能追\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 73,\n    \"start\": 124.11,\n    \"end\": 124.66,\n    \"text\": \"山里\",\n    \"direct\": \"山里\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 74,\n    \"start\": 124.71,\n    \"end\": 125.06,\n    \"text\": \"嗯\",\n    \"direct\": \"嗯\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 75,\n    \"start\": 125.86,\n    \"end\": 126.66,\n    \"text\": \"这个\",\n    \"direct\": \"这个\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 76,\n    \"start\": 127.26,\n    \"end\": 128.11,\n    \"text\": \"能不能挣钱\",\n    \"direct\": \"能不能追她\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 77,\n    \"start\": 128.18,\n    \"end\": 128.74,\n    \"text\": \"能挣\",\n    \"direct\": \"能追\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 78,\n    \"start\": 129.02,\n    \"end\": 129.58,\n    \"text\": \"跪着\",\n    \"direct\": \"跪着\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 79,\n    \"start\": 130.38,\n    \"end\": 131.82,\n    \"text\": \"这个加上这个\",\n    \"direct\": \"这个加上这个\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 80,\n    \"start\": 132.06,\n    \"end\": 132.94,\n    \"text\": \"能不能\",\n    \"direct\": \"能不能\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 81,\n    \"start\": 134.06,\n    \"end\": 135.26,\n    \"text\": \"站着把钱挣了\",\n    \"direct\": \"站着把她追了\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 82,\n    \"start\": 136.82,\n    \"end\": 138.06,\n    \"text\": \"敢问酒桶大哥\",\n    \"direct\": \"敢问光棍大哥\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 83,\n    \"start\": 138.51,\n    \"end\": 139.74,\n    \"text\": \"何方神圣\",\n    \"direct\": \"何方神圣\",\n    \"speaker\": \"S01\"\n  },\n  {\n    \"id\": 84,\n    \"start\": 139.86,\n    \"end\": 140.46,\n    \"text\": \"鄙人\",\n    \"direct\": \"鄙人\",\n    \"speaker\": \"S02\"\n  },\n  {\n    \"id\": 85,\n    \"start\": 141.26,\n    \"end\": 142.26,\n    \"text\": \"张麻子\",\n    \"direct\": \"李光棍\",\n    \"speaker\": \"S02\"\n  }\n]"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "原文：",
+          "\"\"\"",
+          "{",
+          "  \"text\": \"晚了 前几任县长把额城的税收到九十年以后了 也就是他妈的西历 二零一零年了 咱们来错地方了 我倒是觉得这个地方不错 百姓成穷鬼了 没油水可榨了 老子从来就没想刮穷鬼的钱 不刮穷鬼的钱你收谁的呀 谁有钱挣谁的 当过县长吗 没有 我告诉告诉你 县长上任得巧立名目 拉拢豪绅 交税捐款 他们交了 才能让百姓跟着交钱 得钱之后 豪绅的钱如数奉还 百姓的钱三七分成 怎么才七成啊 七成是人家的 能得三成还得看黄四郎的脸色 谁的脸色 他 他 我大老远的来一趟 就是为了看他的",
+          "[LLM] request (step=vlf-create, model=vlf-create, stream=False, response_json=True, timeout=300s, prompt_chars=72225, base_url=http://localhost:8800/v1)",
+          "[LLM] ok (step=vlf-create, model=vlf-create, elapsed=153.8s)",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\.step_node_7_1787845973112_result.json, exiting 0"
+        ]
       },
       "measured": {
         "width": 420,
-        "height": 475
+        "height": 603
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1787847309484",
       "type": "workflow",
       "position": {
-        "x": 1320,
-        "y": -1260
+        "x": 1350,
+        "y": -1440
       },
       "data": {
         "nodeType": "json_visual_editor",
@@ -762,34 +627,54 @@
           "enable_copy": true,
           "edited_json": ""
         },
-        "status": "pending"
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\output/LLM_node_7_1787845973112.json"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 242
+        "height": 340
       },
       "selected": false,
       "dragging": false
     },
     {
-      "id": "node_3_1787847336501",
+      "id": "node_4_1788954192528",
       "type": "workflow",
       "position": {
-        "x": 735,
-        "y": -735
+        "x": 1335,
+        "y": -1785
       },
+      "selected": false,
       "data": {
-        "nodeType": "srt_to_json",
-        "label": "SRT字幕转json",
-        "config": {},
-        "status": "pending"
+        "nodeType": "run_wait",
+        "label": "运行等待",
+        "config": {
+          "enabled": false,
+          "wait_seconds": 300
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "note": "等待你检查和编辑json",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output": "Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\output/LLM_node_7_1787845973112.json"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 132
+        "height": 271
       },
-      "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     }
   ],
   "edges": [
@@ -943,90 +828,6 @@
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1786046579815",
-      "sourceHandle": "out-subtitle",
-      "target": "node_2_1787654223924",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1786046579815out-subtitle-node_2_1787654223924in-subtitle",
-      "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787828965709",
-      "sourceHandle": "out-subtitle",
-      "target": "node_1_1787830624387",
-      "targetHandle": "in-json",
-      "id": "xy-edge__node_1_1787828965709out-subtitle-node_1_1787830624387in-json",
-      "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787830624387",
-      "sourceHandle": "out-output",
-      "target": "node_2_1787215768626",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1787830624387out-output-node_2_1787215768626in-subtitle",
-      "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1787215768626",
-      "sourceHandle": "out-subtitle",
-      "target": "node_1_1786046579815",
-      "targetHandle": "in-json",
-      "id": "xy-edge__node_2_1787215768626out-subtitle-node_1_1786046579815in-json",
-      "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787067672223",
-      "sourceHandle": "out-audio",
-      "target": "node_2_1787215768626",
-      "targetHandle": "in-alignment_audio",
-      "id": "xy-edge__node_1_1787067672223out-audio-node_2_1787215768626in-alignment_audio",
-      "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787067672223",
-      "sourceHandle": "out-audio",
-      "target": "node_2_1787215768626",
-      "targetHandle": "in-vocal_audio",
-      "id": "xy-edge__node_1_1787067672223out-audio-node_2_1787215768626in-vocal_audio",
-      "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
         "stroke": "#6366f1",
         "strokeWidth": 2
       },
@@ -1036,19 +837,6 @@
       "targetHandle": "in-asr_audio",
       "id": "xy-edge__n_msyu4zm55ofzout-audio-node_1_1787828965709in-asr_audio",
       "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1787654223924",
-      "sourceHandle": "out-subtitle",
-      "target": "node_1_1787844335859",
-      "targetHandle": "in-json",
-      "id": "xy-edge__node_2_1787654223924out-subtitle-node_1_1787844335859in-json"
     },
     {
       "type": "bezier",
@@ -1093,19 +881,6 @@
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1787844335859",
-      "sourceHandle": "out-json",
-      "target": "node_1_1781200299298",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1787844335859out-json-node_1_1781200299298in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
         "stroke": "#22d3ee",
         "strokeWidth": 2
       },
@@ -1122,41 +897,54 @@
         "stroke": "#facc15",
         "strokeWidth": 2
       },
+      "source": "node_1_1787828965709",
+      "sourceHandle": "out-subtitle",
+      "target": "node_1_1787844335859",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1787828965709out-subtitle-node_1_1787844335859in-json"
+    },
+    {
       "source": "node_2_1787847309484",
       "sourceHandle": "out-json",
+      "target": "node_4_1788954192528",
+      "targetHandle": "in-input",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_2_1787847309484out-json-node_4_1788954192528in-input"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_4_1788954192528",
+      "sourceHandle": "out-output",
       "target": "node_1_1781709944783",
       "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_2_1787847309484out-json-node_1_1781709944783in-subtitle"
+      "id": "xy-edge__node_4_1788954192528out-output-node_1_1781709944783in-subtitle"
     },
     {
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#34d399",
+        "stroke": "#a78bfa",
         "strokeWidth": 2
       },
-      "source": "node_1_1781200299298",
-      "sourceHandle": "out-original",
-      "target": "node_3_1787847336501",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1781200299298out-original-node_3_1787847336501in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
-      },
-      "source": "node_3_1787847336501",
+      "source": "node_1_1787844335859",
       "sourceHandle": "out-json",
       "target": "node_7_1787845973112",
       "targetHandle": "in-json",
-      "id": "xy-edge__node_3_1787847336501out-json-node_7_1787845973112in-json"
+      "id": "xy-edge__node_1_1787844335859out-json-node_7_1787845973112in-json"
     }
   ],
   "type": "user",
   "createdAt": "2026-08-27T23:30:57",
-  "updatedAt": "2026-08-30T07:55:38",
-  "revision": 7
+  "updatedAt": "2026-09-09T22:13:26",
+  "revision": 24
 }

@@ -16,6 +16,8 @@ import os
 import json
 import random
 import shutil
+import threading
+import time
 import subprocess
 import uuid
 import re
@@ -261,7 +263,7 @@ def _build_chapter_cover(chapter: dict, cfg: dict, out_dir: str, nid: str):
 # 按章节锁定生成配置（换模型不重跑全项目）
 # --------------------------------------------------------------------------- #
 # 锁定配置只记录「生成相关」参数，排除路由键与 force，避免续跑时覆盖 shot/chapter 路由。
-_LOCK_EXCLUDE = {"shot_id", "chapter_id", "force", "text"}
+_LOCK_EXCLUDE = {"shot_id", "chapter_id", "force", "text", "retry_failed"}
 
 
 def _lockable_cfg(cfg: dict) -> dict:
@@ -402,18 +404,73 @@ def _pick_interface(manager_getter, cfg_key: str, cfg: dict) -> str:
     return enabled[0]["id"]
 
 
+# --------------------------------------------------------------------------- #
+# 生成任务台账：线程上下文 + 三大引擎统一登记（每次生成都留痕，失败可查可重试）
+# --------------------------------------------------------------------------- #
+_gen_ctx = threading.local()
+
+
+def _set_gen_ctx(**kw) -> None:
+    """设置当前线程/节点的生成上下文（creation_id / 目标 / step / 上游任务）。"""
+    data = dict(getattr(_gen_ctx, "data", None) or {})
+    data.update(kw)
+    _gen_ctx.data = data
+
+
+def _get_gen_ctx() -> dict:
+    return dict(getattr(_gen_ctx, "data", None) or {})
+
+
+def _log_generation(kind: str, *, prompt: str = "", interface: str = "", model: str = "",
+                    mode: str = "", result=None, error=None, duration_ms: int = 0) -> None:
+    """登记一次生成调用到台账；台账写入异常不得影响主生成流程。"""
+    try:
+        from backend import creation as agi
+        ctx = _get_gen_ctx()
+        creation_id = ctx.get("creation_id") or ""
+        if not creation_id:
+            return
+        agi.add_generation_task(
+            creation_id,
+            kind=kind,
+            target_type=ctx.get("target_type") or "",
+            target_id=ctx.get("target_id") or "",
+            chapter_id=ctx.get("chapter_id") or "",
+            step_id=ctx.get("step_id") or "",
+            interface=interface, model=model, mode=mode,
+            prompt=prompt,
+            upstream_task_id=ctx.get("upstream_task_id") or "",
+            status="failed" if error else "success",
+            result=json.dumps([os.path.abspath(p) for p in (result or [])], ensure_ascii=False),
+            error=str(error or "")[:2000],
+            duration_ms=int(duration_ms or 0),
+        )
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def _gen_images(prompt: str, out_dir: str, cfg: dict, num: int = 1, aspect: str = "1:1",
                 ref_images=None, seed=None) -> list:
     from backend.imagegen.imagegen_factory import get_imagegen_engine
     from backend.imagegen.imagegen_interface_manager import get_imagegen_interface_manager
     iface = _pick_interface(get_imagegen_interface_manager, "image_interface", cfg)
     engine = get_imagegen_engine(iface)
-    paths = engine.generate(prompt=prompt, output_dir=out_dir, mode="txt2img",
-                            aspect_ratio=aspect, num_images=num,
-                            ref_images=list(ref_images) if ref_images else None,
-                            seed=seed)
-    if not paths:
-        raise RuntimeError("生图未返回任何结果")
+    t0, paths, err = time.time(), [], None
+    try:
+        paths = engine.generate(prompt=prompt, output_dir=out_dir, mode="txt2img",
+                                aspect_ratio=aspect, num_images=num,
+                                ref_images=list(ref_images) if ref_images else None,
+                                seed=seed) or []
+        if not paths:
+            raise RuntimeError("生图未返回任何结果")
+    except Exception as e:  # noqa: BLE001
+        err = str(e)
+        raise
+    finally:
+        _log_generation("image", prompt=prompt, interface=iface,
+                        model=(cfg.get("image_model") or ""), mode="txt2img",
+                        result=paths, error=err,
+                        duration_ms=int((time.time() - t0) * 1000))
     return paths
 
 
@@ -423,12 +480,22 @@ def _gen_video(prompt: str, out_dir: str, cfg: dict, ref_images=None,
     from backend.videogen.videogen_interface_manager import get_videogen_interface_manager
     iface = _pick_interface(get_videogen_interface_manager, "video_interface", cfg)
     engine = get_videogen_engine(iface)
-    paths = engine.generate(prompt=prompt, output_dir=out_dir,
-                            model=(cfg.get("video_model") or "") or "",
-                            mode="img2video", resolution=(cfg.get("resolution") or "720P"),
-                            duration=duration, num_videos=1, ref_images=ref_images or None)
-    if not paths:
-        raise RuntimeError("生视频未返回任何结果")
+    t0, paths, err = time.time(), [], None
+    try:
+        paths = engine.generate(prompt=prompt, output_dir=out_dir,
+                                model=(cfg.get("video_model") or "") or "",
+                                mode="img2video", resolution=(cfg.get("resolution") or "720P"),
+                                duration=duration, num_videos=1, ref_images=ref_images or None) or []
+        if not paths:
+            raise RuntimeError("生视频未返回任何结果")
+    except Exception as e:  # noqa: BLE001
+        err = str(e)
+        raise
+    finally:
+        _log_generation("video", prompt=prompt, interface=iface,
+                        model=(cfg.get("video_model") or ""), mode="img2video",
+                        result=paths, error=err,
+                        duration_ms=int((time.time() - t0) * 1000))
     return paths
 
 
@@ -449,9 +516,19 @@ def _tts(text: str, out_path: str, cfg: dict, ref_audio: str = None) -> bool:
     else:
         if cfg.get("tts_voice"):
             kwargs["voice"] = cfg.get("tts_voice")
-    ok = engine.synthesize(text, str(out_path), **kwargs)
-    if not ok or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
-        raise RuntimeError(f"TTS 合成失败：{text[:30]}…")
+    t0, err = time.time(), None
+    try:
+        ok = engine.synthesize(text, str(out_path), **kwargs)
+        if not ok or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
+            raise RuntimeError(f"TTS 合成失败：{text[:30]}…")
+    except Exception as e:  # noqa: BLE001
+        err = str(e)
+        raise
+    finally:
+        _log_generation("tts", prompt=text, interface=iface,
+                        model=(cfg.get("tts_model") or ""), mode=mode,
+                        result=[out_path] if not err else [], error=err,
+                        duration_ms=int((time.time() - t0) * 1000))
     return True
 
 
@@ -741,19 +818,31 @@ class S_AGI_Project(BaseStep):
 
         brief = _read_text(inp.get("text"), task_dir) or (cfg.get("outline_prompt") or "")
         name = (cfg.get("project_name") or "AI漫剧项目").strip() or "AI漫剧项目"
+        # 风格预设：作为题材/画风/受众默认值（节点显式配置优先）
+        preset = None
+        preset_id = (cfg.get("style_preset") or "").strip()
+        if preset_id:
+            try:
+                preset = agi.get_style_preset(preset_id)
+            except Exception:  # noqa: BLE001
+                preset = None
         creation = agi.create_creation(
             name,
             description=brief[:500] if brief else "",
-            genre_tags=cfg.get("genre_tags") or "",
-            art_style_tags=cfg.get("art_style_tags") or "",
-            audience_tags=cfg.get("audience_tags") or "",
+            genre_tags=cfg.get("genre_tags")
+            or (",".join(preset.get("genre_tags") or []) if preset else ""),
+            art_style_tags=cfg.get("art_style_tags") or (preset.get("name") if preset else ""),
+            audience_tags=cfg.get("audience_tags")
+            or (",".join(preset.get("audience_tags") or []) if preset else ""),
         )
         cid = creation["id"]
         if callback:
             callback(20, f"已创建创作项目《{name}》")
 
         system = "你是资深动漫总编剧，擅长搭建世界观与整体故事骨架。只输出 JSON，不要多余说明。"
-        prompt = (f"为 AI 漫剧项目《{name}》搭建故事骨架。\n【创意/要求】\n{brief}\n\n"
+        _style_line = (f"\n【画风/风格】{preset['art_style']}"
+                       if preset and preset.get("art_style") else "")
+        prompt = (f"为 AI 漫剧项目《{name}》搭建故事骨架。\n【创意/要求】\n{brief}{_style_line}\n\n"
                   f"返回 JSON：{{worldview:世界观设定, outline:整体故事大纲, "
                   f"script_text:可分集展开的总剧本文本}}。")
         resp = _llm(self.step_id, prompt, system=system, json_mode=True,
@@ -767,6 +856,9 @@ class S_AGI_Project(BaseStep):
             f"【{head}】\n{body}" for head, body in
             (("世界观", worldview), ("大纲", outline), ("总剧本", script)) if body
         ) or brief
+        # 预设画风写入【画风锁定】段，下游生图节点自动取用（_style_hint）
+        if preset and preset.get("art_style") and "【画风锁定】" not in (script_text or ""):
+            script_text = f"【画风锁定】\n{preset['art_style']}\n\n{script_text}"
         agi.update_creation(cid, description=(outline or worldview or brief)[:500],
                             script_text=script_text)
         if callback:
@@ -1045,6 +1137,9 @@ class S_AGI_Character(BaseStep):
                         callback(30, f"人物 {name} 发布公共角色库失败（跳过）：{e}")
 
             created.append(member)
+            _set_gen_ctx(creation_id=creation_id, step_id=self.step_id,
+                         target_type="character", target_id=member.get("id") or "",
+                         upstream_task_id="")
             if callback:
                 callback(20 + int(60 * (i + 1) / max(1, len(chars))),
                          f"已写入人物：{name}")
@@ -1186,6 +1281,9 @@ class S_AGI_Voice(BaseStep):
             tts_cfg["tts_voice_design"] = c.get("voice_design") or "自然清晰的中文配音"
             if callback:
                 callback(10 + int(70 * (i + 1) / total), f"合成音色样本：{name}")
+            _set_gen_ctx(creation_id=creation_id, step_id=self.step_id,
+                         target_type="character", target_id=c.get("id") or "",
+                         upstream_task_id="")
             _tts(text, tmp, tts_cfg)
             try:
                 dur = get_audio_duration(tmp) or 0.0
@@ -1305,6 +1403,8 @@ class S_AGI_Scene(BaseStep):
                     existing_scenes.setdefault(k, scene)
                 scene_meta.append({**scene, "reused": False})
             scene_ids.append(scene["id"])
+            _set_gen_ctx(creation_id=creation_id, step_id=self.step_id,
+                         target_type="scene", target_id=scene["id"], upstream_task_id="")
             if cfg.get("generate_images"):
                 p = f"{style}；动漫风格场景概念图，{desc}，氛围感强，电影级构图。"
                 try:
@@ -1413,6 +1513,8 @@ class S_AGI_Prop(BaseStep):
                 existing.add(name)
                 prop_meta.append({**prop, "reused": False})
                 prop_ids.append(prop["id"])
+            _set_gen_ctx(creation_id=creation_id, step_id=self.step_id,
+                         target_type="prop", target_id=prop["id"], upstream_task_id="")
             if cfg.get("generate_images"):
                 gen = f"{style}；动漫风格，白色背景单品道具图，{prompt_txt}，清晰无阴影，产品级展示。"
                 try:
@@ -1812,6 +1914,32 @@ class S_AGI_Shot(BaseStep):
         creation_id = chapter.get("creation_id")
 
         proj = agi.get_creation(creation_id, with_detail=True)
+        # 关联结构化：人物名/别名 → 人物 id；场景(地点+时间)/地点 → 场景 id
+        _char_index = {}
+        for _c in (proj.get("characters") or []):
+            for _k in [_c.get("name"), *(_c.get("aliases") or [])]:
+                if _k:
+                    _char_index[str(_k).strip()] = _c["id"]
+        _scene_index, _scene_by_loc = {}, {}
+        for _sc in (proj.get("scenes") or []):
+            _loc = str(_sc.get("location") or "").strip()
+            if not _loc:
+                continue
+            _scene_index[(_loc, str(_sc.get("time") or "").strip())] = _sc["id"]
+            _scene_by_loc.setdefault(_loc, _sc["id"])
+
+        def _norm_chars(raw):
+            """人物由名字数组升级为 {name, id}（id 按项目人物名/别名解析，未匹配留空）。"""
+            out = []
+            for _c in (raw or []):
+                _n = _c if isinstance(_c, str) else (_c.get("name") or "")
+                _n = str(_n or "").strip()
+                if not _n:
+                    continue
+                _cid = (_c.get("id") if isinstance(_c, dict) else "") or _char_index.get(_n, "")
+                out.append({"name": _n, "id": _cid})
+            return out
+
         char_names = [c.get("name") for c in proj.get("characters", [])]
         brief = _read_text(inp.get("text"), task_dir) or (chapter.get("original_text") or "")
         n = max(1, int(cfg.get("num_shots") or 8))
@@ -1846,8 +1974,13 @@ class S_AGI_Shot(BaseStep):
                 except (TypeError, ValueError):
                     dur_val = None
             order_no = i + 1
+            _loc = str(s.get("location") or "").strip()
+            _tm = str(s.get("time") or "").strip()
             fields = dict(
-                characters=s.get("characters") or [],
+                characters=_norm_chars(s.get("characters")),
+                # 场景关联：优先 (地点+时间) 精确匹配，回退按地点匹配
+                scene_id=(_scene_index.get((_loc, _tm))
+                          or (_scene_by_loc.get(_loc) if _loc else None)),
                 scene_descriptions=s.get("scene_descriptions") or [],
                 dialogues=s.get("dialogues") or [],
                 bgm_design=s.get("bgm_design") or "",
@@ -1936,13 +2069,23 @@ class S_AGI_ShotFrames(BaseStep):
         except (TypeError, ValueError):
             max_refs = 4
         batch = len(targets) > 1
+        retry_failed = bool(cfg.get("retry_failed", False))
 
         results = []
         local_files = []
         for idx, sid in enumerate(targets):
             shot = agi.get_shot(sid)
             _, ch_id = _resolve_creation_of(shot_id=sid)
-            if not force and agi.list_assets(creation_id, asset_kind="scene_image", shot_id=sid):
+            # 单分镜重试：该分镜最近一次生图失败 → 允许重跑，并用 upstream_task_id 串联失败记录
+            upstream = ""
+            if retry_failed:
+                _failed = agi.list_generation_tasks(creation_id, kind="image",
+                                                    target_type="shot", target_id=sid,
+                                                    status="failed", limit=1)
+                upstream = _failed[0]["id"] if _failed else ""
+            _set_gen_ctx(creation_id=creation_id, chapter_id=ch_id, step_id=self.step_id,
+                         target_type="shot", target_id=sid, upstream_task_id=upstream)
+            if not force and not upstream and agi.list_assets(creation_id, asset_kind="scene_image", shot_id=sid):
                 if callback:
                     callback(int(90 * (idx + 1) / len(targets)), f"分镜 {idx + 1} 首尾帧已存在，跳过")
                 results.append({"shot_id": sid, "first_frame": "", "last_frame": ""})
@@ -2037,13 +2180,23 @@ class S_AGI_ShotVideo(BaseStep):
         duration = max(1, int(cfg.get("duration") or 5))
         aspect = (cfg.get("aspect_ratio") or "16:9")
         batch = len(targets) > 1
+        retry_failed = bool(cfg.get("retry_failed", False))
 
         results = []
         local_files = []
         for idx, sid in enumerate(targets):
             shot = agi.get_shot(sid)
             creation_id, ch_id = _resolve_creation_of(shot_id=sid)
-            if not force and agi.list_assets(creation_id, asset_kind="shot_video", shot_id=sid):
+            # 单分镜重试：该分镜最近一次生视频失败 → 允许重跑，并用 upstream_task_id 串联失败记录
+            upstream = ""
+            if retry_failed:
+                _failed = agi.list_generation_tasks(creation_id, kind="video",
+                                                    target_type="shot", target_id=sid,
+                                                    status="failed", limit=1)
+                upstream = _failed[0]["id"] if _failed else ""
+            _set_gen_ctx(creation_id=creation_id, chapter_id=ch_id, step_id=self.step_id,
+                         target_type="shot", target_id=sid, upstream_task_id=upstream)
+            if not force and not upstream and agi.list_assets(creation_id, asset_kind="shot_video", shot_id=sid):
                 _a = agi.list_assets(creation_id, asset_kind="shot_video", shot_id=sid)[0]
                 _p = (_a.get("paths") or [""])[0]
                 if callback:
@@ -2208,6 +2361,8 @@ class S_AGI_ShotDub(BaseStep):
                 if callback:
                     callback(int(85 * idx / len(targets)) +
                              int(10 * (i + 1) / len(dialogues)), f"分镜 {idx + 1} 合成：{char}")
+                _set_gen_ctx(creation_id=creation_id, chapter_id=ch_id, step_id=self.step_id,
+                             target_type="shot", target_id=sid, upstream_task_id="")
                 _tts(d["content"], seg, cfg, ref_audio=ref_audio)
                 segs.append(seg)
                 try:
@@ -2476,6 +2631,8 @@ class S_AGI_ChapterExport(BaseStep):
         cover_img = ""
 
         if make_cover:
+            _set_gen_ctx(creation_id=creation_id, chapter_id=chapter_id, step_id=self.step_id,
+                         target_type="chapter", target_id=chapter_id, upstream_task_id="")
             cover_img = _build_chapter_cover(chapter, cfg, out_dir, nid)
             if cover_img:
                 if tdims:

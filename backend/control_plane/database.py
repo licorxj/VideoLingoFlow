@@ -3,13 +3,36 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from sqlalchemy import create_engine, event, inspect, text
+from sqlalchemy import Select, create_engine, event, inspect, text
 from sqlalchemy.engine import Engine, make_url
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, sessionmaker, with_loader_criteria
 
 
 _engine: Engine | None = None
 _session_factory: sessionmaker[Session] | None = None
+
+
+@event.listens_for(Session, "do_orm_execute")
+def _soft_delete_filter(execute_state) -> None:
+    """全表软删除：为所有继承 ``SoftDeleteMixin`` 的实体自动附加 ``deleted_at IS NULL`` 过滤。
+
+    查询已删除数据时，在对应 session 上设置 ``session.info["include_deleted"] = True`` 即可跳过过滤。
+    """
+    stmt = execute_state.statement
+    if not isinstance(stmt, Select):
+        return
+    if execute_state.is_column_load or execute_state.is_relationship_load:
+        return
+    if execute_state.session.info.get("include_deleted"):
+        return
+    from backend.control_plane.models import SoftDeleteMixin
+    execute_state.statement = stmt.options(
+        with_loader_criteria(
+            SoftDeleteMixin,
+            lambda cls: cls.deleted_at.is_(None),
+            include_aliases=True,
+        )
+    )
 
 
 def database_path() -> Path:

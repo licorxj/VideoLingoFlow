@@ -8,7 +8,7 @@ from math import gcd
 from pathlib import Path
 import json
 
-from sqlalchemy import select
+from sqlalchemy import func, select, update
 
 from backend.control_plane.database import session_scope
 from backend.control_plane.models import Character, ImageAsset, VideoAsset
@@ -111,7 +111,7 @@ def delete_character(character_id: str) -> None:
         row = session.get(Character, character_id)
         if row is None:
             raise NotFoundError(f"角色不存在: {character_id}")
-        session.delete(row)
+        session.execute(update(Character).where(Character.id == character_id).values(deleted_at=func.now()))
 
 
 # ---------------------------------------------------------------- 图片素材库
@@ -195,7 +195,7 @@ def delete_image(image_id: str) -> None:
         row = session.get(ImageAsset, image_id)
         if row is None:
             raise NotFoundError(f"图片素材不存在: {image_id}")
-        session.delete(row)
+        session.execute(update(ImageAsset).where(ImageAsset.id == image_id).values(deleted_at=func.now()))
 
 
 # ---------------------------------------------------------------- 视频素材库
@@ -279,7 +279,7 @@ def delete_video(video_id: str) -> None:
         row = session.get(VideoAsset, video_id)
         if row is None:
             raise NotFoundError(f"视频素材不存在: {video_id}")
-        session.delete(row)
+        session.execute(update(VideoAsset).where(VideoAsset.id == video_id).values(deleted_at=func.now()))
 
 
 # ---------------------------------------------------------------- 探测辅助

@@ -2812,6 +2812,7 @@ BUILTIN_NODE_TYPES = [
         "defaultConfig": {
             "project_name": "AI漫剧项目",
             "llm_model": "",
+            "style_preset": "",
             "genre_tags": "",
             "art_style_tags": "",
             "audience_tags": "",
@@ -2821,6 +2822,7 @@ BUILTIN_NODE_TYPES = [
             {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
             {"key": "browse_project", "label": "浏览项目", "type": "button", "colSpan": "full", "description": "以思维导图方式可视化浏览项目骨架与各阶段产物（文本/图片/视频/音频）"},
             {"key": "project_name", "label": "项目名称", "type": "text", "colSpan": "half"},
+            {"key": "style_preset", "label": "风格预设", "type": "api-select", "apiEndpoint": "/api/creation/style-presets", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "选预设后自动带出题材/受众/画风；画风写入【画风锁定】，下游生图节点自动取用（节点内显式填写的标签优先）"},
             {"key": "genre_tags", "label": "类型标签", "type": "text", "colSpan": "half", "placeholder": "逗号分隔，如 科幻,冒险"},
             {"key": "art_style_tags", "label": "画风标签", "type": "text", "colSpan": "half", "placeholder": "逗号分隔，如 赛博朋克"},
             {"key": "audience_tags", "label": "受众标签", "type": "text", "colSpan": "half"},
@@ -3204,6 +3206,7 @@ BUILTIN_NODE_TYPES = [
             {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "colSpan": "full"},
             {"key": "image_interface", "label": "生图接口", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/enabled", "colSpan": "full"},
             {"key": "force", "label": "强制重生成", "type": "switch", "colSpan": "full", "description": "开启后忽略已存在首尾帧，重新生图（默认跳过已完成分镜）"},
+            {"key": "retry_failed", "label": "仅重试失败分镜", "type": "switch", "colSpan": "full", "description": "开启后只重跑「生成任务台账」中最近一次生图失败的分镜，已成功的分镜跳过（重试记录会串联原失败任务）"},
         ],
     },
     {
@@ -3252,6 +3255,7 @@ BUILTIN_NODE_TYPES = [
             {"key": "aspect_ratio", "label": "比例", "type": "select", "colSpan": "half", "options": [
                 {"value": "16:9", "label": "16:9"}, {"value": "9:16", "label": "9:16"}, {"value": "1:1", "label": "1:1"}]},
             {"key": "force", "label": "强制重生成", "type": "switch", "colSpan": "full", "description": "开启后忽略已存在视频，重新生成（默认跳过已完成分镜）"},
+            {"key": "retry_failed", "label": "仅重试失败分镜", "type": "switch", "colSpan": "full", "description": "开启后只重跑「生成任务台账」中最近一次生视频失败的分镜，已成功的分镜跳过（重试记录会串联原失败任务）"},
         ],
     },
     {
