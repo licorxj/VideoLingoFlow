@@ -45,8 +45,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 491
-      }
+        "height": 434
+      },
+      "selected": false
     },
     {
       "id": "node_2_1788682616200",
@@ -74,7 +75,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 284
+        "height": 251
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -131,7 +132,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 1084
+        "height": 942
       },
       "selected": false,
       "dragging": false,
@@ -162,10 +163,15 @@
           "cli_package": "hyperframes@latest",
           "extra_instruction": "log放大显示，并做由大到小的动画过渡。元素做大一些，不要集中在画面中央，太小无法阅读"
         },
-        "status": "running",
-        "progress": 48,
-        "message": "",
-        "outputs": {},
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "project_dir": "cache/hyperframes_node_3_1788682640602",
+          "brief": "cache/hyperframes_node_3_1788682640602/BRIEF.md",
+          "url": "",
+          "video": "cache/hyperframes_render_node_5_1788683544296.mp4"
+        },
         "error": "",
         "logLines": [
           "[step_worker] start node_type=hyperframes_render node_id=node_5_1788683544296 pid=48304",
@@ -180,9 +186,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 836
+        "height": 875
       },
-      "selected": true,
+      "selected": false,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     }
@@ -199,7 +205,8 @@
         "stroke": "#22d3ee",
         "strokeWidth": 2
       },
-      "id": "xy-edge__node_1_1788682606968out-no_input-node_2_1788682616200in-any"
+      "id": "xy-edge__node_1_1788682606968out-no_input-node_2_1788682616200in-any",
+      "selected": false
     },
     {
       "type": "bezier",
@@ -212,7 +219,8 @@
       "sourceHandle": "out-filepath",
       "target": "node_3_1788682640602",
       "targetHandle": "in-assets",
-      "id": "xy-edge__node_2_1788682616200out-filepath-node_3_1788682640602in-assets"
+      "id": "xy-edge__node_2_1788682616200out-filepath-node_3_1788682640602in-assets",
+      "selected": false
     },
     {
       "type": "bezier",
@@ -225,7 +233,8 @@
       "sourceHandle": "out-brief",
       "target": "node_5_1788683544296",
       "targetHandle": "in-brief",
-      "id": "xy-edge__node_3_1788682640602out-brief-node_5_1788683544296in-brief"
+      "id": "xy-edge__node_3_1788682640602out-brief-node_5_1788683544296in-brief",
+      "selected": false
     },
     {
       "type": "bezier",
@@ -238,7 +247,8 @@
       "sourceHandle": "out-project_dir",
       "target": "node_5_1788683544296",
       "targetHandle": "in-project_dir",
-      "id": "xy-edge__node_3_1788682640602out-project_dir-node_5_1788683544296in-project_dir"
+      "id": "xy-edge__node_3_1788682640602out-project_dir-node_5_1788683544296in-project_dir",
+      "selected": false
     },
     {
       "type": "bezier",
@@ -251,11 +261,12 @@
       "sourceHandle": "out-summary",
       "target": "node_5_1788683544296",
       "targetHandle": "in-assets",
-      "id": "xy-edge__node_3_1788682640602out-summary-node_5_1788683544296in-assets"
+      "id": "xy-edge__node_3_1788682640602out-summary-node_5_1788683544296in-assets",
+      "selected": false
     }
   ],
   "type": "user",
   "createdAt": "2026-09-06T16:22:16",
-  "updatedAt": "2026-09-07T02:29:46",
-  "revision": 4
+  "updatedAt": "2026-09-08T02:09:15",
+  "revision": 6
 }

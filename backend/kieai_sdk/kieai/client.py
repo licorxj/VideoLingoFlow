@@ -15,7 +15,10 @@ Example
     from kieai import KieClient
 
     async def main():
-        async with KieClient(api_key="YOUR_KEY") as client:
+        # api_key is optional: the SDK resolves it as
+        #   1) api_key passed here, 2) project secret://KIEAI_API_KEY,
+        #   3) the KIEAI_API_KEY environment variable.
+        async with KieClient() as client:
             result = await client.generate(
                 "bytedance/seedream-v4-text-to-image",
                 prompt="a cat on a roof",
@@ -80,6 +83,28 @@ _MEDIA_EXTS = {
 }
 # Fallback extension when none can be inferred, keyed by category.
 _CATEGORY_EXT = {"image": ".png", "video": ".mp4", "audio": ".mp3"}
+
+# Secret-credential / environment-variable name used to look up the KIE API key
+# when one is not explicitly passed to ``KieClient(...)``.
+_KIE_SECRET_NAME = "KIEAI_API_KEY"
+_SECRET_PREFIX = "secret://"
+
+
+def _load_project_key(name: str) -> Optional[str]:
+    """Resolve a credential by name via the project's key admin.
+
+    Returns the plaintext key, or ``None`` when the project store is not
+    importable (standalone SDK usage) or the credential is missing/empty.
+    """
+    try:
+        from backend.config.credential_store import get_raw
+    except Exception:
+        return None
+    try:
+        val = get_raw(name)
+    except Exception:
+        return None
+    return val if val else None
 
 
 def _collect_result_urls(result: Any) -> List[str]:
@@ -182,7 +207,7 @@ class Task:
 class KieClient:
     def __init__(
         self,
-        api_key: str,
+        api_key: Optional[str] = None,
         *,
         catalog: Optional[Catalog] = None,
         catalog_path: Optional[str] = None,
@@ -191,8 +216,13 @@ class KieClient:
         max_poll: int = 120,
         session: Optional[aiohttp.ClientSession] = None,
         output_base: Optional[str] = None,
+        secret_name: str = _KIE_SECRET_NAME,
     ):
+        # ``api_key`` may be omitted; the effective key is resolved lazily on the
+        # first request via :meth:`_resolve_api_key`
+        # (caller -> project secret admin -> environment variable).
         self.api_key = api_key
+        self.secret_name = secret_name
         self.catalog = catalog or Catalog.load(catalog_path)
         self.timeout = timeout
         self.poll_interval = poll_interval
@@ -202,14 +232,59 @@ class KieClient:
         self.output_base = output_base or os.path.join(os.getcwd(), "output")
         self._owns_session = session is None
         self._session = session
-        self._headers = {"Authorization": f"Bearer {api_key}"}
+        # Resolved lazily on first use; requests always pass fresh auth headers.
+        self._headers: Dict[str, str] = {}
+
+    # ------------------------------------------------------------------ #
+    # api key resolution
+    # ------------------------------------------------------------------ #
+    def _resolve_api_key(self) -> str:
+        """Resolve the effective API key using a 3-tier fallback.
+
+        1. The explicit ``api_key`` passed to the constructor.  A
+           ``secret://NAME`` reference is itself resolved through the project
+           key admin.
+        2. The project credential store entry ``secret://<secret_name>``
+           (defaults to ``secret://KIEAI_API_KEY``).  Re-resolved on every call
+           so the project's round-robin / rotation policy is honoured.
+        3. The ``<secret_name>`` system environment variable.
+        """
+        candidate = self.api_key
+        if candidate and candidate.startswith(_SECRET_PREFIX):
+            name = candidate[len(_SECRET_PREFIX):].strip()
+            raw = _load_project_key(name) if name else None
+            if raw:
+                return raw
+            candidate = None  # unresolved reference -> fall through
+        if candidate:
+            return candidate
+
+        raw = _load_project_key(self.secret_name)
+        if raw:
+            return raw
+
+        env_key = os.environ.get(self.secret_name)
+        if env_key:
+            return env_key
+
+        raise KieRequestError(
+            f"No KIE API key available. Provide api_key=..., configure the "
+            f"secret://{self.secret_name} credential in the project key admin, "
+            f"or set the {self.secret_name} environment variable."
+        )
+
+    def _auth_headers(self) -> Dict[str, str]:
+        """Authorization header for the KIE API host (re-resolved per request)."""
+        headers = {"Authorization": f"Bearer {self._resolve_api_key()}"}
+        self._headers = headers
+        return headers
 
     # ------------------------------------------------------------------ #
     # session management
     # ------------------------------------------------------------------ #
     async def __aenter__(self) -> "KieClient":
         if self._session is None:
-            self._session = aiohttp.ClientSession(headers=self._headers)
+            self._session = aiohttp.ClientSession(headers=self._auth_headers())
         return self
 
     async def __aexit__(self, *exc) -> None:
@@ -220,7 +295,7 @@ class KieClient:
     @property
     def session(self) -> aiohttp.ClientSession:
         if self._session is None:
-            self._session = aiohttp.ClientSession(headers=self._headers)
+            self._session = aiohttp.ClientSession(headers=self._auth_headers())
         return self._session
 
     # ------------------------------------------------------------------ #
@@ -236,7 +311,7 @@ class KieClient:
     # core request primitives
     # ------------------------------------------------------------------ #
     async def _post_json(self, url: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        async with self.session.post(url, json=body) as resp:
+        async with self.session.post(url, json=body, headers=self._auth_headers()) as resp:
             try:
                 data = await resp.json()
             except Exception:
@@ -254,7 +329,7 @@ class KieClient:
             return data
 
     async def _get_json(self, url: str) -> Dict[str, Any]:
-        async with self.session.get(url) as resp:
+        async with self.session.get(url, headers=self._auth_headers()) as resp:
             try:
                 data = await resp.json()
             except Exception:
@@ -464,14 +539,12 @@ class KieClient:
 
         ``method`` is one of ``url`` / ``stream`` / ``base64`` and selects the
         matching catalog entry (``upload-file-url`` / ``upload-file-stream`` /
-        ``upload-file-base-64``).
-        suffix = {"url": "upload-file-url", "stream": "upload-file-stream",
-                  "base64": "upload-file-base-64"}[method]
+        ``upload-file-base64``).
         """
         suffix = {
             "url": "upload-file-url",
             "stream": "upload-file-stream",
-            "base64": "upload-file-base-64",
+            "base64": "upload-file-base64",
         }[method]
         entry = self.catalog.get(suffix)
         data = await self._post_json(entry.endpoint, dict(params))

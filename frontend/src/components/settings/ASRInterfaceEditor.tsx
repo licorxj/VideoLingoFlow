@@ -195,16 +195,16 @@ export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) 
   const hasCustomParams = (config.custom_params || []).length > 0;
 
   return (
-    <div className="max-h-[85vh] overflow-y-auto">
-      <div className="p-6 space-y-5">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-bold">{iface ? "编辑 ASR 接口" : "添加 ASR 接口"}</h3>
-          <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
-            <X className="w-4 h-4" />
-          </button>
-        </div>
+    <div className="flex flex-col max-h-[85vh]">
+      {/* Header */}
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 shrink-0">
+        <h3 className="text-lg font-bold">{iface ? "编辑 ASR 接口" : "添加 ASR 接口"}</h3>
+        <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-secondary transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
         {/* Basic Info */}
         <div className="rounded-2xl border border-border/50 bg-card/70 p-5 space-y-4">
           <h4 className="text-sm font-semibold">基本信息</h4>
@@ -609,14 +609,15 @@ export default function ASRInterfaceEditor({ iface, onSaved, onCancel }: Props) 
           )}
         </div>
 
-        {/* Footer */}
-        <div className="flex gap-3 justify-end pt-2">
-          <button onClick={onCancel} className="px-5 py-2.5 text-sm font-medium border border-border/60 rounded-xl hover:bg-secondary/70 transition-all duration-200 active:scale-[0.97]">取消</button>
-          <button onClick={handleSave} disabled={saving || !name.trim()}
-            className="px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-primary/25 active:scale-[0.97] disabled:opacity-40 btn-glow">
-            {saving ? "保存中..." : "保存"}
-          </button>
-        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="flex gap-3 justify-end px-6 py-4 border-t border-border/50 shrink-0">
+        <button onClick={onCancel} className="px-5 py-2.5 text-sm font-medium border border-border/60 rounded-xl hover:bg-secondary/70 transition-all duration-200 active:scale-[0.97]">取消</button>
+        <button onClick={handleSave} disabled={saving || !name.trim()}
+          className="px-5 py-2.5 text-sm font-semibold bg-primary text-primary-foreground rounded-xl transition-all duration-200 hover:shadow-lg hover:shadow-primary/25 active:scale-[0.97] disabled:opacity-40 btn-glow">
+          {saving ? "保存中..." : "保存"}
+        </button>
       </div>
 
       {/* Language Picker Modal */}

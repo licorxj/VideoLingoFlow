@@ -25,15 +25,20 @@ from pathlib import Path
 from sqlalchemy import func, select
 
 from backend.control_plane.database import session_scope
-from backend.control_plane.models import CREATION_ASSET_KINDS, Creation, CreationAsset, CreationChapter, CreationCharacter, CreationShot
+from backend.control_plane.models import CREATION_ASSET_KINDS, ChapterStitch, Creation, CreationAsset, CreationChapter, CreationCharacter, CreationProp, CreationScene, CreationShot
 from backend.creation import audio_refs, paths
 from backend.creation.common import NotFoundError, ValidationError, ensure_tag_list, row_to_dict
 
 _CREATION_FIELDS = {"name", "description", "genre_tags", "art_style_tags", "audience_tags", "status", "script_text", "owner_id", "project_id"}
-_CREATION_CHARACTER_FIELDS = {"name", "gender", "age", "personality", "occupation", "aliases", "relationship_note", "voice_design", "voice_ref", "character_lib_id"}
-_CHAPTER_FIELDS = {"title", "original_text", "summary", "order_no"}
-_SHOT_FIELDS = {"characters", "scene_descriptions", "dialogues", "bgm_design", "sfx_design", "order_no"}
+_CREATION_CHARACTER_FIELDS = {"name", "gender", "age", "personality", "occupation", "aliases", "relationship_note", "voice_design", "voice_ref", "character_lib_id", "final_prompt", "status", "seed_value", "reference_images"}
+_CHAPTER_FIELDS = {"title", "original_text", "summary", "order_no", "status", "cover", "gen_config"}
+_SHOT_FIELDS = {"characters", "scene_descriptions", "dialogues", "bgm_design", "sfx_design", "order_no",
+                "scene_id", "shot_type", "angle", "movement", "atmosphere", "location", "time",
+                "duration_seconds", "image_prompt", "video_prompt", "reference_images", "status"}
 _ASSET_FIELDS = {"name", "ref_id", "paths", "sequence", "duration_seconds", "description", "metadata_json", "chapter_id", "shot_id"}
+_CHAPTER_STITCH_FIELDS = {"transition", "transition_duration", "resolution", "aspect_ratio",
+                          "make_cover", "cover_duration", "cover_image", "sources", "output",
+                          "duration_seconds"}
 
 
 def _new_dialogue_id() -> str:
@@ -91,6 +96,8 @@ def get_creation(creation_id: str, *, with_detail: bool = False) -> dict:
                 for shot in session.scalars(select(CreationShot).where(CreationShot.chapter_id.in_(chapter_ids)).order_by(CreationShot.order_no)).all():
                     shots.setdefault(shot.chapter_id, []).append(row_to_dict(shot))
             data["chapters"] = [{**row_to_dict(chapter), "shots": shots.get(chapter.id, [])} for chapter in chapters]
+            data["scenes"] = [row_to_dict(item) for item in session.scalars(select(CreationScene).where(CreationScene.creation_id == creation_id).order_by(CreationScene.order_no)).all()]
+            data["props"] = [row_to_dict(item) for item in session.scalars(select(CreationProp).where(CreationProp.creation_id == creation_id).order_by(CreationProp.order_no)).all()]
             data["assets"] = [row_to_dict(item) for item in session.scalars(select(CreationAsset).where(CreationAsset.creation_id == creation_id).order_by(CreationAsset.created_at)).all()]
         return data
 
@@ -155,6 +162,9 @@ def add_creation_character(
     voice_design: str = "",
     voice_ref: str = "",
     character_lib_id: str | None = None,
+    status: str = "pending",
+    seed_value: int | None = None,
+    reference_images: str = "",
 ) -> dict:
     """为项目添加人物设定;voice_ref 为 vf:voices:<id> 音色引用,character_lib_id 关联公共角色库。"""
     if not name or not str(name).strip():
@@ -178,6 +188,9 @@ def add_creation_character(
             voice_design=voice_design,
             voice_ref=voice_ref,
             character_lib_id=character_lib_id,
+            status=status,
+            seed_value=seed_value,
+            reference_images=reference_images,
         )
         session.add(row)
         session.flush()
@@ -253,7 +266,7 @@ def publish_character_to_library(creation_character_id: str, *, tags=None) -> di
 # ---------------------------------------------------------------- 章节
 
 
-def add_chapter(creation_id: str, *, order_no: int | None = None, title: str = "", original_text: str = "", summary: str = "") -> dict:
+def add_chapter(creation_id: str, *, order_no: int | None = None, title: str = "", original_text: str = "", summary: str = "", status: str = "draft") -> dict:
     """新增章节;order_no 缺省时追加到末尾。"""
     with session_scope() as session:
         _require_creation(session, creation_id)
@@ -261,7 +274,7 @@ def add_chapter(creation_id: str, *, order_no: int | None = None, title: str = "
             order_no = (session.scalar(select(func.max(CreationChapter.order_no)).where(CreationChapter.creation_id == creation_id)) or 0) + 1
         if session.scalar(select(CreationChapter.id).where(CreationChapter.creation_id == creation_id, CreationChapter.order_no == order_no)):
             raise ValidationError(f"章节序号已存在: {order_no}")
-        row = CreationChapter(creation_id=creation_id, order_no=order_no, title=title, original_text=original_text, summary=summary)
+        row = CreationChapter(creation_id=creation_id, order_no=order_no, title=title, original_text=original_text, summary=summary, status=status)
         session.add(row)
         session.flush()
         return row_to_dict(row)
@@ -320,6 +333,174 @@ def remove_chapter(chapter_id: str) -> None:
         session.delete(row)
 
 
+# ---------------------------------------------------------------- 场景资产
+
+_SCENE_FIELDS = {"name", "location", "time", "lighting", "prompt", "final_prompt", "image_url", "status"}
+
+
+def add_creation_scene(
+    creation_id: str,
+    *,
+    order_no: int | None = None,
+    name: str = "",
+    location: str = "",
+    time: str = "",
+    lighting: str = "",
+    prompt: str = "",
+    final_prompt: str = "",
+    image_url: str = "",
+    status: str = "pending",
+) -> dict:
+    """为项目新增场景资产;order_no 缺省时追加到末尾。"""
+    with session_scope() as session:
+        _require_creation(session, creation_id)
+        if order_no is None:
+            order_no = (session.scalar(select(func.max(CreationScene.order_no)).where(CreationScene.creation_id == creation_id)) or 0) + 1
+        row = CreationScene(
+            creation_id=creation_id,
+            order_no=order_no,
+            name=name,
+            location=location,
+            time=time,
+            lighting=lighting,
+            prompt=prompt,
+            final_prompt=final_prompt,
+            image_url=image_url,
+            status=status,
+        )
+        session.add(row)
+        session.flush()
+        return row_to_dict(row)
+
+
+def get_scene(scene_id: str) -> dict:
+    with session_scope() as session:
+        row = session.get(CreationScene, scene_id)
+        if row is None:
+            raise NotFoundError(f"场景不存在: {scene_id}")
+        return row_to_dict(row)
+
+
+def list_scenes(creation_id: str) -> list[dict]:
+    with session_scope() as session:
+        _require_creation(session, creation_id)
+        rows = session.scalars(select(CreationScene).where(CreationScene.creation_id == creation_id).order_by(CreationScene.order_no)).all()
+        return [row_to_dict(row) for row in rows]
+
+
+def update_scene(scene_id: str, **fields) -> dict:
+    unknown = set(fields) - _SCENE_FIELDS
+    if unknown:
+        raise ValidationError(f"不支持更新的字段: {sorted(unknown)}")
+    with session_scope() as session:
+        row = session.get(CreationScene, scene_id)
+        if row is None:
+            raise NotFoundError(f"场景不存在: {scene_id}")
+        for key, value in fields.items():
+            setattr(row, key, value)
+        session.flush()
+        return row_to_dict(row)
+
+
+def remove_scene(scene_id: str) -> None:
+    with session_scope() as session:
+        row = session.get(CreationScene, scene_id)
+        if row is None:
+            raise NotFoundError(f"场景不存在: {scene_id}")
+        session.delete(row)
+
+
+# ---------------------------------------------------------------- 道具资产
+
+_PROP_FIELDS = {"order_no", "name", "type", "description", "prompt", "final_prompt", "image_url", "reference_images", "status"}
+
+
+def add_creation_prop(
+    creation_id: str,
+    name: str,
+    *,
+    order_no: int | None = None,
+    type: str = "",
+    description: str = "",
+    prompt: str = "",
+    final_prompt: str = "",
+    image_url: str = "",
+    reference_images=None,
+    status: str = "pending",
+) -> dict:
+    """为项目新增道具资产;name 同项目内唯一。"""
+    if not name or not str(name).strip():
+        raise ValidationError("道具名称不能为空")
+    with session_scope() as session:
+        _require_creation(session, creation_id)
+        if session.scalar(select(CreationProp.id).where(CreationProp.creation_id == creation_id, CreationProp.name == name)):
+            raise ValidationError(f"项目内已存在同名道具: {name}")
+        if order_no is None:
+            order_no = (session.scalar(select(func.max(CreationProp.order_no)).where(CreationProp.creation_id == creation_id)) or 0) + 1
+        row = CreationProp(
+            creation_id=creation_id,
+            order_no=order_no,
+            name=str(name).strip(),
+            type=type,
+            description=description,
+            prompt=prompt,
+            final_prompt=final_prompt,
+            image_url=image_url,
+            reference_images=list(reference_images or []),
+            status=status,
+        )
+        session.add(row)
+        session.flush()
+        return row_to_dict(row)
+
+
+def get_prop(prop_id: str) -> dict:
+    with session_scope() as session:
+        row = session.get(CreationProp, prop_id)
+        if row is None:
+            raise NotFoundError(f"道具不存在: {prop_id}")
+        return row_to_dict(row)
+
+
+def list_props(creation_id: str) -> list[dict]:
+    with session_scope() as session:
+        _require_creation(session, creation_id)
+        rows = session.scalars(select(CreationProp).where(CreationProp.creation_id == creation_id).order_by(CreationProp.order_no)).all()
+        return [row_to_dict(row) for row in rows]
+
+
+def update_prop(prop_id: str, **fields) -> dict:
+    unknown = set(fields) - _PROP_FIELDS
+    if unknown:
+        raise ValidationError(f"不支持更新的字段: {sorted(unknown)}")
+    if "name" in fields:
+        new_name = str(fields["name"] or "").strip()
+        if not new_name:
+            raise ValidationError("道具名称不能为空")
+        fields["name"] = new_name
+    if "reference_images" in fields:
+        fields["reference_images"] = list(fields["reference_images"] or [])
+    with session_scope() as session:
+        row = session.get(CreationProp, prop_id)
+        if row is None:
+            raise NotFoundError(f"道具不存在: {prop_id}")
+        if "name" in fields and fields["name"] != row.name:
+            if session.scalar(select(CreationProp.id).where(CreationProp.creation_id == row.creation_id, CreationProp.name == fields["name"], CreationProp.id != prop_id)):
+                raise ValidationError(f"项目内已存在同名道具: {fields['name']}")
+        for key, value in fields.items():
+            setattr(row, key, value)
+        session.flush()
+        return row_to_dict(row)
+
+
+def remove_prop(prop_id: str) -> None:
+    with session_scope() as session:
+        row = session.get(CreationProp, prop_id)
+        if row is None:
+            raise NotFoundError(f"道具不存在: {prop_id}")
+        session.delete(row)
+
+
 # ---------------------------------------------------------------- 分镜
 
 
@@ -332,6 +513,18 @@ def add_shot(
     dialogues=None,
     bgm_design: str = "",
     sfx_design: str = "",
+    scene_id: str | None = None,
+    shot_type: str = "",
+    angle: str = "",
+    movement: str = "",
+    atmosphere: str = "",
+    location: str = "",
+    time: str = "",
+    duration_seconds: float | None = None,
+    image_prompt: str = "",
+    video_prompt: str = "",
+    reference_images=None,
+    status: str = "pending",
 ) -> dict:
     """新增分镜;order_no 缺省时追加到末尾。
 
@@ -347,9 +540,24 @@ def add_shot(
             order_no = (session.scalar(select(func.max(CreationShot.order_no)).where(CreationShot.chapter_id == chapter_id)) or 0) + 1
         if session.scalar(select(CreationShot.id).where(CreationShot.chapter_id == chapter_id, CreationShot.order_no == order_no)):
             raise ValidationError(f"分镜序号已存在: {order_no}")
+        if scene_id:
+            if session.get(CreationScene, scene_id) is None:
+                raise NotFoundError(f"场景不存在: {scene_id}")
         row = CreationShot(
             chapter_id=chapter_id,
             order_no=order_no,
+            scene_id=scene_id,
+            shot_type=shot_type,
+            angle=angle,
+            movement=movement,
+            atmosphere=atmosphere,
+            location=location,
+            time=time,
+            duration_seconds=duration_seconds,
+            image_prompt=image_prompt,
+            video_prompt=video_prompt,
+            reference_images=list(reference_images or []),
+            status=status,
             characters=_normalize_shot_characters(characters),
             scene_descriptions=[str(item) for item in (scene_descriptions or [])],
             dialogues=_normalize_dialogues(dialogues),
@@ -386,6 +594,11 @@ def update_shot(shot_id: str, **fields) -> dict:
             fields["dialogues"] = _normalize_dialogues(fields["dialogues"])
         if "scene_descriptions" in fields:
             fields["scene_descriptions"] = [str(item) for item in (fields["scene_descriptions"] or [])]
+        if "reference_images" in fields:
+            fields["reference_images"] = list(fields["reference_images"] or [])
+        if "scene_id" in fields and fields["scene_id"]:
+            if session.get(CreationScene, fields["scene_id"]) is None:
+                raise NotFoundError(f"场景不存在: {fields['scene_id']}")
         for key, value in fields.items():
             setattr(row, key, value)
         session.flush()
@@ -532,6 +745,55 @@ def remove_asset(asset_id: str) -> None:
         if row is None:
             raise NotFoundError(f"项目资产不存在: {asset_id}")
         session.delete(row)
+
+
+def add_chapter_stitch(creation_id: str, chapter_id: str, **fields) -> dict:
+    """登记一条章节拼接历史（导出/重拼各记一条），供后续可重拼与转场复用。
+
+    fields 见 ``_CHAPTER_STITCH_FIELDS``；sources 为有序分镜成片源的绝对路径 JSON 字符串。
+    """
+    unknown = set(fields) - _CHAPTER_STITCH_FIELDS
+    if unknown:
+        raise ValidationError(f"不支持的章节拼接字段: {sorted(unknown)}")
+    with session_scope() as session:
+        _require_creation(session, creation_id)
+        _require_chapter(session, creation_id, chapter_id)
+        row = ChapterStitch(
+            id=str(uuid.uuid4()),
+            creation_id=creation_id,
+            chapter_id=chapter_id,
+            transition=str(fields.get("transition") or "none"),
+            transition_duration=float(fields.get("transition_duration") or 0.4),
+            resolution=str(fields.get("resolution") or "original"),
+            aspect_ratio=str(fields.get("aspect_ratio") or "original"),
+            make_cover=bool(fields.get("make_cover")),
+            cover_duration=float(fields.get("cover_duration") or 3.0),
+            cover_image=str(fields.get("cover_image") or ""),
+            sources=str(fields.get("sources") or ""),
+            output=str(fields.get("output") or ""),
+            duration_seconds=fields.get("duration_seconds"),
+        )
+        session.add(row)
+        session.flush()
+        return row_to_dict(row)
+
+
+def list_chapter_stitches(chapter_id: str, *, creation_id: str = "") -> list[dict]:
+    """列出章节的拼接历史，按时间倒序（最新在前）。"""
+    with session_scope() as session:
+        stmt = select(ChapterStitch).where(ChapterStitch.chapter_id == chapter_id)
+        if creation_id:
+            stmt = stmt.where(ChapterStitch.creation_id == creation_id)
+        rows = session.scalars(stmt.order_by(ChapterStitch.created_at.desc())).all()
+        return [row_to_dict(r) for r in rows]
+
+
+def get_chapter_stitch(stitch_id: str) -> dict:
+    with session_scope() as session:
+        row = session.get(ChapterStitch, stitch_id)
+        if row is None:
+            raise NotFoundError(f"章节拼接历史不存在: {stitch_id}")
+        return row_to_dict(row)
 
 
 def export_creation(creation_id: str) -> dict:

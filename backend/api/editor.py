@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from pathlib import Path
 import asyncio
+import json
+import os
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse, JSONResponse
@@ -9,13 +12,73 @@ from fastapi.responses import FileResponse, JSONResponse
 from backend.control_plane.database import session_scope
 from backend.control_plane.models import Task
 from backend.editor.models import CharactersWriteRequest, ImportRequest, ProjectWriteRequest
-from backend.editor.repository import EditorProjectRepository, RevisionConflictError
+from backend.editor.repository import TASKS_ROOT, EditorProjectRepository, RevisionConflictError
 
 
 router = APIRouter()
 repository = EditorProjectRepository()
 
 TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted"}
+
+
+def _iter_workspace_roots() -> list[Path]:
+    control_root = Path(os.getenv("CONTROL_PLANE_WORKSPACE_ROOT", Path.cwd() / "control_plane_workspaces"))
+    return [control_root, Path(TASKS_ROOT)]
+
+
+def _clear_pending_edit(task_id: str) -> None:
+    """用户在剪辑台保存项目后清除「待剪辑」标记。"""
+    try:
+        repository.task_dir(task_id)
+    except HTTPException:
+        return
+    state_path = repository.editor_dir(task_id) / "push_state.json"
+    if not state_path.is_file():
+        return
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["pendingEdit"] = False
+        state["editedAt"] = datetime.now(timezone.utc).isoformat()
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=2), encoding="utf-8")
+    except (OSError, json.JSONDecodeError):
+        pass
+
+
+@router.get("/tasks/pending")
+async def list_pending_edit_tasks():
+    """列出已推送到剪辑台、等待人工剪辑的任务（剪辑台首页「待剪辑」标签）。"""
+    pending: list[dict] = []
+    seen: set[str] = set()
+    for root in _iter_workspace_roots():
+        if not root.is_dir():
+            continue
+        for state_path in root.glob("*/editor/push_state.json"):
+            try:
+                state = json.loads(state_path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if not state.get("pendingEdit"):
+                continue
+            task_id = str(state.get("taskId") or state_path.parent.parent.name)
+            if task_id in seen:
+                continue
+            seen.add(task_id)
+            task_dir = state_path.parent.parent
+            task_name = task_id
+            task_json = task_dir / "task.json"
+            if task_json.is_file():
+                try:
+                    data = json.loads(task_json.read_text(encoding="utf-8"))
+                    task_name = data.get("task_name") or task_id
+                except (OSError, json.JSONDecodeError):
+                    pass
+            pending.append({
+                "id": task_id,
+                "task_name": task_name,
+                "pushed_at": state.get("pushedAt"),
+            })
+    pending.sort(key=lambda item: str(item.get("pushed_at") or ""), reverse=True)
+    return {"tasks": pending}
 
 
 @router.get("/tasks")
@@ -72,9 +135,11 @@ async def get_project(task_id: str):
 @router.put("/tasks/{task_id}/project")
 async def update_project(task_id: str, request: ProjectWriteRequest):
     try:
-        return repository.save_project(task_id, request.project, request.expected_revision, "editor")
+        result = repository.save_project(task_id, request.project, request.expected_revision, "editor")
     except RevisionConflictError as exc:
         return JSONResponse(status_code=409, content={"detail": "revision_conflict", "revision": exc.revision})
+    _clear_pending_edit(task_id)
+    return result
 
 
 @router.get("/tasks/{task_id}/assets/{asset_id}/stream")

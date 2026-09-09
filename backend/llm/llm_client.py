@@ -267,6 +267,8 @@ class LLMClient:
         temperature: Optional[float] = None,
         images: Optional[List[str]] = None,
         log_request_params: bool = False,
+        model_override: str = "",
+        retry: bool = True,
     ) -> Any:
         """
         Send a chat completion request.
@@ -282,12 +284,18 @@ class LLMClient:
             temperature: Override temperature (None = API default).
             images: Optional list of image file paths for multimodal requests.
             log_request_params: Print full request parameters before sending.
+            model_override: Force a specific model name (overrides step routing).
+            retry: Whether to retry transport-level errors. Set to False when the
+                caller (e.g. batch_chat) already performs its own retry, to avoid
+                nested retry amplification.
 
         Returns:
             Parsed response (dict if response_json, str otherwise).
             If stream=True, returns a generator of text chunks.
         """
         api_cfg = self._get_api_config(step_name)
+        if model_override:
+            api_cfg["model"] = model_override.strip()
         if not api_cfg["base_url"] or not api_cfg["api_key"]:
             # 配置缺失是本地问题，重试无意义，直接给出可定位的错误
             raise LLMRequestError(
@@ -295,6 +303,11 @@ class LLMClient:
                 "please configure in Settings > LLM",
                 error_type=LLMErrorType.CONFIG, step=step_name, model=api_cfg.get("model"),
             )
+
+        # 重试开关：batch_chat 已作为唯一重试层，调用 chat 时传 retry=False，
+        # 避免“chat 内部重试 × batch 重试”的嵌套放大（否则单请求最多 16 次 HTTP）。
+        _retry_enabled = bool(retry) and bool(api_cfg.get("retry_enabled", True))
+        _retry_count = api_cfg.get("retry_count", 1) if _retry_enabled else 0
 
         # Build message list
         if messages:
@@ -337,8 +350,8 @@ class LLMClient:
                 log=log,
                 temperature=temperature,
                 timeout_val=api_cfg.get("timeout", 120),
-                retry_enabled=api_cfg.get("retry_enabled", True),
-                retry_count=api_cfg.get("retry_count", 1),
+                retry_enabled=_retry_enabled,
+                retry_count=_retry_count,
             )
 
         # --- Legacy path: OpenAI SDK → HTTP gateway → upstream ---
@@ -401,8 +414,8 @@ class LLMClient:
         # are retried. All other errors (auth, bad request, parse failure, config,
         # unknown) raise immediately with the real cause — retrying them cannot
         # succeed and only masks the actual problem.
-        retry_enabled = api_cfg.get("retry_enabled", True)
-        retry_count = api_cfg.get("retry_count", 1) if retry_enabled else 0
+        retry_enabled = _retry_enabled
+        retry_count = _retry_count
 
         last_error = None
         for attempt in range(retry_count + 1):
@@ -682,6 +695,7 @@ class LLMClient:
                         temperature=req.get("temperature"),
                         images=req.get("images"),
                         log_request_params=req.get("log_request_params", False),
+                        retry=False,
                     )
                     return result
                 except Exception as e:

@@ -48,6 +48,200 @@
   },
   "models": [
     {
+      "id": "gpt-image-2-text-to-image",
+      "name": "GPT Image-2 - Text to Image",
+      "platform": "gpt-image",
+      "category": "image",
+      "family": "market",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "gpt-image-2-text-to-image",
+      "model_options": [
+        "gpt-image-2-text-to-image"
+      ],
+      "description": "Generate content using the GPT Image 2 Text To Image model (market createTask + recordInfo).",
+      "params": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "A text description of the image you want to generate (max 20000 chars)."
+        },
+        {
+          "name": "aspect_ratio",
+          "type": "string",
+          "required": false,
+          "default": "auto",
+          "enum": [
+            "auto",
+            "1:1",
+            "3:2",
+            "2:3",
+            "4:3",
+            "3:4",
+            "16:9",
+            "9:16",
+            "2:1",
+            "1:2",
+            "3:1",
+            "1:3",
+            "21:9",
+            "9:21",
+            "5:4",
+            "4:5"
+          ],
+          "description": "Width-height ratio of the image. For 2K/4K, 5:4, 4:5, 3:1, 1:3 and 9:21 are not supported."
+        },
+        {
+          "name": "resolution",
+          "type": "string",
+          "required": false,
+          "default": "1K",
+          "enum": [
+            "1K",
+            "2K",
+            "4K"
+          ],
+          "description": "Image resolution."
+        },
+        {
+          "name": "background",
+          "type": "string",
+          "required": false,
+          "default": "opaque",
+          "enum": [
+            "transparent",
+            "opaque",
+            "auto"
+          ],
+          "description": "Image background output mode: transparent / opaque / auto."
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "0.413",
+      "kie_price": "0.04",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/market\\gpt-image\\2-text-to-image",
+      "pricing": {
+        "official_price": "0.413",
+        "kie_price": "0.04",
+        "credit_price": "8",
+        "credit_unit": "per image",
+        "discount_rate": 0.0,
+        "provider": "OpenAI",
+        "interface_type": "image",
+        "example": "gpt image 2, text-to-image, 4k",
+        "anchor": "https://kie.ai/gpt-image-2?model=gpt-image-2-text-to-image",
+        "variants": 1,
+        "approx": true
+      }
+    },
+    {
+      "id": "gpt-image-2-image-to-image",
+      "name": "GPT Image-2 - Image to Image",
+      "platform": "gpt-image",
+      "category": "image",
+      "family": "market",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "gpt-image-2-image-to-image",
+      "model_options": [
+        "gpt-image-2-image-to-image"
+      ],
+      "description": "Generate content using the GPT Image 2 Image To Image model (market createTask + recordInfo).",
+      "params": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "A text description of the image you want to generate (max 20000 chars)."
+        },
+        {
+          "name": "input_urls",
+          "type": "array<string>",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "Reference image URLs for image-to-image (max 30MB each; jpeg/png/webp/jpg)."
+        },
+        {
+          "name": "aspect_ratio",
+          "type": "string",
+          "required": false,
+          "default": "auto",
+          "enum": [
+            "auto",
+            "1:1",
+            "3:2",
+            "2:3",
+            "4:3",
+            "3:4",
+            "16:9",
+            "9:16",
+            "2:1",
+            "1:2",
+            "3:1",
+            "1:3",
+            "21:9",
+            "9:21",
+            "5:4",
+            "4:5"
+          ],
+          "description": "Width-height ratio of the image. For 2K/4K, 5:4, 4:5, 3:1, 1:3 and 9:21 are not supported."
+        },
+        {
+          "name": "resolution",
+          "type": "string",
+          "required": false,
+          "default": "1K",
+          "enum": [
+            "1K",
+            "2K",
+            "4K"
+          ],
+          "description": "Image resolution."
+        },
+        {
+          "name": "background",
+          "type": "string",
+          "required": false,
+          "default": "opaque",
+          "enum": [
+            "transparent",
+            "opaque",
+            "auto"
+          ],
+          "description": "Image background output mode: transparent / opaque / auto."
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "0.413",
+      "kie_price": "0.04",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/market\\gpt-image\\2-image-to-image",
+      "pricing": {
+        "official_price": "0.413",
+        "kie_price": "0.04",
+        "credit_price": "8",
+        "credit_unit": "per image",
+        "discount_rate": 0.0,
+        "provider": "OpenAI",
+        "interface_type": "image",
+        "example": "gpt image 2, image-to-image, 4k",
+        "anchor": "https://kie.ai/gpt-image-2?model=gpt-image-2-image-to-image",
+        "variants": 1,
+        "approx": true
+      }
+    },
+    {
       "id": "generate-4o-image",
       "name": "Generate 4o Image",
       "platform": "GPT-4o Image",

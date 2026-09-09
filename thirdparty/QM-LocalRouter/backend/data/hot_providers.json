@@ -80,12 +80,20 @@
     "homepage": "https://cloud.siliconflow.cn/i/L5HvpICN"
   },
   {
-    "name": "阿里百炼 (DashScope)",
+    "name": "SiliconFlow (硅基流动)",
     "protocol": "openai",
-    "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "description": "通义千问 Qwen 系列，阿里云大模型平台",
+    "base_url": "https://api.siliconflow.cn/v1",
+    "description": "国产模型聚合平台，支持多种开源模型，有免费额度",
+    "icon_keyword": "siliconflow",
+    "homepage": "https://cloud.siliconflow.cn/i/L5HvpICN"
+  },
+  {
+    "name": "cavotiAI (国际模型)",
+    "protocol": "openai",
+    "base_url": "	https://cavoti.com/v1",
+    "description": "前沿模型聚合路由平台，价格便宜，注册送一亿token",
     "icon_keyword": "alibaba dashscope",
-    "homepage": "https://www.aliyun.com/benefit/ai/aistar?clubBiz=subTask..12814001..10274.."
+    "homepage": "https://cavoti.com/register?aff=4VLMN2NN445Y"
   },
   {
     "name": "腾讯云混元",

@@ -204,6 +204,9 @@ api_keys.json
 kieai_sdk/pricing_config.json
 # kie.ai pricing disk cache (generated, may contain fetched data)
 kieai_sdk/prices_cache.json
+# kieai_sdk 移至 backend/ 后新路径的密钥与缓存
+backend/kieai_sdk/pricing_config.json
+backend/kieai_sdk/prices_cache.json
 # 第三方社交发布运行时凭据数据（cookie / 账号数据）
 **/cookies/
 **/cookiesFile/

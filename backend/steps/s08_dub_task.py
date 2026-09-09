@@ -15,6 +15,11 @@ class S08DubTask(BaseStep):
     step_name = "生成配音任务"
     dependencies = ["s06_subtitle_gen"]
 
+    # 语速预测缩减阈值：预测时长 > 时间槽时长 * ratio 且绝对差 > margin 秒时视为超长
+    # ratio 取 2.0：后续 s09 调速步骤(max=1.5)可消化约一半余量，故此处仅在预测明显超长时才改文案
+    SPEED_REDUCE_RATIO = 2.0
+    SPEED_REDUCE_MIN_MARGIN = 0.5
+
     @property
     def artifacts(self):
         node_suffix = f"_{getattr(self, '_node_id', '')}" if getattr(self, "_node_id", "") else ""
@@ -593,6 +598,84 @@ class S08DubTask(BaseStep):
             "max_concurrent": max_concurrent,
         }
 
+    # ═══════════ 语速预测 + 句子缩减（speed_predict_reduce） ═══════════
+
+    @classmethod
+    def _apply_speed_predict_reduction(
+        cls,
+        segments: List[Dict],
+        read_language: str,
+        node_cfg: Dict,
+        callback: Optional[Callable] = None,
+    ) -> Dict[str, int]:
+        """语速预测缩减：预测每句 TTS 朗读时长，明显超过时间槽时由 LLM 缩减朗读文本。
+
+        - 时长预测复用多语言估算模块 backend/utils/tts_duration_estimator（无需调用 TTS 引擎）
+        - 缩减请求复用 s09 的字幕缩减实现（backend/utils/subtitle_reduction，含批次并发、
+          短句跳过与缩减幅度校验），提示词模板沿用 s09_subtitle_reduction
+        - 短句（中文<3字 / 英文等词类语言<2词）自动跳过缩减
+        - 无时间戳输入（duration 为 None）无法比较，整体跳过
+
+        Returns:
+            统计信息 {"predicted": 预测句数, "overflow": 超长句数, "reduced": 实际缩减句数}
+        """
+        from backend.utils.tts_duration_estimator import estimate_tts_duration
+        from backend.utils.subtitle_reduction import reduce_overflow_texts
+
+        timed = [seg for seg in segments if seg.get("duration")]
+        if not timed:
+            logger.info("[DubTask] 语速预测缩减：输入无时间戳（文本配音模式），跳过")
+            return {"predicted": 0, "overflow": 0, "reduced": 0}
+
+        # 1) 多语言 TTS 时长预测
+        for seg in timed:
+            text = seg.get("read_text") or seg.get("text") or ""
+            seg["tts_predicted_duration"] = estimate_tts_duration(text, read_language)
+
+        # 2) 筛选超长句：预测时长远大于时间槽时长
+        try:
+            ratio = float(node_cfg.get("speed_predict_ratio") or cls.SPEED_REDUCE_RATIO)
+        except (TypeError, ValueError):
+            ratio = cls.SPEED_REDUCE_RATIO
+        try:
+            margin = float(node_cfg.get("speed_predict_margin") or cls.SPEED_REDUCE_MIN_MARGIN)
+        except (TypeError, ValueError):
+            margin = cls.SPEED_REDUCE_MIN_MARGIN
+
+        overflow = []
+        for seg in timed:
+            predicted = seg.get("tts_predicted_duration") or 0.0
+            duration = seg.get("duration") or 0.0
+            if duration > 0 and predicted > duration * ratio and predicted - duration > margin:
+                # 借用 real_duration 字段向共享缩减模块传递预测时长（用于计算目标缩减比例）
+                seg["real_duration"] = predicted
+                overflow.append(seg)
+
+        stats = {"predicted": len(timed), "overflow": len(overflow), "reduced": 0}
+        logger.info(
+            f"[DubTask] 语速预测：共 {len(timed)} 句，超长 {len(overflow)} 句"
+            f"（阈值：预测 > 时槽×{ratio:.2f} 且差值>{margin:.2f}s）"
+        )
+
+        if not overflow:
+            return stats
+
+        # 3) LLM 缩减（复用 s09 共享缩减实现，内部自动跳过短句）
+        if callback:
+            callback(80, f"语速预测：{len(overflow)}/{len(timed)} 句预测超长，调用 LLM 缩减...")
+        try:
+            stats["reduced"] = reduce_overflow_texts(
+                overflow, step_name="s09_subtitle_reduction"
+            )
+        except Exception as e:
+            logger.warning(f"[DubTask] LLM 缩减异常（不中断任务）: {e}")
+        finally:
+            # 清理临时传递字段，避免泄漏到下游任务单
+            for seg in overflow:
+                seg.pop("real_duration", None)
+
+        return stats
+
     def _write_csv(self, task_dir: str, segments: List[Dict]) -> None:
         import pandas as pd
 
@@ -653,6 +736,7 @@ class S08DubTask(BaseStep):
                     "overlap_after": seg.get("overlap_after", 0.0),
                     "gap_after": seg["gap_after"],
                     "speed_ratio": seg["speed_ratio"],
+                    "tts_predicted_duration": seg.get("tts_predicted_duration"),
                     "audio_file": seg["audio_file"],
                     "character_id": seg["character_id"],
                     "read_character_id": seg["read_character_id"],
@@ -700,10 +784,14 @@ class S08DubTask(BaseStep):
         enable_tone = bool(node_cfg.get("ai_read_tone"))
         enable_normalize = bool(node_cfg.get("normalize_chinese_read_text"))
         enable_dialect = bool(node_cfg.get("ai_dialect_colloquial"))
+        enable_speed_reduce = bool(node_cfg.get("speed_predict_reduce"))
         dialect_name = str(node_cfg.get("dialect_name") or "四川话").strip() or "四川话"
 
         logger.info(f"[DubTask] 节点配置: {node_cfg}")
-        logger.info(f"[DubTask] LLM选项: ai_read_tone={enable_tone}, normalize={enable_normalize}, dialect={enable_dialect}")
+        logger.info(
+            f"[DubTask] LLM选项: ai_read_tone={enable_tone}, normalize={enable_normalize}, "
+            f"dialect={enable_dialect}, speed_predict_reduce={enable_speed_reduce}"
+        )
 
         segments = self._build_segments(entries, task_dir)
 
@@ -725,6 +813,20 @@ class S08DubTask(BaseStep):
                 callback=callback,
             )
 
+        # 语速预测缩减：预测 TTS 时长并对超长句调用 LLM 缩减（在写盘前完成，保证下游拿到缩减后文本）
+        speed_reduce_stats = {"predicted": 0, "overflow": 0, "reduced": 0}
+        if enable_speed_reduce:
+            if callback:
+                callback(72, "语速预测：估算各句 TTS 朗读时长...")
+            try:
+                speed_reduce_stats = self._apply_speed_predict_reduction(
+                    segments, read_language, node_cfg, callback
+                )
+            except Exception as e:
+                logger.warning(f"[DubTask] 语速预测缩减异常（不中断任务）: {e}")
+                import traceback
+                traceback.print_exc()
+
         self._write_csv(task_dir, segments)
 
         json_payload = self._build_json_payload(
@@ -735,6 +837,10 @@ class S08DubTask(BaseStep):
                 "normalize_chinese_read_text": enable_normalize and self._is_chinese_language(read_language),
                 "ai_dialect_colloquial": enable_dialect,
                 "dialect_name": dialect_name if enable_dialect else "",
+                "speed_predict_reduce": enable_speed_reduce,
+                "speed_reduce_predicted": speed_reduce_stats.get("predicted", 0),
+                "speed_reduce_overflow": speed_reduce_stats.get("overflow", 0),
+                "speed_reduce_count": speed_reduce_stats.get("reduced", 0),
                 "llm_batch_count": llm_runtime["batch_count"],
                 "llm_max_request_chars": llm_runtime["max_request_chars"],
                 "llm_max_concurrent": llm_runtime["max_concurrent"],

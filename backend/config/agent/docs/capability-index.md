@@ -91,7 +91,19 @@ python backend/manager.py 18001 11001   # 自定义端口
 
 系统由**节点（node）**组成工作流。每个节点在 `builtin_node_types.py` 定义展示元数据（名称/分类/输入/输出/表单/执行域），在 `step_registry.py` 映射到具体的 `S_*` Step 类。
 
-**当前内置节点 108 个**（另有 3 个自定义节点：`groupnode_mtbj91n4`、`groupnode_mtbj9s8i`、`hyperframe_render`；合计 111 个，数量随版本增长，不要硬编码旧数字）。完整定义以 `builtin_node_types.py` 为准；**权威清单见 `docs/node_catalog.md`**（按分组表格罗列 id / 名称 / 描述 / 执行域 / 输入 / 输出接口，含自定义节点，总计 111 个），新增或修改节点后在 `PROJECT_ROOT` 下运行 `python scripts/generate_node_catalog.py` 重新生成。
+## AI 漫剧提示词模板库
+
+AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*.md`
+（`README.md` 有节点↔模板映射与字段契约）。运行时由 `s_agi_comic.py::_load_prompt()`
+读取并**拼在节点内置约束之前**；**JSON schema 与字段约束始终由代码追加在最后**，
+因此人工改写模板不会破坏入库格式。模板缺失时节点自动回退内置提示词。
+
+需要调整某个阶段的创作规范时，**改对应 MD 即可，不必改节点代码**；
+但不要改动示例中的字段名（节点按这些键解析入库）。
+
+改进计划见 `docs/AI漫剧改进计划.md`（P0：分镜生产字段/资产提取/格式化剧本/P1/P2）。
+
+**当前内置节点 109 个**（另有 3 个自定义节点：`groupnode_mtbj91n4`、`groupnode_mtbj9s8i`、`hyperframe_render`；合计 112 个，数量随版本增长，不要硬编码旧数字）。完整定义以 `builtin_node_types.py` 为准；**权威清单见 `docs/node_catalog.md`**（按分组表格罗列 id / 名称 / 描述 / 执行域 / 输入 / 输出接口，含自定义节点，总计 112 个），新增或修改节点后在 `PROJECT_ROOT` 下运行 `python scripts/generate_node_catalog.py` 重新生成。
 
 下面按 `category`（后端白名单值）分组罗列**真实存在**的节点（`·子进程` 表示 `execution_domain="process"`；`·未注册` 表示尚未注册进 `step_registry._STEPS`）：
 
@@ -176,7 +188,8 @@ python backend/manager.py 18001 11001   # 自定义端口
 - `aigc_comfyui`：ComfyUI 生图
 - `aigc_jimeng`：即梦 CLI 生成 ·子进程
 - `aigc_runninghub`：RunningHub 生成 ·子进程
-- `agi_project`：项目立项·剧本创作（起始节点：创建项目 + LLM 故事骨架，creation_id 贯穿下游）
+- `agi_project`：项目立项·剧本创作（起始节点：创建项目 + LLM 故事骨架，creation_id 贯穿下游；「浏览项目」按钮弹窗内含思维导图单项目视图与**项目列表多宫格首页**（简介/进度/资产统计，`GET /api/creation/list`），点卡片进入该项目导图）
+- `agi_deepen`：剧本深化（骨架→严格 JSON 设定书入库：剧本简介/章节内容规划建章/人物设计提炼/画风元素锁定写入骨架；下游生图自动取用画风、分镜提示词注入人物造型锚点；AGI 全部 LLM 节点支持 `llm_model` 配置覆盖路由模型）
 - `agi_character`：人物资产创作（LLM 生成人物设定，发布公共角色库 + 多视角图）
 - `agi_voice`：人物音色生产 ·子进程（按 voice_design 合成音色样本→vf 引用→绑定人物 voice_ref）
 - `agi_scene`：场景资产创作 ·子进程（场景概念图）

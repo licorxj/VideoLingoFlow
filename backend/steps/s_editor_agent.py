@@ -30,6 +30,27 @@ class S_EditorAgent(BaseStep):
         if callback:
             callback(20, "正在加载剪辑项目和素材")
         repository = EditorProjectRepository()
+        # 接力上游剪辑项目 JSON：先恢复为当前状态，再做二次精选。
+        # 单节点重跑防叠加：共享文件若由本节点上次写回（lastWriter==本节点），
+        # 则回退到进入本节点前的输入快照（cache），从进入点状态重新执行。
+        node_id = getattr(self, "_node_id", "")
+        project_input = str(inputs.get("project") or "")
+        if project_input and os.path.isfile(project_input):
+            with open(project_input, "r", encoding="utf-8") as handle:
+                data = json.load(handle)
+            input_backup = os.path.join(task_dir, "cache", f"editing_input_{node_id}.json")
+            if node_id and data.get("lastWriter") == node_id and os.path.isfile(input_backup):
+                try:
+                    with open(input_backup, "r", encoding="utf-8") as handle:
+                        data = json.load(handle)
+                except (OSError, json.JSONDecodeError):
+                    pass
+            elif node_id:
+                os.makedirs(os.path.dirname(input_backup), exist_ok=True)
+
+                with open(input_backup, "w", encoding="utf-8") as handle:
+                    json.dump(data, handle, ensure_ascii=False)
+            repository.restore_snapshot(task_id, data, updated_by="editor_agent")
         try:
             snapshot = repository.snapshot(task_id)
         except Exception:
@@ -57,9 +78,10 @@ class S_EditorAgent(BaseStep):
         with open(artifacts_path, "w", encoding="utf-8") as handle:
             json.dump(run, handle, ensure_ascii=False, indent=2)
 
-        # 剪辑项目快照：含时间线、素材与修订号，供下游「剪辑渲染」等节点消费
+        # 剪辑项目快照：写回剪辑链共享项目文件（含时间线、素材与修订号），
+        # 供下游「剪辑渲染」等节点消费；链上所有节点共用同一 JSON 文件名
         latest = repository.snapshot(task_id)
-        project_path = os.path.join(output_dir, f"editor_project_{node_id}.json")
+        project_path = os.path.join(output_dir, "editing_project.json")
         with open(project_path, "w", encoding="utf-8") as handle:
             json.dump(
                 {
@@ -67,6 +89,7 @@ class S_EditorAgent(BaseStep):
                     "revision": latest.get("revision"),
                     "project": latest.get("project"),
                     "assets": latest.get("assets"),
+                    "lastWriter": node_id,
                 },
                 handle,
                 ensure_ascii=False,

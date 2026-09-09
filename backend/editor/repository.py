@@ -4,6 +4,7 @@ import json
 import mimetypes
 import os
 import re
+import shutil
 import subprocess
 import threading
 import uuid
@@ -505,13 +506,39 @@ class EditorProjectRepository:
             float(metadata.get("duration") or 0),
             max((float(element.get("startTime", 0) or 0) + float(element.get("duration", 0) or 0) for scene in scenes for track in scene["tracks"] for element in track["elements"]), default=0),
         )
+        self._strip_inline_media(normalized)
         return normalized
+
+    @staticmethod
+    def _strip_inline_media(project: dict[str, Any]) -> None:
+        """剥离项目 JSON 中内联的 base64 媒体数据（dataURL）。
+
+        图片等素材一律以 mediaId 引用仓库资产文件；编辑器保存项目时可能把
+        缩略图（metadata.thumbnail）或元素内嵌图片写成 dataURL，会显著膨胀
+        剪辑项目 JSON 体积并拖累剪辑 AI Agent 读取上下文，统一在此清除。
+        """
+        metadata = project.get("metadata")
+        if isinstance(metadata, dict) and isinstance(metadata.get("thumbnail"), str) and metadata["thumbnail"].startswith("data:"):
+            metadata["thumbnail"] = ""
+        for scene in project.get("scenes") or []:
+            if not isinstance(scene, dict):
+                continue
+            for track in scene.get("tracks") or []:
+                if not isinstance(track, dict):
+                    continue
+                for element in track.get("elements") or []:
+                    if not isinstance(element, dict):
+                        continue
+                    for key, value in list(element.items()):
+                        if isinstance(value, str) and value.startswith("data:") and len(value) > 4096:
+                            element.pop(key, None)
 
     def import_assets(
         self,
         task_id: str,
         candidate_ids: list[str],
         use_dub_segments: bool = False,
+        arrange_tracks: bool = True,
     ) -> dict[str, Any]:
         self.validate_task_id(task_id)
         with self._lock_for(task_id):
@@ -532,6 +559,9 @@ class EditorProjectRepository:
                 scene = project["scenes"][0]
                 main_track = scene["tracks"][0]
                 selected = [candidates[candidate_id] for candidate_id in selected_ids]
+                if not arrange_tracks:
+                    # 仅导入素材清单，不把素材预排到轨道
+                    selected = []
                 main_video = next((candidate for candidate in selected if candidate.category == "video"), None)
                 cover = next((candidate for candidate in selected if candidate.category == "cover"), None)
                 if main_video:
@@ -577,7 +607,7 @@ class EditorProjectRepository:
                     for _, entries in subtitle_entries:
                         subtitle_track["elements"].extend(self._text_element(start, end, content) for start, end, content in entries)
                     scene["tracks"].append(subtitle_track)
-                main_title, hook = self._title_metadata(task_id)
+                main_title, hook = self._title_metadata(task_id) if arrange_tracks else ("", "")
                 if main_title:
                     scene["tracks"].append({"id": self._new_id("track"), "type": "text", "name": "Main title", "hidden": False, "elements": [self._title_element(main_title)]})
                 if hook:
@@ -597,6 +627,66 @@ class EditorProjectRepository:
         self._write_json(self.project_path(task_id), project)
         characters = self._read_json(self.characters_path(task_id), {"revision": 1, "characters": []})
         return {"project": project, "assets": self._load_assets(task_id), "characters": characters.get("characters", []), "revision": project.get("revision", 1)}
+
+    def restore_snapshot(self, task_id: str, data: dict[str, Any], updated_by: str = "workflow") -> dict[str, Any]:
+        """恢复上游节点导出的剪辑项目快照，作为本任务剪辑器的当前状态。
+
+        用于「剪辑 JSON 接力」链路：Cutia 交互剪辑 → 剪辑AI Agent → 剪辑渲染。
+        之间以剪辑项目 JSON 文件传递数据，各步骤执行前先恢复上游快照，
+        确保严格按数据流顺序处理，而非依赖仓库残留状态。
+        快照格式与 :meth:`snapshot` 输出一致：``{"project": ..., "assets": [...]}``。
+        """
+        self.validate_task_id(task_id)
+        project = data.get("project") if isinstance(data, dict) else None
+        if not isinstance(project, dict) or not project:
+            raise ValueError("剪辑项目 JSON 缺少 project 字段，无法恢复")
+        with self._lock_for(task_id):
+            incoming_assets = data.get("assets") if isinstance(data, dict) else None
+            if isinstance(incoming_assets, list):
+                existing = {
+                    asset.get("id"): asset
+                    for asset in self._load_assets(task_id)
+                    if isinstance(asset, dict) and asset.get("id")
+                }
+                for asset in incoming_assets:
+                    if isinstance(asset, dict) and asset.get("id"):
+                        existing.setdefault(asset["id"], asset)
+                self._write_json(self.assets_path(task_id), {"assets": list(existing.values()), "updatedAt": self._utc_now()})
+            try:
+                current = self._read_json(self.project_path(task_id), None)
+            except HTTPException:
+                current = None
+            expected = int((current or {}).get("revision") or 1)
+            project = self._normalize_project(task_id, project)
+            project["taskId"] = task_id
+            project["revision"] = expected + 1
+            project["updatedBy"] = updated_by
+            project["updatedAt"] = self._utc_now()
+            metadata = project.setdefault("metadata", {})
+            metadata["id"] = task_id
+            metadata["updatedAt"] = project["updatedAt"]
+            if self._read_json(self.characters_path(task_id), None) is None:
+                self._write_json(self.characters_path(task_id), {"revision": 1, "characters": []})
+            self._write_json(self.project_path(task_id), project)
+            return self.snapshot(task_id)
+
+    def reset_project(self, task_id: str) -> None:
+        """彻底清空剪辑工作台的仓库数据，使下一次 import_assets 从零重新初始化。
+
+        删除项目（project.json）、素材记录（assets.json）、角色（characters.json）
+        与外部素材副本目录（editor/media/），避免工作流重跑时素材增量叠加、
+        旧时间线与新素材混杂导致错乱。推送标记 push_state.json 一并删除
+        （重新初始化后旧推送状态已无意义，由后续「推送到剪辑台」重新写入）。
+        """
+        self.validate_task_id(task_id)
+        with self._lock_for(task_id):
+            editor_dir = self.editor_dir(task_id)
+            editor_dir.mkdir(parents=True, exist_ok=True)
+            for name in ("project.json", "assets.json", "characters.json", "push_state.json"):
+                (editor_dir / name).unlink(missing_ok=True)
+            media_dir = editor_dir / "media"
+            if media_dir.is_dir():
+                shutil.rmtree(media_dir, ignore_errors=True)
 
     def save_project(self, task_id: str, project: dict[str, Any], expected_revision: int, updated_by: str) -> dict[str, Any]:
         self.validate_task_id(task_id)

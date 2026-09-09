@@ -3,11 +3,12 @@
 接收上游「剪辑AI Agent」或「Cutia 交互剪辑」产出的剪辑项目，驱动无头浏览器
 加载 Cutia 渲染内核完成导出，实现无需人工介入的剪辑闭环。
 """
+import json
 import os
 from pathlib import Path
 from typing import Callable, Optional
 
-from backend.editor.headless_renderer import HeadlessRenderError, render_project
+from backend.editor.headless_renderer import HeadlessRenderError, ensure_chromium_installed, render_project
 from backend.editor.repository import EditorProjectRepository
 from backend.steps.base_step import BaseStep
 
@@ -53,10 +54,16 @@ class S_CutiaRender(BaseStep):
         config = getattr(self, "_node_config", {}) or {}
         repository = EditorProjectRepository()
 
-        try:
-            snapshot = repository.snapshot(task_id)
-        except Exception:
-            snapshot = repository.import_assets(task_id, [])
+        # 接力上游「剪辑AI Agent / Cutia 交互剪辑」输出的剪辑项目 JSON：优先渲染该快照
+        project_input = str((getattr(self, "_step_inputs", {}) or {}).get("project") or "")
+        if project_input and os.path.isfile(project_input):
+            with open(project_input, "r", encoding="utf-8") as handle:
+                snapshot = repository.restore_snapshot(task_id, json.load(handle), updated_by="cutia_render")
+        else:
+            try:
+                snapshot = repository.snapshot(task_id)
+            except Exception:
+                snapshot = repository.import_assets(task_id, [])
 
         project = snapshot.get("project") or {}
         assets = snapshot.get("assets") or []
@@ -87,6 +94,13 @@ class S_CutiaRender(BaseStep):
         def progress(percent: int, message: str) -> None:
             if callback:
                 callback(max(0, min(100, int(percent))), message)
+
+        # 渲染前自检 Playwright Chromium 内核：缺失或版本不匹配时自动下载
+        # （用户显式指定 browser_channel 时使用系统浏览器，无需下载内核）
+        if not browser_channel:
+            if callback:
+                callback(2, "正在检查 Playwright Chromium 内核")
+            ensure_chromium_installed(callback)
 
         try:
             render_project(

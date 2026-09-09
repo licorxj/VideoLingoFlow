@@ -594,6 +594,1775 @@
         "timeout": 1800,
         "sdk_extra_args": {}
       }
+    },
+    {
+      "id": "kieai_video",
+      "name": "KIE AI 视频生成",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "国际顶级模型聚合调用，价格优惠（基于 kie.ai SDK），支持文生视频、图生视频-首/尾帧、多模态参考生视频（图+视频+音频），异步任务轮询模式。",
+      "api_source_url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+      "model_docs_url": "https://kie.ai/zh-CN/pricing",
+      "balance": null,
+      "config": {
+        "api_url": "https://api.kie.ai",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.videogen.sdk.kieai_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "secret://KIEAI_API_KEY",
+        "default_model": "bytedance/seedance-1.5-pro",
+        "model_options": [
+          "bytedance/seedance-1.5-pro",
+          "bytedance/seedance-2-5",
+          "bytedance/seedance-2-fast",
+          "bytedance/seedance-2-mini",
+          "bytedance/seedance-2",
+          "bytedance/v1-lite-image-to-video",
+          "bytedance/v1-lite-text-to-video",
+          "bytedance/v1-pro-fast-image-to-video",
+          "bytedance/v1-pro-image-to-video",
+          "bytedance/v1-pro-text-to-video",
+          "gemini-omni-video",
+          "google/gemini-omni-flash-1-1",
+          "grok-imagine-video-1-5-preview",
+          "grok-imagine/extend",
+          "grok-imagine/image-to-video",
+          "grok-imagine/text-to-video",
+          "hailuo/02-image-to-video-pro",
+          "hailuo/02-image-to-video-standard",
+          "hailuo/02-text-to-video-pro",
+          "hailuo/02-text-to-video-standard",
+          "hailuo/2-3-image-to-video-pro",
+          "hailuo/2-3-image-to-video-standard",
+          "happyhorse-1-1/image-to-video",
+          "happyhorse-1-1/reference-to-video",
+          "happyhorse-1-1/text-to-video",
+          "happyhorse/image-to-video",
+          "happyhorse/reference-to-video",
+          "happyhorse/text-to-video",
+          "happyhorse/video-edit",
+          "kling/ai-avatar-pro",
+          "kling/ai-avatar-standard",
+          "kling-2.6/image-to-video",
+          "kling-3.0/motion-control",
+          "kling-2.6/motion-control",
+          "kling-2.6/text-to-video",
+          "kling/v2-1-master-image-to-video",
+          "kling/v2-1-master-text-to-video",
+          "kling/v2-1-pro",
+          "kling/v2-1-standard",
+          "kling/v2-5-turbo-text-to-video-pro",
+          "kling-3.0-omni/text-to-video",
+          "kling-3.0-omni/transformation",
+          "kling/v3-turbo-image-to-video",
+          "kling/v3-turbo-text-to-video",
+          "minimax-h3/image-to-video",
+          "minimax-h3/reference-to-video",
+          "minimax-h3/text-to-video",
+          "omnihuman-1-5",
+          "pixverse-v6/image-to-video",
+          "pixverse-v6/reference-to-video",
+          "pixverse-v6/text-to-video",
+          "pixverse-v6/transition",
+          "wan/2-2-a14b-image-to-video-turbo",
+          "wan/2-2-a14b-speech-to-video-turbo",
+          "wan/2-2-a14b-text-to-video-turbo",
+          "wan/2-5-image-to-video",
+          "wan/2-5-text-to-video",
+          "wan/2-6-flash-image-to-video",
+          "wan/2-6-flash-video-to-video",
+          "wan/2-6-image-to-video",
+          "wan/2-6-text-to-video",
+          "wan/2-6-video-to-video",
+          "wan/2-7-image-to-video",
+          "wan/2-7-r2v",
+          "wan/2-7-text-to-video",
+          "wan/2-7-videoedit",
+          "wan/3-0-video-prime",
+          "wan/3-0-video",
+          "extend-ai-video",
+          "generate-ai-video",
+          "generate-aleph-video",
+          "extend-veo3-1-video",
+          "generate-veo3-1-video"
+        ],
+        "model_metadata": {
+          "bytedance/seedance-1.5-pro": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.035",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              4,
+              8,
+              12
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": true,
+            "default_audio": "model_default",
+            "ratio_default": "1:1"
+          },
+          "bytedance/seedance-2-5": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.315",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              4,
+              17,
+              30
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 3,
+            "max_ref_audios": 3,
+            "supports_audio": true,
+            "default_audio": "model_default",
+            "ratio_default": "1:1"
+          },
+          "bytedance/seedance-2-fast": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.124",
+            "resolutions": [
+              "480P",
+              "720P"
+            ],
+            "durations": [
+              4,
+              9,
+              15
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 3,
+            "supports_audio": true,
+            "default_audio": "model_default",
+            "ratio_default": "1:1"
+          },
+          "bytedance/seedance-2-mini": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.041",
+            "resolutions": [
+              "480P",
+              "720P"
+            ],
+            "durations": [
+              4,
+              9,
+              15
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 3,
+            "max_ref_audios": 3,
+            "supports_audio": true,
+            "default_audio": "model_default",
+            "ratio_default": "1:1"
+          },
+          "bytedance/seedance-2": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "1.04",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P",
+              "4K"
+            ],
+            "durations": [
+              4,
+              9,
+              15
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 3,
+            "max_ref_audios": 3,
+            "supports_audio": true,
+            "default_audio": "model_default",
+            "ratio_default": "1:1"
+          },
+          "bytedance/v1-lite-image-to-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.315",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "bytedance/v1-lite-text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.315",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "bytedance/v1-pro-fast-image-to-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.315",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "bytedance/v1-pro-image-to-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.315",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "bytedance/v1-pro-text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.315",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "21:9"
+          },
+          "gemini-omni-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.90",
+            "resolutions": [
+              "720P",
+              "1080P",
+              "4K"
+            ],
+            "durations": [
+              4,
+              6,
+              8,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": true,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "google/gemini-omni-flash-1-1": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.9",
+            "resolutions": [
+              "360P",
+              "720P",
+              "1080P",
+              "4K"
+            ],
+            "durations": [
+              4,
+              6,
+              8,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": true,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "grok-imagine-video-1-5-preview": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.0225",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "1:1"
+          },
+          "grok-imagine/extend": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.135",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "grok-imagine/image-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.004",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              6,
+              18,
+              30
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "2:3"
+          },
+          "grok-imagine/text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.04",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              6,
+              18,
+              30
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "2:3"
+          },
+          "hailuo/02-image-to-video-pro": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.285",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "hailuo/02-image-to-video-standard": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.1",
+            "resolutions": [
+              "512P",
+              "768P"
+            ],
+            "durations": [
+              6,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "hailuo/02-text-to-video-pro": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.285",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "hailuo/02-text-to-video-standard": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.25",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              6,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "hailuo/2-3-image-to-video-pro": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.4",
+            "resolutions": [
+              "768P",
+              "1080P"
+            ],
+            "durations": [
+              6,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "hailuo/2-3-image-to-video-standard": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.125",
+            "resolutions": [
+              "768P",
+              "1080P"
+            ],
+            "durations": [
+              6,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "happyhorse-1-1/image-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.145",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "happyhorse-1-1/reference-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.145",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "happyhorse-1-1/text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.145",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "happyhorse/image-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.092",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "happyhorse/reference-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.1035",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "happyhorse/text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.04",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "happyhorse/video-edit": {
+            "modes": [
+              "txt2video",
+              "autovideo"
+            ],
+            "price": "0.6",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 2,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling/ai-avatar-pro": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling/ai-avatar-standard": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling-2.6/image-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.55",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling-3.0/motion-control": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.1",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling-2.6/motion-control": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.055",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling-2.6/text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "1.1",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "1:1"
+          },
+          "kling/v2-1-master-image-to-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling/v2-1-master-text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling/v2-1-pro": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling/v2-1-standard": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling/v2-5-turbo-text-to-video-pro": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling-3.0-omni/text-to-video": {
+            "modes": [
+              "txt2video",
+              "autovideo"
+            ],
+            "price": "0.04",
+            "resolutions": [
+              "720P",
+              "1080P",
+              "4K"
+            ],
+            "durations": [
+              3,
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling-3.0-omni/transformation": {
+            "modes": [
+              "txt2video",
+              "autovideo"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "720P",
+              "1080P",
+              "4K"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling/v3-turbo-image-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "kling/v3-turbo-text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.335",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "1:1"
+          },
+          "minimax-h3/image-to-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.04",
+            "resolutions": [
+              "768P",
+              "2K"
+            ],
+            "durations": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "minimax-h3/reference-to-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.04",
+            "resolutions": [
+              "768P",
+              "2K"
+            ],
+            "durations": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ],
+            "max_ref_images": 9,
+            "max_ref_videos": 3,
+            "max_ref_audios": 3,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "adaptive"
+          },
+          "minimax-h3/text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.04",
+            "resolutions": [
+              "768P",
+              "2K"
+            ],
+            "durations": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12,
+              13,
+              14,
+              15
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "21:9"
+          },
+          "omnihuman-1-5": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.135",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "pixverse-v6/image-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.092",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "pixverse-v6/reference-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.1035",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "pixverse-v6/text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.04",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "pixverse-v6/transition": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.092",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-2-a14b-image-to-video-turbo": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.2",
+            "resolutions": [
+              "480P",
+              "720P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-2-a14b-speech-to-video-turbo": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.2",
+            "resolutions": [
+              "480P",
+              "580P",
+              "720P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-2-a14b-text-to-video-turbo": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.2",
+            "resolutions": [
+              "480P",
+              "720P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-5-image-to-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "1.0",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 2,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-5-text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.6",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-6-flash-image-to-video": {
+            "modes": [
+              "txt2video",
+              "autovideo"
+            ],
+            "price": "1.575",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-6-flash-video-to-video": {
+            "modes": [
+              "txt2video",
+              "autovideo"
+            ],
+            "price": "1.575",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-6-image-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "1.0475",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-6-text-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.5225",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10,
+              15
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-6-video-to-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "1.575",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-7-image-to-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video"
+            ],
+            "price": "0.06",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-7-r2v": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.08",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-7-text-to-video": {
+            "modes": [
+              "txt2video",
+              "autovideo"
+            ],
+            "price": "0.06",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 2,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/2-7-videoedit": {
+            "modes": [
+              "txt2video",
+              "autovideo"
+            ],
+            "price": "0.12",
+            "resolutions": [
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 2,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "wan/3-0-video-prime": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.126",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 10,
+            "max_ref_videos": 3,
+            "max_ref_audios": 3,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "adaptive"
+          },
+          "wan/3-0-video": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "0.09",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 10,
+            "max_ref_videos": 3,
+            "max_ref_audios": 3,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "adaptive"
+          },
+          "extend-ai-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.06",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "generate-ai-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.06",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "generate-aleph-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.06",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "extend-veo3-1-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.30",
+            "resolutions": [
+              "480P",
+              "720P",
+              "1080P"
+            ],
+            "durations": [
+              5,
+              10
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          },
+          "generate-veo3-1-video": {
+            "modes": [
+              "txt2video"
+            ],
+            "price": "0.30",
+            "resolutions": [
+              "720P",
+              "1080P",
+              "4K"
+            ],
+            "durations": [
+              4,
+              6,
+              8
+            ],
+            "max_ref_images": 0,
+            "max_ref_videos": 0,
+            "max_ref_audios": 0,
+            "supports_audio": false,
+            "default_audio": "off",
+            "ratio_default": "16:9"
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "flf2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "autovideo": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "nsfw_checker",
+            "default": "false",
+            "description": "是否启用内容安全检查（部分模型支持）"
+          },
+          {
+            "key": "poll_timeout",
+            "default": "600",
+            "description": "任务轮询超时时间（秒）"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 1800,
+        "sdk_extra_args": {}
+      }
     }
   ]
 }

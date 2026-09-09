@@ -19,7 +19,7 @@ from starlette.background import BackgroundTask
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import Scope, Receive, Send
 
-from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects
+from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, musicgen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects, notifications
 from backend.control_plane import runtime_flags
 from backend.utils.observability import correlation_id
 
@@ -180,6 +180,7 @@ app.include_router(tts_interfaces.voice_router, prefix="/api/tts-voices", tags=[
 app.include_router(asr_interfaces.router, prefix="/api/asr-interfaces", tags=["asr-interfaces"])
 app.include_router(imagegen_interfaces.router, prefix="/api/imagegen-interfaces", tags=["imagegen-interfaces"])
 app.include_router(videogen_interfaces.router, prefix="/api/videogen-interfaces", tags=["videogen-interfaces"])
+app.include_router(musicgen_interfaces.router, prefix="/api/musicgen-interfaces", tags=["musicgen-interfaces"])
 app.include_router(separation_interfaces.router, prefix="/api/separation-interfaces", tags=["separation-interfaces"])
 app.include_router(ocr_interfaces.router, prefix="/api/ocr-interfaces", tags=["ocr-interfaces"])
 app.include_router(publish.router, prefix="/api/publish", tags=["publish"])
@@ -207,6 +208,7 @@ app.include_router(voiceforge_ws.router, prefix="/ws/voiceforge", tags=["voicefo
 app.include_router(lcwr.router, tags=["lcwr"])
 app.include_router(qm_mail.router, tags=["qm-mail"])
 app.include_router(llm_router_update.router, tags=["llm-router-update"])
+app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 
 LLM_ROUTER_UPSTREAM = "http://127.0.0.1:8800"
 CUTIA_UPSTREAM = f"http://127.0.0.1:{os.environ.get('CUTIA_PORT', '4100')}"

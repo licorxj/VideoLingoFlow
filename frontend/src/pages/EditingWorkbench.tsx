@@ -4,6 +4,7 @@ import { Clapperboard, Download, ExternalLink, FilePlus2, FolderInput, Home, Loa
 import { Button } from "@/components/ui/button";
 import TaskImportDialog from "@/components/editor/TaskImportDialog";
 import { type EditorSnapshot, editorApi } from "@/api/editor";
+import client from "@/api/client";
 import { toast } from "@/pages/llm-router/toast";
 import { PageBackground } from "@/components/shared/PageBackground";
 
@@ -26,7 +27,21 @@ export default function EditingWorkbench() {
   const [projectSaveMessage, setProjectSaveMessage] = useState("");
   const [conflictRevision, setConflictRevision] = useState<number | null>(null);
   const [updatingCutia, setUpdatingCutia] = useState(false);
+  const [pendingTasks, setPendingTasks] = useState<{ id: string; task_name: string; pushed_at: string | null }[]>([]);
   const frameRef = useRef<HTMLIFrameElement>(null);
+
+  useEffect(() => {
+    if (workspaceId) return;
+    let cancelled = false;
+    const load = () => {
+      client.get("/api/editor/tasks/pending")
+        .then((r) => { if (!cancelled) setPendingTasks(r.data?.tasks || []); })
+        .catch(() => {});
+    };
+    load();
+    const timer = window.setInterval(load, 5000);
+    return () => { cancelled = true; window.clearInterval(timer); };
+  }, [workspaceId]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent<unknown>) => {
@@ -167,7 +182,7 @@ export default function EditingWorkbench() {
   };
 
   if (!workspaceId) {
-    return <PageBackground tone="editing" className="h-full min-h-[560px] flex items-center justify-center"><div className="max-w-xl px-6 text-center"><div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-primary"><Clapperboard className="h-7 w-7" /></div><h1 className="text-2xl font-bold">剪辑工作台</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">使用原始 Cutia 编辑器制作新视频，或导入历史任务的成片、配音、字幕和封面继续精剪。</p><div className="mt-7 grid gap-3 sm:grid-cols-2"><Button className="h-11" onClick={() => setImportOpen(true)}><FolderInput className="mr-2 h-4 w-4" />导入历史项目</Button><Button className="h-11" variant="outline" onClick={createBlankProject}><FilePlus2 className="mr-2 h-4 w-4" />新建空白项目</Button></div></div><TaskImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={onImported} /></PageBackground>;
+    return <PageBackground tone="editing" className="h-full min-h-[560px] flex items-center justify-center"><div className="max-w-xl px-6 text-center"><div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-lg bg-primary/10 text-primary"><Clapperboard className="h-7 w-7" /></div><h1 className="text-2xl font-bold">剪辑工作台</h1><p className="mt-2 text-sm leading-6 text-muted-foreground">使用原始 Cutia 编辑器制作新视频，或导入历史任务的成片、配音、字幕和封面继续精剪。</p><div className="mt-7 grid gap-3 sm:grid-cols-2"><Button className="h-11" onClick={() => setImportOpen(true)}><FolderInput className="mr-2 h-4 w-4" />导入历史项目</Button><Button className="h-11" variant="outline" onClick={createBlankProject}><FilePlus2 className="mr-2 h-4 w-4" />新建空白项目</Button></div>{pendingTasks.length > 0 && <div className="mt-8 text-left"><div className="mb-2 flex items-center gap-2 text-sm font-semibold"><Clapperboard className="h-4 w-4 text-primary" />待剪辑任务<span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{pendingTasks.length}</span></div><div className="space-y-2">{pendingTasks.map((task) => (<button key={task.id} onClick={() => navigate(`/editing?task=${task.id}`)} className="w-full flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/60 px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-primary/5"><div className="min-w-0"><div className="truncate text-sm font-medium">{task.task_name}</div><div className="mt-0.5 text-xs text-muted-foreground">推送于 {task.pushed_at ? new Date(task.pushed_at).toLocaleString("zh-CN", { hour12: false }) : "--"}</div></div><span className="shrink-0 rounded-md bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-600 dark:text-amber-400">待剪辑</span></button>))}</div></div>}</div><TaskImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={onImported} /></PageBackground>;
   }
 
   return <PageBackground tone="editing" className="flex h-full min-h-0 flex-col overflow-hidden p-3 sm:p-4">

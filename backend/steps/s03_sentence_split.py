@@ -1208,17 +1208,18 @@ Each sentence must be AT MOST {max_length} characters.
 {text}
 
 ## Output Format
-Return a JSON array of strings, e.g. ["sentence1", "sentence2"]
-Return ONLY the JSON array, no explanation.""".format(
+Return a JSON object with a single key "result" whose value is an array of strings, e.g. {"result": ["sentence1", "sentence2"]}
+Return ONLY the JSON object, no explanation.""".format(
             max_length=str(max_length),
             text=original_text,
         )
 
         try:
             resp = llm.chat("s03_sentence_split", prompt, response_json=True)
-            if not isinstance(resp, list) or not resp:
+            result = resp.get("result") if isinstance(resp, dict) else None
+            if not isinstance(result, list) or not result:
                 return None
-            texts = [str(t).strip() for t in resp if str(t).strip()]
+            texts = [str(t).strip() for t in result if str(t).strip()]
             if not texts:
                 return None
 

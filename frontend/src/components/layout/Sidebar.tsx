@@ -54,6 +54,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
   const [restartingSvc, setRestartingSvc] = useState<string | null>(null);
   const [stoppingSvc, setStoppingSvc] = useState<string | null>(null);
   const [shuttingDownAll, setShuttingDownAll] = useState(false);
+  const [restartingBackendAll, setRestartingBackendAll] = useState(false);
   const [piJump, setPiJump] = useState(false);
   const [hiddenRoutes, setHiddenRoutes] = useState<Set<string>>(() => {
     const set = new Set<string>();
@@ -165,6 +166,21 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
       setShuttingDownAll(false);
     }, 3000);
   }, [shuttingDownAll]);
+
+  const restartBackendAndWorker = useCallback(async () => {
+    if (restartingBackendAll) return;
+    setRestartingBackendAll(true);
+    try {
+      // 1) 先硬重启主后端（较快）
+      await fetch("http://localhost:18001/manager/restart-main", { method: "POST" }).catch(() => {});
+      // 2) 再软重启任务 Worker（在途任务完成后生效，可能耗时较长）
+      await fetch("http://localhost:18001/manager/restart-control-plane-worker", { method: "POST" }).catch(() => {});
+      fetchStatus();
+    } finally {
+      // 请求已发出，按钮短暂展示“重启中”后恢复；worker 实际仍在后台软重启
+      window.setTimeout(() => setRestartingBackendAll(false), 1500);
+    }
+  }, [fetchStatus, restartingBackendAll]);
 
   useEffect(() => {
     fetchStatus();
@@ -330,6 +346,21 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             onRestart={() => restartService("manager/restart-cutia", "cutia")}
             onStop={() => stopService("manager/stop-cutia", "cutia")}
           />
+
+          <button
+            type="button"
+            onClick={restartBackendAndWorker}
+            disabled={restartingBackendAll}
+            className={cn(
+              "flex h-9 w-full items-center justify-center gap-2 whitespace-nowrap rounded-lg border text-[12px] font-semibold leading-none transition-colors",
+              "border-primary/40 bg-primary/10 text-primary hover:bg-primary/15",
+              "disabled:cursor-not-allowed disabled:opacity-60"
+            )}
+            title="同时重启主后端与任务 Worker（Worker 为软重启，在途任务完成后生效）"
+          >
+            <RefreshCw className={cn("h-3.5 w-3.5", restartingBackendAll && "animate-spin")} />
+            {restartingBackendAll ? "重启中..." : "一键重启后端"}
+          </button>
 
           <div className="flex items-center gap-1.5 pt-1">
             <button

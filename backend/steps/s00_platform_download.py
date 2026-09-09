@@ -29,7 +29,16 @@ class S00PlatformDownload(BaseStep):
 
     def check_artifact(self, task_dir: str) -> bool:
         cache = os.path.join(task_dir, "cache")
-        return any(f.startswith("s00_platform_download_") for f in os.listdir(cache) if os.path.exists(cache))
+        if not os.path.isdir(cache):
+            return False
+        # 产物命名为：原始下载文件名_节点id.扩展名，按节点 id 后缀匹配视频文件
+        node_id = getattr(self, "_node_id", "") or self.step_id
+        video_exts = {".mp4", ".mkv", ".webm", ".mov", ".avi", ".flv", ".m4v"}
+        for name in os.listdir(cache):
+            stem, ext = os.path.splitext(name)
+            if ext.lower() in video_exts and stem.endswith(f"_{node_id}"):
+                return True
+        return False
 
     def validate_inputs(self, task_dir: str) -> bool:
         task_json = os.path.join(task_dir, "task.json")
@@ -266,11 +275,14 @@ class S00PlatformDownload(BaseStep):
         else:
             safe_title = sanitize_filename(url.rstrip("/").split("/")[-1]) or "video"
 
-        # Rename the downloaded video using the resolved real filepath first.
+        # 节点 id：优先使用工作流节点真实 id，回退到 step_id
+        node_id = getattr(self, "_node_id", "") or self.step_id
+
+        # 产物命名约定：原始下载文件名_节点id.扩展名
         produced = {}
         if resolved_video_path and os.path.isfile(resolved_video_path):
             ext = os.path.splitext(resolved_video_path)[1].lower()
-            new_name = f"s00_platform_download_video_{safe_title}{ext}"
+            new_name = f"{safe_title}_{node_id}{ext}"
             new_path = os.path.join(cache_dir, new_name)
             if os.path.abspath(resolved_video_path) != os.path.abspath(new_path):
                 os.rename(resolved_video_path, new_path)
@@ -280,7 +292,7 @@ class S00PlatformDownload(BaseStep):
             if callback:
                 callback(70, f"Video: {os.path.basename(new_path)}")
 
-        # Scan cache for subtitle/cover outputs and rename with sanitized name
+        # Scan cache for subtitle/cover outputs and rename with the same convention
         if os.path.exists(cache_dir):
             for f in os.listdir(cache_dir):
                 fpath = os.path.join(cache_dir, f)
@@ -290,7 +302,7 @@ class S00PlatformDownload(BaseStep):
                 # Determine file type
                 ext = os.path.splitext(f)[1].lower()
                 if f.startswith("s00_platform_download_sub"):
-                    new_name = f"s00_platform_download_sub_{safe_title}{ext}"
+                    new_name = f"{safe_title}_{node_id}{ext}"
                     new_path = os.path.join(cache_dir, new_name)
                     os.rename(fpath, new_path)
                     produced["subtitle"] = new_path
@@ -298,7 +310,7 @@ class S00PlatformDownload(BaseStep):
                         callback(80, f"Subtitle: {new_name}")
 
                 elif f.startswith("s00_platform_download_cover"):
-                    new_name = f"s00_platform_download_cover_{safe_title}{ext}"
+                    new_name = f"{safe_title}_{node_id}{ext}"
                     new_path = os.path.join(cache_dir, new_name)
                     os.rename(fpath, new_path)
                     produced["cover"] = new_path

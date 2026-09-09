@@ -12,7 +12,8 @@ from backend.steps.s_aigc_comfyui import S_AIGC_ComfyUI
 from backend.steps.s_aigc_runninghub import S_AIGC_RunningHub
 from backend.steps.s_aigc_jimeng import S_AIGC_Jimeng
 from backend.steps.s_agi_comic import (
-    S_AGI_Project, S_AGI_Character, S_AGI_Voice, S_AGI_Scene, S_AGI_Chapter, S_AGI_Shot,
+    S_AGI_Project, S_AGI_Deepen, S_AGI_Character, S_AGI_Voice, S_AGI_Scene, S_AGI_Prop, S_AGI_Chapter, S_AGI_Shot,
+    S_AGI_Extract, S_AGI_Prompt,
     S_AGI_ShotFrames, S_AGI_ShotVideo, S_AGI_ShotDub,
     S_AGI_ShotExport, S_AGI_ChapterExport,
 )
@@ -66,6 +67,8 @@ from backend.steps.s_video_split import S_VideoSplit
 from backend.steps.s_video_region_crop import S_VideoRegionCrop
 from backend.steps.s_video_region_composite import S_VideoRegionComposite
 from backend.steps.s_cutia import S_Cutia
+from backend.steps.s_project_init import S_ProjectInit
+from backend.steps.s_track_add_media import S_TrackAddMedia
 from backend.steps.s_cutia_render import S_CutiaRender
 from backend.steps.s_lcwr_watermark_removal import S_LcwrWatermarkRemoval
 from backend.steps.s_media_to_url import S_MediaToUrl
@@ -92,6 +95,11 @@ from backend.steps.s_seedream import (
 from backend.steps.s_seedance import (
     S_SeedanceTxt2Video, S_SeedanceImg2Video,
     S_SeedanceFlf2Video, S_SeedanceAutoVideo,
+)
+from backend.steps.s_musicgen import (
+    S_MusicTxt2Music, S_MusicInstrumental, S_MusicLyrics, S_MusicExtend,
+    S_MusicCover, S_MusicAddInstrumental, S_MusicAddVocals,
+    S_MusicSeparate, S_MusicToWav, S_MusicUploadExtend,
 )
 from backend.steps.s_hyperframes_creative import S_HyperFramesCreative
 from backend.steps.s_hyperframes_render import S_HyperFramesRender
@@ -180,9 +188,13 @@ _STEPS = {
     "aigc_jimeng": S_AIGC_Jimeng(),
     "s_aigc_jimeng": S_AIGC_Jimeng(),
     "agi_project": S_AGI_Project(),
+    "agi_deepen": S_AGI_Deepen(),
     "agi_character": S_AGI_Character(),
     "agi_voice": S_AGI_Voice(),
     "agi_scene": S_AGI_Scene(),
+    "agi_prop": S_AGI_Prop(),
+    "agi_extract": S_AGI_Extract(),
+    "agi_prompt": S_AGI_Prompt(),
     "agi_chapter": S_AGI_Chapter(),
     "agi_shot": S_AGI_Shot(),
     "agi_shot_frames": S_AGI_ShotFrames(),
@@ -230,6 +242,8 @@ _STEPS = {
     "video_region_crop": S_VideoRegionCrop(),
     "s_video_region_composite": S_VideoRegionComposite(),
     "video_region_composite": S_VideoRegionComposite(),
+    "project_init": S_ProjectInit(),
+    "add_track_media": S_TrackAddMedia(),
     "s_cutia": S_Cutia(),
     "cutia": S_Cutia(),
     "s_cutia_render": S_CutiaRender(),
@@ -292,6 +306,27 @@ _STEPS = {
     "seedance_img2video": S_SeedanceImg2Video(),
     "seedance_flf2video": S_SeedanceFlf2Video(),
     "seedance_autovideo": S_SeedanceAutoVideo(),
+    # AI 音乐生成能力节点（KieAI / Suno，置于 AI音乐 分组）
+    "music_txt2music": S_MusicTxt2Music(),
+    "s_music_txt2music": S_MusicTxt2Music(),
+    "music_instrumental": S_MusicInstrumental(),
+    "s_music_instrumental": S_MusicInstrumental(),
+    "music_lyrics": S_MusicLyrics(),
+    "s_music_lyrics": S_MusicLyrics(),
+    "music_extend": S_MusicExtend(),
+    "s_music_extend": S_MusicExtend(),
+    "music_cover": S_MusicCover(),
+    "s_music_cover": S_MusicCover(),
+    "music_add_instrumental": S_MusicAddInstrumental(),
+    "s_music_add_instrumental": S_MusicAddInstrumental(),
+    "music_add_vocals": S_MusicAddVocals(),
+    "s_music_add_vocals": S_MusicAddVocals(),
+    "music_separate": S_MusicSeparate(),
+    "s_music_separate": S_MusicSeparate(),
+    "music_to_wav": S_MusicToWav(),
+    "s_music_to_wav": S_MusicToWav(),
+    "music_upload_extend": S_MusicUploadExtend(),
+    "s_music_upload_extend": S_MusicUploadExtend(),
 }
 
 

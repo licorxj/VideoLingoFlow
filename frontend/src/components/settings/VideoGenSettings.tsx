@@ -371,8 +371,8 @@ export default function VideoGenSettings() {
 
       {showEditor &&
         createPortal(
-          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm animate-fade-in overflow-y-auto py-10 px-4">
-            <div className="bg-background border border-border/60 rounded-2xl shadow-2xl w-[min(880px,92vw)] animate-scale-in">
+          <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm animate-fade-in overflow-y-auto py-6 px-4">
+            <div className="bg-background border-2 border-primary/40 ring-1 ring-primary/10 rounded-2xl shadow-2xl shadow-primary/10 w-[min(1056px,92vw)] animate-scale-in">
               <VideoGenInterfaceEditor
                 iface={editing}
                 onSaved={handleSaved}

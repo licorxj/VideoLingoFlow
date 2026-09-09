@@ -15,6 +15,7 @@ import os
 import re
 import threading
 import time
+from pathlib import Path
 from typing import Any, Callable, Optional
 
 # 桥接协议版本，需与 cutia 侧 TASK_PROJECT_BRIDGE_VERSION 一致
@@ -90,6 +91,73 @@ def resolve_backend_base_url() -> str:
     port = str(os.environ.get("VIDEOLINGO_BACKEND_PORT") or DEFAULT_BACKEND_PORT).strip()
     host = str(os.environ.get("VIDEOLINGO_BACKEND_HOST") or "127.0.0.1").strip()
     return f"http://{host}:{port}"
+
+
+def ensure_chromium_installed(progress: Optional[Callable[[int, str], None]] = None) -> None:
+    """渲染前确保 Playwright Chromium 内核已安装且与当前 playwright 版本匹配。
+
+    通过 ``playwright install chromium --dry-run`` 解析期望的安装位置，
+    检查浏览器可执行文件是否存在；缺失（未安装）或版本号不匹配（目录名
+    含版本号，升级 playwright 后目录变化）时自动执行真实下载。
+    :raises HeadlessRenderError: 自动下载失败。
+    """
+    import subprocess
+    import sys
+
+    playwright_exe = Path(sys.executable).with_name("playwright.exe")
+    if not playwright_exe.is_file():
+        playwright_exe = Path(sys.executable).parent / "Scripts" / "playwright.exe"
+    cmd_prefix = [str(playwright_exe)] if playwright_exe.is_file() else [sys.executable, "-m", "playwright"]
+
+    def _expected_browser_roots() -> list[Path]:
+        """解析 dry-run 输出，返回 chromium / chromium-headless-shell 的安装根目录。"""
+        try:
+            result = subprocess.run(
+                cmd_prefix + ["install", "chromium", "--dry-run"],
+                capture_output=True, text=True, timeout=60, check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return []
+        roots: list[Path] = []
+        section_is_chromium = False
+        for raw in (result.stdout or "").splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            if "playwright" in line:
+                # 组件标题行（如 "Chrome Headless Shell ... (playwright chromium-headless-shell v1223)"）
+                section_is_chromium = "chromium" in line
+            elif section_is_chromium and line.startswith("Install location:"):
+                location = line.split(":", 1)[1].strip()
+                if location:
+                    roots.append(Path(location))
+        return roots
+
+    def _has_browser(root: Path) -> bool:
+        if not root.is_dir():
+            return False
+        return any(
+            exe.name.lower() in {"chrome.exe", "chrome-headless-shell.exe"}
+            for exe in root.rglob("*.exe")
+        )
+
+    try:
+        roots = _expected_browser_roots()
+        if roots and all(_has_browser(root) for root in roots):
+            return  # 内核已安装且版本匹配
+    except Exception:  # noqa: BLE001 - 探测失败时直接尝试安装
+        pass
+
+    if progress:
+        progress(2, "Playwright Chromium 内核缺失或版本不匹配，正在自动下载（约 300MB）")
+    try:
+        result = subprocess.run(cmd_prefix + ["install", "chromium"], timeout=1800, check=False)
+    except (OSError, subprocess.SubprocessError) as exc:
+        raise HeadlessRenderError(f"Playwright Chromium 内核自动下载失败：{exc}") from exc
+    if result.returncode != 0:
+        raise HeadlessRenderError(
+            "Playwright Chromium 内核自动下载失败，请手动执行：playwright install chromium"
+        )
 
 
 class CutiaHeadlessRenderer:

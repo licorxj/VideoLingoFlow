@@ -3,18 +3,21 @@
 """Basic usage examples for the kie.ai async SDK.
 
 Run with:  python examples/basic_usage.py
-Set your key via environment variable KIE_API_KEY.
+
+The API key is resolved automatically (caller -> secret://KIEAI_API_KEY ->
+KIEAI_API_KEY env var). You can also pass it explicitly:
+    api_key = os.environ.get("KIEAI_API_KEY")
+    KieClient(api_key=api_key)
 """
 
 import asyncio
-import os
 
 from kieai import KieClient
 
 
 async def main():
-    api_key = os.environ.get("KIE_API_KEY", "YOUR_KEY")
-    async with KieClient(api_key=api_key) as client:
+    # api_key is optional; falls back to secret://KIEAI_API_KEY then $KIEAI_API_KEY
+    async with KieClient() as client:
 
         # ---- 1. Image generation (Market unified endpoint) ---------------
         image = await client.generate(

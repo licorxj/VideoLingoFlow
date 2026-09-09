@@ -630,7 +630,7 @@
         "maxTokens": 16384
       }
     ],
-    "checkedAt": 1788716626154,
+    "checkedAt": 1788810035253,
     "lastModified": 1788432042000,
     "etag": "W/\"9e08b40aec8bdd3f07048e0597de5fc2\""
   },
@@ -707,7 +707,7 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1788716626538,
+    "checkedAt": 1788810035281,
     "lastModified": 1787571286000,
     "etag": "W/\"3db76cd3404affdf755b2efc443b74c3\""
   },
@@ -1218,7 +1218,7 @@
         }
       }
     ],
-    "checkedAt": 1788716626436,
+    "checkedAt": 1788810035279,
     "lastModified": 1788432026000,
     "etag": "W/\"82d850ac898f9406a8bedcd62f25e6da\""
   },
@@ -2219,8 +2219,8 @@
         "id": "gpt-6-astra",
         "name": "GPT-6 Astra",
         "api": "openai-responses",
-        "baseUrl": "https://api.openai.com/v1",
         "provider": "openai",
+        "baseUrl": "https://api.openai.com/v1",
         "reasoning": true,
         "input": [
           "text",
@@ -2484,9 +2484,9 @@
         }
       }
     ],
-    "checkedAt": 1788716627386,
-    "lastModified": 1788552639000,
-    "etag": "W/\"19f6d8bc2ce0b7b34fecb2e606b57a4e\""
+    "checkedAt": 1788810035274,
+    "lastModified": 1788784749000,
+    "etag": "W/\"1cca1d47130c92b44203cbe8314876b0\""
   },
   "huggingface": {
     "models": [
@@ -4239,7 +4239,7 @@
         }
       }
     ],
-    "checkedAt": 1788716624590,
+    "checkedAt": 1788810035250,
     "lastModified": 1788552629000,
     "etag": "W/\"c1f6e94b634de8948b873721ec37b8d2\""
   },
@@ -4636,7 +4636,7 @@
         }
       }
     ],
-    "checkedAt": 1788716627322,
+    "checkedAt": 1788810035304,
     "lastModified": 1788432010000,
     "etag": "W/\"5fdc170fdb3eb24c0e164a059918e474\""
   }
