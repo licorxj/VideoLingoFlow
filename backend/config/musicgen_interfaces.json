@@ -1,0 +1,228 @@
+{
+  "interfaces": [
+    {
+      "id": "kieai_music",
+      "name": "KieAI -suno音乐生成",
+      "type": "sdk",
+      "enabled": true,
+      "builtin": true,
+      "balance": null,
+      "description": "KieAI 聚合 Suno 的音乐生成接口（文生音乐 / 纯音乐 / 歌词 / 扩展 / 翻唱 / 伴奏 / 人声 / 分离 / 转码）。",
+      "api_source_url": "https://kieai.erweima.ai",
+      "model_docs_url": "",
+      "config": {
+        "api_url": "",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.musicgen.sdk.kieai_music_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "secret://KIEAI_API_KEY",
+        "default_model": "V5_5",
+        "model_options": [
+          "V4",
+          "V4_5",
+          "V4_5PLUS",
+          "V4_5ALL",
+          "V5",
+          "V5_5"
+        ],
+        "model_metadata": {
+          "V4": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          },
+          "V4_5": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          },
+          "V4_5PLUS": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          },
+          "V4_5ALL": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          },
+          "V5": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          },
+          "V5_5": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          }
+        },
+        "modes": {
+          "txt2music": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "instrumental": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "lyrics": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "extend": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "cover": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "add_instrumental": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "add_vocals": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "separate": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "to_wav": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "upload_extend": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "sdk_extra_args": {
+          "poll_timeout": 600
+        },
+        "max_concurrent": 1,
+        "timeout": 600,
+        "poll_timeout": 600,
+        "api_key_env": "KIEAI_API_KEY",
+        "base_url": "https://kieai.erweima.ai"
+      }
+    }
+  ]
+}

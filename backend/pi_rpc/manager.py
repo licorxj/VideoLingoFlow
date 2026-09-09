@@ -704,7 +704,22 @@ class PiSessionManager:
             if runtime["status"] != "available":
                 raise PiRpcError(runtime.get("message") or "Pi runtime is unavailable")
             if len(self._sessions) >= int(self._config("max_sessions", 3) or 3):
-                raise PiRpcError("Pi session limit reached")
+                # 达到上限时驱逐最久未活动且不在流式输出的会话（LRU），避免多助手弹窗场景直接报错
+                evictable = sorted(
+                    (client.info.last_activity, sid)
+                    for sid, client in self._sessions.items()
+                    if not client.info.streaming
+                )
+                if evictable:
+                    victim_client = self._sessions.pop(evictable[0][1], None)
+                    if victim_client:
+                        try:
+                            await victim_client.close()
+                            self._store.mark_closed(victim_client.info.project_id)
+                        except Exception:
+                            pass
+                if len(self._sessions) >= int(self._config("max_sessions", 3) or 3):
+                    raise PiRpcError("Pi session limit reached")
             root = self._root()
             default_cwd = root / "data" / "workspace"
             safe_cwd = self._allowed_root(cwd or str(default_cwd if default_cwd.is_dir() else root))

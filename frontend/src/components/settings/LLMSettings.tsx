@@ -16,6 +16,7 @@ const STEPS = [
   { id: "s08_dub_task", name: "配音任务" },
   { id: "s09_subtitle_reduction", name: "字幕缩减" },
   { id: "agent_model", name: "Agent 模型" },
+  { id: "vlf-create", name: "创作创意" },
 ];
 
 export default function LLMSettings() {

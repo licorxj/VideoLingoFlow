@@ -1,73 +1,111 @@
+"""s_cutia: 推送到剪辑台。
+
+链路定位：素材编排已由上游「剪辑项目初始化」完成，本节点不再编排素材。
+职责：
+1. 接收上游剪辑项目 JSON 并推送到剪辑工作台（恢复为剪辑仓库当前项目）；
+2. 打「待剪辑」标记（editor/push_state.json，供剪辑台首页待剪辑项目标签读取，
+   首页展示目前暂未实现，数据已就绪）；
+3. 发起系统提醒通知（前端头部通知中心轮询 /api/notifications 拉取展示）；
+4. 按卡片设置的等待时长等待（默认 600 秒，支持取消）；
+5. 等待结束后透传输出剪辑项目 JSON。
+"""
 import json
 import os
+import time
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
+from backend.control_plane.runtime import TaskCancelledError
 from backend.editor.repository import EditorProjectRepository
-from backend.control_plane.runtime import WorkflowWaitingError
 from backend.steps.base_step import BaseStep
+from backend.utils.runtime_notifications import push_notification
 
 
 class S_Cutia(BaseStep):
     step_id = "cutia"
-    step_name = "Cutia 交互剪辑"
+    step_name = "推送到剪辑台"
     dependencies = []
 
     def check_artifact(self, task_dir: str) -> bool:
-        return bool(self._latest_export(task_dir))
+        # 输出为剪辑链共享文件 output/editing_project.json：
+        # 共享文件无法作为本节点完成标记（上游节点也会写它），统一返回 False，
+        # 由引擎按 DB 中记录的本节点 outputs 判定是否已完成。
+        return False
 
     def validate_inputs(self, task_dir: str) -> bool:
         return True
 
-    def _latest_export(self, task_dir: str) -> str:
+    def _mark_pending_edit(self, task_dir: str, task_id: str) -> None:
+        """写入「待剪辑」推送标记，供剪辑台首页待剪辑项目标签读取。"""
+        editor_dir = Path(task_dir) / "editor"
+        editor_dir.mkdir(parents=True, exist_ok=True)
+        state = {
+            "taskId": task_id,
+            "pendingEdit": True,
+            "pushedAt": datetime.now(timezone.utc).isoformat(),
+        }
+        with open(editor_dir / "push_state.json", "w", encoding="utf-8") as handle:
+            json.dump(state, handle, ensure_ascii=False, indent=2)
+
+    def run(self, task_dir: str, callback: Optional[Callable] = None,
+            cancel_callback: Optional[Callable] = None) -> dict:
         task_id = os.path.basename(os.path.normpath(task_dir))
-        repository = EditorProjectRepository()
-        try:
-            assets = repository.snapshot(task_id)["assets"]
-        except Exception:
-            return ""
-        exports = [
-            asset for asset in assets
-            if asset.get("source") == "editor_export" and asset.get("type") == "video"
-        ]
-        for asset in reversed(exports):
-            path = Path(task_dir) / str(asset.get("relative_path") or "")
-            if path.is_file():
-                return str(path)
-        return ""
-
-    def _input_candidate_ids(self, task_id: str, task_dir: str) -> list[str]:
-        repository = EditorProjectRepository()
+        config = getattr(self, "_node_config", {}) or {}
         inputs = getattr(self, "_step_inputs", {}) or {}
-        root = Path(task_dir).resolve()
-        input_paths = set()
-        for value in inputs.values():
-            if not isinstance(value, str) or not value:
-                continue
-            path = Path(value)
-            if not path.is_absolute():
-                path = root / path
-            try:
-                input_paths.add(path.resolve())
-            except OSError:
-                continue
-        return [
-            candidate.id
-            for candidate in repository.import_candidates(task_id)
-            if (root / candidate.relative_path).resolve() in input_paths
-        ]
-
-    def _write_project_snapshot(self, task_dir: str, task_id: str) -> str:
-        """导出当前剪辑项目快照，供下游节点接收剪辑项目 JSON。"""
         repository = EditorProjectRepository()
+
+        # 1. 接收上游剪辑项目 JSON 并推送到剪辑台（恢复为剪辑仓库当前项目）
+        if callback:
+            callback(15, "正在接收剪辑项目")
+        project_input = str(inputs.get("project") or "")
+        if project_input and os.path.isfile(project_input):
+            with open(project_input, "r", encoding="utf-8") as handle:
+                snapshot = repository.restore_snapshot(task_id, json.load(handle), updated_by="cutia_push")
+        else:
+            try:
+                snapshot = repository.snapshot(task_id)
+            except Exception as exc:
+                raise ValueError("推送到剪辑台需要上游「剪辑项目」JSON 输入") from exc
+
+        # 2. 打「待剪辑」标记（剪辑台首页标签数据源）
+        self._mark_pending_edit(task_dir, task_id)
+
+        # 3. 发起系统提醒通知
+        push_notification(
+            "info",
+            "剪辑项目已推送到剪辑台",
+            f"任务 {task_id} 的剪辑项目已就绪，请前往剪辑工作台处理",
+            task_id=task_id,
+            link=f"/editing?task={task_id}",
+        )
+        if callback:
+            callback(35, "剪辑项目已推送到剪辑台，已发送系统提醒")
+
+        # 4. 等待剪辑（卡片设置的等待时长，默认 600 秒）
         try:
-            snapshot = repository.snapshot(task_id)
-        except Exception:
-            return ""
+            wait_seconds = max(float(config.get("wait_seconds") or 600), 0.0)
+        except (TypeError, ValueError):
+            wait_seconds = 600.0
+        if wait_seconds > 0:
+            waited = 0.0
+            while waited < wait_seconds:
+                chunk = min(2.0, wait_seconds - waited)
+                time.sleep(chunk)
+                waited += chunk
+                if cancel_callback is not None and cancel_callback():
+                    raise TaskCancelledError("等待剪辑被取消")
+                if callback and int(waited) % 30 == 0:
+                    percent = 40 + int(50 * waited / wait_seconds)
+                    callback(percent, f"等待剪辑中 {int(waited)}/{int(wait_seconds)} 秒")
+
+        # 5. 透传输出剪辑项目 JSON
+        if callback:
+            callback(95, "等待结束，透传输出剪辑项目")
         output_dir = Path(task_dir) / "output"
         output_dir.mkdir(parents=True, exist_ok=True)
-        node_id = getattr(self, "_node_id", "") or "project"
-        path = output_dir / f"cutia_project_{node_id}.json"
+        # 透传写回剪辑链共享项目文件（与输入同一个文件，保持 JSON 名称一致）
+        path = output_dir / "editing_project.json"
         with open(path, "w", encoding="utf-8") as handle:
             json.dump(
                 {
@@ -75,32 +113,15 @@ class S_Cutia(BaseStep):
                     "revision": snapshot.get("revision"),
                     "project": snapshot.get("project"),
                     "assets": snapshot.get("assets"),
+                    "lastWriter": str(getattr(self, "_node_id", "") or ""),
                 },
                 handle,
                 ensure_ascii=False,
                 indent=2,
             )
-        return str(path)
-
-    def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
-        task_id = os.path.basename(os.path.normpath(task_dir))
-        export_path = self._latest_export(task_dir)
-        if export_path:
-            project_path = self._write_project_snapshot(task_dir, task_id)
-            if callback:
-                callback(100, "已取得 Cutia 导出成片")
-            outputs = {"video": export_path}
-            if project_path:
-                outputs["project"] = project_path
-            return {"outputs": outputs, "artifacts": [export_path]}
-
-        candidate_ids = self._input_candidate_ids(task_id, task_dir)
         if callback:
-            callback(30, "正在准备 Cutia 项目素材")
-        EditorProjectRepository().import_assets(task_id, candidate_ids)
-        if callback:
-            callback(50, "等待在 Cutia 中编辑并导出")
-        raise WorkflowWaitingError(
-            "等待在 Cutia 剪辑工作台导出成片",
-            f"/editing?task={task_id}",
-        )
+            callback(100, "剪辑项目已透传输出")
+        return {
+            "artifacts": [str(path)],
+            "outputs": {"project": str(path)},
+        }

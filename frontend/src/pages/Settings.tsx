@@ -8,6 +8,7 @@ import TTSSettings from "@/components/settings/TTSSettings";
 import OCRSettings from "@/components/settings/OCRSettings";
 import ImageGenSettings from "@/components/settings/ImageGenSettings";
 import VideoGenSettings from "@/components/settings/VideoGenSettings";
+import MusicGenSettings from "@/components/settings/MusicGenSettings";
 import SubtitleStyle from "@/components/settings/SubtitleStyle";
 import VideoProcess from "@/components/settings/VideoProcess";
 import GeneralSettings from "@/components/settings/GeneralSettings";
@@ -28,6 +29,7 @@ import {
   SlidersVertical,
   Image,
   Video,
+  Music,
   Boxes,
   Sparkles,
   Layers,
@@ -51,12 +53,13 @@ const TABS: TabDef[] = [
   { id: "ui", label: "UI 设置", icon: Palette, group: "界面", tone: "primary", component: UISettings },
   { id: "general", label: "通用设置", icon: Settings2, group: "通用", tone: "default", component: GeneralSettings },
   { id: "audio", label: "音频处理", icon: SlidersVertical, group: "媒体", tone: "info", component: AudioProcessingSettings },
-  { id: "llm", label: "LLM 配置", icon: Brain, group: "模型", tone: "ai", component: LLMSettings },
+  { id: "llm", label: "AI 模型配置", icon: Brain, group: "模型", tone: "ai", component: LLMSettings },
   { id: "asr", label: "ASR 配置", icon: Mic, group: "模型", tone: "info", component: ASRSettings },
   { id: "tts", label: "TTS 配置", icon: Volume2, group: "模型", tone: "success", component: TTSSettings },
   { id: "ocr", label: "OCR 配置", icon: ScanText, group: "模型", tone: "info", component: OCRSettings },
   { id: "imggen", label: "图像生成", icon: Image, group: "模型", tone: "ai", component: ImageGenSettings },
   { id: "videogen", label: "视频生成", icon: Video, group: "模型", tone: "ai", component: VideoGenSettings },
+  { id: "musicgen", label: "AI音乐生成", icon: Music, group: "模型", tone: "ai", component: MusicGenSettings },
   { id: "secrets", label: "密钥管理", icon: KeyRound, group: "高级", tone: "warning", component: SecretManagerSettings },
   { id: "aigc", label: "其他能力接口", icon: Boxes, group: "高级", tone: "warning", component: AigcCapabilitiesSettings },
   { id: "backup", label: "用户数据备份", icon: Database, group: "高级", tone: "warning", component: DataBackupSettings },

@@ -9,7 +9,7 @@ export type HeaderAnnouncement = {
   createdAt: string;
 };
 
-export type RuntimeNotificationKind = "dispatch" | "success" | "error";
+export type RuntimeNotificationKind = "dispatch" | "success" | "error" | "info";
 
 export type RuntimeNotification = {
   id: string;
@@ -138,6 +138,7 @@ export function useHeaderInbox() {
   const [toastQueue, setToastQueue] = useState<RuntimeNotification[]>([]);
   const baselineReadyRef = useRef(false);
   const snapshotRef = useRef<Map<string, TaskSnapshot>>(new Map());
+  const serverTimeRef = useRef<string>("");
   const pollTimerRef = useRef<number | null>(null);
   const toastTimersRef = useRef<Record<string, number>>({});
 
@@ -211,6 +212,31 @@ export function useHeaderInbox() {
     }
   }, [pushNotification]);
 
+  const syncRuntimeNotifications = useCallback(async () => {
+    try {
+      const response = await client.get("/api/notifications", {
+        params: serverTimeRef.current ? { since: serverTimeRef.current } : {},
+      });
+      const data = response.data as { notifications?: Record<string, unknown>[]; serverTime?: string };
+      if (data.serverTime) serverTimeRef.current = data.serverTime;
+      // 首轮只建立时间基线，不弹历史通知
+      if (!baselineReadyRef.current) return;
+      for (const raw of data.notifications || []) {
+        pushNotification({
+          id: pickValue(raw, ["id"]) || `${pickValue(raw, ["created_at"])}-${pickValue(raw, ["title"])}`,
+          kind: "info",
+          title: pickValue(raw, ["title"]) || "系统通知",
+          description: pickValue(raw, ["description", "content"]) || "",
+          createdAt: Date.parse(pickValue(raw, ["created_at"])) || Date.now(),
+          read: false,
+          taskId: pickValue(raw, ["task_id"]) || undefined,
+        });
+      }
+    } catch {
+      // 系统通知拉取失败不阻塞界面
+    }
+  }, [pushNotification]);
+
   const markNotificationsRead = useCallback(() => {
     setNotifications((current) => current.map((item) => ({ ...item, read: true })));
   }, []);
@@ -228,12 +254,16 @@ export function useHeaderInbox() {
     clearNotifications();
     refreshAnnouncements();
     syncTaskNotifications();
-    pollTimerRef.current = window.setInterval(syncTaskNotifications, 5000);
+    syncRuntimeNotifications();
+    pollTimerRef.current = window.setInterval(() => {
+      syncTaskNotifications();
+      syncRuntimeNotifications();
+    }, 5000);
     return () => {
       if (pollTimerRef.current) window.clearInterval(pollTimerRef.current);
       Object.values(toastTimersRef.current).forEach((timer) => window.clearTimeout(timer));
     };
-  }, [clearNotifications, refreshAnnouncements, syncTaskNotifications]);
+  }, [clearNotifications, refreshAnnouncements, syncTaskNotifications, syncRuntimeNotifications]);
 
   const unreadNotificationCount = useMemo(
     () => notifications.filter((item) => !item.read).length,

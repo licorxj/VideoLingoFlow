@@ -8,6 +8,7 @@ NODE_CATEGORIES = [
     {"value": "audio", "label": "音频处理节点", "color": "#0ea5e9", "icon": "Volume2"},
     {"value": "video", "label": "视频处理节点", "color": "#ef4444", "icon": "Film"},
     {"value": "ai_gen", "label": "AI生成类节点", "color": "#10b981", "icon": "Sparkles"},
+    {"value": "music_gen", "label": "AI音乐", "color": "#a78bfa", "icon": "Music"},
     {"value": "translation", "label": "翻译相关节点", "color": "#8b5cf6", "icon": "Languages"},
     {"value": "flow_control", "label": "流程控制节点", "color": "#6366f1", "icon": "GitBranch"},
     {"value": "network_request", "label": "网络请求类节点", "color": "#0f766e", "icon": "Globe"},
@@ -155,7 +156,7 @@ def validate_node_type_data(data: dict) -> None:
         seen_field_keys.add(field_key)
 
         rule = CONFIG_FIELD_TYPE_RULES[field_type]
-        supported = set(rule.get("supportedProperties", [])) | {"key", "label", "type"}
+        supported = set(rule.get("supportedProperties", [])) | {"key", "label", "type", "colSpan"}
         unsupported = sorted(k for k, v in field.items() if k not in supported and v not in (None, "", [], {}))
         if unsupported:
             raise ValueError(f"Unsupported properties for config field '{field_key}': {', '.join(unsupported)}")

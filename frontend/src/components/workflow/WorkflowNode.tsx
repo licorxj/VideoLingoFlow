@@ -7,6 +7,7 @@ import { Handle, Position, useReactFlow } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
 import client from "@/api/client";
+import CreationBrowserDialog from "./CreationBrowserDialog";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import {
   getNodeTypeDef, PORT_COLORS, getVisibleOutputs, getNodeInputs, isConfigFieldVisible,
@@ -874,7 +875,7 @@ function ImageCompare({ config, image1Path, image2Path, taskId, refreshKey }: { 
   );
 }
 
-function ApiSelectField({ field, value, config, onConfigChange }: { field: ConfigField; value: string; config: Record<string, any>; onConfigChange: (key: string, value: any) => void }) {
+function ApiSelectField({ field, value, config, onConfigChange, followValue }: { field: ConfigField; value: string; config: Record<string, any>; onConfigChange: (key: string, value: any) => void; followValue?: string }) {
   const [apiOptions, setApiOptions] = useState<{ value: string; label: string; description?: string }[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -891,6 +892,22 @@ function ApiSelectField({ field, value, config, onConfigChange }: { field: Confi
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // 端口跟随：上游连线已提供值时显示只读跟随态（断开连线后恢复手动选择）
+  if (field.followPort && followValue) {
+    return (
+      <div>
+        <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+        <div className="w-full text-xs px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/5 text-foreground/80 flex items-center justify-between gap-2">
+          <span className="truncate" title={followValue}>{followValue}</span>
+          <span className="text-[10px] text-primary flex-shrink-0">跟随上游输入</span>
+        </div>
+        {field.description && (
+          <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{field.description}（断开上游连线后可手动选择）</p>
+        )}
+      </div>
+    );
+  }
 
   // Resolve dynamic API endpoint with parameter substitution
   const resolveEndpoint = (endpoint: string): string => {
@@ -1213,12 +1230,13 @@ function AccountSelectField({ field, value, onConfigChange }: { field: ConfigFie
   );
 }
 
-function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonAction }: {
+function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonAction, upstreamOutputs }: {
   nodeType: any;
   config: Record<string, any>;
   onConfigChange: (key: string, value: any) => void;
   onVoiceSelect?: (field: ConfigField) => void;
   onButtonAction?: (field: ConfigField) => void;
+  upstreamOutputs?: Record<string, any>;
 }) {
   const [dynamicFields, setDynamicFields] = useState<ConfigField[]>([]);
   const [dynamicLoading, setDynamicLoading] = useState(false);
@@ -1754,7 +1772,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           }
 
           if (field.type === "api-select") {
-            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={config} onConfigChange={onConfigChange} /></div>;
+            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={config} onConfigChange={onConfigChange} followValue={field.followPort ? String((upstreamOutputs as any)?.[field.followPort] ?? "") : ""} /></div>;
           }
 
           if (field.type === "multiselect") {
@@ -2057,6 +2075,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const [qmMailboxes, setQmMailboxes] = useState<any[]>([]);
   const [qmMailLoading, setQmMailLoading] = useState(false);
   const [subtitleFindOpen, setSubtitleFindOpen] = useState(false);
+  const [creationBrowserOpen, setCreationBrowserOpen] = useState(false);
 
   // 头部顶栏既是唯一的节点拖拽手柄，也承担"点击展开/折叠"，需要区分拖动与点击
   const { headerRef, onClickGuarded: onHeaderClick } = useHeaderDragSafeClick(
@@ -2172,7 +2191,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
   // For preview nodes, get paths from upstream outputs or configs
   const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } =
-    (nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "image_compare" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
+    (nodeType.id.startsWith("agi_") || nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "image_compare" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
 
   // 当前任务 id（调试任务 activeTaskId 或一般/批量任务 taskModeId），用于相对产物路径解析
   const storeActiveTaskId = useWorkflowStore((s) => s.activeTaskId);
@@ -3093,10 +3112,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
               <ConfigForm
                 nodeType={nodeType}
                 config={config}
+                upstreamOutputs={upstreamOutputs}
                 onConfigChange={handleConfigChange}
                 onVoiceSelect={setVoiceSelectField}
                 onButtonAction={() => {
-                  if (nodeType.id === "text_editor") openTextEditor();
+                  if (nodeType.id === "agi_project") { setCreationBrowserOpen(true); }
+          else if (nodeType.id === "text_editor") openTextEditor();
                   else if (nodeType.id === "subtitle_editor") openSubtitleEditor();
                   else openJsonEditor();
                 }}
@@ -3142,13 +3163,24 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         <ConfigForm
           nodeType={nodeType}
           config={config}
+          upstreamOutputs={upstreamOutputs}
           onConfigChange={handleConfigChange}
           onVoiceSelect={setVoiceSelectField}
           onButtonAction={() => {
-            if (nodeType.id === "text_editor") openTextEditor();
+            if (nodeType.id === "agi_project") { setCreationBrowserOpen(true); }
+          else if (nodeType.id === "text_editor") openTextEditor();
             else if (nodeType.id === "subtitle_editor") openSubtitleEditor();
             else openJsonEditor();
           }}
+        />
+      )}
+
+      {/* 项目浏览（agi_project 浏览项目按钮） */}
+      {nodeType.id === "agi_project" && (
+        <CreationBrowserDialog
+          open={creationBrowserOpen}
+          onClose={() => setCreationBrowserOpen(false)}
+          creationId={String((upstreamOutputs as any)?.creation_id || nd?.outputs?.creation_id || config.creation_id || "")}
         />
       )}
 

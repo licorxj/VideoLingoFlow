@@ -201,7 +201,7 @@ class Quota(TimestampedVersioned, Base):
     used_value: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
-CREATION_ASSET_KINDS = {"character", "scene_image", "voiceover", "shot_video", "sfx", "bgm", "shot_render", "chapter_render"}
+CREATION_ASSET_KINDS = {"character", "scene_image", "prop_image", "voiceover", "shot_video", "sfx", "bgm", "shot_render", "chapter_render", "chapter_cover"}
 
 
 class Creation(TimestampedVersioned, Base):
@@ -217,6 +217,8 @@ class Creation(TimestampedVersioned, Base):
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
     script_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     characters: Mapped[list["CreationCharacter"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
+    scenes: Mapped[list["CreationScene"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
+    props: Mapped[list["CreationProp"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
     chapters: Mapped[list["CreationChapter"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
     assets: Mapped[list["CreationAsset"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
 
@@ -239,6 +241,10 @@ class CreationCharacter(TimestampedVersioned, Base):
     relationship_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
     voice_design: Mapped[str] = mapped_column(Text, nullable=False, default="")
     voice_ref: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    final_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    seed_value: Mapped[int | None] = mapped_column(Integer, nullable=True, default=None)
+    reference_images: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     creation: Mapped[Creation] = relationship(back_populates="characters")
 
 
@@ -251,8 +257,49 @@ class CreationChapter(TimestampedVersioned, Base):
     title: Mapped[str] = mapped_column(String(256), nullable=False, default="")
     original_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     summary: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
+    cover: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    gen_config: Mapped[str] = mapped_column(Text, nullable=False, default="")
     creation: Mapped[Creation] = relationship(back_populates="chapters")
     shots: Mapped[list["CreationShot"]] = relationship(back_populates="chapter", cascade="all, delete-orphan")
+
+
+class CreationScene(TimestampedVersioned, Base):
+    """创作项目内的场景资产;可复用并生成固定视角概念图。"""
+    __tablename__ = "cp_creation_scenes"
+    __table_args__ = (
+        UniqueConstraint("creation_id", "order_no", name="uq_cp_creation_scenes_creation_order"),
+    )
+    creation_id: Mapped[str] = mapped_column(ForeignKey("cp_creations.id", ondelete="CASCADE"), nullable=False)
+    order_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    location: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    time: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    lighting: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    final_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    image_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    creation: Mapped[Creation] = relationship(back_populates="scenes")
+
+
+class CreationProp(TimestampedVersioned, Base):
+    """创作项目内的道具资产;推动剧情且值得单独生图。"""
+    __tablename__ = "cp_creation_props"
+    __table_args__ = (
+        UniqueConstraint("creation_id", "name", name="uq_cp_creation_props_creation_name"),
+    )
+    creation_id: Mapped[str] = mapped_column(ForeignKey("cp_creations.id", ondelete="CASCADE"), nullable=False)
+    order_no: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    type: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    description: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    final_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    image_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    reference_images: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
+    creation: Mapped[Creation] = relationship(back_populates="props")
 
 
 class CreationShot(TimestampedVersioned, Base):
@@ -261,12 +308,25 @@ class CreationShot(TimestampedVersioned, Base):
     __table_args__ = (UniqueConstraint("chapter_id", "order_no", name="uq_cp_creation_shots_chapter_order"),)
     chapter_id: Mapped[str] = mapped_column(ForeignKey("cp_creation_chapters.id", ondelete="CASCADE"), nullable=False)
     order_no: Mapped[int] = mapped_column(Integer, nullable=False)
+    scene_id: Mapped[str | None] = mapped_column(ForeignKey("cp_creation_scenes.id", ondelete="SET NULL"))
+    shot_type: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    angle: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    movement: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    atmosphere: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    location: Mapped[str] = mapped_column(String(256), nullable=False, default="")
+    time: Mapped[str] = mapped_column(String(64), nullable=False, default="")
+    duration_seconds: Mapped[float | None] = mapped_column(Float)
+    image_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    video_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    reference_images: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     characters: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     scene_descriptions: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     dialogues: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     bgm_design: Mapped[str] = mapped_column(Text, nullable=False, default="")
     sfx_design: Mapped[str] = mapped_column(Text, nullable=False, default="")
     chapter: Mapped[CreationChapter] = relationship(back_populates="shots")
+    scene: Mapped[CreationScene] = relationship("CreationScene")
 
 
 class CreationAsset(TimestampedVersioned, Base):
@@ -288,6 +348,29 @@ class CreationAsset(TimestampedVersioned, Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     metadata_json: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
     creation: Mapped[Creation] = relationship(back_populates="assets")
+
+
+class ChapterStitch(TimestampedVersioned, Base):
+    """章节拼接历史：记录每次章节导出(章节成片)的拼接配置、有序分镜成片源列表与产物路径。
+
+    支持「可重拼」——用户可复用历史记录中的分镜成片源，仅更换转场/封面/分辨率重新拼接，
+    无需重新生成分镜视频。
+    """
+    __tablename__ = "cp_chapter_stitch"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    creation_id: Mapped[str] = mapped_column(ForeignKey("cp_creations.id", ondelete="CASCADE"), nullable=False)
+    chapter_id: Mapped[str] = mapped_column(ForeignKey("cp_creation_chapters.id", ondelete="CASCADE"), nullable=False)
+    transition: Mapped[str] = mapped_column(String(32), nullable=False, default="none")
+    transition_duration: Mapped[float] = mapped_column(Float, nullable=False, default=0.4)
+    resolution: Mapped[str] = mapped_column(String(16), nullable=False, default="original")
+    aspect_ratio: Mapped[str] = mapped_column(String(16), nullable=False, default="original")
+    make_cover: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    cover_duration: Mapped[float] = mapped_column(Float, nullable=False, default=3.0)
+    cover_image: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
+    # 有序分镜成片源(绝对路径 JSON 列表)，重拼时复用
+    sources: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    output: Mapped[str] = mapped_column(String(1024), nullable=False, default="")
+    duration_seconds: Mapped[float | None] = mapped_column(Float, nullable=True)
 
 
 class Character(TimestampedVersioned, Base):

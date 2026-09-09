@@ -10,7 +10,8 @@ Quick start
     from kieai import KieClient, Catalog
 
     async def main():
-        async with KieClient(api_key="YOUR_KEY") as client:
+        # api_key is optional; falls back to secret://KIEAI_API_KEY then $KIEAI_API_KEY
+        async with KieClient() as client:
             # image (Market unified endpoint)
             img = await client.generate(
                 "bytedance/seedream-v4-text-to-image",

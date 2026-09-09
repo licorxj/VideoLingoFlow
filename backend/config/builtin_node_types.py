@@ -1035,12 +1035,14 @@ BUILTIN_NODE_TYPES = [
             "ai_dialect_colloquial": False,
             "dialect_name": "四川话",
             "min_sentence_duration": 0.2,
+            "speed_predict_reduce": False,
         },
         "configFields": [
             {"key": "ai_read_tone", "label": "AI设计朗读语气", "type": "checkbox", "description": "启用后由 LLM 为每句补充朗读情绪语气描述"},
             {"key": "normalize_chinese_read_text", "label": "中文朗读文本归一化", "type": "checkbox", "description": "仅在目标朗读语言为中文时生效，将数字、单位、符号等规范化为汉字读法"},
             {"key": "ai_dialect_colloquial", "label": "AI方言口语化", "type": "checkbox", "description": "启用后由 LLM 按方言特色改写朗读文本"},
             {"key": "dialect_name", "label": "方言", "type": "text", "placeholder": "四川话", "dependsOn": "ai_dialect_colloquial", "description": "填写目标方言名称，启用方言口语化时写入任务单(方言)列"},
+            {"key": "speed_predict_reduce", "label": "语速预测+句子缩减", "type": "checkbox", "description": "启用后预测每句 TTS 朗读时长（多语言兼容），预测时长远大于句子时间槽时由 LLM 缩减朗读文本；短句（中文<3字/英文<2词）不缩减"},
             {"key": "min_sentence_duration", "label": "单句最短时长(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 5, "step": 0.05, "defaultValue": 0.2, "description": "执行前单句时长检测阈值：任意单句时长小于该值(秒)将报错，默认0.2秒"},
         ],
     },
@@ -1627,10 +1629,11 @@ BUILTIN_NODE_TYPES = [
         "name": "剪辑AI Agent",
         "execution_domain": "process",
         "category": "agent",
-        "description": "通过自然语言读取并修改当前任务的剪辑项目和时间线",
+        "description": "接收上游剪辑项目JSON，按编辑指令对时间线二次精选，输出精选后的剪辑json",
         "icon": "Clapperboard",
         "color": "#10b981",
         "inputs": [
+            {"id": "project", "label": "剪辑项目", "type": "json"},
             {"id": "text", "label": "编辑指令", "type": "text"},
         ],
         "outputs": [
@@ -1652,16 +1655,30 @@ BUILTIN_NODE_TYPES = [
                 {"value": "editing", "label": "剪辑顾问"},
                 {"value": "storytelling", "label": "叙事导演"},
             ]},
+            {"key": "imagegen_iface_id", "label": "生图接口", "type": "api-select", "colSpan": "half",
+             "apiEndpoint": "/api/imagegen-interfaces/enabled",
+             "placeholder": "自动（按能力选择）"},
+            {"key": "imagegen_model", "label": "生图模型", "type": "api-select", "colSpan": "half",
+             "dependsOn": "imagegen_iface_id",
+             "apiEndpoint": "/api/imagegen-interfaces/{imagegen_iface_id}/models-for-node?mode=txt2img",
+             "placeholder": "跟随接口默认"},
+            {"key": "videogen_iface_id", "label": "生视频接口", "type": "api-select", "colSpan": "half",
+             "apiEndpoint": "/api/videogen-interfaces/enabled",
+             "placeholder": "自动（按能力选择）"},
+            {"key": "videogen_model", "label": "生视频模型", "type": "api-select", "colSpan": "half",
+             "dependsOn": "videogen_iface_id",
+             "apiEndpoint": "/api/videogen-interfaces/{videogen_iface_id}/models-for-node?mode=t2v",
+             "placeholder": "跟随接口默认"},
         ],
     },
     {
-        "id": "cutia",
-        "name": "Cutia 交互剪辑",
+        "id": "project_init",
+        "name": "剪辑项目初始化",
         "execution_domain": "thread",
         "category": "video",
-        "description": "将上游素材载入 Cutia，等待手工剪辑并导出成片后继续工作流",
+        "description": "收集上游素材并构造初始剪辑JSON（默认时间线骨架+素材清单），供「Cutia 交互剪辑」接力整理筛选",
         "icon": "Clapperboard",
-        "color": "#14b8a6",
+        "color": "#0ea5e9",
         "inputs": [
             {"id": "video", "label": "视频", "type": "video"},
             {"id": "audio", "label": "音频", "type": "audio"},
@@ -1669,18 +1686,136 @@ BUILTIN_NODE_TYPES = [
             {"id": "subtitle", "label": "字幕", "type": "subtitle"},
         ],
         "outputs": [
-            {"id": "video", "label": "剪辑成片", "type": "video"},
+            {"id": "project", "label": "初始剪辑项目", "type": "json"},
+        ],
+        "defaultConfig": {
+            "arrange_tracks": True,
+        },
+        "configFields": [
+            {"key": "arrange_tracks", "label": "是否将素材加入轨道", "type": "checkbox", "colSpan": "half",
+             "description": "关闭时只导入素材清单，不自动编排到时间线"},
+        ],
+    },
+    {
+        "id": "add_track_media",
+        "name": "添加剪辑素材到轨道",
+        "execution_domain": "thread",
+        "category": "video",
+        "description": "接收任意类型素材，按所选类型添加到剪辑项目轨道（可新建轨道/轨道尾部/自定义插入点），输出剪辑项目JSON",
+        "icon": "Layers",
+        "color": "#8b5cf6",
+        "inputs": [
+            {"id": "project", "label": "剪辑项目", "type": "json"},
+            {"id": "media", "label": "素材", "type": "any"},
+        ],
+        "outputs": [
             {"id": "project", "label": "剪辑项目", "type": "json"},
         ],
-        "defaultConfig": {},
-        "configFields": [],
+        "defaultConfig": {
+            "media_type": "video",
+            "new_track": False,
+            "track_name": "",
+            "insert_mode": "end",
+            "insert_time": 0,
+            "static_duration": 3,
+            "pos_x": 0,
+            "pos_y": 0,
+            "scale": 1,
+            "rotate": 0,
+            "opacity": 1,
+            "volume": 1,
+            "muted": False,
+            "content": "",
+            "font_size": 5,
+            "font_family": "Arial",
+            "color": "#ffffff",
+            "background_color": "rgba(0, 0, 0, 0.7)",
+            "text_align": "center",
+            "font_weight": "normal",
+        },
+        "configFields": [
+            {"key": "media_type", "label": "素材类型", "type": "select", "options": [
+                {"value": "video", "label": "视频"},
+                {"value": "audio", "label": "音频"},
+                {"value": "image", "label": "图片"},
+                {"value": "text", "label": "文字"},
+            ]},
+            {"key": "new_track", "label": "新建轨道添加", "type": "checkbox", "colSpan": "half"},
+            {"key": "track_name", "label": "新轨道名称", "type": "text", "colSpan": "half",
+             "dependsOn": "new_track", "placeholder": "留空自动命名"},
+            {"key": "insert_mode", "label": "插入时间点", "type": "select", "options": [
+                {"value": "end", "label": "插入到轨道尾部"},
+                {"value": "custom", "label": "自定义插入点时间"},
+            ]},
+            {"key": "insert_time", "label": "插入点时间（秒）", "type": "number", "min": 0, "step": 0.1,
+             "colSpan": "half", "dependsOn": "insert_mode", "dependsValue": "custom"},
+            {"key": "static_duration", "label": "素材时长（秒）", "type": "number", "min": 0.1, "step": 0.1,
+             "colSpan": "half", "placeholder": "仅图片/文字生效",
+             "dependsOn": "media_type", "dependsValue": ["image", "text"]},
+            {"key": "pos_x", "label": "X 坐标", "type": "number", "step": 1,
+             "colSpan": "half", "dependsOn": "media_type", "dependsValue": ["video", "image", "text"]},
+            {"key": "pos_y", "label": "Y 坐标", "type": "number", "step": 1,
+             "colSpan": "half", "dependsOn": "media_type", "dependsValue": ["video", "image", "text"]},
+            {"key": "scale", "label": "缩放", "type": "number", "min": 0.1, "step": 0.1,
+             "colSpan": "half", "dependsOn": "media_type", "dependsValue": ["video", "image"]},
+            {"key": "rotate", "label": "旋转（度）", "type": "number", "step": 1,
+             "colSpan": "half", "dependsOn": "media_type", "dependsValue": ["video", "image"]},
+            {"key": "opacity", "label": "不透明度", "type": "number", "min": 0, "max": 1, "step": 0.05,
+             "colSpan": "half", "dependsOn": "media_type", "dependsValue": ["video", "image"]},
+            {"key": "volume", "label": "音量", "type": "number", "min": 0, "max": 2, "step": 0.1,
+             "colSpan": "half", "dependsOn": "media_type", "dependsValue": "audio"},
+            {"key": "muted", "label": "静音", "type": "checkbox", "colSpan": "half",
+             "dependsOn": "media_type", "dependsValue": "audio"},
+            {"key": "content", "label": "文字内容", "type": "textarea",
+             "dependsOn": "media_type", "dependsValue": "text"},
+            {"key": "font_size", "label": "字号", "type": "number", "min": 1, "step": 1,
+             "colSpan": "half", "dependsOn": "media_type", "dependsValue": "text"},
+            {"key": "font_family", "label": "字体", "type": "text", "colSpan": "half",
+             "dependsOn": "media_type", "dependsValue": "text"},
+            {"key": "color", "label": "文字颜色", "type": "text", "colSpan": "half",
+             "dependsOn": "media_type", "dependsValue": "text", "placeholder": "#ffffff"},
+            {"key": "background_color", "label": "背景颜色", "type": "text", "colSpan": "half",
+             "dependsOn": "media_type", "dependsValue": "text", "placeholder": "rgba(0, 0, 0, 0.7)"},
+            {"key": "text_align", "label": "对齐方式", "type": "select", "colSpan": "half",
+             "dependsOn": "media_type", "dependsValue": "text", "options": [
+                 {"value": "left", "label": "左对齐"},
+                 {"value": "center", "label": "居中"},
+                 {"value": "right", "label": "右对齐"},
+             ]},
+            {"key": "font_weight", "label": "字重", "type": "select", "colSpan": "half",
+             "dependsOn": "media_type", "dependsValue": "text", "options": [
+                 {"value": "normal", "label": "常规"},
+                 {"value": "bold", "label": "加粗"},
+             ]},
+        ],
+    },
+    {
+        "id": "cutia",
+        "name": "推送到剪辑台",
+        "execution_domain": "thread",
+        "category": "video",
+        "description": "将剪辑项目JSON推送到剪辑工作台并发起系统提醒，等待剪辑后透传输出（素材编排由上游「剪辑项目初始化」完成）",
+        "icon": "Clapperboard",
+        "color": "#14b8a6",
+        "inputs": [
+            {"id": "project", "label": "剪辑项目", "type": "json"},
+        ],
+        "outputs": [
+            {"id": "project", "label": "剪辑项目", "type": "json"},
+        ],
+        "defaultConfig": {
+            "wait_seconds": 600,
+        },
+        "configFields": [
+            {"key": "wait_seconds", "label": "等待剪辑时间（秒）", "type": "number", "min": 0, "colSpan": "half"},
+        ],
     },
     {
         "id": "cutia_render",
         "name": "剪辑渲染",
         "execution_domain": "thread",
         "category": "video",
-        "description": "无头加载剪辑项目并渲染导出成片，无需人工打开剪辑工作台",
+        "description": "接收上游精选后的剪辑项目JSON，无头加载并渲染导出成片，无需人工打开剪辑工作台",
         "icon": "Clapperboard",
         "color": "#f97316",
         "inputs": [
@@ -2676,17 +2811,59 @@ BUILTIN_NODE_TYPES = [
         ],
         "defaultConfig": {
             "project_name": "AI漫剧项目",
+            "llm_model": "",
             "genre_tags": "",
             "art_style_tags": "",
             "audience_tags": "",
             "outline_prompt": "",
         },
         "configFields": [
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
+            {"key": "browse_project", "label": "浏览项目", "type": "button", "colSpan": "full", "description": "以思维导图方式可视化浏览项目骨架与各阶段产物（文本/图片/视频/音频）"},
             {"key": "project_name", "label": "项目名称", "type": "text", "colSpan": "half"},
             {"key": "genre_tags", "label": "类型标签", "type": "text", "colSpan": "half", "placeholder": "逗号分隔，如 科幻,冒险"},
             {"key": "art_style_tags", "label": "画风标签", "type": "text", "colSpan": "half", "placeholder": "逗号分隔，如 赛博朋克"},
             {"key": "audience_tags", "label": "受众标签", "type": "text", "colSpan": "half"},
             {"key": "outline_prompt", "label": "创意与要求", "type": "textarea", "colSpan": "full", "placeholder": "世界观方向、题材、体量等；也可从 text 端口传入"},
+        ],
+    },
+    {
+        "id": "agi_deepen",
+        "name": "剧本深化",
+        "execution_domain": "thread",
+        "category": "aigc",
+        "description": "AI 漫剧·剧本深化：把项目骨架深化为严格格式化的设定书并入库——剧本简介、各章节内容规划(建章)、人物设计提炼(同名提炼/新增)、画风元素锁定(写入骨架供下游生图取用)",
+        "icon": "PenLine",
+        "color": "#db2777",
+        "inputs": [
+            {"id": "creation_id", "label": "创作项目ID", "type": "any"},
+            {"id": "text", "label": "额外要求", "type": "text"},
+        ],
+        "outputs": [
+            {"id": "creation_id", "label": "创作项目ID", "type": "text"},
+            {"id": "bible", "label": "剧本设定书", "type": "json"},
+            {"id": "synopsis", "label": "剧本简介", "type": "text"},
+            {"id": "style_bible", "label": "画风锁定", "type": "text"},
+        ],
+        "defaultConfig": {
+            "creation_id": "",
+            "llm_model": "",
+            "num_chapters": 3,
+            "num_characters": 3,
+            "art_style_input": "",
+            "extra_requirements": "",
+            "require_screenplay": True,
+            "replace_chapters": False,
+        },
+        "configFields": [
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "连线传入 creation_id 时优先"},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
+            {"key": "num_chapters", "label": "章节数量", "type": "number", "colSpan": "half", "min": 1, "max": 50},
+            {"key": "num_characters", "label": "人物数量", "type": "number", "colSpan": "half", "min": 1, "max": 20},
+            {"key": "art_style_input", "label": "画风人工指定", "type": "text", "colSpan": "full", "placeholder": "留空由 LLM 锁定"},
+            {"key": "extra_requirements", "label": "额外要求", "type": "textarea", "colSpan": "full", "placeholder": "题材禁忌、体量、风格倾向等；也可从 text 端口传入"},
+            {"key": "require_screenplay", "label": "强制格式化剧本", "type": "toggle", "defaultValue": True, "description": "章节内容规划必须写成格式化剧本（## S编号 | 内景/外景 · 地点 | 时间段 + 对白），不合规会自动纠错重试"},
+            {"key": "replace_chapters", "label": "重置章节规划", "type": "toggle", "defaultValue": False, "description": "开启则先删除项目已有章节(含其下分镜！)再写入本章规划"},
         ],
     },
     {
@@ -2710,19 +2887,31 @@ BUILTIN_NODE_TYPES = [
             "creation_id": "",
             "genre_tags": "",
             "num_characters": 4,
+            "char_count_mode": "follow",
+            "mode": "auto",
+            "llm_model": "",
             "generate_images": False,
             "publish_to_library": True,
+            "seed": "",
             "num_views": 3,
             "view_prompts": "正面全身,侧面半身,背面全身",
             "image_interface": "",
             "art_style_prompt": "",
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
-            {"key": "num_characters", "label": "人物数量", "type": "number", "colSpan": "half", "min": 1, "max": 20},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
+            {"key": "mode", "label": "资产来源", "type": "select", "colSpan": "half", "options": [
+                {"value": "auto", "label": "自动(有剧本则提取)"}, {"value": "extract", "label": "从剧本提取"}, {"value": "generate", "label": "依创意生成"}],
+                "description": "提取模式按人物姓名（场景按地点+时间段）去重复用，适合小说/剧本改编"},
+            {"key": "char_count_mode", "label": "人物数量", "type": "select", "colSpan": "half", "options": [
+                {"value": "follow", "label": "跟随项目"}, {"value": "manual", "label": "手动指定"}],
+                "description": "跟随项目：由 LLM 依骨架与剧情决定人数（默认）；手动指定：固定数量"},
+            {"key": "num_characters", "label": "指定数量", "type": "number", "colSpan": "half", "min": 1, "max": 20, "dependsOn": "char_count_mode", "dependsValue": "manual"},
             {"key": "genre_tags", "label": "发布标签", "type": "text", "placeholder": "逗号分隔，发布到公共角色库时使用", "colSpan": "half"},
             {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "placeholder": "追加到生图/分镜提示词中的画风描述"},
             {"key": "generate_images", "label": "生成角色立绘", "type": "toggle", "defaultValue": False},
+            {"key": "seed", "label": "生图种子(留空自动)", "type": "number", "colSpan": "half", "min": 0, "description": "固定种子可让角色立绘在重生成时保持一致；留空则由系统为角色分配并锁定"},
             {"key": "publish_to_library", "label": "发布到公共角色库", "type": "toggle", "defaultValue": True, "description": "开启后人物自动发布为公共角色，立绘以多视角图形式挂到角色库 images_dir"},
             {"key": "num_views", "label": "多视角数量", "type": "number", "colSpan": "half", "min": 1, "max": 6, "dependsOn": "publish_to_library", "dependsValue": True},
             {"key": "view_prompts", "label": "视角标签", "type": "text", "colSpan": "half", "placeholder": "逗号分隔，如 正面全身,侧面半身,背面全身", "dependsOn": "publish_to_library", "dependsValue": True},
@@ -2753,7 +2942,7 @@ BUILTIN_NODE_TYPES = [
             "overwrite": False,
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
             {"key": "tts_interface", "label": "TTS 接口", "type": "api-select", "apiEndpoint": "/api/tts-interfaces/enabled", "colSpan": "full"},
             {"key": "sample_text", "label": "样本台词模板", "type": "text", "colSpan": "full", "placeholder": "支持 {name} 与 {voice_design} 占位符"},
             {"key": "overwrite", "label": "覆盖已有音色", "type": "toggle", "defaultValue": False},
@@ -2764,7 +2953,7 @@ BUILTIN_NODE_TYPES = [
         "name": "场景资产创作",
         "execution_domain": "process",
         "category": "aigc",
-        "description": "AI 漫剧·场景资产创作：生成关键场景描述并生成场景概念图，登记为 scene_image 资产",
+        "description": "AI 漫剧·场景资产创作：生成关键场景(地点/时间段/光影)并生成固定视角概念图，写入场景资产表并登记 scene_image 资产",
         "icon": "Image",
         "color": "#db2777",
         "inputs": [
@@ -2773,22 +2962,133 @@ BUILTIN_NODE_TYPES = [
         ],
         "outputs": [
             {"id": "creation_id", "label": "创作项目ID", "type": "text"},
+            {"id": "scene_ids", "label": "场景ID列表", "type": "json"},
             {"id": "scenes", "label": "场景清单", "type": "json"},
             {"id": "images", "label": "场景图", "type": "any"},
         ],
         "defaultConfig": {
             "creation_id": "",
             "num_scenes": 6,
+            "mode": "auto",
+            "llm_model": "",
             "generate_images": True,
             "image_interface": "",
             "art_style_prompt": "",
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
+            {"key": "mode", "label": "资产来源", "type": "select", "colSpan": "half", "options": [
+                {"value": "auto", "label": "自动(有剧本则提取)"}, {"value": "extract", "label": "从剧本提取"}, {"value": "generate", "label": "依创意生成"}],
+                "description": "提取模式按人物姓名（场景按地点+时间段）去重复用，适合小说/剧本改编"},
             {"key": "num_scenes", "label": "场景数量", "type": "number", "colSpan": "half", "min": 1, "max": 30},
             {"key": "generate_images", "label": "生成场景图", "type": "toggle", "defaultValue": True},
             {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "colSpan": "full"},
             {"key": "image_interface", "label": "生图接口", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/enabled", "colSpan": "full"},
+        ],
+    },
+    {
+        "id": "agi_prop",
+        "name": "道具资产创作",
+        "execution_domain": "process",
+        "category": "aigc",
+        "description": "AI 漫剧·道具资产创作：从剧本提取/生成推动剧情的关键道具，生成白底单品图，写入道具资产表并登记 prop_image 资产",
+        "icon": "Box",
+        "color": "#db2777",
+        "inputs": [
+            {"id": "creation_id", "label": "创作项目ID", "type": "any"},
+            {"id": "text", "label": "补充描述", "type": "text"},
+        ],
+        "outputs": [
+            {"id": "creation_id", "label": "创作项目ID", "type": "text"},
+            {"id": "prop_ids", "label": "道具ID列表", "type": "json"},
+            {"id": "props", "label": "道具清单", "type": "json"},
+            {"id": "images", "label": "道具图", "type": "any"},
+        ],
+        "defaultConfig": {
+            "creation_id": "",
+            "num_props": 6,
+            "mode": "auto",
+            "llm_model": "",
+            "generate_images": True,
+            "image_interface": "",
+            "art_style_prompt": "",
+        },
+        "configFields": [
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
+            {"key": "mode", "label": "资产来源", "type": "select", "colSpan": "half", "options": [
+                {"value": "auto", "label": "自动(有剧本则提取)"}, {"value": "extract", "label": "从剧本提取"}, {"value": "generate", "label": "依创意生成"}],
+                "description": "提取模式按道具名去重复用，适合小说/剧本改编"},
+            {"key": "num_props", "label": "道具数量", "type": "number", "colSpan": "half", "min": 1, "max": 30},
+            {"key": "generate_images", "label": "生成道具图", "type": "toggle", "defaultValue": True},
+            {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "colSpan": "full"},
+            {"key": "image_interface", "label": "生图接口", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/enabled", "colSpan": "full"},
+        ],
+    },
+    {
+        "id": "agi_extract",
+        "name": "资产自动提取",
+        "execution_domain": "thread",
+        "category": "aigc",
+        "description": "AI 漫剧·资产自动提取：从格式化剧本一次性提取人物/场景/道具，按名去重入库（同名复用更新，新增写入一级资产表），对标 Drama extractor",
+        "icon": "Sparkles",
+        "color": "#db2777",
+        "inputs": [
+            {"id": "creation_id", "label": "创作项目ID", "type": "any"},
+            {"id": "text", "label": "补充剧本", "type": "text"},
+        ],
+        "outputs": [
+            {"id": "creation_id", "label": "创作项目ID", "type": "text"},
+            {"id": "character_ids", "label": "人物ID列表", "type": "json"},
+            {"id": "scene_ids", "label": "场景ID列表", "type": "json"},
+            {"id": "prop_ids", "label": "道具ID列表", "type": "json"},
+            {"id": "characters", "label": "人物清单", "type": "json"},
+            {"id": "scenes", "label": "场景清单", "type": "json"},
+            {"id": "props", "label": "道具清单", "type": "json"},
+        ],
+        "defaultConfig": {
+            "creation_id": "",
+            "mode": "auto",
+            "llm_model": "",
+        },
+        "configFields": [
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
+            {"key": "mode", "label": "提取模式", "type": "select", "colSpan": "half", "options": [
+                {"value": "auto", "label": "自动(有剧本则提取)"}, {"value": "extract", "label": "从剧本提取"}, {"value": "generate", "label": "依创意生成"}]},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
+        ],
+    },
+    {
+        "id": "agi_prompt",
+        "name": "生成提示词",
+        "execution_domain": "thread",
+        "category": "aigc",
+        "description": "AI 漫剧·生成提示词：把资产描述结合整体画风生成 final_prompt 写入库（可调试/可人工改），供生图节点使用，对标 Drama prompt_generator",
+        "icon": "Wand2",
+        "color": "#db2777",
+        "inputs": [
+            {"id": "creation_id", "label": "创作项目ID", "type": "any"},
+            {"id": "ids", "label": "资产ID列表(可选)", "type": "json"},
+        ],
+        "outputs": [
+            {"id": "creation_id", "label": "创作项目ID", "type": "text"},
+            {"id": "asset_type", "label": "资产类型", "type": "text"},
+            {"id": "ids", "label": "资产ID列表", "type": "json"},
+            {"id": "final_prompts", "label": "最终提示词", "type": "json"},
+        ],
+        "defaultConfig": {
+            "creation_id": "",
+            "asset_type": "scene",
+            "llm_model": "",
+            "art_style_prompt": "",
+        },
+        "configFields": [
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
+            {"key": "asset_type", "label": "资产类型", "type": "select", "colSpan": "half", "options": [
+                {"value": "character", "label": "人物"}, {"value": "scene", "label": "场景"}, {"value": "prop", "label": "道具"}]},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由"},
+            {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "colSpan": "full"},
         ],
     },
     {
@@ -2812,12 +3112,16 @@ BUILTIN_NODE_TYPES = [
         "defaultConfig": {
             "creation_id": "",
             "num_chapters": 1,
+            "llm_model": "",
             "chapter_title": "",
+            "force": False,
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "章节管理目标项目；连线传入 creation_id 时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "章节管理目标项目；连线传入 creation_id 时优先"},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
             {"key": "num_chapters", "label": "章节数量", "type": "number", "colSpan": "half", "min": 1, "max": 50},
             {"key": "chapter_title", "label": "首章标题(可选)", "type": "text", "colSpan": "half"},
+            {"key": "force", "label": "强制重生成", "type": "switch", "colSpan": "half", "description": "开启后忽略已就绪章节，全部重新生成（断点续跑默认跳过已完成项）"},
         ],
     },
     {
@@ -2841,11 +3145,15 @@ BUILTIN_NODE_TYPES = [
             "creation_id": "",
             "chapter_id": "",
             "num_shots": 8,
+            "llm_model": "",
+            "force": False,
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入 chapter_id 时可省"},
-            {"key": "chapter_id", "label": "章节", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "colSpan": "full", "description": "先选择创作项目；连线传入 chapter_id 时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入 chapter_id 时可省"},
+            {"key": "chapter_id", "label": "章节", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "followPort": "chapter_id", "colSpan": "full", "description": "先选择创作项目；连线传入 chapter_id 时优先"},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half", "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
             {"key": "num_shots", "label": "分镜数量", "type": "number", "colSpan": "half", "min": 1, "max": 60},
+            {"key": "force", "label": "强制重生成", "type": "switch", "colSpan": "half", "description": "开启后忽略已就绪分镜，全部重新生成（断点续跑默认跳过已完成项）"},
         ],
     },
     {
@@ -2882,10 +3190,11 @@ BUILTIN_NODE_TYPES = [
             "max_ref_images": 4,
             "image_interface": "",
             "art_style_prompt": "",
+            "force": False,
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
-            {"key": "chapter_id", "label": "章节(批处理)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "colSpan": "full", "description": "选择后整章批处理；连线传入时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
+            {"key": "chapter_id", "label": "章节(批处理)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "followPort": "chapter_id", "colSpan": "full", "description": "选择后整章批处理；连线传入时优先"},
             {"key": "shot_id", "label": "分镜(单个)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/shots?chapter_id={chapter_id}", "optionLabel": "label", "optionValue": "id", "colSpan": "full", "description": "先选择创作项目与章节；连线传入时优先"},
             {"key": "generate_first", "label": "生成首帧", "type": "toggle", "defaultValue": True},
             {"key": "generate_last", "label": "生成尾帧", "type": "toggle", "defaultValue": True},
@@ -2894,6 +3203,7 @@ BUILTIN_NODE_TYPES = [
             {"key": "max_ref_images", "label": "参考图上限", "type": "number", "colSpan": "half", "min": 0, "max": 8},
             {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "colSpan": "full"},
             {"key": "image_interface", "label": "生图接口", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/enabled", "colSpan": "full"},
+            {"key": "force", "label": "强制重生成", "type": "switch", "colSpan": "full", "description": "开启后忽略已存在首尾帧，重新生图（默认跳过已完成分镜）"},
         ],
     },
     {
@@ -2927,10 +3237,11 @@ BUILTIN_NODE_TYPES = [
             "resolution": "720P",
             "aspect_ratio": "16:9",
             "camera_prompt": "",
+            "force": False,
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
-            {"key": "chapter_id", "label": "章节(批处理)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "colSpan": "full", "description": "选择后整章批处理；连线传入时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
+            {"key": "chapter_id", "label": "章节(批处理)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "followPort": "chapter_id", "colSpan": "full", "description": "选择后整章批处理；连线传入时优先"},
             {"key": "shot_id", "label": "分镜(单个)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/shots?chapter_id={chapter_id}", "optionLabel": "label", "optionValue": "id", "colSpan": "full", "description": "先选择创作项目与章节；连线传入时优先"},
             {"key": "video_interface", "label": "生视频接口", "type": "api-select", "apiEndpoint": "/api/videogen-interfaces/enabled", "colSpan": "full"},
             {"key": "camera_prompt", "label": "运镜提示词", "type": "text", "colSpan": "half", "placeholder": "如 缓慢推近，电影感镜头"},
@@ -2940,6 +3251,7 @@ BUILTIN_NODE_TYPES = [
                 {"value": "480P", "label": "480P"}, {"value": "720P", "label": "720P"}, {"value": "1080P", "label": "1080P"}]},
             {"key": "aspect_ratio", "label": "比例", "type": "select", "colSpan": "half", "options": [
                 {"value": "16:9", "label": "16:9"}, {"value": "9:16", "label": "9:16"}, {"value": "1:1", "label": "1:1"}]},
+            {"key": "force", "label": "强制重生成", "type": "switch", "colSpan": "full", "description": "开启后忽略已存在视频，重新生成（默认跳过已完成分镜）"},
         ],
     },
     {
@@ -2973,10 +3285,11 @@ BUILTIN_NODE_TYPES = [
             "tts_voice": "",
             "tts_voice_design": "",
             "make_srt": True,
+            "force": False,
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
-            {"key": "chapter_id", "label": "章节(批处理)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "colSpan": "full", "description": "选择后整章批处理；连线传入时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
+            {"key": "chapter_id", "label": "章节(批处理)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "followPort": "chapter_id", "colSpan": "full", "description": "选择后整章批处理；连线传入时优先"},
             {"key": "shot_id", "label": "分镜(单个)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/shots?chapter_id={chapter_id}", "optionLabel": "label", "optionValue": "id", "colSpan": "full", "description": "先选择创作项目与章节；连线传入时优先"},
             {"key": "tts_interface", "label": "TTS 接口", "type": "api-select", "apiEndpoint": "/api/tts-interfaces/enabled", "colSpan": "full"},
             {"key": "tts_mode", "label": "合成模式", "type": "select", "colSpan": "half", "options": [
@@ -2984,6 +3297,7 @@ BUILTIN_NODE_TYPES = [
             {"key": "make_srt", "label": "生成SRT字幕", "type": "toggle", "defaultValue": True},
             {"key": "tts_voice", "label": "预设音色名", "type": "text", "colSpan": "half", "dependsOn": "tts_mode", "dependsValue": "preset_voice"},
             {"key": "tts_voice_design", "label": "音色/克隆指令", "type": "textarea", "colSpan": "full", "placeholder": "人物无 voice_ref 时的回退指令文本"},
+            {"key": "force", "label": "强制重生成", "type": "switch", "colSpan": "full", "description": "开启后忽略已存在配音，重新合成（默认跳过已完成分镜）"},
         ],
     },
     {
@@ -3019,10 +3333,11 @@ BUILTIN_NODE_TYPES = [
             "fade_out": 0.3,
             "mute_original": False,
             "burn_subtitle": False,
+            "force": False,
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
-            {"key": "chapter_id", "label": "章节(批处理)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "colSpan": "full", "description": "选择后整章批处理；连线传入时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
+            {"key": "chapter_id", "label": "章节(批处理)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "followPort": "chapter_id", "colSpan": "full", "description": "选择后整章批处理；连线传入时优先"},
             {"key": "shot_id", "label": "分镜(单个)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/shots?chapter_id={chapter_id}", "optionLabel": "label", "optionValue": "id", "colSpan": "full", "description": "先选择创作项目与章节；连线传入时优先"},
             {"key": "burn_subtitle", "label": "烧录字幕", "type": "toggle", "defaultValue": False, "description": "优先取配音资产旁的 SRT，烧录失败自动回退为无字幕成片"},
             {"key": "dub_vol", "label": "配音音量", "type": "slider", "colSpan": "half", "min": 0, "max": 1, "step": 0.05},
@@ -3030,6 +3345,7 @@ BUILTIN_NODE_TYPES = [
             {"key": "fade_in", "label": "淡入(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 5, "step": 0.1},
             {"key": "fade_out", "label": "淡出(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 5, "step": 0.1},
             {"key": "mute_original", "label": "静音原声", "type": "toggle", "defaultValue": False},
+            {"key": "force", "label": "强制重生成", "type": "switch", "colSpan": "full", "description": "开启后忽略已存在成片，重新混流导出（默认跳过已完成分镜）"},
         ],
     },
     {
@@ -3052,10 +3368,31 @@ BUILTIN_NODE_TYPES = [
         "defaultConfig": {
             "creation_id": "",
             "chapter_id": "",
+            "reuse_stitch_id": "",
+            "resolution": "original",
+            "aspect_ratio": "original",
+            "transition": "none",
+            "transition_duration": 0.4,
+            "make_cover": False,
+            "cover_duration": 3,
+            "cover_prompt": "",
+            "image_interface": "",
         },
         "configFields": [
-            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
-            {"key": "chapter_id", "label": "章节", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "colSpan": "full", "description": "要导出的章节；连线传入 chapter_id 时优先"},
+            {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入时优先"},
+            {"key": "chapter_id", "label": "章节", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/chapters", "optionLabel": "title", "optionValue": "id", "followPort": "chapter_id", "colSpan": "full", "description": "要导出的章节；连线传入 chapter_id 时优先"},
+            {"key": "resolution", "label": "输出分辨率", "type": "select", "colSpan": "half", "options": [
+                {"value": "original", "label": "原始分辨率"}, {"value": "480P", "label": "480P"}, {"value": "720P", "label": "720P"}, {"value": "1080P", "label": "1080P"}], "description": "将全部分镜成片统一缩放/补边到该分辨率"},
+            {"key": "aspect_ratio", "label": "输出比例", "type": "select", "colSpan": "half", "options": [
+                {"value": "original", "label": "原始比例"}, {"value": "16:9", "label": "16:9"}, {"value": "9:16", "label": "9:16"}, {"value": "1:1", "label": "1:1"}]},
+            {"key": "transition", "label": "转场衔接", "type": "select", "colSpan": "half", "options": [
+                {"value": "none", "label": "无（直接拼接）"}, {"value": "fade", "label": "交叉淡化"}, {"value": "fadeblack", "label": "淡出黑场"}, {"value": "smoothleft", "label": "左滑"}, {"value": "smoothright", "label": "右滑"}, {"value": "wipeup", "label": "上擦"}, {"value": "wipedown", "label": "下擦"}], "description": "分镜之间叠加转场效果（自动统一分辨率/帧率）"},
+            {"key": "transition_duration", "label": "转场时长(秒)", "type": "number", "colSpan": "half", "min": 0.1, "max": 3, "step": 0.1},
+            {"key": "make_cover", "label": "生成章节封面片头", "type": "switch", "colSpan": "half", "description": "用章节标题/简介生成封面图，作为章节成片开头的静态片头并登记 chapter_cover 资产"},
+            {"key": "cover_duration", "label": "封面时长(秒)", "type": "number", "colSpan": "half", "min": 1, "max": 10, "step": 0.5},
+            {"key": "reuse_stitch_id", "label": "重拼(拼接历史ID)", "type": "text", "colSpan": "full", "placeholder": "填入历史拼接记录 ID，可复用其分镜成片源", "description": "可重拼：沿用上次拼接的分镜成片源，仅更换转场/封面/分辨率重新拼接，不重新生成分镜视频"},
+            {"key": "cover_prompt", "label": "封面提示词(可选)", "type": "textarea", "colSpan": "full"},
+            {"key": "image_interface", "label": "生图接口", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/enabled", "colSpan": "full"},
         ],
     },
     {
@@ -3865,6 +4202,286 @@ _SEEDANCE_NODES = [
         "autovideo", need_refs=True, ref_ports=3),
 ]
 BUILTIN_NODE_TYPES.extend(_SEEDANCE_NODES)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# AI 音乐生成能力节点（底层为 KieAI / Suno，经 backend.musicgen 工厂统一调用）
+#
+# 每种生成能力一个节点，统一由 backend/steps/s_musicgen.py 的 S_MusicGenBase 执行：
+#   music_txt2music         文生音乐（含人声）
+#   music_instrumental      纯音乐（无歌词）
+#   music_lyrics            歌词生成
+#   music_extend            音乐扩展（按上游 audio_id 续写）
+#   music_cover             翻唱 / 风格迁移（参考音频）
+#   music_add_instrumental  添加伴奏
+#   music_add_vocals        添加人声
+#   music_separate          人声 / 分轨分离
+#   music_to_wav            转 WAV
+#   music_upload_extend     上传本地音频并扩展
+#
+# 提示词来源兼容：所有含提示词的节点均提供 text 输入口与「使用节点内提示词」开关——
+#   开关关闭 → 使用上游连线文本；开关打开且内容非空 → 使用节点内填写的提示词。
+# ─────────────────────────────────────────────────────────────────────────────
+MUSIC_IFACE_API = "/api/musicgen-interfaces"
+
+_VOCAL_GENDER_OPTIONS = [
+    {"value": "", "label": "不指定"},
+    {"value": "male", "label": "男声"},
+    {"value": "female", "label": "女声"},
+    {"value": "girl", "label": "少女"},
+    {"value": "boy", "label": "少年"},
+    {"value": "woman", "label": "成熟女声"},
+    {"value": "man", "label": "成熟男声"},
+    {"value": "children", "label": "童声"},
+    {"value": "young boy", "label": "年轻男声"},
+    {"value": "young girl", "label": "年轻女声"},
+]
+
+_DURATION_OPTIONS = [
+    {"value": "15", "label": "15 秒"},
+    {"value": "30", "label": "30 秒"},
+    {"value": "60", "label": "60 秒"},
+    {"value": "120", "label": "120 秒"},
+    {"value": "240", "label": "240 秒"},
+]
+
+
+def _music_common_fields(capability: str, extra=None):
+    """音乐节点通用面板：接口 + 模型（模型按能力模式过滤，从接口配置动态获取）。"""
+    fields = [
+        {"key": "interface", "label": "音乐接口", "type": "api-select", "colSpan": "half",
+         "apiEndpoint": f"{MUSIC_IFACE_API}/enabled",
+         "optionLabel": "name", "optionValue": "id",
+         "placeholder": "跟随全局默认接口"},
+        {"key": "model", "label": "模型", "type": "api-select", "colSpan": "half",
+         "apiEndpoint": f"{MUSIC_IFACE_API}/{{interface}}/models-for-node?mode={capability}",
+         "dependsOn": "interface", "placeholder": "跟随接口默认模型"},
+    ]
+    if extra:
+        fields.extend(extra)
+    return fields
+
+
+def _music_prompt_fields():
+    """提示词双来源：上游连线文本输入 或 节点内自定义提示词。"""
+    return [
+        {"key": "custom_prompt_enabled", "label": "使用节点内提示词", "type": "toggle", "colSpan": "half",
+         "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"},
+        {"key": "custom_prompt", "label": "自定义提示词", "type": "textarea", "colSpan": "full",
+         "dependsOn": "custom_prompt_enabled", "dependsValue": True,
+         "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"},
+    ]
+
+
+def _music_node(node_id, name, description, capability, icon="Music",
+                inputs=None, outputs=None, extra_fields=None,
+                extra_default=None, prompt=True):
+    ins = list(inputs or [])
+    if prompt and not any(i.get("id") == "text" for i in ins):
+        ins.insert(0, {"id": "text", "label": "提示词 / 歌词", "type": "text"})
+
+    fields = _music_common_fields(capability)
+    if prompt:
+        fields.extend(_music_prompt_fields())
+    if extra_fields:
+        fields.extend(extra_fields)
+    fields.append(
+        {"key": "poll_timeout", "label": "轮询超时(秒)", "type": "number",
+         "min": 60, "max": 3600, "colSpan": "half",
+         "description": "生成任务最长等待时间，超时视为失败"}
+    )
+
+    default = {
+        "interface": "",
+        "model": "",
+        "custom_prompt_enabled": False,
+        "custom_prompt": "",
+        "poll_timeout": 600,
+    }
+    if extra_default:
+        default.update(extra_default)
+
+    outs = outputs or [
+        {"id": "audio", "label": "音频", "type": "audio"},
+        {"id": "audios", "label": "音频列表", "type": "json"},
+        {"id": "params", "label": "生成参数JSON", "type": "json"},
+    ]
+
+    return {
+        "id": node_id,
+        "name": name,
+        "execution_domain": "process",
+        "category": "music_gen",
+        "description": description,
+        "icon": icon,
+        "color": "#a78bfa",
+        "inputs": ins,
+        "outputs": outs,
+        "defaultConfig": default,
+        "configFields": fields,
+    }
+
+
+_MUSIC_NODES = [
+    _music_node(
+        "music_txt2music", "AI音乐-文生音乐",
+        "根据提示词 / 歌词生成完整歌曲（含人声）。提示词可来自连线文本输入或节点内自定义；产物为音频。",
+        "txt2music", icon="Music",
+        extra_default={"instrumental": False, "duration": "60"},
+        extra_fields=[
+            {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half",
+             "placeholder": "如：pop, cinematic, lo-fi"},
+            {"key": "title", "label": "歌曲标题", "type": "text", "colSpan": "half"},
+            {"key": "instrumental", "label": "纯音乐(无歌词)", "type": "toggle", "colSpan": "half"},
+            {"key": "duration", "label": "时长", "type": "select", "colSpan": "half",
+             "options": _DURATION_OPTIONS},
+            {"key": "negative_tags", "label": "反向标签", "type": "text", "colSpan": "half",
+             "placeholder": "逗号分隔，如：heavy metal"},
+            {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
+             "options": _VOCAL_GENDER_OPTIONS},
+        ]),
+    _music_node(
+        "music_instrumental", "AI音乐-纯音乐",
+        "根据风格描述生成无人声的纯音乐 / 伴奏。提示词可来自连线文本输入或节点内自定义。",
+        "instrumental", icon="Music2",
+        extra_default={"duration": "60"},
+        extra_fields=[
+            {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half",
+             "placeholder": "如：piano, ambient, epic"},
+            {"key": "title", "label": "曲目标题", "type": "text", "colSpan": "half"},
+            {"key": "duration", "label": "时长", "type": "select", "colSpan": "half",
+             "options": _DURATION_OPTIONS},
+            {"key": "negative_tags", "label": "反向标签", "type": "text", "colSpan": "half",
+             "placeholder": "逗号分隔"},
+        ]),
+    _music_node(
+        "music_lyrics", "AI音乐-歌词生成",
+        "根据主题描述生成歌词文本（不产出音频）。主题可来自连线文本输入或节点内自定义；输出歌词文本供「文生音乐」等节点使用。",
+        "lyrics", icon="ListMusic",
+        outputs=[
+            {"id": "text", "label": "歌词文本", "type": "text"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ],
+        extra_fields=[
+            {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half",
+             "placeholder": "如：pop, rock"},
+            {"key": "title", "label": "歌曲标题", "type": "text", "colSpan": "half"},
+        ]),
+    _music_node(
+        "music_extend", "AI音乐-音乐扩展",
+        "对已有曲目做续写扩展：从上游音乐节点的参数 JSON 取 audio_id（也可直接填 audio_id），可指定续写起点与续写提示词。",
+        "extend", icon="Repeat",
+        inputs=[
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+            {"id": "text", "label": "续写提示词", "type": "text"},
+        ],
+        extra_fields=[
+            {"key": "audio_id", "label": "音频ID", "type": "text", "colSpan": "half",
+             "description": "留空则自动从上游参数 JSON 中读取 audio_id", "placeholder": "上游传入时留空"},
+            {"key": "continue_at", "label": "续写起点(秒)", "type": "number", "min": 0, "colSpan": "half",
+             "description": "从原曲的第 N 秒开始续写"},
+            {"key": "default_param_flag", "label": "沿用原曲参数", "type": "toggle", "colSpan": "half"},
+            {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half"},
+            {"key": "title", "label": "歌曲标题", "type": "text", "colSpan": "half"},
+            {"key": "instrumental", "label": "纯音乐", "type": "toggle", "colSpan": "half"},
+            {"key": "negative_tags", "label": "反向标签", "type": "text", "colSpan": "half"},
+            {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
+             "options": _VOCAL_GENDER_OPTIONS},
+        ]),
+    _music_node(
+        "music_cover", "AI音乐-翻唱/风格迁移",
+        "上传参考音频并按提示词 / 风格做翻唱或风格迁移。参考音频从连线 audio 输入（本地文件自动上传）。",
+        "cover", icon="Disc",
+        inputs=[
+            {"id": "audio", "label": "参考音频", "type": "audio"},
+            {"id": "text", "label": "风格/提示词", "type": "text"},
+        ],
+        extra_fields=[
+            {"key": "style", "label": "目标风格", "type": "text", "colSpan": "half",
+             "placeholder": "如：jazz, electronic"},
+            {"key": "title", "label": "曲目标题", "type": "text", "colSpan": "half"},
+            {"key": "custom_mode", "label": "自定义模式", "type": "toggle", "colSpan": "half",
+             "description": "开启后使用节点内的风格/标题/提示词，否则由模型自动推断"},
+            {"key": "instrumental", "label": "纯音乐", "type": "toggle", "colSpan": "half"},
+            {"key": "negative_tags", "label": "反向标签", "type": "text", "colSpan": "half"},
+            {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
+             "options": _VOCAL_GENDER_OPTIONS},
+        ]),
+    _music_node(
+        "music_add_instrumental", "AI音乐-添加伴奏",
+        "为人声 / 干声轨道添加伴奏：上传音频后生成带伴奏的完整曲目。",
+        "add_instrumental", icon="Guitar",
+        inputs=[
+            {"id": "audio", "label": "人声音频", "type": "audio"},
+            {"id": "text", "label": "标题/标签", "type": "text"},
+        ],
+        extra_fields=[
+            {"key": "title", "label": "曲目标题", "type": "text", "colSpan": "half",
+             "description": "留空则自动取提示词前 60 字符"},
+            {"key": "tags", "label": "风格标签", "type": "text", "colSpan": "half",
+             "placeholder": "如：pop, energetic"},
+            {"key": "negative_tags", "label": "反向标签", "type": "text", "colSpan": "half"},
+            {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
+             "options": _VOCAL_GENDER_OPTIONS},
+        ]),
+    _music_node(
+        "music_add_vocals", "AI音乐-添加人声",
+        "为伴奏 /  instrumental 轨道添加人声：上传音频并提供歌词或演唱提示词。",
+        "add_vocals", icon="Mic",
+        inputs=[
+            {"id": "audio", "label": "伴奏音频", "type": "audio"},
+            {"id": "text", "label": "歌词/演唱提示", "type": "text"},
+        ],
+        extra_fields=[
+            {"key": "title", "label": "曲目标题", "type": "text", "colSpan": "half",
+             "description": "留空则自动取提示词前 60 字符"},
+            {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half"},
+            {"key": "negative_tags", "label": "反向标签", "type": "text", "colSpan": "half"},
+            {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
+             "options": _VOCAL_GENDER_OPTIONS},
+        ]),
+    _music_node(
+        "music_separate", "AI音乐-人声分离",
+        "对已有曲目做分轨分离（人声 / 伴奏 / 鼓 / 贝斯等）。可接上游音频文件，也可从上游参数 JSON 取 task_id / audio_id。",
+        "separate", icon="Scissors",
+        inputs=[
+            {"id": "audio", "label": "待分离音频", "type": "audio"},
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+        ],
+        extra_fields=[
+            {"key": "stem_type", "label": "分离类型", "type": "text", "colSpan": "half",
+             "placeholder": "all / vocals / instrumental / drums / bass",
+             "description": "留空默认 all（分离为人声 + 伴奏）"},
+        ]),
+    _music_node(
+        "music_to_wav", "AI音乐-转WAV",
+        "把已有曲目转换为 WAV 无损格式：从上游音乐节点的参数 JSON 取 task_id / audio_id。",
+        "to_wav", icon="FileAudio", prompt=False,
+        inputs=[{"id": "json", "label": "上游音乐参数JSON", "type": "json"}],
+        outputs=[
+            {"id": "audio", "label": "WAV音频", "type": "audio"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ]),
+    _music_node(
+        "music_upload_extend", "AI音乐-上传并扩展",
+        "上传本地音频并续写扩展：参考音频从连线 audio 输入，可指定续写起点与提示词。",
+        "upload_extend", icon="Repeat2",
+        inputs=[
+            {"id": "audio", "label": "本地音频", "type": "audio"},
+            {"id": "text", "label": "续写提示词", "type": "text"},
+        ],
+        extra_fields=[
+            {"key": "continue_at", "label": "续写起点(秒)", "type": "number", "min": 0, "colSpan": "half"},
+            {"key": "default_param_flag", "label": "沿用原曲参数", "type": "toggle", "colSpan": "half"},
+            {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half"},
+            {"key": "title", "label": "歌曲标题", "type": "text", "colSpan": "half"},
+            {"key": "instrumental", "label": "纯音乐", "type": "toggle", "colSpan": "half"},
+            {"key": "negative_tags", "label": "反向标签", "type": "text", "colSpan": "half"},
+            {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
+             "options": _VOCAL_GENDER_OPTIONS},
+        ]),
+]
+BUILTIN_NODE_TYPES.extend(_MUSIC_NODES)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

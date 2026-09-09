@@ -123,6 +123,8 @@ export interface ConfigField {
   fileFilter?: string[];
   apiEndpoint?: string;
   apiUrl?: string;
+  /** 端口跟随：该端口有上游连线值时，下拉显示为只读跟随态 */
+  followPort?: string;
   interfaceIdKey?: string;
   optionLabel?: string;
   optionValue?: string;
@@ -141,7 +143,7 @@ export interface ConfigField {
 export interface NodeTypeDef {
   id: string;
   name: string;
-  category: "io" | "preview" | "audio" | "video" | "ai_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agent" | "utility" | "file" | "group_node" | "input" | "process" | "ai" | "output" | "publish";
+  category: "io" | "preview" | "audio" | "video" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agent" | "utility" | "file" | "group_node" | "input" | "process" | "ai" | "output" | "publish";
   description: string;
   icon: string;
   color: string;
@@ -210,6 +212,7 @@ export const CATEGORIES = {
   audio: { label: "音频处理节点", color: "#0ea5e9", icon: "Volume2" },
   video: { label: "视频处理节点", color: "#ef4444", icon: "Film" },
   ai_gen: { label: "AI生成类节点", color: "#10b981", icon: "Sparkles" },
+  music_gen: { label: "AI音乐", color: "#a78bfa", icon: "Music" },
   translation: { label: "翻译相关节点", color: "#8b5cf6", icon: "Languages" },
   flow_control: { label: "流程控制节点", color: "#6366f1", icon: "GitBranch" },
   network_request: { label: "网络请求类节点", color: "#0f766e", icon: "Globe" },

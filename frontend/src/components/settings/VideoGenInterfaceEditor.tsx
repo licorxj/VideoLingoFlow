@@ -204,14 +204,15 @@ export default function VideoGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
   };
 
   return (
-    <div className="p-6 space-y-5 max-h-[80vh] overflow-y-auto">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col max-h-[85vh]">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 shrink-0">
         <h2 className="text-lg font-semibold">{iface ? "编辑接口" : "新建接口"}</h2>
         <button onClick={onCancel} className="p-1.5 rounded-lg hover:bg-accent/60 transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-5">
       {/* Basic Info */}
       <div className={sectionCls}>
         <h4 className="text-xs font-semibold text-foreground">基础信息</h4>
@@ -588,8 +589,10 @@ export default function VideoGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
         ))}
       </div>
 
+      </div>
+
       {/* Actions */}
-      <div className="flex justify-end gap-3 pt-2">
+      <div className="flex justify-end gap-3 px-6 py-4 border-t border-border/50 shrink-0">
         <button onClick={onCancel} className="px-4 py-2 text-sm border border-border/60 rounded-xl hover:bg-accent/60 transition-colors">
           取消
         </button>

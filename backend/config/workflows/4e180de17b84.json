@@ -40,7 +40,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 565
+        "height": 564
       },
       "selected": false,
       "dragging": false,
@@ -69,7 +69,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 309
+        "height": 310
       },
       "selected": false,
       "dragging": false,
@@ -108,7 +108,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 400
+        "height": 398
       },
       "selected": false,
       "dragging": false,
@@ -141,7 +141,7 @@
         "disableExecute": false,
         "workbench_url": "",
         "logLines": [
-          "[step_worker] start node_type=translate node_id=node_1_1780954897405 pid=46556",
+          "[step_worker] start node_type=translate node_id=node_1_1780954897405 pid=44240",
           "[step_worker] step instance created: S05Translate",
           "[step_worker] step_inputs keys=['subtitle', 'summary', 'language', 'prompt_template']",
           "[step_worker] node_config keys=['translation_style', 'reflect_translate', 'processing_language', 'target_language']",
@@ -153,7 +153,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 530
+        "height": 532
       },
       "selected": false,
       "dragging": false,
@@ -186,7 +186,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 398
+        "height": 396
       },
       "selected": false,
       "dragging": false,
@@ -220,7 +220,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 653
+        "height": 655
       },
       "selected": false,
       "dragging": false,
@@ -283,7 +283,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 478
+        "height": 428
       },
       "selected": false,
       "dragging": false,
@@ -306,11 +306,11 @@
           ],
           "clone_source": "per_segment",
           "voice_design_role_1_desc": "中年、女性、高音叫卖",
-          "speed_regenerate": true,
+          "speed_regenerate": false,
           "ai_subtitle_reduction": true,
           "speed_rounds": 1,
           "ai_rounds": 1,
-          "overwrite_generate": true,
+          "overwrite_generate": false,
           "voice_role_1": "白桦"
         },
         "status": "completed",
@@ -325,7 +325,7 @@
         "workbench_url": "",
         "logLines": [
           "[S09] 分析变速倍数",
-          "  - 需要变速: 62 段",
+          "  - 需要变速: 91 段",
           "  - 超出最大变速(1.35x): 4 段",
           "[S09] 最终溢出段数: 4",
           "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\dub_task_node_1_1781709944783.json",
@@ -336,7 +336,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 773
+        "height": 779
       },
       "selected": false,
       "dragging": false,
@@ -372,7 +372,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 418
+        "height": 442
       },
       "selected": false,
       "dragging": false,
@@ -390,8 +390,8 @@
         "label": "音频合并",
         "config": {
           "video_speed_adjust": false,
-          "speed_min": "0.9",
-          "speed_max": "1.4",
+          "speed_min": "0.85",
+          "speed_max": "2.5",
           "gap_threshold": "0.5",
           "fast_limit": "1.5"
         },
@@ -411,7 +411,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 760
+        "height": 755
       },
       "selected": false,
       "dragging": false,
@@ -448,7 +448,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 653
+        "height": 655
       },
       "selected": false,
       "dragging": false,
@@ -492,7 +492,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 466
+        "height": 469
       },
       "selected": false,
       "dragging": false,
@@ -526,7 +526,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 452
+        "height": 403
       },
       "selected": false,
       "dragging": false,
@@ -573,7 +573,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 605
+        "height": 603
       },
       "selected": false,
       "dragging": false,
@@ -613,7 +613,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 472
+        "height": 470
       },
       "selected": false,
       "dragging": false,
@@ -633,8 +633,8 @@
           "mode": [
             "img2img"
           ],
-          "interface": "33c78ad1",
-          "model": "doubao-seedream-4-5-251128",
+          "interface": "kieai",
+          "model": "gpt-image-2-image-to-image",
           "resolution": "1K",
           "aspect_ratio": "3:4",
           "num_images": 1,
@@ -647,15 +647,15 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "images": "['output/cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg']",
-          "text": "output/cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg"
+          "images": "['output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png']",
+          "text": "output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png"
         },
         "error": "",
         "note": "竖图封面",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
-          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=7400",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782507205161_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=55772",
           "[step_worker] step instance created: S_ImageGen",
           "[step_worker] step_inputs keys=['text', 'image']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
@@ -666,7 +666,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 698
+        "height": 700
       },
       "selected": false,
       "dragging": false,
@@ -689,15 +689,13 @@
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "skipped": true
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 434
+        "height": 356
       },
       "selected": false,
       "dragging": false,
@@ -731,7 +729,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 400
+        "height": 399
       },
       "selected": false,
       "dragging": false,
@@ -771,7 +769,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 500
+        "height": 498
       },
       "selected": false,
       "dragging": false,
@@ -792,7 +790,7 @@
             "img2img"
           ],
           "interface": "kieai",
-          "model": "gpt-image-2-image-to-image",
+          "model": "seedream/5-lite-image-to-image",
           "resolution": "1K",
           "aspect_ratio": "4:3",
           "num_images": 1,
@@ -805,15 +803,15 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "images": "['output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png']",
-          "text": "output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png"
+          "images": "['output/cover_gen_byfram_1_gen_image_node_3_1782641542678.jpg']",
+          "text": "output/cover_gen_byfram_1_gen_image_node_3_1782641542678.jpg"
         },
         "error": "",
         "note": "横图封面",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
-          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=29276",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_3_1782641542678_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=50880",
           "[step_worker] step instance created: S_ImageGen",
           "[step_worker] step_inputs keys=['image', 'text']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
@@ -824,7 +822,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 698
+        "height": 700
       },
       "selected": false,
       "dragging": false,
@@ -853,7 +851,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 408
+        "height": 331
       },
       "selected": false,
       "dragging": false,
@@ -899,19 +897,19 @@
         "note": "发布平台",
         "workbench_url": "",
         "logLines": [
-          "[Publish] Upload OK: id=522d42aa-43e0-4431-b7f8-f0ffb6826b30, stored_path=materials/2026/09/04/522d42aa-43e0-4431-b7f8-f0ffb6826b30.jpg",
-          "[Publish] cover_landscape material obj: id=522d42aa-43e0-4431-b7f8-f0ffb6826b30, stored_path=materials/2026/09/04/522d42aa-43e0-4431-b7f8-f0ffb6826b30.jpg",
-          "[Publish] Uploading material: cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg (0.7 MB)",
-          "[Publish] Upload OK: id=66086cf3-b5b9-4cea-bc83-90412c803789, stored_path=materials/2026/09/04/66086cf3-b5b9-4cea-bc83-90412c803789.jpg",
-          "[Publish] cover_portrait material obj: id=66086cf3-b5b9-4cea-bc83-90412c803789, stored_path=materials/2026/09/04/66086cf3-b5b9-4cea-bc83-90412c803789.jpg",
-          "[Publish] Creating draft: title='自尊-果然能打败老阿姨的只有老阿姨-13575837212', accounts=[2, 3, 4, 5], video=OK, cover_l=OK, cover_p=OK",
+          "[Publish] Upload OK: id=2eaca35f-61f4-47fd-8391-9442c6f6f7ea, stored_path=materials/2026/09/05/2eaca35f-61f4-47fd-8391-9442c6f6f7ea.png",
+          "[Publish] cover_landscape material obj: id=2eaca35f-61f4-47fd-8391-9442c6f6f7ea, stored_path=materials/2026/09/05/2eaca35f-61f4-47fd-8391-9442c6f6f7ea.png",
+          "[Publish] Uploading material: cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg (0.9 MB)",
+          "[Publish] Upload OK: id=5c13728a-7c27-4fe9-829a-e4d9aa428226, stored_path=materials/2026/09/05/5c13728a-7c27-4fe9-829a-e4d9aa428226.jpg",
+          "[Publish] cover_portrait material obj: id=5c13728a-7c27-4fe9-829a-e4d9aa428226, stored_path=materials/2026/09/05/5c13728a-7c27-4fe9-829a-e4d9aa428226.jpg",
+          "[Publish] Creating draft: title='NX点创建全攻略：智能推断点，效率倍增', accounts=[2, 3, 4, 5], video=OK, cover_l=OK, cover_p=OK",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\cc34cd0123cc429b9314da466aa5e1e6\\cache\\.step_node_1_1782672877872_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782672877872_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 877
+        "height": 880
       },
       "selected": false,
       "dragging": false,
@@ -958,7 +956,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 605
+        "height": 603
       },
       "selected": false,
       "dragging": false,
@@ -990,7 +988,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 303
+        "height": 302
       },
       "selected": false,
       "dragging": false,
@@ -1021,7 +1019,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 311
+        "height": 309
       },
       "selected": false,
       "dragging": false,
@@ -1089,7 +1087,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 433
+        "height": 439
       },
       "selected": false,
       "dragging": false,
@@ -1124,7 +1122,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 433
+        "height": 439
       },
       "selected": false,
       "dragging": false,
@@ -1153,7 +1151,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 232
+        "height": 231
       },
       "selected": false,
       "dragging": false,
@@ -1189,7 +1187,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 484
+        "height": 490
       },
       "selected": false,
       "dragging": false,
@@ -1229,14 +1227,14 @@
         },
         "error": "",
         "logLines": [
-          "[ASR] Audio duration: 757.3s",
-          "[ASR] Audio split into 3 segments: [(0.0, 240.836563), (240.836563, 493.976), (493.976, 757.2935)]",
-          "[ASR] 引擎 'moss' 已加载（空闲 5s 自动卸载）",
-          "[ASR] 引擎 'moss' 已卸载（归还内存/显存）",
-          "[ASR] 引擎 'moss' 已加载（空闲 5s 自动卸载）",
-          "[ASR] 引擎 'moss' 已卸载（归还内存/显存）",
-          "[ASR] 引擎 'moss' 已加载（空闲 5s 自动卸载）",
-          "[ASR] 引擎 'moss' 已卸载（归还内存/显存）"
+          "[ASR PostProcess] diarization_enabled=False, diarization_engine=pyannote",
+          "[ASR PostProcess] VAD was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Alignment was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Diarization was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
+          "[ASR PostProcess] No post-processing needed, returning original result",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_2_1788054290141_result.json, exiting 0"
         ],
         "workbench_url": ""
       },
@@ -1277,7 +1275,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 400
+        "height": 399
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1309,7 +1307,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 373
+        "height": 374
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1405,7 +1403,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 672
+        "height": 671
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1437,7 +1435,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 410
+        "height": 408
       },
       "dragHandle": ".wf-node-drag-handle",
       "selected": false,
@@ -1472,7 +1470,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 460
+        "height": 464
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1500,7 +1498,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 232
+        "height": 231
       }
     },
     {
@@ -1526,7 +1524,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 211
+        "height": 212
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -1574,7 +1572,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 712
+        "height": 711
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -2342,6 +2340,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-05T17:15:33",
-  "revision": 34
+  "updatedAt": "2026-09-09T05:58:14",
+  "revision": 39
 }

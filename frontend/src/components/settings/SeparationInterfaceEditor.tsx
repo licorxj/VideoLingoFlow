@@ -231,9 +231,9 @@ export default function SeparationInterfaceEditor({
   };
 
   return (
-    <div className="max-h-[85vh] overflow-y-auto">
+    <div className="flex flex-col max-h-[85vh]">
       {/* Header */}
-      <div className="flex items-center justify-between p-5 border-b border-border/50">
+      <div className="flex items-center justify-between p-5 border-b border-border/50 shrink-0">
         <h2 className="text-base font-semibold">
           {iface ? "编辑接口" : "添加接口"}
         </h2>
@@ -245,7 +245,7 @@ export default function SeparationInterfaceEditor({
         </button>
       </div>
 
-      <div className="p-5 space-y-5">
+      <div className="flex-1 min-h-0 overflow-y-auto p-5 space-y-5">
         {/* Basic Info */}
         <div className="space-y-3">
           <h3 className="text-sm font-semibold">基本信息</h3>
@@ -456,7 +456,7 @@ export default function SeparationInterfaceEditor({
       </div>
 
       {/* Footer */}
-      <div className="flex items-center justify-end gap-3 p-5 border-t border-border/50">
+      <div className="flex items-center justify-end gap-3 p-5 border-t border-border/50 shrink-0">
         <button
           onClick={onCancel}
           className="px-4 py-2 text-sm font-medium border border-border/60 rounded-lg hover:bg-accent/60 transition-all duration-200"

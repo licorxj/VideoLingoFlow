@@ -1331,7 +1331,9 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
       "ai_read_tone": false,
       "normalize_chinese_read_text": false,
       "ai_dialect_colloquial": false,
-      "dialect_name": "四川话"
+      "dialect_name": "四川话",
+      "min_sentence_duration": 0.2,
+      "speed_predict_reduce": false
     },
     "configFields": [
       {
@@ -1359,6 +1361,12 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "placeholder": "四川话",
         "dependsOn": "ai_dialect_colloquial",
         "description": "填写目标方言名称，启用方言口语化时写入任务单“方言”列"
+      },
+      {
+        "key": "speed_predict_reduce",
+        "label": "语速预测+句子缩减",
+        "type": "checkbox",
+        "description": "启用后预测每句 TTS 朗读时长（多语言兼容），预测时长远大于句子时间槽时由 LLM 缩减朗读文本；短句（中文<3字/英文<2词）不缩减"
       }
     ],
     "isBuiltIn": true
@@ -2630,10 +2638,15 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     "id": "editor_agent",
     "name": "剪辑AI Agent",
     "category": "ai",
-    "description": "通过自然语言读取并修改当前任务的剪辑项目和时间线",
+    "description": "接收上游剪辑项目JSON，按编辑指令对时间线二次精选，输出精选后的剪辑json",
     "icon": "Clapperboard",
     "color": "#10b981",
     "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑项目",
+        "type": "json"
+      },
       {
         "id": "text",
         "label": "编辑指令",
@@ -2738,12 +2751,12 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     "isBuiltIn": true
   },
   {
-    "id": "cutia",
-    "name": "Cutia 交互剪辑",
-    "category": "process",
-    "description": "将上游素材载入 Cutia，等待手工剪辑并导出成片后继续工作流",
+    "id": "project_init",
+    "name": "剪辑项目初始化",
+    "category": "video",
+    "description": "收集上游素材并构造初始剪辑JSON（默认时间线骨架+素材清单），供「Cutia 交互剪辑」接力整理筛选",
     "icon": "Clapperboard",
-    "color": "#14b8a6",
+    "color": "#0ea5e9",
     "inputs": [
       {
         "id": "video",
@@ -2768,25 +2781,307 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     ],
     "outputs": [
       {
-        "id": "video",
-        "label": "剪辑成片",
-        "type": "video"
+        "id": "project",
+        "label": "初始剪辑项目",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "arrange_tracks": true
+    },
+    "configFields": [
+      {
+        "key": "arrange_tracks",
+        "label": "是否将素材加入轨道",
+        "type": "checkbox",
+        "colSpan": "half",
+        "description": "关闭时只导入素材清单，不自动编排到时间线"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "add_track_media",
+    "name": "添加剪辑素材到轨道",
+    "category": "video",
+    "description": "接收任意类型素材，按所选类型添加到剪辑项目轨道（可新建轨道/轨道尾部/自定义插入点），输出剪辑项目JSON",
+    "icon": "Layers",
+    "color": "#8b5cf6",
+    "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑项目",
+        "type": "json"
       },
+      {
+        "id": "media",
+        "label": "素材",
+        "type": "any"
+      }
+    ],
+    "outputs": [
       {
         "id": "project",
         "label": "剪辑项目",
         "type": "json"
       }
     ],
-    "defaultConfig": {},
-    "configFields": [],
+    "defaultConfig": {
+      "media_type": "video",
+      "new_track": false,
+      "track_name": "",
+      "insert_mode": "end",
+      "insert_time": 0,
+      "static_duration": 3,
+      "pos_x": 0,
+      "pos_y": 0,
+      "scale": 1,
+      "rotate": 0,
+      "opacity": 1,
+      "volume": 1,
+      "muted": false,
+      "content": "",
+      "font_size": 5,
+      "font_family": "Arial",
+      "color": "#ffffff",
+      "background_color": "rgba(0, 0, 0, 0.7)",
+      "text_align": "center",
+      "font_weight": "normal"
+    },
+    "configFields": [
+      {
+        "key": "media_type",
+        "label": "素材类型",
+        "type": "select",
+        "options": [
+          { "value": "video", "label": "视频" },
+          { "value": "audio", "label": "音频" },
+          { "value": "image", "label": "图片" },
+          { "value": "text", "label": "文字" }
+        ]
+      },
+      {
+        "key": "new_track",
+        "label": "新建轨道添加",
+        "type": "checkbox",
+        "colSpan": "half"
+      },
+      {
+        "key": "track_name",
+        "label": "新轨道名称",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "new_track",
+        "placeholder": "留空自动命名"
+      },
+      {
+        "key": "insert_mode",
+        "label": "插入时间点",
+        "type": "select",
+        "options": [
+          { "value": "end", "label": "插入到轨道尾部" },
+          { "value": "custom", "label": "自定义插入点时间" }
+        ]
+      },
+      {
+        "key": "insert_time",
+        "label": "插入点时间（秒）",
+        "type": "number",
+        "min": 0,
+        "step": 0.1,
+        "colSpan": "half",
+        "dependsOn": "insert_mode",
+        "dependsValue": "custom"
+      },
+      {
+        "key": "static_duration",
+        "label": "素材时长（秒）",
+        "type": "number",
+        "min": 0.1,
+        "step": 0.1,
+        "colSpan": "half",
+        "placeholder": "仅图片/文字生效",
+        "dependsOn": "media_type",
+        "dependsValue": ["image", "text"]
+      },
+      {
+        "key": "pos_x",
+        "label": "X 坐标",
+        "type": "number",
+        "step": 1,
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": ["video", "image", "text"]
+      },
+      {
+        "key": "pos_y",
+        "label": "Y 坐标",
+        "type": "number",
+        "step": 1,
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": ["video", "image", "text"]
+      },
+      {
+        "key": "scale",
+        "label": "缩放",
+        "type": "number",
+        "min": 0.1,
+        "step": 0.1,
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": ["video", "image"]
+      },
+      {
+        "key": "rotate",
+        "label": "旋转（度）",
+        "type": "number",
+        "step": 1,
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": ["video", "image"]
+      },
+      {
+        "key": "opacity",
+        "label": "不透明度",
+        "type": "number",
+        "min": 0,
+        "max": 1,
+        "step": 0.05,
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": ["video", "image"]
+      },
+      {
+        "key": "volume",
+        "label": "音量",
+        "type": "number",
+        "min": 0,
+        "max": 2,
+        "step": 0.1,
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": "audio"
+      },
+      {
+        "key": "muted",
+        "label": "静音",
+        "type": "checkbox",
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": "audio"
+      },
+      {
+        "key": "content",
+        "label": "文字内容",
+        "type": "textarea",
+        "dependsOn": "media_type",
+        "dependsValue": "text"
+      },
+      {
+        "key": "font_size",
+        "label": "字号",
+        "type": "number",
+        "min": 1,
+        "step": 1,
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": "text"
+      },
+      {
+        "key": "font_family",
+        "label": "字体",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": "text"
+      },
+      {
+        "key": "color",
+        "label": "文字颜色",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": "text",
+        "placeholder": "#ffffff"
+      },
+      {
+        "key": "background_color",
+        "label": "背景颜色",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": "text",
+        "placeholder": "rgba(0, 0, 0, 0.7)"
+      },
+      {
+        "key": "text_align",
+        "label": "对齐方式",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": "text",
+        "options": [
+          { "value": "left", "label": "左对齐" },
+          { "value": "center", "label": "居中" },
+          { "value": "right", "label": "右对齐" }
+        ]
+      },
+      {
+        "key": "font_weight",
+        "label": "字重",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "media_type",
+        "dependsValue": "text",
+        "options": [
+          { "value": "normal", "label": "常规" },
+          { "value": "bold", "label": "加粗" }
+        ]
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "cutia",
+    "name": "推送到剪辑台",
+    "category": "video",
+    "description": "将剪辑项目JSON推送到剪辑工作台并发起系统提醒，等待剪辑后透传输出（素材编排由上游「剪辑项目初始化」完成）",
+    "icon": "Clapperboard",
+    "color": "#14b8a6",
+    "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑项目",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "project",
+        "label": "剪辑项目",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "wait_seconds": 600
+    },
+    "configFields": [
+      {
+        "key": "wait_seconds",
+        "label": "等待剪辑时间（秒）",
+        "type": "number",
+        "min": 0,
+        "colSpan": "half"
+      }
+    ],
     "isBuiltIn": true
   },
   {
     "id": "cutia_render",
     "name": "剪辑渲染",
     "category": "process",
-    "description": "无头加载剪辑项目并渲染导出成片，无需人工打开剪辑工作台",
+    "description": "接收上游精选后的剪辑项目JSON，无头加载并渲染导出成片，无需人工打开剪辑工作台",
     "icon": "Clapperboard",
     "color": "#f97316",
     "inputs": [
@@ -4522,6 +4817,1443 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
           { "value": "medium", "label": "中等（CRF 23）" },
           { "value": "low", "label": "低质量（CRF 28）" }
         ]
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_txt2music",
+    "name": "AI音乐-文生音乐",
+    "category": "music_gen",
+    "description": "根据提示词 / 歌词生成完整歌曲（含人声）。提示词可来自连线文本输入或节点内自定义；产物为音频。",
+    "icon": "Music",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词 / 歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "audios",
+        "label": "音频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600,
+      "instrumental": false,
+      "duration": "60"
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=txt2music",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "style",
+        "label": "音乐风格",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：pop, cinematic, lo-fi"
+      },
+      {
+        "key": "title",
+        "label": "歌曲标题",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "instrumental",
+        "label": "纯音乐(无歌词)",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "duration",
+        "label": "时长",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "15",
+            "label": "15 秒"
+          },
+          {
+            "value": "30",
+            "label": "30 秒"
+          },
+          {
+            "value": "60",
+            "label": "60 秒"
+          },
+          {
+            "value": "120",
+            "label": "120 秒"
+          },
+          {
+            "value": "240",
+            "label": "240 秒"
+          }
+        ]
+      },
+      {
+        "key": "negative_tags",
+        "label": "反向标签",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "逗号分隔，如：heavy metal"
+      },
+      {
+        "key": "vocal_gender",
+        "label": "人声性别",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "不指定"
+          },
+          {
+            "value": "male",
+            "label": "男声"
+          },
+          {
+            "value": "female",
+            "label": "女声"
+          },
+          {
+            "value": "girl",
+            "label": "少女"
+          },
+          {
+            "value": "boy",
+            "label": "少年"
+          },
+          {
+            "value": "woman",
+            "label": "成熟女声"
+          },
+          {
+            "value": "man",
+            "label": "成熟男声"
+          },
+          {
+            "value": "children",
+            "label": "童声"
+          },
+          {
+            "value": "young boy",
+            "label": "年轻男声"
+          },
+          {
+            "value": "young girl",
+            "label": "年轻女声"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_instrumental",
+    "name": "AI音乐-纯音乐",
+    "category": "music_gen",
+    "description": "根据风格描述生成无人声的纯音乐 / 伴奏。提示词可来自连线文本输入或节点内自定义。",
+    "icon": "Music2",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词 / 歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "audios",
+        "label": "音频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600,
+      "duration": "60"
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=instrumental",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "style",
+        "label": "音乐风格",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：piano, ambient, epic"
+      },
+      {
+        "key": "title",
+        "label": "曲目标题",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "duration",
+        "label": "时长",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "15",
+            "label": "15 秒"
+          },
+          {
+            "value": "30",
+            "label": "30 秒"
+          },
+          {
+            "value": "60",
+            "label": "60 秒"
+          },
+          {
+            "value": "120",
+            "label": "120 秒"
+          },
+          {
+            "value": "240",
+            "label": "240 秒"
+          }
+        ]
+      },
+      {
+        "key": "negative_tags",
+        "label": "反向标签",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "逗号分隔"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_lyrics",
+    "name": "AI音乐-歌词生成",
+    "category": "music_gen",
+    "description": "根据主题描述生成歌词文本（不产出音频）。主题可来自连线文本输入或节点内自定义；输出歌词文本供「文生音乐」等节点使用。",
+    "icon": "ListMusic",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词 / 歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "text",
+        "label": "歌词文本",
+        "type": "text"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=lyrics",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "style",
+        "label": "音乐风格",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：pop, rock"
+      },
+      {
+        "key": "title",
+        "label": "歌曲标题",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_extend",
+    "name": "AI音乐-音乐扩展",
+    "category": "music_gen",
+    "description": "对已有曲目做续写扩展：从上游音乐节点的参数 JSON 取 audio_id（也可直接填 audio_id），可指定续写起点与续写提示词。",
+    "icon": "Repeat",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      },
+      {
+        "id": "text",
+        "label": "续写提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "audios",
+        "label": "音频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=extend",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "audio_id",
+        "label": "音频ID",
+        "type": "text",
+        "colSpan": "half",
+        "description": "留空则自动从上游参数 JSON 中读取 audio_id",
+        "placeholder": "上游传入时留空"
+      },
+      {
+        "key": "continue_at",
+        "label": "续写起点(秒)",
+        "type": "number",
+        "min": 0,
+        "colSpan": "half",
+        "description": "从原曲的第 N 秒开始续写"
+      },
+      {
+        "key": "default_param_flag",
+        "label": "沿用原曲参数",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "style",
+        "label": "音乐风格",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "title",
+        "label": "歌曲标题",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "instrumental",
+        "label": "纯音乐",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "negative_tags",
+        "label": "反向标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "vocal_gender",
+        "label": "人声性别",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "不指定"
+          },
+          {
+            "value": "male",
+            "label": "男声"
+          },
+          {
+            "value": "female",
+            "label": "女声"
+          },
+          {
+            "value": "girl",
+            "label": "少女"
+          },
+          {
+            "value": "boy",
+            "label": "少年"
+          },
+          {
+            "value": "woman",
+            "label": "成熟女声"
+          },
+          {
+            "value": "man",
+            "label": "成熟男声"
+          },
+          {
+            "value": "children",
+            "label": "童声"
+          },
+          {
+            "value": "young boy",
+            "label": "年轻男声"
+          },
+          {
+            "value": "young girl",
+            "label": "年轻女声"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_cover",
+    "name": "AI音乐-翻唱/风格迁移",
+    "category": "music_gen",
+    "description": "上传参考音频并按提示词 / 风格做翻唱或风格迁移。参考音频从连线 audio 输入（本地文件自动上传）。",
+    "icon": "Disc",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "audio",
+        "label": "参考音频",
+        "type": "audio"
+      },
+      {
+        "id": "text",
+        "label": "风格/提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "audios",
+        "label": "音频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=cover",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "style",
+        "label": "目标风格",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：jazz, electronic"
+      },
+      {
+        "key": "title",
+        "label": "曲目标题",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "custom_mode",
+        "label": "自定义模式",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后使用节点内的风格/标题/提示词，否则由模型自动推断"
+      },
+      {
+        "key": "instrumental",
+        "label": "纯音乐",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "negative_tags",
+        "label": "反向标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "vocal_gender",
+        "label": "人声性别",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "不指定"
+          },
+          {
+            "value": "male",
+            "label": "男声"
+          },
+          {
+            "value": "female",
+            "label": "女声"
+          },
+          {
+            "value": "girl",
+            "label": "少女"
+          },
+          {
+            "value": "boy",
+            "label": "少年"
+          },
+          {
+            "value": "woman",
+            "label": "成熟女声"
+          },
+          {
+            "value": "man",
+            "label": "成熟男声"
+          },
+          {
+            "value": "children",
+            "label": "童声"
+          },
+          {
+            "value": "young boy",
+            "label": "年轻男声"
+          },
+          {
+            "value": "young girl",
+            "label": "年轻女声"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_add_instrumental",
+    "name": "AI音乐-添加伴奏",
+    "category": "music_gen",
+    "description": "为人声 / 干声轨道添加伴奏：上传音频后生成带伴奏的完整曲目。",
+    "icon": "Guitar",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "audio",
+        "label": "人声音频",
+        "type": "audio"
+      },
+      {
+        "id": "text",
+        "label": "标题/标签",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "audios",
+        "label": "音频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=add_instrumental",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "title",
+        "label": "曲目标题",
+        "type": "text",
+        "colSpan": "half",
+        "description": "留空则自动取提示词前 60 字符"
+      },
+      {
+        "key": "tags",
+        "label": "风格标签",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：pop, energetic"
+      },
+      {
+        "key": "negative_tags",
+        "label": "反向标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "vocal_gender",
+        "label": "人声性别",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "不指定"
+          },
+          {
+            "value": "male",
+            "label": "男声"
+          },
+          {
+            "value": "female",
+            "label": "女声"
+          },
+          {
+            "value": "girl",
+            "label": "少女"
+          },
+          {
+            "value": "boy",
+            "label": "少年"
+          },
+          {
+            "value": "woman",
+            "label": "成熟女声"
+          },
+          {
+            "value": "man",
+            "label": "成熟男声"
+          },
+          {
+            "value": "children",
+            "label": "童声"
+          },
+          {
+            "value": "young boy",
+            "label": "年轻男声"
+          },
+          {
+            "value": "young girl",
+            "label": "年轻女声"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_add_vocals",
+    "name": "AI音乐-添加人声",
+    "category": "music_gen",
+    "description": "为伴奏 /  instrumental 轨道添加人声：上传音频并提供歌词或演唱提示词。",
+    "icon": "Mic",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "audio",
+        "label": "伴奏音频",
+        "type": "audio"
+      },
+      {
+        "id": "text",
+        "label": "歌词/演唱提示",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "audios",
+        "label": "音频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=add_vocals",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "title",
+        "label": "曲目标题",
+        "type": "text",
+        "colSpan": "half",
+        "description": "留空则自动取提示词前 60 字符"
+      },
+      {
+        "key": "style",
+        "label": "音乐风格",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "negative_tags",
+        "label": "反向标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "vocal_gender",
+        "label": "人声性别",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "不指定"
+          },
+          {
+            "value": "male",
+            "label": "男声"
+          },
+          {
+            "value": "female",
+            "label": "女声"
+          },
+          {
+            "value": "girl",
+            "label": "少女"
+          },
+          {
+            "value": "boy",
+            "label": "少年"
+          },
+          {
+            "value": "woman",
+            "label": "成熟女声"
+          },
+          {
+            "value": "man",
+            "label": "成熟男声"
+          },
+          {
+            "value": "children",
+            "label": "童声"
+          },
+          {
+            "value": "young boy",
+            "label": "年轻男声"
+          },
+          {
+            "value": "young girl",
+            "label": "年轻女声"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_separate",
+    "name": "AI音乐-人声分离",
+    "category": "music_gen",
+    "description": "对已有曲目做分轨分离（人声 / 伴奏 / 鼓 / 贝斯等）。可接上游音频文件，也可从上游参数 JSON 取 task_id / audio_id。",
+    "icon": "Scissors",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词 / 歌词",
+        "type": "text"
+      },
+      {
+        "id": "audio",
+        "label": "待分离音频",
+        "type": "audio"
+      },
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "audios",
+        "label": "音频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=separate",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "stem_type",
+        "label": "分离类型",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "all / vocals / instrumental / drums / bass",
+        "description": "留空默认 all（分离为人声 + 伴奏）"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_to_wav",
+    "name": "AI音乐-转WAV",
+    "category": "music_gen",
+    "description": "把已有曲目转换为 WAV 无损格式：从上游音乐节点的参数 JSON 取 task_id / audio_id。",
+    "icon": "FileAudio",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "WAV音频",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=to_wav",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_upload_extend",
+    "name": "AI音乐-上传并扩展",
+    "category": "music_gen",
+    "description": "上传本地音频并续写扩展：参考音频从连线 audio 输入，可指定续写起点与提示词。",
+    "icon": "Repeat2",
+    "color": "#a78bfa",
+    "inputs": [
+      {
+        "id": "audio",
+        "label": "本地音频",
+        "type": "audio"
+      },
+      {
+        "id": "text",
+        "label": "续写提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "audios",
+        "label": "音频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "interface": "",
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "interface",
+        "label": "音乐接口",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局默认接口"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=upload_extend",
+        "dependsOn": "interface",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "continue_at",
+        "label": "续写起点(秒)",
+        "type": "number",
+        "min": 0,
+        "colSpan": "half"
+      },
+      {
+        "key": "default_param_flag",
+        "label": "沿用原曲参数",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "style",
+        "label": "音乐风格",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "title",
+        "label": "歌曲标题",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "instrumental",
+        "label": "纯音乐",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "negative_tags",
+        "label": "反向标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "vocal_gender",
+        "label": "人声性别",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "不指定"
+          },
+          {
+            "value": "male",
+            "label": "男声"
+          },
+          {
+            "value": "female",
+            "label": "女声"
+          },
+          {
+            "value": "girl",
+            "label": "少女"
+          },
+          {
+            "value": "boy",
+            "label": "少年"
+          },
+          {
+            "value": "woman",
+            "label": "成熟女声"
+          },
+          {
+            "value": "man",
+            "label": "成熟男声"
+          },
+          {
+            "value": "children",
+            "label": "童声"
+          },
+          {
+            "value": "young boy",
+            "label": "年轻男声"
+          },
+          {
+            "value": "young girl",
+            "label": "年轻女声"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
       }
     ],
     "isBuiltIn": true

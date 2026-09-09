@@ -37,7 +37,8 @@ import asyncio
 from kieai import KieClient
 
 async def main():
-    async with KieClient(api_key="YOUR_KEY") as client:
+    # api_key 可省略：依次回退到 secret://KIEAI_API_KEY、环境变量 KIEAI_API_KEY
+    async with KieClient() as client:
         # 图片（Market 统一端点）
         img = await client.generate(
             "bytedance/seedream-v4-text-to-image",
@@ -52,6 +53,23 @@ async def main():
         up = await client.upload(method="url", fileUrl="https://x/y.jpg")
 
 asyncio.run(main())
+```
+
+## API Key 获取（三级回退）
+
+`KieClient(api_key=...)` 中的 `api_key` 是可选的。未显式传入时，SDK 按以下优先级解析真实密钥：
+
+1. **调用者传入**：构造时传入的 `api_key`（也支持传入 `secret://NAME` 引用，会经密钥管理员解析）。
+2. **项目密钥管理员**：查询 `secret://KIEAI_API_KEY`（对应 `backend/config/credential_store` 中的凭据）；每次请求都会重新解析，因此支持密钥管理页的轮询/轮换策略。
+3. **系统环境变量**：`KIEAI_API_KEY`。
+
+三者皆无时，首次发起请求会抛出 `KieRequestError`。在独立（非 backend）环境使用 SDK 时，第 2 步自动跳过（模块不可导入），直接回退到第 3 步或显式传入的 key。
+
+```python
+# 完全省略 key（依赖项目密钥管理员或环境变量）
+client = KieClient()
+# 自定义引用名 / 环境变量名
+client = KieClient(secret_name="KIEAI_API_KEY")
 ```
 
 ## 产物落盘（output_path）
