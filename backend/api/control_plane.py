@@ -187,26 +187,63 @@ def runtime_status():
 
     system = {"available": False, "cpu_percent": None, "ram_percent": None, "gpu_percent": None, "vram_percent": None}
     try:
-        import psutil
+        from backend.utils.system_metrics import get_system_metrics
 
-        system["available"] = True
-        system["cpu_percent"] = round(float(psutil.cpu_percent(interval=0.1)), 1)
-        system["ram_percent"] = round(float(psutil.virtual_memory().percent), 1)
+        metrics = get_system_metrics()
+        system["available"] = bool(metrics.get("available"))
+        system["cpu_percent"] = metrics.get("cpu_percent")
+        system["ram_percent"] = metrics.get("ram_percent")
+        system["gpu_percent"] = metrics.get("gpu_percent")
+        system["vram_percent"] = metrics.get("vram_percent")
     except Exception:
         pass
-    vram = gpu_service.get("vram") if isinstance(gpu_service.get("vram"), dict) else {}
-    total_gb = vram.get("total_gb")
-    used_gb = vram.get("used_gb")
-    if isinstance(total_gb, (int, float)) and total_gb > 0 and isinstance(used_gb, (int, float)):
-        system["vram_percent"] = round(used_gb / total_gb * 100, 1)
-    if isinstance(vram.get("utilization_percent"), (int, float)):
-        system["gpu_percent"] = vram["utilization_percent"]
+    if system["cpu_percent"] is None or system["ram_percent"] is None:
+        # 采集器预热中：回退一次性读取（非阻塞，避免拖慢本接口）
+        try:
+            import psutil
+
+            system["available"] = True
+            if system["cpu_percent"] is None:
+                system["cpu_percent"] = round(float(psutil.cpu_percent(interval=None)), 1)
+            if system["ram_percent"] is None:
+                system["ram_percent"] = round(float(psutil.virtual_memory().percent), 1)
+        except Exception:
+            pass
+    if system["gpu_percent"] is None or system["vram_percent"] is None:
+        # GPU 采集器尚未就绪时，用 GPU 服务快照兜底
+        vram = gpu_service.get("vram") if isinstance(gpu_service.get("vram"), dict) else {}
+        total_gb = vram.get("total_gb")
+        used_gb = vram.get("used_gb")
+        if system["vram_percent"] is None and isinstance(total_gb, (int, float)) and total_gb > 0 and isinstance(used_gb, (int, float)):
+            system["vram_percent"] = round(used_gb / total_gb * 100, 1)
+        if system["gpu_percent"] is None and isinstance(vram.get("utilization_percent"), (int, float)):
+            system["gpu_percent"] = vram["utilization_percent"]
 
     return {
         "batch": batch,
         "control_plane": control_plane,
         "gpu_service": gpu_service,
         "system": system,
+    }
+
+
+@router.get("/system/metrics")
+def system_metrics():
+    """系统资源指标（后台采样缓存，纯内存读取）。
+
+    供前端头部以秒级频率轮询，不触发 Celery inspect / Redis / DB 查询，
+    因此比 ``/runtime/status`` 更轻、更及时。
+    """
+    from backend.utils.system_metrics import get_system_metrics
+
+    metrics = get_system_metrics()
+    return {
+        "available": bool(metrics.get("available")),
+        "cpu_percent": metrics.get("cpu_percent"),
+        "ram_percent": metrics.get("ram_percent"),
+        "gpu_percent": metrics.get("gpu_percent"),
+        "vram_percent": metrics.get("vram_percent"),
+        "age_seconds": metrics.get("age_seconds"),
     }
 
 

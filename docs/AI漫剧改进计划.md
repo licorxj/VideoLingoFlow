@@ -40,7 +40,8 @@
 | 5 | 提示词沉淀 ✅已完成 | 人物/场景/分镜增 `final_prompt` 列（`agi_prompt` 节点生成并回写，可人工改）；运行时拼装作初值 |
 | 6 | 生成任务台账 ✅已完成 | 新表 `cp_generation_tasks`（kind/目标 id/interface/model/prompt/上游 task_id/结果/错误/耗时）；`_gen_images`/`_gen_video`/`_tts` 统一登记（线程上下文透传目标），失败留 error；`retry_failed` 只重跑失败分镜并串联 `upstream_task_id` |
 | 7 | 道具资产 ✅已完成 | 新表 `cp_creation_props` + 提取产出 + 白底单品图 |
-| 8 | 风格预设库 ✅已完成 | 新表 `cp_style_presets`（name/art_style/genre_tags/audience_tags/description/is_builtin）+ 迁移预置 4 个内置预设；立项节点新增「风格预设」下拉（`/api/creation/style-presets`），选中后自动带出题材/受众并写入【画风锁定】供下游生图取用，节点显式标签优先 |
+| 8 | 风格预设库 ✅已完成 | 新表 `cp_style_presets`（name/art_style/genre_tags/audience_tags/description/is_builtin）+ 内置 **21 种**常见画风（迁移 `20260909_10` 预置 4 个、`20260910_03` 补齐 17 个，含日式/国漫/欧美/3D卡通/美漫/韩漫/水墨/国潮/工笔/写实/黑白/港漫/蒸汽朋克/哥特/像素/黏土/绘本/Q版 等）；立项节点新增「风格预设」下拉（`/api/creation/style-presets`）**＋「自定义画风」文本框**（优先级最高），选中后自动带出题材/受众并写入【画风锁定】，节点显式标签优先 |
+| 8.1 | **全链路画风统一** ✅已完成 | 画风唯一来源 = 立项预设/自定义输入 → 项目骨架【画风锁定】（剧本深化仅在未锁定时才产出画风，不再改写）；立绘/场景/道具/分镜关键帧/章节封面等生图 prompt 一律经 `_style_hint()` 取用，**移除各节点写死的"动漫风格"**；章节/分镜 LLM 提示词也注入画风约束（分镜不写画种词）；模板侧同步修订 `project_outline.md`/`deepen_bible.md`/`character_extract.md`；立绘 prompt 补入造型锚点 `visual_anchor`，提升角色区分度与形象稳定性 |
 | 9 | 分镜关联结构化 ✅已完成 | shots 增 `scene_id`（已有列，本轮补写入）；`agi_shot` 按人物名/别名解析 id 写出 `{name, id}`，并按 (地点+时间)→地点 解析 `scene_id`；`_normalize_shot_characters` 支持保留 `id`；迁移 `20260909_09` 数据迁移存量分镜（名字数组→对象 + scene_id 回填） |
 
 ### P2 — 增强

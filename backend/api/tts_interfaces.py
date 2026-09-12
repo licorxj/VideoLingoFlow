@@ -91,9 +91,23 @@ async def list_interfaces():
 
 
 @router.get("/enabled")
-async def list_enabled():
+async def list_enabled(mode: str = ""):
+    """已启用接口列表。
+
+    ``mode`` 支持单个或多个（逗号分隔）TTS 模式名，按「任一命中」筛选：
+    工作流节点用它把「克隆接口」与「设计接口」分开拉取候选，例如
+    ``?mode=voice_design``、``?mode=clone,controllable_clone``。
+    """
     mgr = get_tts_interface_manager()
-    return {"interfaces": mgr.get_enabled()}
+    interfaces = mgr.get_enabled()
+    modes = [m.strip() for m in (mode or "").split(",") if m.strip()]
+    if modes:
+        def _supports(iface: dict, name: str) -> bool:
+            cfg = (iface.get("config") or {}).get("modes") or {}
+            return bool(((cfg.get(name) or {}) or {}).get("enabled"))
+
+        interfaces = [i for i in interfaces if any(_supports(i, m) for m in modes)]
+    return {"interfaces": interfaces}
 
 
 @router.get("/by-mode/{mode}")
@@ -265,6 +279,20 @@ async def get_engine_capabilities(engine_id: str):
         "voice_options": iface.get("config", {}).get("voice_options", []),
         "model_options": iface.get("config", {}).get("model_options", []),
     }
+
+
+@router.get("/{iface_id}/models-for-node")
+async def get_tts_models_for_node(iface_id: str):
+    """供工作流节点使用的 TTS 模型下拉列表（取自接口配置 model_options）。
+
+    返回 {models: [...]}，与前端 api-select 的数组兜底解析一致；
+    接口未配置模型时返回空列表，节点侧显示占位提示并回退接口默认模型。
+    """
+    mgr = get_tts_interface_manager()
+    iface = mgr.get(iface_id)
+    if not iface:
+        raise HTTPException(404, f"TTS引擎 '{iface_id}' 不存在")
+    return {"models": iface.get("config", {}).get("model_options", []) or []}
 
 
 @router.get("/{engine_id}/voices")

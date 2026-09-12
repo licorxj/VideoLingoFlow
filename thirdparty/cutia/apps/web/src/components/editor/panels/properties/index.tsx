@@ -40,7 +40,7 @@ export function PropertiesPanel() {
 	);
 
 	return (
-		<div className="panel bg-background h-full rounded-sm border overflow-hidden">
+		<div className="panel bg-background h-full rounded-xl border border-border/60 overflow-hidden shadow-[var(--shadow-panel)]">
 			{selectedElements.length > 0 ? (
 				<ScrollArea className="h-full">
 					{grouped.text && grouped.text.length > 0 && (

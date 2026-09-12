@@ -53,6 +53,37 @@ export interface BatchPage {
   page_size: number;
 }
 
+export interface BatchArchiveFile {
+  path: string;
+  name: string;
+  size: number;
+  category: "video" | "subtitle" | "image" | "audio" | "other";
+  required: boolean;
+}
+
+export interface BatchArchiveTaskFiles {
+  task_id: string;
+  task_name: string;
+  status: string;
+  dir: string;
+  exists: boolean;
+  files: BatchArchiveFile[];
+}
+
+export interface BatchArchiveFilesResponse {
+  batch_id: string;
+  batch_name: string;
+  tasks: BatchArchiveTaskFiles[];
+}
+
+export interface BatchArchiveResult {
+  batch_id: string;
+  target_dir: string;
+  archived: { task_id: string; task_name: string; path: string }[];
+  blocked: { task_id: string; reason: string }[];
+  failed: { task_id: string; error: string }[];
+}
+
 export interface BatchCreateRequest {
   workflow_id: string;
   batch_name?: string;
@@ -105,13 +136,17 @@ export interface RuntimeStatus {
       vram_headroom_gb: number;
     };
   };
-  system: {
-    available: boolean;
-    cpu_percent: number | null;
-    ram_percent: number | null;
-    gpu_percent: number | null;
-    vram_percent: number | null;
-  };
+  system: SystemMetrics;
+}
+
+/** 系统资源指标（后台采样，秒级刷新；age_seconds 为距上次采样的秒数） */
+export interface SystemMetrics {
+  available: boolean;
+  cpu_percent: number | null;
+  ram_percent: number | null;
+  gpu_percent: number | null;
+  vram_percent: number | null;
+  age_seconds?: number | null;
 }
 
 export const batchApi = {
@@ -168,6 +203,15 @@ export const batchApi = {
 
   getRuntimeStatus: () =>
     client.get("/api/control/runtime/status").then((r) => r.data as RuntimeStatus),
+
+  getSystemMetrics: () =>
+    client.get("/api/control/system/metrics").then((r) => r.data as SystemMetrics),
+
+  getArchiveFiles: (batchId: string) =>
+    client.get(`/api/batch/${batchId}/archive-files`).then((r) => r.data as BatchArchiveFilesResponse),
+
+  archiveBatch: (batchId: string, targetDir: string, tasks: Record<string, string[]>) =>
+    client.post(`/api/batch/${batchId}/archive`, { target_dir: targetDir, tasks }).then((r) => r.data as BatchArchiveResult),
 
   updateConfig: (maxConcurrent: number, taskStartInterval?: number) =>
     client.put("/api/batch/config", {

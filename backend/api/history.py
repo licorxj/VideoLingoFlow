@@ -1,9 +1,10 @@
 """History API: query completed/failed tasks."""
 import os
 import json
-from typing import Optional
+from typing import List, Optional
 
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 
 from backend.control_plane.database import session_scope
 from backend.control_plane.models import Task
@@ -15,7 +16,7 @@ WORKFLOWS_DIR = os.path.join(
     "config", "workflows",
 )
 
-TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted"}
+TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted", "archived"}
 
 
 def _workflow_name(workflow_id: str) -> Optional[str]:
@@ -63,6 +64,10 @@ def _history_task(task: Task) -> dict:
         "finished_at": task.updated_at.isoformat() if task.status in TERMINAL_STATUSES and task.updated_at else None,
         "batch_id": batch_id,
         "detached": bool(payload.get("detached")),
+        # 批次归档信息：供「历史项目 → 已归档项目」载回使用
+        "archived": task.status == "archived",
+        "archive_path": getattr(task, "archive_path", None),
+        "archived_at": task.archived_at.isoformat() if getattr(task, "archived_at", None) else None,
     }
     result["task_type"] = _task_type(result)
     return result
@@ -77,3 +82,25 @@ async def list_history(status: Optional[str] = None):
     else:
         tasks = [t for t in tasks if t.get("status") in ("completed", "failed")]
     return {"tasks": tasks}
+
+
+class RestoreArchivedRequest(BaseModel):
+    task_ids: List[str] = []
+
+
+@router.get("/archived")
+async def list_archived():
+    """列出全部已归档项目，供「加载已归档项目」弹窗选择。"""
+    from backend.engine.batch_archive import list_archived_tasks
+
+    return {"tasks": list_archived_tasks()}
+
+
+@router.post("/restore")
+async def restore_archived(req: RestoreArchivedRequest):
+    """载回已归档项目：以 task_id 新建工作区、复制归档内容、删除归档文件夹后刷新历史。"""
+    from backend.engine.batch_archive import restore_archived_tasks
+
+    if not req.task_ids:
+        raise HTTPException(status_code=400, detail="请选择要载回的已归档项目")
+    return restore_archived_tasks(req.task_ids)

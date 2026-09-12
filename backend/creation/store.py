@@ -29,13 +29,20 @@ from backend.control_plane.models import CREATION_ASSET_KINDS, ChapterStitch, Cr
 from backend.creation import audio_refs, paths
 from backend.creation.common import NotFoundError, ValidationError, ensure_tag_list, row_to_dict
 
-_CREATION_FIELDS = {"name", "description", "genre_tags", "art_style_tags", "audience_tags", "status", "script_text", "owner_id", "project_id"}
+_CREATION_FIELDS = {"name", "description", "genre_tags", "art_style_tags", "audience_tags",
+                    "video_aspect_ratio", "status", "script_text", "owner_id", "project_id"}
+
+# 立项视频比例(尺寸)可选档位
+_VIDEO_ASPECT_RATIOS = ("9:16", "16:9", "4:3", "3:4", "1:1")
 _CREATION_CHARACTER_FIELDS = {"name", "gender", "age", "personality", "occupation", "aliases", "relationship_note", "voice_design", "voice_ref", "character_lib_id", "final_prompt", "status", "seed_value", "reference_images"}
 _CHAPTER_FIELDS = {"title", "original_text", "summary", "order_no", "status", "cover", "gen_config"}
 _SHOT_FIELDS = {"characters", "scene_descriptions", "dialogues", "bgm_design", "sfx_design", "order_no",
                 "scene_id", "shot_type", "angle", "movement", "atmosphere", "location", "time",
-                "duration_seconds", "image_prompt", "video_prompt", "reference_images", "status"}
-_ASSET_FIELDS = {"name", "ref_id", "paths", "sequence", "duration_seconds", "description", "metadata_json", "chapter_id", "shot_id"}
+                "duration_seconds", "image_prompt", "video_prompt", "image_prompt_refs",
+                "reference_images", "status"}
+_ASSET_FIELDS = {"name", "ref_id", "paths", "sequence", "duration_seconds", "description", "metadata_json",
+                 "chapter_id", "shot_id", "review_status", "review_note", "is_primary"}
+ASSET_REVIEW_STATUSES = ("", "approved", "rejected")
 _CHAPTER_STITCH_FIELDS = {"transition", "transition_duration", "resolution", "aspect_ratio",
                           "make_cover", "cover_duration", "cover_image", "sources", "output",
                           "duration_seconds"}
@@ -59,6 +66,7 @@ def create_creation(
     genre_tags=None,
     art_style_tags=None,
     audience_tags=None,
+    video_aspect_ratio: str = "16:9",
     script_text: str = "",
     status: str = "draft",
     owner_id: str | None = None,
@@ -67,6 +75,10 @@ def create_creation(
     """新建 AI 剧集创作项目。标签支持 list 或逗号分隔字符串。"""
     if not name or not str(name).strip():
         raise ValidationError("项目名称不能为空")
+    if not video_aspect_ratio or not str(video_aspect_ratio).strip():
+        video_aspect_ratio = "16:9"
+    if video_aspect_ratio not in _VIDEO_ASPECT_RATIOS:
+        raise ValidationError(f"不支持的视频比例: {video_aspect_ratio},可选 {_VIDEO_ASPECT_RATIOS}")
     with session_scope() as session:
         row = Creation(
             name=str(name).strip(),
@@ -74,6 +86,7 @@ def create_creation(
             genre_tags=ensure_tag_list(genre_tags),
             art_style_tags=ensure_tag_list(art_style_tags),
             audience_tags=ensure_tag_list(audience_tags),
+            video_aspect_ratio=video_aspect_ratio,
             script_text=script_text,
             status=status,
             owner_id=owner_id,
@@ -128,6 +141,11 @@ def update_creation(creation_id: str, **fields) -> dict:
     for key in ("genre_tags", "art_style_tags", "audience_tags"):
         if key in fields:
             fields[key] = ensure_tag_list(fields[key])
+    if "video_aspect_ratio" in fields:
+        if not fields["video_aspect_ratio"] or not str(fields["video_aspect_ratio"]).strip():
+            fields["video_aspect_ratio"] = "16:9"
+        if fields["video_aspect_ratio"] not in _VIDEO_ASPECT_RATIOS:
+            raise ValidationError(f"不支持的视频比例: {fields['video_aspect_ratio']},可选 {_VIDEO_ASPECT_RATIOS}")
     if "name" in fields and not str(fields.get("name") or "").strip():
         raise ValidationError("项目名称不能为空")
     with session_scope() as session:
@@ -743,6 +761,57 @@ def update_asset(asset_id: str, **fields) -> dict:
             setattr(row, key, value)
         session.flush()
         return row_to_dict(row)
+
+
+def review_asset(asset_id: str, status: str, note: str = "", primary: bool | None = None) -> dict:
+    """人工审查一条资产：通过/打回/备注，并可设为主选（N 选 1）。
+
+    设为主选时，同一分镜同一资产类型下的其他候选自动降为非主选，保证唯一主选。
+    """
+    if status not in ASSET_REVIEW_STATUSES:
+        raise ValidationError(f"不支持的审查状态: {status}（可选 {ASSET_REVIEW_STATUSES}）")
+    with session_scope() as session:
+        row = session.get(CreationAsset, asset_id)
+        if row is None:
+            raise NotFoundError(f"项目资产不存在: {asset_id}")
+        row.review_status = status
+        if note or status != "rejected":
+            row.review_note = note or ""
+        if primary is not None:
+            if primary:
+                siblings = session.scalars(
+                    select(CreationAsset).where(
+                        CreationAsset.creation_id == row.creation_id,
+                        CreationAsset.asset_kind == row.asset_kind,
+                        CreationAsset.shot_id == row.shot_id,
+                        CreationAsset.id != asset_id,
+                    )
+                ).all()
+                for s in siblings:
+                    s.is_primary = False
+            row.is_primary = bool(primary)
+        session.flush()
+        return row_to_dict(row)
+
+
+def review_stats(creation_id: str, *, chapter_id: str = "") -> dict:
+    """项目/章节的审查统计：通过 / 打回 / 未审 数量。"""
+    with session_scope() as session:
+        stmt = select(CreationAsset).where(CreationAsset.creation_id == creation_id)
+        if chapter_id:
+            stmt = stmt.where(CreationAsset.chapter_id == chapter_id)
+        rows = session.scalars(stmt).all()
+    out = {"total": 0, "approved": 0, "rejected": 0, "pending": 0}
+    for row in rows:
+        out["total"] += 1
+        status = row.review_status or ""
+        if status == "approved":
+            out["approved"] += 1
+        elif status == "rejected":
+            out["rejected"] += 1
+        else:
+            out["pending"] += 1
+    return out
 
 
 def append_asset_paths(asset_id: str, new_paths) -> dict:

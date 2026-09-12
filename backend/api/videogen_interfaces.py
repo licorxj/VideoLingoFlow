@@ -225,6 +225,34 @@ async def get_videogen_models_for_node(
     return {"models": supported, "param_schema": param_schema, "mode": target_mode}
 
 
+@router.get("/{iface_id}/param-options")
+async def get_videogen_param_options(
+    iface_id: str,
+    model: str = Query("", description="模型名；留空取接口首个可用模型"),
+):
+    """返回分辨率/时长/比例选项，供节点表单级联下拉。
+
+    model 允许留空（节点未显式选模型时），此时取接口首个可用模型的元数据；
+    元数据缺失时返回通用兜底列表，保证前端下拉始终有可选项。
+    """
+    mgr = get_videogen_interface_manager()
+    iface = mgr.get(iface_id)
+    if not iface:
+        raise HTTPException(status_code=404, detail="接口不存在")
+    config = iface.get("config", {}) or {}
+    metadata = config.get("model_metadata", {}) or {}
+    models = config.get("model_options", []) or []
+    target = model if model in metadata else next(
+        (m for m in models if m in metadata), (models[0] if models else ""))
+    meta = metadata.get(target, {}) if target else {}
+    return {
+        "model": target,
+        "resolutions": meta.get("resolutions") or ["480P", "720P", "1080P"],
+        "durations": meta.get("durations") or [5, 10],
+        "aspect_ratios": meta.get("aspect_ratios") or ["16:9", "9:16", "1:1"],
+    }
+
+
 @router.get("/sdk/{sdk_module}/models-for-node")
 async def get_videogen_models_for_node_by_sdk(
     sdk_module: str,

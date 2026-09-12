@@ -342,6 +342,7 @@ def _to_dict(row, *, reveal: bool = False) -> Dict[str, Any]:
         "id": row.id,
         "name": row.name,
         "purpose": row.purpose or "",
+        "register_url": getattr(row, "register_url") or "",
         "masked": mask_value(active),
         "keys_count": len(keys),
         "rotate": rotate,
@@ -379,7 +380,7 @@ def get_credential(credential_id: str, *, reveal: bool = False) -> Optional[Dict
         return _to_dict(row, reveal=reveal) if row else None
 
 
-def create_credential(name: str, value: str, purpose: str = "", *, rotate: bool = True) -> Dict[str, Any]:
+def create_credential(name: str, value: str, purpose: str = "", *, rotate: bool = True, register_url: str = "") -> Dict[str, Any]:
     from sqlalchemy import select
 
     from backend.control_plane.database import session_scope
@@ -397,6 +398,7 @@ def create_credential(name: str, value: str, purpose: str = "", *, rotate: bool 
             value=encode_input_value(value),
             purpose=purpose or "",
             rotate=bool(rotate),
+            register_url=(register_url or "").strip(),
         )
         session.add(row)
         session.flush()
@@ -412,6 +414,7 @@ def update_credential(
     value: Optional[str] = None,
     purpose: Optional[str] = None,
     rotate: Optional[bool] = None,
+    register_url: Optional[str] = None,
 ) -> Dict[str, Any]:
     from sqlalchemy import select
 
@@ -438,6 +441,8 @@ def update_credential(
             row.purpose = purpose
         if rotate is not None:
             row.rotate = bool(rotate)
+        if register_url is not None:
+            row.register_url = (register_url or "").strip()
         session.flush()
         result = _to_dict(row, reveal=True)
     invalidate(old_name)

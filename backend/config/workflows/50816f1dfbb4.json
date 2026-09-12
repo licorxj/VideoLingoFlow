@@ -1,0 +1,227 @@
+{
+  "id": "50816f1dfbb4",
+  "name": "配背景音",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1789167385785",
+      "type": "workflow",
+      "position": {
+        "x": 315,
+        "y": 360
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "X:/PCTMoveData/Videos/VLF/vlf片尾.mp4",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\ce4eee58e531488fb100abd430e5edb1\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 564
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1789167421840",
+      "type": "workflow",
+      "position": {
+        "x": 1425,
+        "y": 465
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "merge_dub_video",
+        "label": "音视频合成",
+        "config": {
+          "video_mute": true,
+          "audio_volume": 0.95,
+          "audio_fade_in": 0,
+          "audio_fade_out": 0
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_dubbed.mp4"
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 398
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1789167444148",
+      "type": "workflow",
+      "position": {
+        "x": 960,
+        "y": 765
+      },
+      "data": {
+        "nodeType": "audio_asset_library",
+        "label": "音频素材库",
+        "config": {
+          "source": "https://downsc.chinaz.net/Files/DownLoad/sound1/202505/xm3648.mp3",
+          "asset_name": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "Y:\\VideoLingoLc\\control_plane_workspaces\\ce4eee58e531488fb100abd430e5edb1\\xm3648.mp3",
+          "info": {
+            "source": "https://downsc.chinaz.net/Files/DownLoad/sound1/202505/xm3648.mp3",
+            "source_type": "url",
+            "file": {
+              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\ce4eee58e531488fb100abd430e5edb1\\xm3648.mp3",
+              "name": "xm3648.mp3",
+              "size_bytes": 224026,
+              "from": "https://downsc.chinaz.net/Files/DownLoad/sound1/202505/xm3648.mp3"
+            },
+            "asset": null
+          }
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] start node_type=audio_asset_library node_id=node_3_1789167444148 pid=36152",
+          "[step_worker] step instance created: S_AudioAssetLibrary",
+          "[step_worker] step_inputs keys=[]",
+          "[step_worker] node_config keys=['source', 'asset_name']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\ce4eee58e531488fb100abd430e5edb1, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\ce4eee58e531488fb100abd430e5edb1\\cache\\.step_node_3_1789167444148_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 451
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1789167691013",
+      "type": "workflow",
+      "position": {
+        "x": 2250,
+        "y": 570
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 478
+      }
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1789167385785",
+      "sourceHandle": "out-video",
+      "target": "node_2_1789167421840",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#fb923c",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_1_1789167385785out-video-node_2_1789167421840in-video"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1789167385785",
+      "sourceHandle": "out-no_input",
+      "target": "node_3_1789167444148",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1789167385785out-no_input-node_3_1789167444148in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1789167444148",
+      "sourceHandle": "out-audio",
+      "target": "node_2_1789167421840",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1789167444148out-audio-node_2_1789167421840in-audio"
+    },
+    {
+      "source": "node_2_1789167421840",
+      "sourceHandle": "out-video",
+      "target": "node_4_1789167691013",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_2_1789167421840out-video-node_4_1789167691013in-video"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-12T07:01:33",
+  "updatedAt": "2026-09-12T07:05:13",
+  "revision": 2
+}

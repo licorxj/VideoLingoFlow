@@ -29,6 +29,11 @@
       "id": "grp_9a885a56",
       "name": "视频处理",
       "order": 6
+    },
+    {
+      "id": "grp_bac07860",
+      "name": "代码生视频",
+      "order": 7
     }
   ],
   "membership": {
@@ -39,6 +44,8 @@
     "1fdc9c19587d": "grp_a10ef73f",
     "4045976e5994": "grp_c23b4b83",
     "55c6efda5e76": "grp_c23b4b83",
-    "634834ca8d1b": "grp_c23b4b83"
+    "634834ca8d1b": "grp_c23b4b83",
+    "b4d4dcd63826": "grp_d7395d52",
+    "c86ee83c5580": "grp_bac07860"
   }
 }

@@ -1,0 +1,718 @@
+{
+  "id": "cc1ab8358fed",
+  "name": "批量生图任务",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1789111625604",
+      "type": "workflow",
+      "position": {
+        "x": 1005,
+        "y": 435
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "filepath"
+          ],
+          "videoPath": "E:\\黄艺\\制作\\0911课题\\股骨颈骨折_生图提示词.json",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "E:\\黄艺\\制作\\0911课题\\股骨颈骨折_生图提示词.json",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\cbb78e480c6a494daa2ab7ff8b73174f\\cache\\input_video.json",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 501
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1789115078469",
+      "type": "workflow",
+      "position": {
+        "x": 1680,
+        "y": 360
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "file_load",
+        "label": "文件加载",
+        "config": {
+          "filePath": "E:\\黄艺\\制作\\0911课题\\股骨颈骨折_生图提示词.json"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "filepath": "E:\\黄艺\\制作\\0911课题\\股骨颈骨折_生图提示词.json"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 251
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1789114960605",
+      "type": "workflow",
+      "position": {
+        "x": 2610,
+        "y": 420
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "json_get",
+        "label": "JSON取值",
+        "config": {
+          "key_expr": "images",
+          "key_exprs": [
+            "images"
+          ]
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "out_1": [
+            {
+              "id": 1,
+              "scene": "封面主图",
+              "desc": "股骨颈骨折主题封面插画：股骨近端骨骼模型 + 医疗十字/心电图元素",
+              "aspect": "16:9",
+              "prompt": "Medical education cover illustration about femoral neck fracture. A clean 3D-style model of the proximal femur (femoral head, neck, greater trochanter) floating with a subtle teal medical cross and soft heartbeat line in background. Soft teal and white palette with warm orange accent. Minimal flat modern vector, lots of negative space, professional, no text.",
+              "prompt_cn": "股骨颈骨折主题封面插画：青绿色调中悬浮的股骨近端3D骨骼模型，背景有柔和医疗十字与心电波形，留白充足，专业简洁，无文字"
+            },
+            {
+              "id": 2,
+              "scene": "导学·病例场景",
+              "desc": "老年女性在家中不慎滑倒（跌倒高危场景）",
+              "aspect": "16:9",
+              "prompt": "A scene of an elderly woman accidentally slipping and falling at home on a tiled floor, hand reaching to a sofa for support, worried expression, soft warm indoor lighting, flat medical illustration style, teal and beige palette, clean educational tone, no text.",
+              "prompt_cn": "一位老年女性在家中的瓷砖地面上不慎滑倒、伸手扶沙发的瞬间，柔和暖光室内，扁平医学插画风，青绿米色配色，教学感，无文字"
+            },
+            {
+              "id": 3,
+              "scene": "导学·急诊表现",
+              "desc": "老人髋部受伤后被扶上轮椅/担架，髋部疼痛无法站立",
+              "aspect": "4:3",
+              "prompt": "An elderly patient in a hospital emergency scene, sitting in a wheelchair holding the hip area in pain, a nurse assisting, clean medical illustration, soft teal and white clinical palette, empathetic educational style, no text.",
+              "prompt_cn": "医院急诊场景：老人坐轮椅手扶髋部表情痛苦，护士搀扶，干净医学插画，青绿白色临床配色，教学感，无文字"
+            },
+            {
+              "id": 4,
+              "scene": "前测·解剖-股骨近端",
+              "desc": "正常股骨近端解剖结构（股骨头、股骨颈、大转子、小转子）",
+              "aspect": "1:1",
+              "prompt": "Clear labeled-style anatomical diagram of the normal proximal femur: femoral head, femoral neck, greater trochanter, lesser trochanter, shown from front view. Medical illustration, accurate bone shading in ivory/cream color, teal accent outlines, white background, clean teaching diagram, no text labels needed.",
+              "prompt_cn": "正常股骨近端前面观解剖图：股骨头、股骨颈、大转子、小转子，骨骼象牙色带青绿描边，白色背景，清晰教学图，无需文字标签"
+            },
+            {
+              "id": 5,
+              "scene": "前测·解剖-髋关节",
+              "desc": "髋关节球窝结构剖面（股骨头嵌入髋臼）",
+              "aspect": "1:1",
+              "prompt": "Cross-section illustration of the hip ball-and-socket joint: round femoral head seated into the acetabulum, articular cartilage layer highlighted, ligaments around. Medical education style, soft teal and ivory, clean cutaway diagram, white background, no text.",
+              "prompt_cn": "髋关节球窝关节剖面图：圆形股骨头嵌入髋臼，高亮关节软骨层与周围韧带，医学教学风，青绿象牙色，白色背景，无文字"
+            },
+            {
+              "id": 6,
+              "scene": "前测·血供",
+              "desc": "股骨颈血供示意：旋股内、外侧动脉及动脉环",
+              "aspect": "1:1",
+              "prompt": "Medical diagram of blood supply to the femoral head and neck: medial and lateral femoral circumflex arteries forming a ring, vessels climbing up the femoral neck to the head. Red and teal vessel colors on ivory bone, clean educational illustration, white background, no text.",
+              "prompt_cn": "股骨颈血供示意图：旋股内、外侧动脉形成动脉环，血管沿股骨颈上行至股骨头，红青双色血管配象牙骨，干净教学图，无文字"
+            },
+            {
+              "id": 7,
+              "scene": "病因·骨质疏松对比",
+              "desc": "正常骨骼 vs 骨质疏松骨小梁稀疏对比",
+              "aspect": "4:3",
+              "prompt": "Side-by-side comparison illustration: on the left a healthy dense bone trabecular network, on the right an osteoporotic bone with sparse, thin, porous trabeculae. Medical education style, teal and grey palette, clear contrast, white background, no text.",
+              "prompt_cn": "左右对比图：左侧正常致密骨小梁网，右侧骨质疏松骨小梁稀疏多孔，医学教学风，青绿灰色，清晰对比，无文字"
+            },
+            {
+              "id": 8,
+              "scene": "病因·跌倒因素",
+              "desc": "居家跌倒高危因素集合（湿滑地面、杂物、夜间起床）",
+              "aspect": "16:9",
+              "prompt": "An isometric flat illustration of home fall risk factors for elderly: a wet bathroom floor, a loose rug, a dimly lit stair, a scattered toy, a side table. Soft warning orange and teal palette, clean educational infographic style, white background, no text.",
+              "prompt_cn": "等距扁平插画展示老年人居家跌倒高危因素：湿滑浴室地面、松动地毯、昏暗楼梯、散落物品、床头柜，暖橙与青绿配色，信息图风，无文字"
+            },
+            {
+              "id": 9,
+              "scene": "分类·Garden I型",
+              "desc": "Garden I型：不完全骨折、无移位",
+              "aspect": "1:1",
+              "prompt": "Medical illustration of a Garden type I femoral neck fracture: an incomplete fracture line on the femoral neck, bone still aligned with no displacement, shown on an ivory femur with a teal highlight of the crack. Clean teaching diagram, white background, no text.",
+              "prompt_cn": "Garden I型股骨颈骨折：股骨颈不完全骨折线，骨骼仍对齐无移位，象牙色股骨上青绿高亮裂纹，教学图，无文字"
+            },
+            {
+              "id": 10,
+              "scene": "分类·Garden II型",
+              "desc": "Garden II型：完全骨折、无移位",
+              "aspect": "1:1",
+              "prompt": "Medical illustration of a Garden type II femoral neck fracture: a complete fracture line across the neck but no displacement, ivory femur with teal highlight of the full crack, clean teaching diagram, white background, no text.",
+              "prompt_cn": "Garden II型：股骨颈完全骨折线但无移位，象牙色股骨青绿高亮完整裂纹，教学图，无文字"
+            },
+            {
+              "id": 11,
+              "scene": "分类·Garden III型",
+              "desc": "Garden III型：部分移位",
+              "aspect": "1:1",
+              "prompt": "Medical illustration of a Garden type III femoral neck fracture: complete fracture with partial displacement of the femoral head, slight angulation, ivory bone with orange warning highlight, clean teaching diagram, white background, no text.",
+              "prompt_cn": "Garden III型：完全骨折伴股骨头部分移位、轻度成角，象牙骨配橙色警示高亮，教学图，无文字"
+            },
+            {
+              "id": 12,
+              "scene": "分类·Garden IV型",
+              "desc": "Garden IV型：完全移位",
+              "aspect": "1:1",
+              "prompt": "Medical illustration of a Garden type IV femoral neck fracture: complete fracture with full displacement, femoral head completely separated and rotated, ivory bone with strong orange warning highlight, clean teaching diagram, white background, no text.",
+              "prompt_cn": "Garden IV型：完全骨折伴股骨头完全移位、分离旋转，象牙骨配强烈橙色警示，教学图，无文字"
+            },
+            {
+              "id": 13,
+              "scene": "分类·部位分型",
+              "desc": "按骨折线部位分型：头下型、经颈型、基底型（三图并列）",
+              "aspect": "16:9",
+              "prompt": "Three-panel medical illustration of femoral neck fracture locations: subcapital (below the head), transcervical (across the neck), and basicervical (at the base). Each shows an ivory femur with a teal fracture line at the respective location, clean comparative teaching diagram, white background, no text.",
+              "prompt_cn": "三宫格医学插画展示股骨颈骨折部位：头下型、经颈型、基底型，每幅象牙色股骨上青绿骨折线标注位置，对比教学图，无文字"
+            },
+            {
+              "id": 14,
+              "scene": "表现·畸形",
+              "desc": "临床表现：患肢外旋、缩短畸形（与健侧对比）",
+              "aspect": "4:3",
+              "prompt": "Medical illustration comparing both legs: the affected leg is externally rotated (turned outward) and shortened at the hip, while the normal leg is straight. Side view of a lying patient, teal and ivory clinical palette, clear teaching diagram showing deformity, white background, no text.",
+              "prompt_cn": "双下肢对比插画：患侧下肢外旋、髋部缩短，健侧正常伸直，仰卧位侧视，青绿象牙临床配色，清晰展示畸形，无文字"
+            },
+            {
+              "id": 15,
+              "scene": "表现·影像",
+              "desc": "X线影像示意：显示股骨颈骨折线",
+              "aspect": "4:3",
+              "prompt": "A clean stylized X-ray film view of a pelvis showing a femoral neck fracture line on one side, dark film background with light bone shadows and a clear teal-outlined fracture gap, medical radiology education style, no text.",
+              "prompt_cn": "骨盆X线示意：一侧股骨颈可见骨折线，深色胶片背景配浅色骨骼影与青绿描边骨折间隙，放射教学风，无文字"
+            },
+            {
+              "id": 16,
+              "scene": "处理·空心螺钉",
+              "desc": "内固定：三根空心加压螺钉固定股骨颈",
+              "aspect": "1:1",
+              "prompt": "Medical illustration of three cannulated compression screws fixing a femoral neck fracture, screws inserted parallel along the neck into the head, ivory bone with metallic teal screws, clean orthopedic teaching diagram, white background, no text.",
+              "prompt_cn": "三枚空心加压螺钉固定股骨颈骨折示意：螺钉平行沿颈进入股骨头，象牙骨配金属青绿螺钉，骨科教学图，无文字"
+            },
+            {
+              "id": 17,
+              "scene": "处理·动力髋螺钉",
+              "desc": "内固定：动力髋螺钉(DHS)固定",
+              "aspect": "1:1",
+              "prompt": "Medical illustration of a dynamic hip screw (DHS) fixation: a lag screw in the femoral head connected to a side plate on the femur, ivory bone with metallic teal implant, clean orthopedic teaching diagram, white background, no text.",
+              "prompt_cn": "动力髋螺钉(DHS)固定示意：股骨头内拉力螺钉连接股骨干侧方钢板，象牙骨配金属青绿植入物，骨科教学图，无文字"
+            },
+            {
+              "id": 18,
+              "scene": "处理·半髋置换",
+              "desc": "人工股骨头置换（半髋）",
+              "aspect": "1:1",
+              "prompt": "Medical illustration of hemiarthroplasty: an artificial femoral head and stem replacing the proximal femur, metallic teal implant on ivory bone, clean orthopedic teaching diagram, white background, no text.",
+              "prompt_cn": "人工股骨头置换（半髋）示意：金属球头与柄替代股骨近端，象牙骨配金属青绿假体，骨科教学图，无文字"
+            },
+            {
+              "id": 19,
+              "scene": "处理·全髋置换",
+              "desc": "全髋关节置换（髋臼杯+股骨头柄）",
+              "aspect": "1:1",
+              "prompt": "Medical illustration of total hip arthroplasty: an acetabular cup in the pelvis plus a femoral stem with ball head, metallic teal implants on ivory bone, clean orthopedic teaching diagram, white background, no text.",
+              "prompt_cn": "全髋关节置换示意：骨盆内髋臼杯 + 带球头股骨髓腔柄，象牙骨配金属青绿假体，骨科教学图，无文字"
+            },
+            {
+              "id": 20,
+              "scene": "处理·保守治疗",
+              "desc": "皮肤牵引保守治疗",
+              "aspect": "4:3",
+              "prompt": "Medical illustration of skin traction treatment for hip fracture: a patient lying in bed with a traction boot and weight rope on the leg, calm clinical scene, teal and ivory palette, clean teaching diagram, white background, no text.",
+              "prompt_cn": "皮肤牵引保守治疗示意：患者卧床，腿部牵引靴与重物绳索，安静临床场景，青绿象牙配色，教学图，无文字"
+            },
+            {
+              "id": 21,
+              "scene": "护理·体位",
+              "desc": "体位护理：患肢外展中立位 + 外展枕",
+              "aspect": "4:3",
+              "prompt": "Nursing care illustration: a postoperative patient lying in bed with the affected leg in abduction and neutral position, a triangular abduction pillow between the legs, soft teal clinical palette, clean educational diagram, white background, no text.",
+              "prompt_cn": "护理体位示意：术后患者卧床，患肢外展中立位，双腿间置三角外展枕，柔和青绿临床配色，教学图，无文字"
+            },
+            {
+              "id": 22,
+              "scene": "护理·防跌倒",
+              "desc": "病房防跌倒安全措施",
+              "aspect": "16:9",
+              "prompt": "Isometric flat illustration of hospital fall-prevention measures: non-slip floor sign, bed rails, call bell within reach, good lighting, nurse assisting. Soft teal and warm orange palette, clean healthcare infographic, white background, no text.",
+              "prompt_cn": "等距扁平插画展示病房防跌倒措施：防滑标识、床栏、可触及呼叫铃、良好照明、护士协助，青绿暖橙配色，医疗信息图，无文字"
+            },
+            {
+              "id": 23,
+              "scene": "护理·功能锻炼",
+              "desc": "踝泵运动功能锻炼示意",
+              "aspect": "4:3",
+              "prompt": "Medical illustration of ankle pump exercise: a patient moving the foot up and down to flex the ankle, with circular motion arrows, teal and ivory clinical palette, clean rehabilitation teaching diagram, white background, no text.",
+              "prompt_cn": "踝泵运动功能锻炼示意：患者足部上下活动背屈踝关节，配环形运动箭头，青绿象牙临床配色，康复教学图，无文字"
+            },
+            {
+              "id": 24,
+              "scene": "护理·并发症预防",
+              "desc": "并发症预防：下肢深静脉血栓(DVT)预防——气压治疗/弹力袜",
+              "aspect": "4:3",
+              "prompt": "Medical illustration of DVT prevention after hip fracture: intermittent pneumatic compression device on the calf and graduated compression stockings, with a simple vein diagram showing healthy flow, teal and ivory clinical palette, clean teaching diagram, white background, no text.",
+              "prompt_cn": "深静脉血栓(DVT)预防示意：小腿间歇气压治疗仪与梯度弹力袜，配静脉血流示意，青绿象牙临床配色，教学图，无文字"
+            },
+            {
+              "id": 25,
+              "scene": "总结·思维导图",
+              "desc": "知识总结放射状思维导图插图（股骨颈骨折核心要点）",
+              "aspect": "16:9",
+              "prompt": "A clean radial mind-map style illustration for a teaching summary on femoral neck fracture, central node with branching topics (etiology, classification, presentation, treatment, nursing), teal and orange nodes on white background, modern flat infographic, no text.",
+              "prompt_cn": "放射状思维导图风格插图用于股骨颈骨折知识总结，中心节点向外分支（病因、分类、表现、处理、护理），青绿橙色节点，白色背景，现代扁平信息图，无文字"
+            },
+            {
+              "id": 26,
+              "scene": "作业·康复时间线",
+              "desc": "术后康复阶梯时间线插图",
+              "aspect": "16:9",
+              "prompt": "A horizontal timeline infographic illustration of postoperative recovery stages after hip fracture: bed rest, sitting up, assisted walking, independent walking, with small icons and teal progress arrows, clean educational style, white background, no text.",
+              "prompt_cn": "术后康复阶梯时间线信息图：卧床、坐起、助行、独立行走各阶段配小图标与青绿进度箭头，干净教学风，白色背景，无文字"
+            }
+          ]
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 339
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1789122402210",
+      "type": "workflow",
+      "position": {
+        "x": 3300,
+        "y": 390
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "json_visual_editor",
+        "label": "JSON可视化编辑",
+        "config": {
+          "enable_copy": true,
+          "edited_json": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "output/json_visual_edit_node_2_1789122402210.json"
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 340
+      },
+      "dragging": false
+    },
+    {
+      "id": "loop_mtwul2l0_fh2r",
+      "type": "workflow",
+      "position": {
+        "x": 4140,
+        "y": 345
+      },
+      "selected": false,
+      "data": {
+        "kind": "loop",
+        "nodeType": "loop",
+        "label": "循环",
+        "config": {
+          "itemsSource": "upstream",
+          "inlineItems": "",
+          "globPattern": "",
+          "maxIterations": 0,
+          "iterationConcurrency": 4,
+          "onItemError": "stop",
+          "itemAlias": "item",
+          "indexAlias": "index"
+        },
+        "status": "running",
+        "loopMeta": {
+          "version": 1,
+          "internalWorkflow": {
+            "nodes": [
+              {
+                "id": "node_1_1789120999956",
+                "type": "workflow",
+                "position": {
+                  "x": 0,
+                  "y": 75
+                },
+                "selected": false,
+                "data": {
+                  "nodeType": "json_get",
+                  "label": "JSON取值",
+                  "config": {
+                    "key_expr": "",
+                    "outputCount": 3,
+                    "key_exprs": [
+                      "prompt_cn",
+                      "id",
+                      "aspect"
+                    ]
+                  },
+                  "status": "failed",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "permanent",
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 460
+                },
+                "dragHandle": ".wf-node-drag-handle",
+                "dragging": false
+              },
+              {
+                "id": "node_2_1789121068803",
+                "type": "workflow",
+                "position": {
+                  "x": 735,
+                  "y": 0
+                },
+                "selected": false,
+                "data": {
+                  "nodeType": "image_gen",
+                  "label": "AI生图",
+                  "config": {
+                    "mode": "txt2img",
+                    "interface": "kieai",
+                    "model": "z-image",
+                    "resolution": "1K",
+                    "aspect_ratio": "1:1",
+                    "num_images": 1,
+                    "custom_prompt_enabled": false,
+                    "custom_prompt": "",
+                    "output_prefix": "img"
+                  },
+                  "status": "pending",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 594
+                },
+                "dragHandle": ".wf-node-drag-handle",
+                "dragging": false
+              },
+              {
+                "id": "node_6_1789121717010",
+                "type": "workflow",
+                "position": {
+                  "x": 1305,
+                  "y": 210
+                },
+                "data": {
+                  "nodeType": "file_rename",
+                  "label": "文件改名",
+                  "config": {
+                    "rename_mode": "from_input",
+                    "custom_name": "",
+                    "prefix": "",
+                    "suffix": ""
+                  },
+                  "status": "pending",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 210
+                },
+                "selected": false,
+                "dragging": false,
+                "dragHandle": ".wf-node-drag-handle"
+              },
+              {
+                "id": "node_1_1789122258558",
+                "type": "workflow",
+                "position": {
+                  "x": 1830,
+                  "y": 45
+                },
+                "data": {
+                  "nodeType": "archive_artifacts",
+                  "label": "产物文件归档",
+                  "config": {
+                    "operation": "copy",
+                    "targetType": "custom",
+                    "customPath": "E:\\黄艺\\制作\\0911课题\\AIimages",
+                    "useSubfolder": false,
+                    "subfolderNaming": "by_name",
+                    "renameEnabled": false,
+                    "renameMode": "seq",
+                    "prefix": "",
+                    "suffix": ""
+                  },
+                  "status": "pending",
+                  "disableExecute": false,
+                  "progress": 0,
+                  "message": "",
+                  "outputs": {},
+                  "error": "",
+                  "workbench_url": ""
+                },
+                "measured": {
+                  "width": 420,
+                  "height": 344
+                },
+                "selected": false,
+                "dragging": false,
+                "dragHandle": ".wf-node-drag-handle"
+              }
+            ],
+            "edges": [
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#60a5fa",
+                  "strokeWidth": 2
+                },
+                "source": "node_1_1789120999956",
+                "sourceHandle": "out-out_1",
+                "target": "node_2_1789121068803",
+                "targetHandle": "in-text",
+                "id": "xy-edge__node_1_1789120999956out-out_1-node_2_1789121068803in-text",
+                "selected": false
+              },
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#fb923c",
+                  "strokeWidth": 2
+                },
+                "source": "node_2_1789121068803",
+                "sourceHandle": "out-text",
+                "target": "node_6_1789121717010",
+                "targetHandle": "in-any",
+                "id": "xy-edge__node_2_1789121068803out-text-node_6_1789121717010in-any",
+                "selected": false
+              },
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#a78bfa",
+                  "strokeWidth": 2
+                },
+                "source": "node_6_1789121717010",
+                "sourceHandle": "out-any",
+                "target": "node_1_1789122258558",
+                "targetHandle": "in-any",
+                "id": "xy-edge__node_6_1789121717010out-any-node_1_1789122258558in-any",
+                "selected": false
+              },
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#60a5fa",
+                  "strokeWidth": 2
+                },
+                "source": "node_1_1789120999956",
+                "sourceHandle": "out-out_2",
+                "target": "node_6_1789121717010",
+                "targetHandle": "in-name",
+                "id": "xy-edge__node_1_1789120999956out-out_2-node_6_1789121717010in-name",
+                "selected": false
+              },
+              {
+                "type": "bezier",
+                "animated": true,
+                "style": {
+                  "stroke": "#22d3ee",
+                  "strokeWidth": 2
+                },
+                "source": "node_1_1789120999956",
+                "sourceHandle": "out-out_3",
+                "target": "node_2_1789121068803",
+                "targetHandle": "in-aspect_ratio",
+                "id": "xy-edge__node_1_1789120999956out-out_3-node_2_1789121068803in-aspect_ratio",
+                "selected": false
+              }
+            ]
+          },
+          "inputMappings": [
+            {
+              "exposedPortId": "lin_1",
+              "exposedLabel": "JSON取值 / JSON",
+              "targetNodeId": "node_1_1789120999956",
+              "targetPortId": "json",
+              "type": "json"
+            }
+          ],
+          "outputMappings": [],
+          "layout": {
+            "memberPositionsRelativeToGroup": {
+              "node_1_1789120999956": {
+                "x": 0,
+                "y": 75
+              },
+              "node_2_1789121068803": {
+                "x": 735,
+                "y": 0
+              },
+              "node_6_1789121717010": {
+                "x": 1305,
+                "y": 210
+              },
+              "node_1_1789122258558": {
+                "x": 1830,
+                "y": 45
+              }
+            }
+          },
+          "iterator": {
+            "exposedPortId": "lin_1",
+            "targetNodeId": "node_1_1789120999956",
+            "targetPortId": "json"
+          },
+          "loopId": "loop_mtwul2l0_fh2r",
+          "name": "循环"
+        },
+        "disableExecute": false,
+        "progress": 92,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "loopProgress": {
+          "index": 2,
+          "total": 26,
+          "done": 24,
+          "status": "cancelled"
+        }
+      },
+      "measured": {
+        "width": 440,
+        "height": 749
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1789111625604",
+      "sourceHandle": "out-filepath",
+      "target": "node_3_1789115078469",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_1_1789111625604out-filepath-node_3_1789115078469in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1789115078469",
+      "sourceHandle": "out-filepath",
+      "target": "node_1_1789114960605",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_3_1789115078469out-filepath-node_1_1789114960605in-json",
+      "selected": false
+    },
+    {
+      "source": "node_1_1789114960605",
+      "sourceHandle": "out-out_1",
+      "target": "node_2_1789122402210",
+      "targetHandle": "in-json",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_1_1789114960605out-out_1-node_2_1789122402210in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1789122402210",
+      "sourceHandle": "out-json",
+      "target": "loop_mtwul2l0_fh2r",
+      "targetHandle": "in-lin_1",
+      "id": "xy-edge__node_2_1789122402210out-json-loop_mtwt7uan_2yyyin-lin_1",
+      "selected": false
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-11T15:34:13",
+  "updatedAt": "2026-09-11T19:11:51",
+  "revision": 12
+}

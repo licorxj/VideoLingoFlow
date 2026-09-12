@@ -15,6 +15,7 @@ class CredentialCreate(BaseModel):
     name: str
     value: str = ""  # 多行文本，每行一个 key
     purpose: str = ""
+    register_url: str = ""
     rotate: bool = True
 
 
@@ -22,6 +23,7 @@ class CredentialUpdate(BaseModel):
     name: str | None = None
     value: str | None = None  # 多行文本，每行一个 key
     purpose: str | None = None
+    register_url: str | None = None
     rotate: bool | None = None
 
 
@@ -44,7 +46,7 @@ async def list_credentials(
 @router.post("")
 async def create_credential(req: CredentialCreate):
     try:
-        item = credential_store.create_credential(req.name, req.value, req.purpose, rotate=req.rotate)
+        item = credential_store.create_credential(req.name, req.value, req.purpose, rotate=req.rotate, register_url=req.register_url)
     except credential_store.CredentialError as exc:
         raise _bad_request(str(exc))
     except Exception as exc:
@@ -75,7 +77,7 @@ async def get_credential(
 async def update_credential(credential_id: str, req: CredentialUpdate):
     try:
         item = credential_store.update_credential(
-            credential_id, name=req.name, value=req.value, purpose=req.purpose, rotate=req.rotate
+            credential_id, name=req.name, value=req.value, purpose=req.purpose, rotate=req.rotate, register_url=req.register_url
         )
     except credential_store.CredentialError as exc:
         raise _bad_request(str(exc))

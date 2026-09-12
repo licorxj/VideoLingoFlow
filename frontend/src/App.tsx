@@ -13,6 +13,7 @@ import SocialPublish from "./pages/SocialPublish";
 import LLMRouter from "./pages/llm-router";
 import EditingWorkbench from "./pages/EditingWorkbench";
 import MaterialLibrary from "./pages/MaterialLibrary";
+import CreationCanvas from "./pages/creation-canvas/CreationCanvas";
 import Collaboration from "./pages/Collaboration";
 import Community from "./pages/Community";
 import Guide from "./pages/Guide";
@@ -100,6 +101,7 @@ export default function App() {
           <Route path="/social" element={<SocialPublish />} />
           <Route path="/editing" element={<EditingWorkbench />} />
           <Route path="/materials" element={<MaterialLibrary />} />
+          <Route path="/creation-canvas" element={<CreationCanvas />} />
           <Route path="/voiceforge" element={<VoiceForgeLayout />}>
             <Route index element={<VoiceForgeHome />} />
             <Route path="projects/:projectId" element={<VoiceForgeWorkspace />} />

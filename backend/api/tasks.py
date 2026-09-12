@@ -14,7 +14,7 @@ router = APIRouter()
 SUNSET = "2026-09-30T00:00:00Z"
 TASK_STATUS_MAP = {"succeeded": "completed"}
 NODE_STATUS_MAP = {"succeeded": "completed"}
-TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted"}
+TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted", "archived"}
 
 
 def _deprecated(payload: dict, status_code: int = 200) -> JSONResponse:

@@ -160,73 +160,6 @@
       "dragHandle": ".wf-node-drag-handle"
     },
     {
-      "id": "node_1_1781200299298",
-      "type": "workflow",
-      "position": {
-        "x": 1605,
-        "y": -1275
-      },
-      "data": {
-        "nodeType": "subtitle_gen",
-        "label": "字幕生成",
-        "config": {
-          "file_prefix": "tran_"
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "subtitle": "output/tran_subtitles_node_1_1781200299298.srt",
-          "original": "output/tran_subtitles_original_node_1_1781200299298.srt",
-          "bilingual": "output/tran_subtitles_bilingual_node_1_1781200299298.srt"
-        },
-        "error": "",
-        "disableExecute": false,
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 396
-      },
-      "selected": false,
-      "dragging": false,
-      "dragHandle": ".wf-node-drag-handle"
-    },
-    {
-      "id": "node_2_1781207780159",
-      "type": "workflow",
-      "position": {
-        "x": 2400,
-        "y": -585
-      },
-      "data": {
-        "nodeType": "merge_sub_video",
-        "label": "字幕烧录",
-        "config": {
-          "preset_id": "英-中-下中-001",
-          "bgm_volume": 0.85,
-          "fade_in": 0.5,
-          "fade_out": 0.5
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "video": "output/video_with_subs_node_2_1781207780159.mp4"
-        },
-        "error": "",
-        "disableExecute": false,
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 655
-      },
-      "selected": false,
-      "dragging": false,
-      "dragHandle": ".wf-node-drag-handle"
-    },
-    {
       "id": "node_3_1781212794939",
       "type": "workflow",
       "position": {
@@ -256,40 +189,6 @@
       "dragHandle": ".wf-node-drag-handle"
     },
     {
-      "id": "node_2_1781362046659",
-      "type": "workflow",
-      "position": {
-        "x": 3075,
-        "y": 45
-      },
-      "data": {
-        "nodeType": "video_preview",
-        "label": "视频预览器",
-        "config": {
-          "fontSize": 12,
-          "fontFamily": "sans-serif",
-          "fontColor": "#ffffff",
-          "backgroundColor": "rgba(0,0,0,0.6)",
-          "subtitlePosition": "bottom",
-          "title": "翻译后视频"
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {},
-        "error": "",
-        "disableExecute": false,
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 428
-      },
-      "selected": false,
-      "dragging": false,
-      "dragHandle": ".wf-node-drag-handle"
-    },
-    {
       "id": "node_1_1781645240103",
       "type": "workflow",
       "position": {
@@ -300,9 +199,9 @@
         "nodeType": "tts",
         "label": "语音合成 (TTS)",
         "config": {
-          "tts_engine": "8dc074bb",
+          "tts_engine": "voxcpm",
           "tts_mode": [
-            "preset_voice"
+            "clone"
           ],
           "clone_source": "per_segment",
           "voice_design_role_1_desc": "中年、女性、高音叫卖",
@@ -336,7 +235,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 779
+        "height": 586
       },
       "selected": false,
       "dragging": false,
@@ -353,7 +252,7 @@
         "nodeType": "dub_task",
         "label": "生成配音任务",
         "config": {
-          "ai_read_tone": true,
+          "ai_read_tone": false,
           "normalize_chinese_read_text": false,
           "ai_dialect_colloquial": false,
           "dialect_name": "四川话",
@@ -382,8 +281,8 @@
       "id": "node_1_1781810867151",
       "type": "workflow",
       "position": {
-        "x": 2820,
-        "y": -1350
+        "x": 2805,
+        "y": -1485
       },
       "data": {
         "nodeType": "merge_audio",
@@ -411,7 +310,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 755
+        "height": 845
       },
       "selected": false,
       "dragging": false,
@@ -467,7 +366,7 @@
         "config": {
           "method": "demucs",
           "format": "wav",
-          "model": "htdemucs_6s"
+          "model": "mdx"
         },
         "status": "completed",
         "disableExecute": false,
@@ -666,7 +565,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 700
+        "height": 725
       },
       "selected": false,
       "dragging": false,
@@ -689,13 +588,15 @@
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "skipped": true
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 356
+        "height": 436
       },
       "selected": false,
       "dragging": false,
@@ -790,7 +691,7 @@
             "img2img"
           ],
           "interface": "kieai",
-          "model": "seedream/5-lite-image-to-image",
+          "model": "gpt-image-2-image-to-image",
           "resolution": "1K",
           "aspect_ratio": "4:3",
           "num_images": 1,
@@ -822,7 +723,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 700
+        "height": 725
       },
       "selected": false,
       "dragging": false,
@@ -851,7 +752,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 331
+        "height": 411
       },
       "selected": false,
       "dragging": false,
@@ -1502,35 +1403,6 @@
       }
     },
     {
-      "id": "node_2_1788540079002",
-      "type": "workflow",
-      "position": {
-        "x": 1035,
-        "y": -1935
-      },
-      "data": {
-        "nodeType": "subtitle_align",
-        "label": "译文断句和双语对齐",
-        "config": {
-          "max_subtitle_length": "15"
-        },
-        "status": "pending",
-        "disableExecute": false,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 212
-      },
-      "selected": false,
-      "dragHandle": ".wf-node-drag-handle",
-      "dragging": false
-    },
-    {
       "id": "node_3_1788584414700",
       "type": "workflow",
       "position": {
@@ -1595,21 +1467,6 @@
     },
     {
       "type": "smoothstep",
-      "animated": false,
-      "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1780590163157",
-      "sourceHandle": "out-video",
-      "target": "node_2_1781207780159",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1780590163157out-video-node_2_1781207780159in-video",
-      "selected": false
-    },
-    {
-      "type": "smoothstep",
       "style": {
         "stroke": "#3b82f6",
         "strokeWidth": 2,
@@ -1621,19 +1478,6 @@
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1780590163157out-video-node_3_1781212794939in-video",
       "selected": false
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_2_1781207780159",
-      "sourceHandle": "out-video",
-      "target": "node_2_1781362046659",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_2_1781207780159out-video-node_2_1781362046659in-video"
     },
     {
       "type": "smoothstep",
@@ -1973,19 +1817,6 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#f59e0b",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781200299298",
-      "sourceHandle": "out-bilingual",
-      "target": "node_2_1781207780159",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1781200299298out-bilingual-node_2_1781207780159in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "style": {
         "stroke": "#10b981",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -2220,32 +2051,6 @@
       "selected": false
     },
     {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1781200299298",
-      "sourceHandle": "out-original",
-      "target": "node_1_1782640383627",
-      "targetHandle": "in-srt",
-      "id": "xy-edge__node_1_1781200299298out-original-node_1_1782640383627in-srt"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1781200299298",
-      "sourceHandle": "out-original",
-      "target": "node_1_1788461823056",
-      "targetHandle": "in-srt",
-      "id": "xy-edge__node_1_1781200299298out-original-node_1_1788461823056in-srt"
-    },
-    {
       "source": "node_3_1788531005833",
       "sourceHandle": "out-subtitle",
       "target": "node_8_1788537377757",
@@ -2270,32 +2075,6 @@
       "target": "node_6_1788533469576",
       "targetHandle": "in-subtitle",
       "id": "xy-edge__node_8_1788537377757out-json-node_6_1788533469576in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1780954897405",
-      "sourceHandle": "out-reflect",
-      "target": "node_2_1788540079002",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_1_1780954897405out-reflect-node_2_1788540079002in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1788540079002",
-      "sourceHandle": "out-subtitle",
-      "target": "node_1_1781200299298",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_2_1788540079002out-subtitle-node_1_1781200299298in-subtitle"
     },
     {
       "type": "bezier",
@@ -2340,6 +2119,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-09T05:58:14",
-  "revision": 39
+  "updatedAt": "2026-09-12T13:00:32",
+  "revision": 42
 }

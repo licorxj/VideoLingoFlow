@@ -2,12 +2,38 @@
 name: video-prompt
 node: agi_shot_video
 description: 视频提示词拼装规范 — 按 3 秒分段、段内可切镜、@角色/场景引用
+# 以下参数由「分镜视频制作」节点运行时读取（改文件即生效；节点显式配置同名项优先）
+segment_seconds: 3
+join_word: 切到
+reference_prefix: "@"
+time_range_format: "{start}-{end}秒："
+include_dialogues: true
+dialogue_format: "，{character}说：「{content}」"
+scene_join_fallback: "；"
+camera_position: head
 ---
 
 # 视频提示词
 
 本规范用于**拼装**分镜段落的图生视频提示词（不是让模型自由发挥）。
 节点按此规范把分镜的 `scene_descriptions` / `dialogues` 组装为提示词。
+
+## 参数（frontmatter，随文件生效）
+
+上方 frontmatter 参数由 `s_agi_comic.py::S_AGI_ShotVideo` 运行时读取
+（`_video_prompt_rules()`），**改本文件即改拼装行为**；节点显式配置同名项时以节点配置为准。
+文件缺失或参数非法时回退内置默认值，流程不中断。
+
+| 参数 | 默认 | 作用 |
+|---|---|---|
+| `segment_seconds` | `3` | 每段秒数，段头时间轴按此步进 |
+| `join_word` | `切到` | 第 2 段起的衔接词；留空则不写 |
+| `reference_prefix` | `@` | 角色引用前缀；留空则不写 @ 引用 |
+| `time_range_format` | `{start}-{end}秒：` | 段头模板，可用 `{start}` / `{end}` |
+| `include_dialogues` | `true` | 是否把 `dialogues` 并入提示词 |
+| `dialogue_format` | `，{character}说：「{content}」` | 台词拼装模板，可用 `{character}` / `{content}` |
+| `scene_join_fallback` | `；` | 无分段结构（无 `scene_descriptions`）时的兜底连接符 |
+| `camera_position` | `head` | `camera_prompt` 位置：`head` / `tail` / `none` |
 
 ## 格式
 

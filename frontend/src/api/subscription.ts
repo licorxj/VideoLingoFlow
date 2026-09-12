@@ -104,6 +104,14 @@ export function getQuotaExhaustedMessage(status: SubscriptionStatus | null) {
   return "尊敬的注册用户你好，温馨提示您的免费额度或订阅时长已用完，请订阅已获得更多使用时长。";
 }
 
+/**
+ * 本地预校验发现额度不足时，通知后端向头部通知中心写入一条系统提醒。
+ * 后端会再次校验额度并按天去重，失败时静默忽略，不阻塞用户操作。
+ */
+export function notifyQuotaExhausted() {
+  return client.post("/api/subscription/quota-notice").catch(() => undefined);
+}
+
 export const subscriptionApi = {
   getStatus: () => client.get("/api/subscription/status").then((r) => r.data as SubscriptionStatus),
   refresh: () => client.post("/api/subscription/refresh").then((r) => r.data as SubscriptionStatus),

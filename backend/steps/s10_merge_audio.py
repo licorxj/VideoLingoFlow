@@ -211,8 +211,15 @@ class S10MergeAudio(BaseStep):
         node_suffix = f"_{getattr(self, '_node_id', '')}" if getattr(self, "_node_id", "") else ""
         dub_srt_path = os.path.join(output_dir, f"dub{node_suffix}.srt")
         dub_bilingual_srt_path = os.path.join(output_dir, f"dub_bilingual{node_suffix}.srt")
-        self._generate_dub_srt(segments, dub_srt_path)
-        self._generate_bilingual_srt(segments, dub_bilingual_srt_path)
+
+        # 字幕标点过滤设置
+        filter_punct = bool(node_config.get("subtitle_filter_punctuation", False))
+        punct_mode = str(node_config.get("subtitle_punctuation_mode", "space")).strip().lower()
+
+        self._generate_dub_srt(segments, dub_srt_path,
+                                filter_punctuation=filter_punct, punct_mode=punct_mode)
+        self._generate_bilingual_srt(segments, dub_bilingual_srt_path,
+                                      filter_punctuation=filter_punct, punct_mode=punct_mode)
 
         # 确定实际输出音频文件名（与 _merge_audio_consecutive 的导出格式一致）
         from backend.utils.audio_segmenter import get_audio_output_settings
@@ -930,8 +937,33 @@ class S10MergeAudio(BaseStep):
 
     # ─────────────────── Step 7: 生成配音字幕 ───────────────────
 
+    # 常见标点符号集合（中英文）
+    _PUNCTUATION_CHARS = set(
+        "，。！？、；：""''「」【】《》（）…—～·"
+        ",.!?;:'\"[]()...-~`@#$%^&*+=|\\/<>"
+    )
+
     @staticmethod
-    def _generate_dub_srt(segments: List[Dict], output_path: str) -> None:
+    def _process_subtitle_punctuation(text: str, filter_punctuation: bool, punct_mode: str) -> str:
+        """对字幕文本进行标点过滤/替换。
+
+        Args:
+            text: 原始字幕文本
+            filter_punctuation: 是否启用标点过滤
+            punct_mode: 替换模式 - "space" 替换为空格, "remove" 直接删除
+
+        Returns:
+            处理后的文本
+        """
+        if not filter_punctuation or not text:
+            return text
+        replacement = " " if punct_mode == "remove" else ""
+        return "".join(replacement if ch in S10MergeAudio._PUNCTUATION_CHARS else ch for ch in text)
+
+    @staticmethod
+    def _generate_dub_srt(segments: List[Dict], output_path: str,
+                          filter_punctuation: bool = False,
+                          punct_mode: str = "space") -> None:
         """生成配音字幕 SRT 文件。
 
         时间戳使用 new_start/new_end，确保与合并后的音频精确对齐。
@@ -941,7 +973,8 @@ class S10MergeAudio(BaseStep):
         for i, seg in enumerate(segments, 1):
             start = seg.get("new_start", seg.get("start", 0))
             end = seg.get("new_end", seg.get("end", 0))
-            text = seg.get("read_text", seg.get("text", ""))
+            text = S10MergeAudio._process_subtitle_punctuation(
+                seg.get("read_text", seg.get("text", "")), filter_punctuation, punct_mode)
 
             # 确保时间戳有效
             if end <= start:
@@ -958,7 +991,9 @@ class S10MergeAudio(BaseStep):
         print(f"  - 字幕条数: {len(segments)}")
 
     @staticmethod
-    def _generate_bilingual_srt(segments: List[Dict], output_path: str) -> None:
+    def _generate_bilingual_srt(segments: List[Dict], output_path: str,
+                                filter_punctuation: bool = False,
+                                punct_mode: str = "space") -> None:
         """生成双语字幕 SRT 文件（原文在上，译文在下）。
 
         时间戳使用 new_start/new_end，确保与合并后的音频精确对齐。
@@ -967,8 +1002,10 @@ class S10MergeAudio(BaseStep):
         for i, seg in enumerate(segments, 1):
             start = seg.get("new_start", seg.get("start", 0))
             end = seg.get("new_end", seg.get("end", 0))
-            original = seg.get("text", "")
-            translated = seg.get("read_text", "")
+            original = S10MergeAudio._process_subtitle_punctuation(
+                seg.get("text", ""), filter_punctuation, punct_mode)
+            translated = S10MergeAudio._process_subtitle_punctuation(
+                seg.get("read_text", ""), filter_punctuation, punct_mode)
 
             if end <= start:
                 end = start + 0.1

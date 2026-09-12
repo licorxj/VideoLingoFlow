@@ -28,7 +28,7 @@ import {
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
   Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
-  Grid3x3, Ratio,
+  Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
@@ -47,6 +47,7 @@ const ICON_MAP: Record<string, any> = {
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
   Eraser, Type, Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
+  Search, PencilLine, PackagePlus, Database, Braces,
 };
 
 /** 节点头部顶栏：只有在该元素上按下鼠标才允许拖动节点，避免正文内框选/拖动误触移动节点 */
@@ -893,32 +894,18 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // 端口跟随：上游连线已提供值时显示只读跟随态（断开连线后恢复手动选择）
-  if (field.followPort && followValue) {
-    return (
-      <div>
-        <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-        <div className="w-full text-xs px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/5 text-foreground/80 flex items-center justify-between gap-2">
-          <span className="truncate" title={followValue}>{followValue}</span>
-          <span className="text-[10px] text-primary flex-shrink-0">跟随上游输入</span>
-        </div>
-        {field.description && (
-          <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{field.description}（断开上游连线后可手动选择）</p>
-        )}
-      </div>
-    );
-  }
-
-  // Resolve dynamic API endpoint with parameter substitution
+  // Resolve dynamic API endpoint with parameter substitution.
+  // 当某个参数尚未填充（空值）时保留占位符，使 fetchKey 仍含 "{"，
+  // 从而延迟请求，直到所有参数就绪（避免 /api/creation//shots 这类 404）。
   const resolveEndpoint = (endpoint: string): string => {
     if (!endpoint) return "";
     return endpoint.replace(/\{(\w+)\}/g, (_, key) => {
       const val = config[key];
       // Handle array values (e.g., tts_mode is ["preset_voice"])
       if (Array.isArray(val)) {
-        return val[0] || "";
+        return val[0] !== undefined && val[0] !== null && val[0] !== "" ? String(val[0]) : `{${key}}`;
       }
-      return val || "";
+      return val !== undefined && val !== null && val !== "" ? String(val) : `{${key}}`;
     });
   };
 
@@ -927,6 +914,8 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
   const dependsValue = config[field.dependsOn || ""];
 
   useEffect(() => {
+    // 端口跟随模式：不发起请求，也不清空已跟随的 value
+    if (field.followPort && followValue) return;
     if (fetchKey && !fetchKey.includes("{")) {
       setApiLoading(true);
       client.get(fetchKey).then((res) => {
@@ -961,6 +950,9 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
         } else if (Array.isArray(resData[field.key + "s"])) {
           // 复数键兜底（如 duration -> resData.durations / aspect_ratio -> resData.aspect_ratios）
           allItems = mapOptionList(resData[field.key + "s"]);
+        } else if (Array.isArray(resData[field.key + "_options"])) {
+          // 能力接口端点兜底（如 model -> resData.model_options / voice -> resData.voice_options）
+          allItems = mapOptionList(resData[field.key + "_options"]);
         }
 
         // Handle { interfaces: [...] } shape (from /enabled or /asr-interfaces)
@@ -994,6 +986,18 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
             }
           }
         }
+
+        // 最终兜底：带能力前缀的字段（image_resolution / video_model / tts_model 等）
+        // 剥离前缀后按同名键再匹配一次（如 image_resolution -> 端点的 resolutions）
+        if (!allItems.length) {
+          const stripped = field.key.replace(/^(image|video|tts|music)_/, "");
+          if (stripped !== field.key) {
+            const hit = [resData[stripped], resData[stripped + "s"], resData[stripped + "_options"]]
+              .find((c) => Array.isArray(c));
+            if (hit) allItems = mapOptionList(hit as any[]);
+          }
+        }
+
         const uniqueItems = Array.from(new Map(allItems.map((item) => [item.value, item])).values());
         setApiOptions(uniqueItems);
 
@@ -1007,6 +1011,22 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
 
   const selectedLabel = apiOptions.find(opt => opt.value === value)?.label || (apiLoading ? "加载中..." : field.placeholder || "请选择");
   const hasDescriptions = apiOptions.some(opt => opt.description);
+
+  // 端口跟随：上游连线已提供值时显示只读跟随态（断开连线后恢复手动选择）
+  if (field.followPort && followValue) {
+    return (
+      <div>
+        <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+        <div className="w-full text-xs px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/5 text-foreground/80 flex items-center justify-between gap-2">
+          <span className="truncate" title={followValue}>{followValue}</span>
+          <span className="text-[10px] text-primary flex-shrink-0">跟随上游输入</span>
+        </div>
+        {field.description && (
+          <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{field.description}（断开上游连线后可手动选择）</p>
+        )}
+      </div>
+    );
+  }
 
   // If no descriptions, use native select for better UX
   if (!hasDescriptions) {
@@ -1227,6 +1247,179 @@ function AccountSelectField({ field, value, onConfigChange }: { field: ConfigFie
         </div>
       )}
     </>
+  );
+}
+
+/** 人物音色清单的一行配置（写入节点 config.voice_targets）。 */
+interface VoiceTargetRow {
+  id?: string;
+  name: string;
+  enabled: boolean;
+  mode: "design" | "clone";
+  ref_audio: string;
+  /** 已生成音色的可播放地址（仅前端展示，不参与合成） */
+  voice_url?: string;
+}
+
+function VoiceTargetListField({ field, value, config, onConfigChange }: {
+  field: ConfigField;
+  value: any;
+  config: Record<string, any>;
+  onConfigChange: (key: string, value: any) => void;
+}) {
+  const [rows, setRows] = useState<VoiceTargetRow[]>(
+    Array.isArray(value) ? value.filter((r: any) => r && r.name) : []
+  );
+  const [loading, setLoading] = useState(false);
+  const [emptyHint, setEmptyHint] = useState("尚未选择项目或项目内暂无角色");
+  const [pickerIndex, setPickerIndex] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const endpoint = (field.apiEndpoint || "").replace(/\{(\w+)\}/g, (_, key) => {
+    const val = config[key];
+    return val !== undefined && val !== null && val !== "" ? String(val) : `{${key}}`;
+  });
+
+  const commit = (next: VoiceTargetRow[]) => {
+    setRows(next);
+    onConfigChange(field.key, next);
+  };
+
+  useEffect(() => {
+    if (!endpoint || endpoint.includes("{")) return;
+    setLoading(true);
+    client
+      .get(endpoint)
+      .then((res) => {
+        const data = res.data || {};
+        const list: any[] = Array.isArray(data) ? data : data.characters || [];
+        const saved = new Map<string, any>();
+        for (const item of Array.isArray(value) ? value : []) {
+          if (item && (item.id || item.name)) saved.set(String(item.id || item.name), item);
+        }
+        const next: VoiceTargetRow[] = list.map((row: any, index: number) => {
+          const key = String(row.id || row.name || "");
+          const prev = saved.get(key) || {};
+          return {
+            id: row.id || "",
+            name: row.name || `角色${index + 1}`,
+            enabled: prev.enabled === undefined ? true : !!prev.enabled,
+            mode: prev.mode === "clone" ? "clone" : "design",
+            ref_audio: prev.ref_audio || "",
+            voice_url: row.voice_url || "",
+          };
+        });
+        commit(next);
+        setEmptyHint("项目内暂无角色，请先运行「人物资产创作」");
+      })
+      .catch(() => setEmptyHint("角色列表读取失败"))
+      .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [endpoint]);
+
+  const updateRow = (index: number, patch: Partial<VoiceTargetRow>) => {
+    commit(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
+  };
+
+  const playSample = (row: VoiceTargetRow) => {
+    if (!row.voice_url) return;
+    if (audioRef.current) audioRef.current.pause();
+    audioRef.current = new Audio(row.voice_url);
+    audioRef.current.play().catch(() => { });
+  };
+
+  const allEnabled = rows.length > 0 && rows.every((r) => r.enabled);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-1">
+        <label className="text-[11px] font-medium text-muted-foreground">{field.label}</label>
+        {rows.length > 0 && (
+          <button
+            type="button"
+            onPointerDown={(e) => e.stopPropagation()}
+            onClick={() => commit(rows.map((r) => ({ ...r, enabled: !allEnabled })))}
+            className="text-[10px] text-primary hover:underline"
+          >
+            {allEnabled ? "全部取消" : "全部勾选"}
+          </button>
+        )}
+      </div>
+      <div className="rounded-md border border-border/50 bg-background max-h-52 overflow-y-auto">
+        {rows.length === 0 && (
+          <div className="px-2 py-2 text-[10px] text-muted-foreground/70">
+            {loading ? "加载中..." : emptyHint}
+          </div>
+        )}
+        {rows.map((row, index) => (
+          <div
+            key={row.id || row.name}
+            className="flex items-center gap-1.5 px-2 py-1.5 border-b border-border/40 last:border-b-0"
+          >
+            <input
+              type="checkbox"
+              checked={!!row.enabled}
+              onPointerDown={(e) => e.stopPropagation()}
+              onChange={(e) => updateRow(index, { enabled: e.target.checked })}
+              className="w-3 h-3 rounded border-border/50 accent-primary flex-shrink-0"
+            />
+            <span className="text-[11px] text-foreground truncate flex-1 min-w-0" title={row.name}>
+              {row.name}
+            </span>
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => playSample(row)}
+              disabled={!row.voice_url}
+              title={row.voice_url ? "播放已生成音色" : "该角色尚未生成音色"}
+              className={`p-1 rounded-md border border-border/50 flex-shrink-0 ${
+                row.voice_url
+                  ? "text-primary hover:bg-primary/10"
+                  : "text-muted-foreground/40 cursor-not-allowed"
+              }`}
+            >
+              <Play className="w-3 h-3" />
+            </button>
+            <select
+              value={row.mode}
+              onPointerDown={(e) => e.stopPropagation()}
+              onChange={(e) => updateRow(index, { mode: e.target.value as "design" | "clone" })}
+              className="text-[10px] px-1 py-0.5 rounded border border-border/50 bg-background outline-none flex-shrink-0"
+            >
+              <option value="design">设计</option>
+              <option value="clone">克隆</option>
+            </select>
+            <button
+              type="button"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={() => setPickerIndex(index)}
+              disabled={row.mode !== "clone"}
+              title={row.mode === "clone" ? "选择参考音频" : "设计模式无需参考音频"}
+              className={`text-[10px] px-1.5 py-0.5 rounded border flex-shrink-0 max-w-[92px] truncate ${
+                row.mode === "clone"
+                  ? "border-border/50 bg-background text-primary hover:bg-primary/10"
+                  : "border-border/40 text-muted-foreground/40 cursor-not-allowed"
+              }`}
+            >
+              {row.mode === "clone" ? (row.ref_audio ? row.ref_audio.split(/[\\/]/).pop() : "参考音频") : "—"}
+            </button>
+          </div>
+        ))}
+      </div>
+      {field.description && <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{field.description}</p>}
+      {pickerIndex !== null &&
+        createPortal(
+          <AudioSelectorDialog
+            open={true}
+            onClose={() => setPickerIndex(null)}
+            onSelect={(path) => {
+              updateRow(pickerIndex, { ref_audio: path });
+              setPickerIndex(null);
+            }}
+          />,
+          document.body
+        )}
+    </div>
   );
 }
 
@@ -1482,6 +1675,9 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           }
 
           if (field.type === "button") {
+            // 带 url 的按钮：点击在新标签打开外链（如「获取key」「用量日志」）
+            const externalUrl = (field as { url?: string }).url || "";
+            const BtnIcon = externalUrl ? ExternalLink : FileJson;
             return (
               <div key={field.key} className={fieldSpanClass(field)}>
                 {field.description && (
@@ -1489,11 +1685,19 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                 )}
                 <button
                   type="button"
-                  onClick={(e) => { e.stopPropagation(); onButtonAction?.(field); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    // 带 url 的按钮（如「获取key」「用量日志」）直接在新标签打开外链
+                    if (externalUrl) {
+                      window.open(externalUrl, "_blank", "noopener,noreferrer");
+                    } else {
+                      onButtonAction?.(field);
+                    }
+                  }}
                   onPointerDown={(e) => e.stopPropagation()}
                   className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 text-xs font-medium rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                 >
-                  <FileJson className="w-3.5 h-3.5" />
+                  <BtnIcon className="w-3.5 h-3.5" />
                   {field.label}
                 </button>
               </div>
@@ -1966,6 +2170,10 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
             );
           }
 
+          if (field.type === "voice-target-list") {
+            return <div key={field.key} className={fieldSpanClass(field)}><VoiceTargetListField field={field} value={value} config={config} onConfigChange={onConfigChange} /></div>;
+          }
+
           if (field.type === "audio-selector") {
             return (
               <div key={field.key} className={fieldSpanClass(field)}>
@@ -2216,7 +2424,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
     seedance_autovideo: "autovideo",
   };
   const seedanceMode = SEEDANCE_MODE_MAP[nodeType.id || ""] || "txt2video";
-  const isDynamicPorts = isPiAgent || nodeType.id === "output_merge_list";
+  const isDynamicPorts = isPiAgent || nodeType.id === "output_merge_list" || nodeType.id === "json_get";
   const dedupedOutputEntries = (() => {
     const seen = new Set<string>();
     const rawOutputs = nd.outputs;
@@ -2574,36 +2782,40 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
       <div className="px-3 py-2 space-y-1">
         {isDynamicPorts && (
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-semibold text-muted-foreground">输入</span>
-            <button
-              type="button"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); const n = Math.min(Number(config.inputCount) || 2, 8); handleConfigChange("inputCount", n + 1); }}
-              className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-primary border border-primary/30 hover:bg-primary/10"
-              title="增加输入端口"
-            >+</button>
-            <button
-              type="button"
-              onPointerDown={(e) => e.stopPropagation()}
-              onClick={(e) => { e.stopPropagation(); const n = Math.max(Number(config.inputCount) || 2, 1); handleConfigChange("inputCount", n - 1); }}
-              className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-muted-foreground border border-border/50 hover:bg-muted"
-              title="减少输入端口"
-            >−</button>
-            <span className="text-[10px] text-muted-foreground">{visibleInputs.length}</span>
-            {isPiAgent && (
+            {(isPiAgent || nodeType.id === "output_merge_list") && (
+              <>
+                <span className="text-[10px] font-semibold text-muted-foreground">输入</span>
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); const n = Math.min(Number(config.inputCount) || 2, 8); handleConfigChange("inputCount", n + 1); }}
+                  className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-primary border border-primary/30 hover:bg-primary/10"
+                  title="增加输入端口"
+                >+</button>
+                <button
+                  type="button"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => { e.stopPropagation(); const n = Math.max(Number(config.inputCount) || 2, 1); handleConfigChange("inputCount", n - 1); }}
+                  className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-muted-foreground border border-border/50 hover:bg-muted"
+                  title="减少输入端口"
+                >−</button>
+                <span className="text-[10px] text-muted-foreground">{visibleInputs.length}</span>
+              </>
+            )}
+            {(isPiAgent || nodeType.id === "json_get") && (
               <>
                 <span className="text-[10px] font-semibold text-muted-foreground ml-3">输出</span>
                 <button
                   type="button"
                   onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); const n = Math.min(Number(config.outputCount) || 2, 8); handleConfigChange("outputCount", n + 1); }}
+                  onClick={(e) => { e.stopPropagation(); const n = Math.min(Number(config.outputCount) || 1, 8); handleConfigChange("outputCount", n + 1); }}
                   className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-primary border border-primary/30 hover:bg-primary/10"
                   title="增加输出端口"
                 >+</button>
                 <button
                   type="button"
                   onPointerDown={(e) => e.stopPropagation()}
-                  onClick={(e) => { e.stopPropagation(); const n = Math.max(Number(config.outputCount) || 2, 1); handleConfigChange("outputCount", n - 1); }}
+                  onClick={(e) => { e.stopPropagation(); const n = Math.max(Number(config.outputCount) || 1, 1); handleConfigChange("outputCount", n - 1); }}
                   className="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold text-muted-foreground border border-border/50 hover:bg-muted"
                   title="减少输出端口"
                 >−</button>
@@ -3277,6 +3489,43 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                       onPointerDown={(e) => e.stopPropagation()}
                       className="min-w-0 flex-1 text-[11px] px-2 py-1 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
                       placeholder={`输出${index + 1} 描述`}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* json_get: 按输出端口逐条渲染取值表达式输入框 */}
+      {nodeType.id === "json_get" && expanded && (
+        <div className="px-3 pb-3 border-t border-border/50 pt-2 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-foreground">取值表达式</span>
+            <span className="text-[10px] text-muted-foreground">每个输出端口对应一行（用$分隔层级，数组用整数索引）</span>
+          </div>
+          {(() => {
+            const count = Math.min(Math.max(Number(config.outputCount) || 1, 1), 8);
+            const exprs: string[] = Array.isArray(config.key_exprs)
+              ? config.key_exprs.map((v: any) => String(v ?? ""))
+              : [];
+            const rows = Array.from({ length: count }, (_, i) => exprs[i] ?? "");
+            const updateExpr = (index: number, value: string) => {
+              const next = rows.map((row, i) => (i === index ? value : row));
+              handleConfigChange("key_exprs", next);
+            };
+            return (
+              <div className="space-y-1.5">
+                {rows.map((expr, index) => (
+                  <div key={index} className="flex items-center gap-1.5">
+                    <span className="w-12 text-[11px] text-muted-foreground shrink-0">取值{index + 1}</span>
+                    <input
+                      value={expr}
+                      onChange={(e) => updateExpr(index, e.target.value)}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="min-w-0 flex-1 text-[11px] px-2 py-1 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
+                      placeholder="key0$key1$key2"
                     />
                   </div>
                 ))}

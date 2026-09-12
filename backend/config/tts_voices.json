@@ -2934,6 +2934,16 @@
         "age": "",
         "language": ""
       }
+    ],
+    "elevenlab-kie": [
+      {
+        "voice_id": "EkK5I93UQWFDigLMpZcX",
+        "voice_name": "EkK5I93UQWFDigLMpZcX",
+        "description": "",
+        "gender": "",
+        "age": "",
+        "language": ""
+      }
     ]
   }
 }

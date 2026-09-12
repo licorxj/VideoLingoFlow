@@ -22,15 +22,16 @@ import {
   Copy,
   Check,
   RotateCw,
+  ExternalLink,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const inputCls =
   "h-9 rounded-lg border border-border/60 bg-background/60 px-3 text-sm outline-none transition-colors placeholder:text-muted-foreground/60 focus:border-primary/60";
 
-type FormState = { id?: string; name: string; value: string; purpose: string; rotate: boolean };
+type FormState = { id?: string; name: string; value: string; purpose: string; register_url: string; rotate: boolean };
 
-const EMPTY_FORM: FormState = { name: "", value: "", purpose: "", rotate: true };
+const EMPTY_FORM: FormState = { name: "", value: "", purpose: "", register_url: "", rotate: true };
 
 export default function SecretManagerSettings() {
   const [items, setItems] = useState<Credential[]>([]);
@@ -94,6 +95,7 @@ export default function SecretManagerSettings() {
         name: res.data.credential.name,
         value: res.data.credential.value || "",
         purpose: res.data.credential.purpose || "",
+        register_url: res.data.credential.register_url || "",
         rotate: res.data.credential.rotate,
       });
       setFormOpen(true);
@@ -114,6 +116,7 @@ export default function SecretManagerSettings() {
           name: form.name.trim(),
           value: form.value,
           purpose: form.purpose.trim(),
+          register_url: form.register_url.trim(),
           rotate: form.rotate,
         });
         notify("ok", "密钥已更新");
@@ -122,6 +125,7 @@ export default function SecretManagerSettings() {
           name: form.name.trim(),
           value: form.value,
           purpose: form.purpose.trim(),
+          register_url: form.register_url.trim(),
           rotate: form.rotate,
         });
         notify("ok", "密钥已创建");
@@ -275,12 +279,13 @@ export default function SecretManagerSettings() {
           <table className="w-full table-fixed text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="w-[22%] px-4 py-2.5 text-left font-medium">名称</th>
-                <th className="w-[22%] px-4 py-2.5 text-left font-medium">用途说明</th>
+                <th className="w-[20%] px-4 py-2.5 text-left font-medium">名称</th>
+                <th className="w-[18%] px-4 py-2.5 text-left font-medium">用途说明</th>
                 <th className="px-4 py-2.5 text-left font-medium">密钥值</th>
-                <th className="w-[7%] px-4 py-2.5 text-left font-medium">轮询</th>
-                <th className="w-[13%] px-4 py-2.5 text-left font-medium">更新时间</th>
-                <th className="w-32 px-4 py-2.5 text-right font-medium">操作</th>
+                <th className="w-[8%] px-4 py-2.5 text-left font-medium">注册</th>
+                <th className="w-[6%] px-4 py-2.5 text-left font-medium">轮询</th>
+                <th className="w-[12%] px-4 py-2.5 text-left font-medium">更新时间</th>
+                <th className="w-28 px-4 py-2.5 text-right font-medium">操作</th>
               </tr>
             </thead>
             <tbody>
@@ -304,7 +309,7 @@ export default function SecretManagerSettings() {
                       </button>
                     </div>
                   </td>
-                  <td className="max-w-[18rem] px-4 py-3">
+                  <td className="max-w-[14rem] px-4 py-3">
                     <span className="line-clamp-2 text-muted-foreground">{item.purpose || "—"}</span>
                   </td>
                   <td className="px-4 py-3">
@@ -334,6 +339,20 @@ export default function SecretManagerSettings() {
                         )}
                       </button>
                     </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    {item.register_url ? (
+                      <button
+                        onClick={() => window.open(item.register_url, "_blank")}
+                        title={`打开注册页面：${item.register_url}`}
+                        className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/20"
+                      >
+                        <ExternalLink className="h-3 w-3" />
+                        注册
+                      </button>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground/50">—</span>
+                    )}
                   </td>
                   <td className="px-4 py-3">
                     <button
@@ -405,6 +424,28 @@ export default function SecretManagerSettings() {
                 onChange={(e) => setForm({ ...form, purpose: e.target.value })}
                 placeholder="例如：302.AI 聚合平台，用于 LLM 与 TTS"
               />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">注册地址</label>
+              <div className="flex items-center gap-2">
+                <input
+                  className={cn(inputCls, "flex-1")}
+                  value={form.register_url}
+                  onChange={(e) => setForm({ ...form, register_url: e.target.value })}
+                  placeholder="https://platform.openai.com/api-keys"
+                />
+                {form.register_url && (
+                  <button
+                    type="button"
+                    onClick={() => window.open(form.register_url, "_blank")}
+                    title="打开注册页面"
+                    className="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg border border-border/60 px-3 text-xs text-muted-foreground transition-colors hover:text-primary"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    打开
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-muted-foreground">

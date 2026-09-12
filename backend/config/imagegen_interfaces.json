@@ -291,7 +291,7 @@
         "sdk_module": "backend.imagegen.sdk.kieai_wrapper",
         "sdk_function": "generate",
         "sdk_api_key": "secret://KIEAI_API_KEY",
-        "default_model": "seedream/5-lite-text-to-image",
+        "default_model": "gpt-image-2-text-to-image",
         "model_options": [
           "gpt-image-2-text-to-image",
           "gpt-image-2-image-to-image",

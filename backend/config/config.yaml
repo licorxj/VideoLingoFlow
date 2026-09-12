@@ -20,14 +20,14 @@ general:
 
 # ============ LLM ============
 llm:
-  use_router: false
+  use_router: true
   router_url: "http://localhost:8800/v1"
   router_api_key: "secret://LLM_ROUTER_API_KEY"
   # 进程内直连路由器（跳过 localhost HTTP 网关，直接读 router DB + 直连上游 API）
   # 仅当 router_url 指向 localhost 时生效；设为 false 回退到 HTTP 网关
   direct_router: true
   base_url: "http://localhost:8800/v1"
-  api_key: "secret://LLM_API_KEY"
+  api_key: "123"
   max_concurrent: 10
   max_request_chars: 6000
   timeout: 300
@@ -50,6 +50,7 @@ llm:
 
 # ============ Pi Agent ==========
     vlf-create: 'vlf-create'
+    toonflow: vlf-create
 pi:
   enabled: true
   node_path: ""
@@ -65,7 +66,7 @@ pi:
 # ============ TTS ============
 
 tts:
-  method: "confucius4_tts"
+  method: "voxcpm"
   edge_tts:
     voice: "zh-CN-YunjianNeural"
 
@@ -146,9 +147,9 @@ audio:
   bitrate: 320
   bit_depth: 32
 imagegen:
-  method: 33c78ad1
-  default_t2i_model: "doubao-seedream-5-0-lite-260128"
-  default_i2i_model: "doubao-seedream-5-0-lite-260128"
+  method: kieai
+  default_t2i_model: "z-image"
+  default_i2i_model: "gpt-image-2-image-to-image"
 separation:
   method: demucs
   model: htdemucs
@@ -168,7 +169,7 @@ aigc:
     use_wsl: false
     timeout: 120
 videogen:
-  method: wuli_video
-  default_t2v_model: 'Happy Horse 1.1'
-  default_i2v_model: '通义万相 2.7'
-  default_v2v_model: 'Happy Horse 1.1'
+  method: kieai_video
+  default_t2v_model: 'generate-veo3-1-video'
+  default_i2v_model: 'bytedance/seedance-2-mini'
+  default_v2v_model: 'bytedance/seedance-2-mini'

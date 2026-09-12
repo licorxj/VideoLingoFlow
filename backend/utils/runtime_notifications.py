@@ -32,20 +32,31 @@ def push_notification(
     description: str,
     task_id: str = "",
     link: str = "",
+    dedup_key: str = "",
 ) -> dict:
-    """追加一条系统通知（原子写入，超出上限裁剪最旧条目）。"""
-    item = {
-        "id": f"ntf_{uuid.uuid4().hex[:12]}",
-        "kind": kind if kind in ALLOWED_KINDS else "info",
-        "title": str(title or "系统通知"),
-        "description": str(description or ""),
-        "task_id": str(task_id or ""),
-        "link": str(link or ""),
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
+    """追加一条系统通知（原子写入，超出上限裁剪最旧条目）。
+
+    dedup_key 非空时做幂等去重：若通知中心已存在同一 dedup_key 的条目，
+    直接返回该条目而不重复写入（用于「同一天只提醒一次」这类场景）。
+    """
+    dedup_key = str(dedup_key or "")
     with _LOCK:
-        NOTIFICATIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
         items = _read()
+        if dedup_key:
+            for existing in items:
+                if str(existing.get("dedup_key") or "") == dedup_key:
+                    return existing
+        item = {
+            "id": f"ntf_{uuid.uuid4().hex[:12]}",
+            "kind": kind if kind in ALLOWED_KINDS else "info",
+            "title": str(title or "系统通知"),
+            "description": str(description or ""),
+            "task_id": str(task_id or ""),
+            "link": str(link or ""),
+            "dedup_key": dedup_key,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+        }
+        NOTIFICATIONS_PATH.parent.mkdir(parents=True, exist_ok=True)
         items.insert(0, item)
         temporary = NOTIFICATIONS_PATH.with_suffix(f".json.{uuid.uuid4().hex}.tmp")
         with open(temporary, "w", encoding="utf-8") as handle:

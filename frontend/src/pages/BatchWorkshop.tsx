@@ -7,7 +7,7 @@ import CreateBatchDialog from "@/components/batch/CreateBatchDialog";
 import BatchGroupCard from "@/components/batch/BatchGroupCard";
 import BatchRuntimePanel from "@/components/batch/BatchRuntimePanel";
 import { useAlert } from "@/components/ui/AlertProvider";
-import { getSubscriptionError, isDeviceLimitError, isSubscriptionBlocked, getQuotaExhaustedMessage } from "@/api/subscription";
+import { getSubscriptionError, isDeviceLimitError, isSubscriptionBlocked, getQuotaExhaustedMessage, notifyQuotaExhausted } from "@/api/subscription";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -181,6 +181,7 @@ export default function BatchWorkshop() {
       return true;
     }
     const status = useSubscriptionStore.getState().status;
+    notifyQuotaExhausted();
     showAlert(getQuotaExhaustedMessage(status), "warning");
     return true;
   };
@@ -188,6 +189,7 @@ export default function BatchWorkshop() {
   const handleOpenCreateDialog = async () => {
     const status = await useSubscriptionStore.getState().fetchStatus();
     if (status && !status.can_create_task) {
+      notifyQuotaExhausted();
       showAlert(getQuotaExhaustedMessage(status), "warning");
       return;
     }
@@ -199,6 +201,7 @@ export default function BatchWorkshop() {
     try {
       const status = await useSubscriptionStore.getState().fetchStatus();
       if (status && !status.can_create_task) {
+        notifyQuotaExhausted();
         showAlert(getQuotaExhaustedMessage(status), "warning");
         return;
       }

@@ -8,8 +8,18 @@ from backend.config.config_manager import config
 
 router = APIRouter(prefix="/api/public-info")
 
+# 后端程序版本：取自配置 version（单一来源），缺省时回退内置值。
+# 同时用于 OpenAPI 文档版本、/version 接口与 /api/public-info 的 local_version，
+# 保证顶栏角标、About 页与接口文档展示同一个版本号。
+APP_VERSION = str(config.get("version", "") or "2.0.0")
+
 # 云端版本信息中可能的下载地址字段（不同时期服务端字段名不一致，统一兼容）
 _DOWNLOAD_KEYS = ("update_url", "download_url", "downloadUrl", "url", "asset_url")
+
+
+def _local_version() -> str:
+    """本地版本：优先取配置 version，缺省回退到程序内置版本。"""
+    return str(config.get("version", "") or APP_VERSION)
 
 
 def _extract_download_url(update: dict | None) -> str:
@@ -54,7 +64,7 @@ async def get_public_info():
         announcements = []
     return {
         "software_id": SOFTWARE_CODE,
-        "local_version": str(config.get("version", "")),
+        "local_version": _local_version(),
         "update": update,
         "announcements": announcements,
         "update_error": update_error,
@@ -73,6 +83,20 @@ async def get_announcements():
         return {"announcements": latest if isinstance(latest, list) else [], "error": None}
     except Exception as exc:
         return {"announcements": [], "error": str(exc)}
+
+
+@router.get("/version")
+async def get_local_version():
+    """本地版本信息（不访问云端，供顶栏版本角标即时展示）。
+
+    与 /api/public-info 中的 local_version 同源，但不会触发云端更新检查与公告拉取，
+    因此可以在页面启动时无感调用。
+    """
+    return {
+        "version": _local_version(),
+        "api_version": APP_VERSION,
+        "software_id": SOFTWARE_CODE,
+    }
 
 
 @router.get("/download-url")

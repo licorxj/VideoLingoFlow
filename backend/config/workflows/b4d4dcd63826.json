@@ -1,0 +1,406 @@
+{
+  "id": "b4d4dcd63826",
+  "name": "视频下载+翻译文件名",
+  "description": "下载+把视频名称翻译+归档到指定文件夹下，可以做批量任务里面做到批量下载，也可以跟随输出节点在后面，做下载文件固定归档",
+  "nodes": [
+    {
+      "id": "node_1_1783324270560",
+      "type": "workflow",
+      "position": {
+        "x": -2160,
+        "y": -2355
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "url"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "https://youtu.be/mEVl0NS0vu8?si=QxMCPjDFMyJRNYu0",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": false,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false,
+          "filePath": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "url": "https://youtu.be/mEVl0NS0vu8?si=QxMCPjDFMyJRNYu0",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 564
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1786496185089",
+      "type": "workflow",
+      "position": {
+        "x": -75,
+        "y": -2490
+      },
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 478
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1783324281016",
+      "type": "workflow",
+      "position": {
+        "x": -1485,
+        "y": -2385
+      },
+      "data": {
+        "nodeType": "platform_download",
+        "label": "平台视频下载",
+        "config": {
+          "download_subs": true,
+          "download_cover": true,
+          "resolution": "best",
+          "cookie_file": "",
+          "use_as_task_name": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "cache\\That's AI (2026) - Short Film_node_2_1783324281016.mp4",
+          "image": "cache\\That's AI (2026) - Short Film_node_2_1783324281016.jpg",
+          "filename": "That's AI (2026) - Short Film_node_2_1783324281016.mp4"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[S00] yt-dlp stderr: <empty>",
+          "[S00] yt-dlp stdout: VLDL\tThat's AI (2026) - Short Film\tY:\\VideoLingoLc\\control_plane_workspaces\\0d1956d6d34349d58c450bc7f27e7588\\cache\\That's AI (2026) - Short Film [mEVl0NS0vu8].mp4",
+          "[S00] task_name set to: That's AI (2026) - Short Film",
+          "[S00] Output: video -> That's AI (2026) - Short Film_node_2_1783324281016.mp4",
+          "[S00] Output: cover -> That's AI (2026) - Short Film_node_2_1783324281016.jpg",
+          "[S00] Done: 2 files produced",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0d1956d6d34349d58c450bc7f27e7588\\cache\\.step_node_2_1783324281016_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 511
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_1_1787596716961",
+      "type": "workflow",
+      "position": {
+        "x": -45,
+        "y": -1830
+      },
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 432
+      },
+      "selected": true,
+      "dragging": false
+    },
+    {
+      "id": "node_2_1787611118465",
+      "type": "workflow",
+      "position": {
+        "x": -555,
+        "y": -2280
+      },
+      "data": {
+        "nodeType": "archive_artifacts",
+        "label": "产物文件归档",
+        "config": {
+          "operation": "copy",
+          "targetType": "custom",
+          "customPath": "X:\\PCTMoveData\\Videos\\下载",
+          "useSubfolder": true,
+          "subfolderNaming": "by_name",
+          "renameEnabled": false,
+          "renameMode": "seq",
+          "prefix": "",
+          "suffix": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output": "X:\\PCTMoveData\\Videos\\下载\\That's AI (2026) - Short Film_node_2_1783324281016"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 509
+      },
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_3_1789132848732",
+      "type": "workflow",
+      "position": {
+        "x": -840,
+        "y": -1665
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "file_rename",
+        "label": "文件改名",
+        "config": {
+          "rename_mode": "from_input",
+          "custom_name": "",
+          "prefix": "",
+          "suffix": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "any": "Y:\\VideoLingoLc\\control_plane_workspaces\\0d1956d6d34349d58c450bc7f27e7588\\cache\\这是人工智能（2026）- 短片_node_2_1783324281016.mp4"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 310
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_1_1789135981506",
+      "type": "workflow",
+      "position": {
+        "x": -1500,
+        "y": -1740
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "llm_request",
+        "label": "通用LLM请求",
+        "config": {
+          "model": "",
+          "system_prompt": "把用户输入的文件名翻译成目标语言，注意这个是一个文件名，可能含有没有任何含义的数值序号和符号，请翻译实际有含义的部分即可，真正有序号含义的，比如剧集序号等，使用括号把序号包括起来，例如：我的野蛮女友（二），如果是纯字母或者纯数值，直接返回原值即可。直接返回翻译后的文本，不要有任何多余说明。",
+          "user_prompt": "目标语言：{target_language}\n待翻译文件名：{input_text}",
+          "temperature": 0.7,
+          "response_json": false,
+          "log_request": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "result": "output/LLM_node_1_1789135981506.txt",
+          "text": "这是人工智能（2026）- 短片_node_2_1783324281016.mp4"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] step instance created: S_LLMRequest",
+          "[step_worker] step_inputs keys=['text', 'source_language', 'target_language']",
+          "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0d1956d6d34349d58c450bc7f27e7588, kwargs=['callback'])",
+          "[LLM] direct (step=s_llm_request, strategy=vlf-01, stream=False, response_json=False, timeout=300s, prompt_chars=214)",
+          "[LLM] direct ok (step=s_llm_request, elapsed=1.9s)",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0d1956d6d34349d58c450bc7f27e7588\\cache\\.step_node_1_1789135981506_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 603
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1783324270560",
+      "sourceHandle": "out-url",
+      "target": "node_2_1783324281016",
+      "targetHandle": "in-url",
+      "id": "xy-edge__node_1_1783324270560out-url-group_msvicl14_sk47in-gin_1",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-video",
+      "target": "node_1_1786496185089",
+      "targetHandle": "in-video",
+      "id": "xy-edge__group_msvicl14_sk47out-gout_1-node_1_1786496185089in-video",
+      "selected": false
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-image",
+      "target": "node_1_1787596716961",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_2_1783324281016out-image-node_1_1787596716961in-image"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-subtitle",
+      "target": "node_2_1787611118465",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_2_1783324281016out-subtitle-node_2_1787611118465in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-image",
+      "target": "node_2_1787611118465",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_2_1783324281016out-image-node_2_1787611118465in-any"
+    },
+    {
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-video",
+      "target": "node_3_1789132848732",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_2_1783324281016out-video-node_3_1789132848732in-any"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1789132848732",
+      "sourceHandle": "out-any",
+      "target": "node_2_1787611118465",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_3_1789132848732out-any-node_2_1787611118465in-any"
+    },
+    {
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-filename",
+      "target": "node_1_1789135981506",
+      "targetHandle": "in-text",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_2_1783324281016out-filename-node_1_1789135981506in-text"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1789135981506",
+      "sourceHandle": "out-text",
+      "target": "node_3_1789132848732",
+      "targetHandle": "in-name",
+      "id": "xy-edge__node_1_1789135981506out-text-node_3_1789132848732in-name"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-11T21:23:44",
+  "updatedAt": "2026-09-11T22:30:02",
+  "revision": 3
+}

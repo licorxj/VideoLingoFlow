@@ -78,6 +78,7 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
       { value: "api-select", label: "接口选项", supportedProperties: ["placeholder", "apiEndpoint", "apiUrl", "optionLabel", "optionValue", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
       { value: "slider", label: "滑块", supportedProperties: ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
       { value: "number", label: "数字", supportedProperties: ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
+      { value: "voice-target-list", label: "音色目标列表", supportedProperties: ["apiEndpoint", "optionLabel", "optionValue", "placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
     ],
     execTypes: [
       { value: "", label: "无 (仅 UI)" },

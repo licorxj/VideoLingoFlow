@@ -91,7 +91,7 @@ export function PreviewPanel() {
 		<div
 			ref={containerRef}
 			className={cn(
-				"panel bg-background relative flex h-full min-h-0 w-full min-w-0 flex-col rounded-sm border",
+				"panel bg-background relative flex h-full min-h-0 w-full min-w-0 flex-col rounded-xl border border-border/60 shadow-[var(--shadow-panel)]",
 				isFullscreen && "bg-background",
 			)}
 		>

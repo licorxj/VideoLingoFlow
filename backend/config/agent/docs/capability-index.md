@@ -101,6 +101,12 @@ AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*
 需要调整某个阶段的创作规范时，**改对应 MD 即可，不必改节点代码**；
 但不要改动示例中的字段名（节点按这些键解析入库）。
 
+其中 `video_prompt.md` 服务于**确定性拼装**（`agi_shot_video`，非 LLM 生成）：
+`S_AGI_ShotVideo` 由 `_video_prompt_rules()` 读取其 frontmatter 参数
+（`segment_seconds` / `join_word` / `reference_prefix` / `time_range_format` /
+`include_dialogues` / `dialogue_format` / `scene_join_fallback` / `camera_position`）
+驱动拼装，改文件即生效，节点显式配置同名项优先，非法或缺省值回退内置默认。
+
 改进计划见 `docs/AI漫剧改进计划.md`（P0：分镜生产字段/资产提取/格式化剧本/P1/P2）。
 
 **当前内置节点 109 个**（另有 3 个自定义节点：`groupnode_mtbj91n4`、`groupnode_mtbj9s8i`、`hyperframe_render`；合计 112 个，数量随版本增长，不要硬编码旧数字）。完整定义以 `builtin_node_types.py` 为准；**权威清单见 `docs/node_catalog.md`**（按分组表格罗列 id / 名称 / 描述 / 执行域 / 输入 / 输出接口，含自定义节点，总计 112 个），新增或修改节点后在 `PROJECT_ROOT` 下运行 `python scripts/generate_node_catalog.py` 重新生成。

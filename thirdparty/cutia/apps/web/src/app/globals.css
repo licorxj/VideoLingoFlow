@@ -7,283 +7,374 @@
 @plugin "@tailwindcss/typography";
 @plugin "tailwindcss-animate";
 
+/* =============================================================================
+   CapCut-inspired design tokens
+   - Light: airy surface, soft purple accent (#7C3AED), generous rounded corners
+   - Dark:  editorial neutral, same purple accent for brand consistency
+   ============================================================================= */
+
 :root {
-  --background: hsl(0, 0%, 100%);
-  --foreground: hsl(0 0% 11%);
-  --card: hsl(0, 0%, 100%);
-  --card-foreground: hsl(0 0% 11%);
-  --popover: hsl(0, 0%, 100%);
-  --popover-hover: hsl(0, 0%, 96%);
-  --popover-foreground: hsl(0 0% 2%);
-  --primary: #009dff;
-  --primary-foreground: hsl(0, 0%, 100%);
-  --secondary: hsl(204, 100%, 97%);
-  --secondary-border: hsl(204, 100%, 94%);
-  --secondary-foreground: hsl(200, 98%, 39%);
-  --muted: hsl(0 0% 85.1%);
-  --muted-foreground: hsl(0 0% 50%);
-  --accent: hsl(0, 0%, 96%);
-  --accent-foreground: hsl(0 0% 2%);
-  --destructive: hsl(0, 83%, 50%);
-  --destructive-foreground: hsl(0, 0%, 100%);
-  --constructive: hsl(141, 71%, 48%);
-  --constructive-foreground: hsl(0, 0%, 100%);
-  --border: hsl(0 0% 91%);
-  --input: hsl(0 0% 85.1%);
-  --ring: hsl(0, 0%, 55%);
-  --chart-1: hsl(220 70% 50%);
-  --chart-2: hsl(160 60% 45%);
-  --chart-3: hsl(30 80% 55%);
-  --chart-4: hsl(280 65% 60%);
-  --chart-5: hsl(340 75% 55%);
-  --sidebar-background: hsl(0 0% 96.1%);
-  --sidebar-foreground: hsl(0 0% 2%);
-  --sidebar-primary: hsl(0 0% 2%);
-  --sidebar-primary-foreground: hsl(0 0% 91%);
-  --sidebar-accent: hsl(0 0% 85.1%);
-  --sidebar-accent-foreground: hsl(0 0% 2%);
-  --sidebar-border: hsl(0 0% 85.1%);
-  --sidebar-ring: hsl(0 0% 16.9%);
-  --sidebar: hsl(0 0% 98%);
+	/* Surface */
+	--background: hsl(240 20% 98%);
+	--foreground: hsl(240 15% 12%);
+
+	/* Card / popover */
+	--card: hsl(0 0% 100%);
+	--card-foreground: hsl(240 15% 12%);
+	--popover: hsl(0 0% 100%);
+	--popover-hover: hsl(240 20% 96%);
+	--popover-foreground: hsl(240 15% 12%);
+
+	/* Brand — CapCut-style violet */
+	--primary: #7c3aed;
+	--primary-foreground: hsl(0 0% 100%);
+
+	/* Secondary — soft lavender wash */
+	--secondary: hsl(252 100% 96%);
+	--secondary-border: hsl(252 100% 92%);
+	--secondary-foreground: hsl(252 80% 50%);
+
+	/* Muted neutrals */
+	--muted: hsl(240 12% 92%);
+	--muted-foreground: hsl(240 8% 45%);
+
+	/* Accent — hover wash */
+	--accent: hsl(240 20% 95%);
+	--accent-foreground: hsl(240 15% 12%);
+
+	/* Semantic */
+	--destructive: hsl(0 78% 56%);
+	--destructive-foreground: hsl(0 0% 100%);
+	--constructive: hsl(150 70% 42%);
+	--constructive-foreground: hsl(0 0% 100%);
+
+	/* Borders / inputs / rings */
+	--border: hsl(240 12% 90%);
+	--input: hsl(240 12% 90%);
+	--ring: hsl(252 80% 60%);
+
+	/* Charts */
+	--chart-1: hsl(252 80% 60%);
+	--chart-2: hsl(160 60% 45%);
+	--chart-3: hsl(30 80% 55%);
+	--chart-4: hsl(280 65% 60%);
+	--chart-5: hsl(340 75% 55%);
+
+	/* Sidebar */
+	--sidebar-background: hsl(0 0% 100%);
+	--sidebar-foreground: hsl(240 15% 12%);
+	--sidebar-primary: hsl(252 80% 60%);
+	--sidebar-primary-foreground: hsl(0 0% 100%);
+	--sidebar-accent: hsl(240 20% 96%);
+	--sidebar-accent-foreground: hsl(240 15% 12%);
+	--sidebar-border: hsl(240 12% 90%);
+	--sidebar-ring: hsl(252 80% 60%);
+	--sidebar: hsl(0 0% 100%);
 }
 
+/* Panel-scoped tokens — every panel (Timeline/Preview/Properties/Assets/Agent)
+   inherits these so a single rewrite re-skins the whole editor. */
 .panel {
-  --background: hsl(216 13% 98%);
-  --foreground: hsl(0 0% 13%);
-  --card: hsl(0, 0%, 98%);
-  --card-foreground: hsl(0 0% 13%);
-  --primary-foreground: hsl(0, 0%, 98%);
-  --secondary: hsl(204, 100%, 95%);
-  --secondary-border: hsl(204, 100%, 92%);
-  --secondary-foreground: hsl(200, 98%, 37%);
-  --muted: hsl(0 0% 83.1%);
-  --muted-foreground: hsl(0 0% 48%);
-  --accent: hsl(0, 0%, 93%);
-  --accent-foreground: hsl(0 0% 5%);
-  --destructive: hsl(0, 83%, 50%);
-  --destructive-foreground: hsl(0, 0%, 98%);
-  --constructive: hsl(141, 71%, 48%);
-  --constructive-foreground: hsl(0, 0%, 98%);
-  --border: hsl(0 0% 89%);
-  --input: hsl(0 0% 83.1%);
-  --ring: hsl(0, 0%, 53%);
+	--background: hsl(240 20% 98%);
+	--foreground: hsl(240 15% 12%);
+	--card: hsl(0 0% 100%);
+	--card-foreground: hsl(240 15% 12%);
+	--primary-foreground: hsl(0 0% 100%);
+	--secondary: hsl(252 100% 97%);
+	--secondary-border: hsl(252 100% 94%);
+	--secondary-foreground: hsl(252 80% 50%);
+	--muted: hsl(240 12% 93%);
+	--muted-foreground: hsl(240 8% 46%);
+	--accent: hsl(240 20% 95%);
+	--accent-foreground: hsl(240 15% 12%);
+	--destructive: hsl(0 78% 56%);
+	--destructive-foreground: hsl(0 0% 100%);
+	--constructive: hsl(150 70% 42%);
+	--constructive-foreground: hsl(0 0% 100%);
+	--border: hsl(240 12% 90%);
+	--input: hsl(240 12% 90%);
+	--ring: hsl(252 80% 60%);
 }
 
 .dark {
-  --background: hsl(0, 0%, 7%);
-  --foreground: hsl(0 0% 87%);
-  --card: hsl(0, 0%, 7%);
-  --card-foreground: hsl(0 0% 87%);
-  --popover: hsl(0, 0%, 16%);
-  --popover-hover: hsl(0, 0%, 22%);
-  --popover-foreground: hsl(0 0% 95%);
-  --secondary: hsl(204, 100%, 12%);
-  --secondary-border: hsl(204, 100%, 15%);
-  --secondary-foreground: hsl(200, 98%, 61%);
-  --muted: hsl(0 0% 20%);
-  --accent: hsl(0, 0%, 14%);
-  --accent-foreground: hsl(0 0% 95%);
-  --constructive: hsl(141, 71%, 52%);
-  --border: hsl(0 0% 16%);
-  --input: hsl(0 0% 20%);
-  --ring: hsl(0, 0%, 50%);
-  --sidebar-background: hsl(0 0% 8%);
-  --sidebar-foreground: hsl(0 0% 95%);
-  --sidebar-primary: hsl(0 0% 95%);
-  --sidebar-primary-foreground: hsl(0 0% 15%);
-  --sidebar-accent: hsl(0 0% 20%);
-  --sidebar-accent-foreground: hsl(0 0% 95%);
-  --sidebar-border: hsl(0 0% 20%);
-  --sidebar-ring: hsl(0 0% 83.1%);
-  --sidebar: hsl(0 0% 6%);
+	/* Surface — slate-tinged neutrals for the dark editor canvas */
+	--background: hsl(240 12% 9%);
+	--foreground: hsl(240 8% 92%);
+	--card: hsl(240 12% 12%);
+	--card-foreground: hsl(240 8% 92%);
+	--popover: hsl(240 12% 14%);
+	--popover-hover: hsl(240 12% 18%);
+	--popover-foreground: hsl(240 8% 95%);
+
+	--secondary: hsl(252 60% 18%);
+	--secondary-border: hsl(252 60% 22%);
+	--secondary-foreground: hsl(252 90% 72%);
+
+	--muted: hsl(240 10% 20%);
+	--muted-foreground: hsl(240 8% 65%);
+
+	--accent: hsl(240 10% 16%);
+	--accent-foreground: hsl(240 8% 95%);
+
+	--constructive: hsl(150 60% 50%);
+	--border: hsl(240 10% 18%);
+	--input: hsl(240 10% 20%);
+	--ring: hsl(252 90% 70%);
+
+	--sidebar-background: hsl(240 12% 10%);
+	--sidebar-foreground: hsl(240 8% 92%);
+	--sidebar-primary: hsl(252 90% 70%);
+	--sidebar-primary-foreground: hsl(240 12% 10%);
+	--sidebar-accent: hsl(240 10% 18%);
+	--sidebar-accent-foreground: hsl(240 8% 92%);
+	--sidebar-border: hsl(240 10% 18%);
+	--sidebar-ring: hsl(252 90% 70%);
+	--sidebar: hsl(240 12% 8%);
 }
 
 .dark .panel {
-  --background: hsl(0 0% 10%);
-  --foreground: hsl(0 0% 85%);
-  --card: hsl(0, 0%, 10%);
-  --card-foreground: hsl(0 0% 85%);
-  --secondary: hsl(204, 100%, 12%);
-  --secondary-border: hsl(204, 100%, 17%);
-  --secondary-foreground: hsl(200, 98%, 63%);
-  --muted: hsl(0 0% 22%);
-  --accent: hsl(0, 0%, 15%);
-  --accent-foreground: hsl(0 0% 93%);
-  --constructive: hsl(141, 71%, 52%);
-  --border: hsl(0 0% 18%);
-  --input: hsl(0 0% 22%);
-  --ring: hsl(0, 0%, 52%);
+	--background: hsl(240 12% 11%);
+	--foreground: hsl(240 8% 88%);
+	--card: hsl(240 12% 13%);
+	--card-foreground: hsl(240 8% 88%);
+	--secondary: hsl(252 60% 18%);
+	--secondary-border: hsl(252 60% 22%);
+	--secondary-foreground: hsl(252 90% 72%);
+	--muted: hsl(240 10% 22%);
+	--muted-foreground: hsl(240 8% 62%);
+	--accent: hsl(240 10% 17%);
+	--accent-foreground: hsl(240 8% 92%);
+	--constructive: hsl(150 60% 50%);
+	--border: hsl(240 10% 20%);
+	--input: hsl(240 10% 22%);
+	--ring: hsl(252 90% 70%);
 }
 
 @layer base {
-  /*
-    The default border color has changed to `currentcolor` in Tailwind CSS v4,
-    so we've added these compatibility styles to make sure everything still
-    looks the same as it did with Tailwind CSS v3.
-
-    If we ever want to remove these styles, we need to add an explicit border
-    color utility to any element that depends on these defaults.
-  */
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
-  /* Other default base styles */
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-    /* Prevent back/forward swipe */
-    overscroll-behavior-x: contain;
-  }
-  ::selection {
-    @apply bg-primary/35 selection:text-primary-foreground;
-  }
+	/*
+	  Tailwind v4 changed the default border color to `currentcolor`;
+	  keep v3-style explicit border color so existing utilities still work.
+	*/
+	*,
+	::after,
+	::before,
+	::backdrop,
+	::file-selector-button {
+		border-color: var(--color-gray-200, currentcolor);
+	}
+	* {
+		@apply border-border;
+	}
+	body {
+		@apply bg-background text-foreground;
+		/* Prevent back/forward swipe */
+		overscroll-behavior-x: contain;
+	}
+	::selection {
+		@apply bg-primary/35 selection:text-primary-foreground;
+	}
 }
 
 @theme inline {
-  /* Responsive breakpoints */
-  --breakpoint-xs: 30rem;
+	/* Responsive breakpoints */
+	--breakpoint-xs: 30rem;
 
-  /* Typography */
-  --font-sans: var(--font-inter), sans-serif;
+	/* Typography */
+	--font-sans: var(--font-inter), "PingFang SC", "Noto Sans CJK SC",
+		system-ui, sans-serif;
 
-  /* Font sizes */
-  --text-xl: 1.2rem;
-  --text-base: 0.92rem;
-  --text-base--line-height: calc(1.5 / 0.95);
-  --text-xs: 0.75rem;
-  --text-sm: 0.85rem;
-  --text-xs--line-height: calc(1 / 0.8);
+	/* Font sizes */
+	--text-xl: 1.2rem;
+	--text-base: 0.92rem;
+	--text-base--line-height: calc(1.5 / 0.95);
+	--text-xs: 0.75rem;
+	--text-sm: 0.85rem;
+	--text-xs--line-height: calc(1 / 0.8);
 
-  /* Border radius */
-  --radius-lg: 0.82rem;
-  --radius-md: 0.65rem;
-  --radius-sm: 0.35rem;
+	/* Generous rounded corners — CapCut feel */
+	--radius-lg: 0.875rem;
+	--radius-md: 0.7rem;
+	--radius-sm: 0.45rem;
 
-  /* Palette mapped to root design tokens */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+	/* Shadows — soft layered glow */
+	--shadow-panel: 0 1px 2px rgba(15, 14, 35, 0.04),
+		0 8px 24px -12px rgba(15, 14, 35, 0.08);
+	--shadow-panel-lg: 0 4px 8px rgba(15, 14, 35, 0.06),
+		0 24px 48px -16px rgba(76, 29, 149, 0.16);
 
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
+	/* Palette mapped to root design tokens */
+	--color-background: var(--background);
+	--color-foreground: var(--foreground);
 
-  --color-popover: var(--popover);
-  --color-popover-hover: var(--popover-hover);
-  --color-popover-foreground: var(--popover-foreground);
+	--color-card: var(--card);
+	--color-card-foreground: var(--card-foreground);
 
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-border: var(--secondary-border);
-  --color-secondary-foreground: var(--secondary-foreground);
+	--color-popover: var(--popover);
+	--color-popover-hover: var(--popover-hover);
+	--color-popover-foreground: var(--popover-foreground);
 
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
+	--color-primary: var(--primary);
+	--color-primary-foreground: var(--primary-foreground);
+	--color-secondary: var(--secondary);
+	--color-secondary-border: var(--secondary-border);
+	--color-secondary-foreground: var(--secondary-foreground);
 
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
+	--color-muted: var(--muted);
+	--color-muted-foreground: var(--muted-foreground);
 
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
+	--color-accent: var(--accent);
+	--color-accent-foreground: var(--accent-foreground);
 
-  --color-constructive: var(--constructive);
-  --color-constructive-foreground: var(--constructive-foreground);
+	--color-destructive: var(--destructive);
+	--color-destructive-foreground: var(--destructive-foreground);
 
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+	--color-constructive: var(--constructive);
+	--color-constructive-foreground: var(--constructive-foreground);
 
-  /* Chart colors */
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
+	--color-border: var(--border);
+	--color-input: var(--input);
+	--color-ring: var(--ring);
 
-  /* Sidebar */
-  --color-sidebar: var(--sidebar-background);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+	/* Chart colors */
+	--color-chart-1: var(--chart-1);
+	--color-chart-2: var(--chart-2);
+	--color-chart-3: var(--chart-3);
+	--color-chart-4: var(--chart-4);
+	--color-chart-5: var(--chart-5);
 
-  /* Animations */
-  --animate-accordion-down: accordion-down 0.2s ease-out;
-  --animate-accordion-up: accordion-up 0.2s ease-out;
+	/* Sidebar */
+	--color-sidebar: var(--sidebar-background);
+	--color-sidebar-foreground: var(--sidebar-foreground);
+	--color-sidebar-primary: var(--sidebar-primary);
+	--color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+	--color-sidebar-accent: var(--sidebar-accent);
+	--color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+	--color-sidebar-border: var(--sidebar-border);
+	--color-sidebar-ring: var(--sidebar-ring);
 
-  @keyframes accordion-down {
-    from {
-      height: 0;
-    }
-    to {
-      height: var(--radix-accordion-content-height);
-    }
-  }
+	/* Animations */
+	--animate-accordion-down: accordion-down 0.2s ease-out;
+	--animate-accordion-up: accordion-up 0.2s ease-out;
+	--animate-fade-in: fade-in 0.18s ease-out;
+	--animate-pulse-soft: pulse-soft 2.4s ease-in-out infinite;
 
-  @keyframes accordion-up {
-    from {
-      height: var(--radix-accordion-content-height);
-    }
-    to {
-      height: 0;
-    }
-  }
+	@keyframes accordion-down {
+		from {
+			height: 0;
+		}
+		to {
+			height: var(--radix-accordion-content-height);
+		}
+	}
+
+	@keyframes accordion-up {
+		from {
+			height: var(--radix-accordion-content-height);
+		}
+		to {
+			height: 0;
+		}
+	}
+
+	@keyframes fade-in {
+		from {
+			opacity: 0;
+			transform: translateY(2px);
+		}
+		to {
+			opacity: 1;
+			transform: translateY(0);
+		}
+	}
+
+	@keyframes pulse-soft {
+		0%,
+		100% {
+			opacity: 1;
+		}
+		50% {
+			opacity: 0.6;
+		}
+	}
 }
 
+/* ===== Scrollbar utilities ===== */
 @utility scrollbar-hidden {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  &::-webkit-scrollbar {
-    display: none;
-  }
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	&::-webkit-scrollbar {
+		display: none;
+	}
 }
 
 @utility scrollbar-x-hidden {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  &::-webkit-scrollbar:horizontal {
-    display: none;
-  }
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	&::-webkit-scrollbar:horizontal {
+		display: none;
+	}
 }
 
 @utility scrollbar-y-hidden {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-  &::-webkit-scrollbar:vertical {
-    display: none;
-  }
+	-ms-overflow-style: none;
+	scrollbar-width: none;
+	&::-webkit-scrollbar:vertical {
+		display: none;
+	}
 }
 
 @utility scrollbar-thin {
-  &::-webkit-scrollbar {
-    width: 6px;
-    height: 8px;
-  }
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-  &::-webkit-scrollbar-thumb {
-    background: var(--border);
-    border-radius: 4px;
-  }
-  &::-webkit-scrollbar-thumb:hover {
-    background: var(--muted-foreground);
-  }
+	&::-webkit-scrollbar {
+		width: 8px;
+		height: 10px;
+	}
+	&::-webkit-scrollbar-track {
+		background: transparent;
+	}
+	&::-webkit-scrollbar-thumb {
+		background: hsl(240 12% 82%);
+		border-radius: 999px;
+		border: 2px solid transparent;
+		background-clip: padding-box;
+	}
+	&::-webkit-scrollbar-thumb:hover {
+		background: hsl(252 60% 70%);
+		background-clip: padding-box;
+		border: 2px solid transparent;
+	}
+}
+
+/* Dark-mode scrollbar overrides via standard CSS so it works on every UA. */
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+	background: hsl(240 10% 28%);
+	background-clip: padding-box;
+}
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+	background: hsl(252 60% 60%);
+	background-clip: padding-box;
 }
 
 @layer base {
-  * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
+	* {
+		@apply border-border outline-ring/50;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+}
+
+/* ===== Panel surface — soft float on the editor canvas ===== */
+@layer components {
+	.panel-surface {
+		background-color: var(--card);
+		border: 1px solid var(--border);
+		border-radius: var(--radius-lg);
+		box-shadow: var(--shadow-panel);
+	}
+
+	.glass-toolbar {
+		background: color-mix(in oklab, var(--card) 88%, transparent);
+		backdrop-filter: blur(10px);
+		-webkit-backdrop-filter: blur(10px);
+	}
 }

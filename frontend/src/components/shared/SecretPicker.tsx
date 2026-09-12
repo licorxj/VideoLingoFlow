@@ -59,7 +59,7 @@ export function SecretPickerModal({ open, onOpenChange, onPick, title = "匹配�
   const [keyword, setKeyword] = useState("");
   const [selected, setSelected] = useState("");
   const [creating, setCreating] = useState(false);
-  const [form, setForm] = useState({ name: "", value: "", purpose: "", rotate: true });
+  const [form, setForm] = useState({ name: "", value: "", purpose: "", register_url: "", rotate: true });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
@@ -80,7 +80,7 @@ export function SecretPickerModal({ open, onOpenChange, onPick, title = "匹配�
     setKeyword("");
     setSelected("");
     setCreating(false);
-    setForm({ name: "", value: "", purpose: "", rotate: true });
+    setForm({ name: "", value: "", purpose: "", register_url: "", rotate: true });
     setError("");
     refresh();
   }, [open]);
@@ -105,13 +105,14 @@ export function SecretPickerModal({ open, onOpenChange, onPick, title = "匹配�
         name: form.name.trim(),
         value: form.value,
         purpose: form.purpose.trim(),
+        register_url: form.register_url.trim(),
         rotate: form.rotate,
       });
       const created = res.data.credential;
       setItems((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
       setSelected(created.name);
       setCreating(false);
-      setForm({ name: "", value: "", purpose: "", rotate: true });
+      setForm({ name: "", value: "", purpose: "", register_url: "", rotate: true });
     } catch (e: any) {
       setError(e?.message || "创建失败");
     } finally {
@@ -175,6 +176,15 @@ export function SecretPickerModal({ open, onOpenChange, onPick, title = "匹配�
                 value={form.purpose}
                 onChange={(e) => setForm({ ...form, purpose: e.target.value })}
                 placeholder="用于 xxx 接口调用"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-muted-foreground">注册地址</label>
+              <input
+                className={cn(inputCls, "w-full")}
+                value={form.register_url}
+                onChange={(e) => setForm({ ...form, register_url: e.target.value })}
+                placeholder="https://..."
               />
             </div>
             <div className="col-span-2">

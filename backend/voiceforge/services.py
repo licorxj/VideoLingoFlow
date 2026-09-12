@@ -1,3 +1,4 @@
+import inspect
 import json
 import logging
 import os
@@ -490,3 +491,142 @@ def create_task(project_id: str, task_type: str, input_data: dict, idempotency_k
             (task_id, project_id, voice_id, task_type, idempotency_key, json.dumps(input_data, ensure_ascii=False)),
         )
     return task_id, True
+
+
+# --------------------------------------------------------------------------- #
+# 服务层：音色/音频片段合成（供外部流程如「AI漫剧·人物音色生产」复用）
+# --------------------------------------------------------------------------- #
+def synthesize_voice_clip(
+    interface_id: str,
+    text: str,
+    output_path: Path,
+    mode: str,
+    voice_design: str = "",
+    controllable_clone: str = "",
+    ref_audio: str = "",
+    ref_text: str = "",
+    speed: float = None,
+    voice: str = "",
+    model: str = "",
+) -> Path:
+    """调用 TTS 服务层合成一条音频片段，落盘校验后返回绝对路径。
+
+    复用配音谷的重试策略（``synthesis_retry_count``/``synthesis_retry_delay``）与
+    落盘校验；``mode`` 为 voice_design(设计) / controllable_clone(可控克隆) / clone / preset_voice，
+    接口不支持时由接口管理层自行降级（如 controllable_clone -> clone）。失败抛最后一次异常。
+    """
+    output_path = Path(output_path)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    engine = get_tts_engine(interface_id)
+
+    kwargs = {
+        "ref_audio": ref_audio or None,
+        "mode": mode,
+        "speed": speed,
+        "voice": voice or None,
+        "model": model or None,
+        "voice_design": voice_design or None,
+        "controllable_clone": controllable_clone or None,
+        "ref_text": ref_text or None,
+    }
+    # 引擎签名精简时（未声明 **kwargs）先按签名过滤不支持的参数，避免 TypeError。
+    synthesize = engine.synthesize
+    try:
+        spec = inspect.signature(synthesize).parameters
+        if not any(p.kind == inspect.Parameter.VAR_KEYWORD for p in spec.values()):
+            kwargs = {k: v for k, v in kwargs.items() if k in spec}
+    except (TypeError, ValueError):
+        pass
+
+    max_retries = synthesis_retry_count()
+    delay = synthesis_retry_delay()
+    last_error: Exception | None = None
+    for attempt in range(max_retries + 1):
+        try:
+            output_path.unlink(missing_ok=True)
+            succeeded = synthesize(text, str(output_path), **kwargs)
+            if succeeded and output_path.exists() and output_path.stat().st_size > 0:
+                last_error = None
+                break
+            last_error = RuntimeError(f"TTS 接口 {interface_id} 未返回有效音频")
+        except TypeError:
+            # 极少数 wrapper 只接受 (text, output_path)，降级后再试一次
+            try:
+                output_path.unlink(missing_ok=True)
+                if synthesize(text, str(output_path)) and output_path.exists() and output_path.stat().st_size > 0:
+                    last_error = None
+                    break
+                last_error = RuntimeError(f"TTS 接口 {interface_id} 未返回有效音频")
+            except Exception as exc:  # noqa: BLE001
+                last_error = exc
+        except Exception as exc:  # noqa: BLE001
+            last_error = exc
+        if attempt < max_retries:
+            time.sleep(delay)
+    if last_error is not None:
+        output_path.unlink(missing_ok=True)
+        raise last_error
+    return output_path
+
+
+def register_voice_sample(
+    name: str,
+    interface_id: str,
+    mode: str,
+    sample_text: str,
+    sample_clip: Path,
+    voice_design: str = "",
+    controllable_clone: str = "",
+    reference_audio: str = "",
+    description: str = "",
+    gender: str = "",
+    age: str = "",
+    dialect: str = "",
+    tags: list = None,
+    language: str = "zh-CN",
+) -> dict:
+    """把一段已合成的音频登记到配音谷音色库（vf_voices），返回音色行 dict。
+
+    音频本体按音色库约定落到 ``voices/<voice_id>/`` 下：主片段记 sample_storage_key，
+    克隆参考音频（如有）记 reference_storage_key；随后写 voice_config.json 使其
+    在「晴沐配音谷 → 音色库」中可见可用。
+    """
+    voice_id = uuid.uuid4().hex
+    sample_clip = Path(sample_clip)
+    root = storage_root()
+    voice_dir = root / f"voices/{voice_id}"
+    voice_dir.mkdir(parents=True, exist_ok=True)
+
+    suffix = sample_clip.suffix.lower() or ".wav"
+    sample_key = f"voices/{voice_id}/design{suffix}"
+    shutil.copy2(sample_clip, root / sample_key)
+
+    reference_key = ""
+    if reference_audio and Path(reference_audio).is_file():
+        ext = Path(reference_audio).suffix.lower() or ".wav"
+        reference_key = f"voices/{voice_id}/reference{ext}"
+        shutil.copy2(reference_audio, root / reference_key)
+
+    params = {"voice_design": voice_design, "controllable_clone": controllable_clone}
+    design_text = voice_design or ""
+    with session() as conn:
+        conn.execute(
+            "INSERT INTO vf_voices (id, name, display_name, interface_id, voice_id, mode, language, tags_json, description,"
+            " reference_storage_key, preview_storage_key, preview_text, params_json, gender, voice_age, voice_pitch, dialect,"
+            " is_cloned, is_builtin, design_text, voice_group, sample_storage_key, emotions_json, status)"
+            " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                voice_id, name, name, interface_id, "", mode, language,
+                json.dumps(tags or ["音色角色"], ensure_ascii=False), description,
+                reference_key, "", sample_text,
+                json.dumps(params, ensure_ascii=False),
+                gender, age, "", dialect,
+                int(mode in ("clone", "controllable_clone")), 0, design_text, "", sample_key,
+                json.dumps([], ensure_ascii=False), "ready",
+            ),
+        )
+        row = conn.execute("SELECT * FROM vf_voices WHERE id = ?", (voice_id,)).fetchone()
+    from backend.voiceforge.voice_storage import write_voice_config
+
+    write_voice_config(voice_id)
+    return dict(row)

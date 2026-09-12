@@ -15,10 +15,11 @@ from backend.control_plane.models import Task, TaskNode
 from backend.control_plane.workflow_runtime import _node_type, _resource_for, _workspace, _write_legacy_task, queue_for, request_cancel, request_delete, submit_workflow, _clear_workspace_cache
 
 
-TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted"}
-# 批次视图排除的状态：已删除与删除中断残留（历史遗留的 stuck deleting 记录）
-# 不应再出现在批量页面，否则删除后条目仍显示（表现为"删除无效"）。
-BATCH_HIDDEN_STATUSES = {"deleted", "deleting"}
+TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted", "archived"}
+# 批次视图排除的状态：已删除与删除中断残留（历史遗留的 stuck deleting 记录）、
+# 已归档任务（产物已挪到外部归档目录，记录保留在历史项目的已归档列表）。
+# 不应再出现在批量页面，否则删除/归档后条目仍显示。
+BATCH_HIDDEN_STATUSES = {"deleted", "deleting", "archived"}
 WORKBENCH_TASK_STATUS = {
     "succeeded": "completed",
     "queued": "created",
@@ -320,6 +321,31 @@ class BatchExecutor:
 
     def get_batch_detail(self, batch_id: str) -> dict:
         return self._batch_detail(batch_id, self._tasks_for_batch(batch_id))
+
+    def get_archive_files(self, batch_id: str) -> dict:
+        """列出批次下各任务的归档产物清单（供归档弹窗展示）。"""
+        from backend.engine.batch_archive import describe_batch_tasks
+
+        tasks = self._tasks_for_batch(batch_id)
+        detail = self._batch_detail(batch_id, tasks)
+        return {
+            "batch_id": batch_id,
+            "batch_name": detail.get("name", ""),
+            "tasks": describe_batch_tasks(tasks),
+        }
+
+    def archive_batch(self, batch_id: str, target_dir: str, selections: Optional[dict] = None) -> dict:
+        """把批次下任务产物归档到目标文件夹，成功后在库中标记为已归档。"""
+        from backend.engine.batch_archive import archive_batch_tasks
+
+        _trace(f"归档批次 batch={batch_id[:8]} target={target_dir}")
+        tasks = self._tasks_for_batch(batch_id)
+        result = archive_batch_tasks(tasks, target_dir, selections)
+        _trace(
+            f"归档批次完成 batch={batch_id[:8]} archived={len(result.get('archived', []))} "
+            f"blocked={len(result.get('blocked', []))} failed={len(result.get('failed', []))}"
+        )
+        return {"batch_id": batch_id, **result}
 
     def _enqueue(self, task_id: str, mode: str = "new") -> None:
         with session_scope() as session:

@@ -8,8 +8,8 @@
       "builtin": true,
       "balance": null,
       "description": "KieAI 聚合 Suno 的音乐生成接口（文生音乐 / 纯音乐 / 歌词 / 扩展 / 翻唱 / 伴奏 / 人声 / 分离 / 转码）。",
-      "api_source_url": "https://kieai.erweima.ai",
-      "model_docs_url": "",
+      "api_source_url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+      "model_docs_url": "https://kie.ai/zh-CN/market",
       "config": {
         "api_url": "",
         "api_key": "",
