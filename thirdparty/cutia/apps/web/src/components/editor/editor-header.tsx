@@ -35,12 +35,18 @@ import { useAgentStore } from "@/stores/agent-store";
 export function EditorHeader() {
 	const { t } = useTranslation();
 	return (
-		<header className="bg-background flex h-[3.4rem] items-center justify-between px-3 pt-0.5">
-			<div className="flex items-center gap-1">
+		<header
+			className={cn(
+				"glass-toolbar z-40 flex h-[3.6rem] items-center justify-between",
+				"px-4 border-b border-border/60",
+			)}
+		>
+			<div className="flex items-center gap-2">
 				<ProjectDropdown />
+				<div className="mx-1 h-5 w-px bg-border" aria-hidden />
 				<EditableProjectName />
 			</div>
-			<nav className="flex items-center gap-2">
+			<nav className="flex items-center gap-1.5">
 				<FeedbackTrigger>
 					<Button
 						type="button"
@@ -48,6 +54,7 @@ export function EditorHeader() {
 						size="icon"
 						aria-label={t("Feedback")}
 						title={t("Feedback")}
+						className="size-9 rounded-full"
 					>
 						<HugeiconsIcon icon={BubbleChatIcon} className="size-4" />
 					</Button>
@@ -130,19 +137,26 @@ function ProjectDropdown() {
 		<>
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
-					<Button variant="ghost" size="icon" className="p-1 rounded-sm size-8">
+					<Button
+						variant="ghost"
+						size="icon"
+						className="size-9 rounded-full p-1.5"
+					>
 						<Image
 							src={DEFAULT_LOGO_URL}
 							alt="Project thumbnail"
-							width={32}
-							height={32}
+							width={28}
+							height={28}
 							className="dark:invert size-5"
 						/>
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="start" className="z-100 w-52">
+				<DropdownMenuContent
+					align="start"
+					className="z-100 w-56 rounded-xl border-border/60 shadow-lg"
+				>
 					<DropdownMenuItem
-						className="flex items-center gap-1.5"
+						className="flex items-center gap-2 rounded-md"
 						onClick={handleExit}
 						disabled={isExiting}
 					>
@@ -152,7 +166,7 @@ function ProjectDropdown() {
 
 					<DropdownMenuSeparator />
 					<DropdownMenuItem
-						className="flex items-center gap-1.5"
+						className="flex items-center gap-2 rounded-md"
 						onClick={() => setOpenDialog("shortcuts")}
 					>
 						<HugeiconsIcon icon={CommandIcon} className="size-4" />
@@ -250,8 +264,11 @@ function EditableProjectName() {
 			onKeyDown={handleKeyDown}
 			style={{ fieldSizing: "content" }}
 			className={cn(
-				"text-[0.9rem] h-8 px-2 py-1 rounded-sm bg-transparent outline-none cursor-pointer hover:bg-accent hover:text-accent-foreground",
-				isEditing && "ring-1 ring-ring cursor-text hover:bg-transparent",
+				"text-[0.92rem] h-9 px-3 py-1.5 rounded-full bg-transparent outline-none cursor-pointer",
+				"hover:bg-accent/70 hover:text-accent-foreground transition-colors",
+				"max-w-[24ch] truncate",
+				isEditing &&
+					"ring-2 ring-primary/40 cursor-text bg-card hover:bg-card shadow-sm",
 			)}
 		/>
 	);
@@ -268,7 +285,10 @@ function AgentToggle() {
 			size="icon"
 			onClick={togglePanel}
 			title={t("AI Agent")}
-			className="size-8"
+			className={cn(
+				"size-9 rounded-full",
+				isOpen && "bg-primary/15 text-primary hover:bg-primary/20",
+			)}
 		>
 			<HugeiconsIcon icon={SparklesIcon} className="size-4" />
 		</Button>

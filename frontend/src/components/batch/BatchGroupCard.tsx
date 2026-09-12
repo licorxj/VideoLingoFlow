@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronDown, ChevronRight, Layers, Play, Square, RotateCcw, RefreshCw, Trash2, X, Plus, FolderOpen, Upload, FileText, Trash } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, Play, Square, RotateCcw, RefreshCw, Trash2, X, Plus, FolderOpen, Upload, FileText, Trash, Archive } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { batchApi, BatchDetail } from "@/api/batch";
 import { nativeFileDialog } from "@/api/files";
 import { useAlert } from "@/components/ui/AlertProvider";
 import client from "@/api/client";
 import BatchTaskItem from "./BatchTaskItem";
+import BatchArchiveDialog from "./BatchArchiveDialog";
 
 interface SavedWorkflow {
   id: string;
@@ -45,6 +46,7 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
   const [syncModalOpen, setSyncModalOpen] = useState(false);
   const [workflows, setWorkflows] = useState<SavedWorkflow[]>([]);
   const [syncLoading, setSyncLoading] = useState(false);
+  const [archiveModalOpen, setArchiveModalOpen] = useState(false);
 
   // Add tasks dialog state
   const [addModalOpen, setAddModalOpen] = useState(false);
@@ -310,6 +312,13 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
           <span className={cn("text-[10px] font-semibold px-2 py-0.5 rounded-md", statusBadge.cls)}>
             {statusBadge.label}
           </span>
+          <button
+            onClick={(e) => { e.stopPropagation(); setArchiveModalOpen(true); }}
+            className="flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-md border border-border/60 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            title="把批次产物归档到指定文件夹，并从列表移除"
+          >
+            <Archive className="w-3 h-3" />归档批次
+          </button>
           <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-cyan-500/10 text-cyan-600 border border-cyan-500/20">
             {completedCount}/{tasks.length} 完成
             {failedCount > 0 && <span className="text-red-500"> · {failedCount} 失败</span>}
@@ -436,6 +445,16 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
         </div>
       )}
     </div>
+
+    {/* Archive batch modal */}
+    {archiveModalOpen && (
+      <BatchArchiveDialog
+        batchId={batch.batch_id}
+        batchName={batch.name}
+        onClose={() => setArchiveModalOpen(false)}
+        onArchived={() => { setSelectedTasks(new Set()); onRefresh(); }}
+      />
+    )}
 
     {/* Sync workflow modal */}
     {syncModalOpen && (

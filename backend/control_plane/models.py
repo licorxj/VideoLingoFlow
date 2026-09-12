@@ -111,6 +111,9 @@ class Task(TimestampedVersioned, Base):
     timeout_seconds: Mapped[int | None] = mapped_column(Integer)
     deletion_requested: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     worker_id: Mapped[str | None] = mapped_column(String(128))
+    # 归档：产物被复制到外部归档目录后，任务标记为已归档并记录归档路径（供后续载回）
+    archive_path: Mapped[str | None] = mapped_column(String(1024))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     payload: Mapped[dict] = mapped_column(JSON, nullable=False, default=dict)
     project: Mapped[Project | None] = relationship(back_populates="tasks")
     nodes: Mapped[list["TaskNode"]] = relationship(back_populates="task", cascade="all, delete-orphan")
@@ -225,6 +228,7 @@ class Creation(SoftDeleteMixin, TimestampedVersioned, Base):
     genre_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     art_style_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     audience_tags: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
+    video_aspect_ratio: Mapped[str] = mapped_column(String(16), nullable=False, default="16:9")
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="draft")
     script_text: Mapped[str] = mapped_column(Text, nullable=False, default="")
     characters: Mapped[list["CreationCharacter"]] = relationship(back_populates="creation", cascade="all, delete-orphan")
@@ -329,6 +333,9 @@ class CreationShot(SoftDeleteMixin, TimestampedVersioned, Base):
     duration_seconds: Mapped[float | None] = mapped_column(Float)
     image_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
     video_prompt: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # 组装分镜提示词节点产出的有序参考图（绝对路径 JSON 列表：场景→道具(合并)→角色…），
+    # 供「分镜首尾帧」以图生图方式生成分镜图时按序注入参考图，保证一致性。
+    image_prompt_refs: Mapped[str] = mapped_column(Text, nullable=False, default="")
     reference_images: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")
     characters: Mapped[list] = mapped_column(JSON, nullable=False, default=list)
@@ -358,6 +365,11 @@ class CreationAsset(SoftDeleteMixin, TimestampedVersioned, Base):
     duration_seconds: Mapped[float | None] = mapped_column(Float)
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
     metadata_json: Mapped[dict] = mapped_column("metadata", JSON, nullable=False, default=dict)
+    # 人工审查：review_status 空=未审 / approved=通过 / rejected=打回（需重做）
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="")
+    review_note: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # N 选 1：同一分镜同一阶段多个候选中的主选（下游配音/成片默认取主选）
+    is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     creation: Mapped[Creation] = relationship(back_populates="assets")
 
 
@@ -485,6 +497,7 @@ class Credential(TimestampedVersioned, Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
     value: Mapped[str] = mapped_column(Text, nullable=False, default="")
     purpose: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    register_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
     # 多 key 轮询：value 为 JSON 数组（兼容历史纯文本单 key）；新建默认开启
     rotate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     current_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

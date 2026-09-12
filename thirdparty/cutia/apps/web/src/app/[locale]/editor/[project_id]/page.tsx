@@ -57,7 +57,8 @@ function EditorShell() {
 			) : (
 				<>
 					<EditorHeader />
-					<div className="min-h-0 min-w-0 flex-1 px-3 pb-3">
+					{/* Editor canvas: panels float on a soft surface with breathing room */}
+					<div className="min-h-0 min-w-0 flex-1 px-4 pb-4 pt-2">
 						<EditorLayout />
 					</div>
 				</>
@@ -75,7 +76,7 @@ function EditorLayout() {
 	return (
 		<ResizablePanelGroup
 			direction="horizontal"
-			className="size-full gap-[0.19rem]"
+			className="size-full gap-3"
 			onLayout={(sizes) => {
 				if (isAgentOpen && sizes[1] != null) {
 					setPanel("agent", sizes[1]);
@@ -89,7 +90,7 @@ function EditorLayout() {
 			>
 				<ResizablePanelGroup
 					direction="vertical"
-					className="size-full gap-[0.18rem]"
+					className="size-full gap-3"
 					onLayout={(sizes) => {
 						setPanel("mainContent", sizes[0] ?? panels.mainContent);
 						setPanel("timeline", sizes[1] ?? panels.timeline);
@@ -103,7 +104,7 @@ function EditorLayout() {
 					>
 						<ResizablePanelGroup
 							direction="horizontal"
-							className="size-full gap-[0.19rem]"
+							className="size-full gap-3"
 							onLayout={(sizes) => {
 								setPanel("tools", sizes[0] ?? panels.tools);
 								setPanel("preview", sizes[1] ?? panels.preview);

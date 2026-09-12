@@ -22,6 +22,7 @@ import {
   Scissors,
   Mic2,
   Store,
+  Sparkles,
 } from "lucide-react";
 
 const NAV_GROUPS = [
@@ -32,6 +33,7 @@ const NAV_GROUPS = [
   ],
   [
     { to: "/materials", icon: Images, label: "素材库" },
+    { to: "/creation-canvas", icon: Sparkles, label: "创作画布" },
     { to: "/editing", icon: Clapperboard, label: "剪辑工作台" },
     { to: "/voiceforge", icon: Mic2, label: "晴沐配音谷" },
     { to: "/social", icon: Share2, label: "多平台发布" },

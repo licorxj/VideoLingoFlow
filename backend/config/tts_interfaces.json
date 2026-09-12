@@ -1055,6 +1055,85 @@
         "timeout": 600,
         "voice_options": []
       }
+    },
+    {
+      "id": "elevenlab-kie",
+      "name": "elevenlab-kie",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "KIE AI 聚合的 ElevenLabs 语音合成（elevenlabs/text-to-speech-turbo-2-5）：预设音色文本转语音，云端合成不占本地 GPU；支持语速与稳定性/相似度/风格等高级参数。",
+      "api_source_url": "https://kie.ai",
+      "config": {
+        "sdk_package": "",
+        "sdk_module": "backend.tts.sdk.kieai_elevenlabs_wrapper",
+        "sdk_function": "synthesize",
+        "sdk_voice_list_module": "backend.tts.sdk.kieai_elevenlabs_wrapper",
+        "sdk_voice_list_function": "list_voices",
+        "sdk_api_key": "secret://KIEAI_API_KEY",
+        "text_param": "text",
+        "ref_audio_param": null,
+        "speed_param": "speed",
+        "voice": "",
+        "model": "elevenlabs/text-to-speech-turbo-2-5",
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [
+          "elevenlabs/text-to-speech-turbo-2-5",
+          "elevenlabs/text-to-speech-multilingual-v2"
+        ],
+        "voice_options": [],
+        "sdk_extra_args": {
+          "stability": "",
+          "similarity_boost": "",
+          "style": "",
+          "language_code": ""
+        },
+        "custom_params": [
+          {
+            "key": "stability",
+            "default": "",
+            "description": "稳定性 0.0-1.0，留空使用平台默认值"
+          },
+          {
+            "key": "similarity_boost",
+            "default": "",
+            "description": "相似度增强 0.0-1.0，留空使用平台默认值"
+          },
+          {
+            "key": "style",
+            "default": "",
+            "description": "风格强度 0.0-1.0，留空使用平台默认值"
+          },
+          {
+            "key": "language_code",
+            "default": "",
+            "description": "语言代码（如 zh / en / ja），留空自动判断"
+          }
+        ],
+        "modes": {
+          "clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": false,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "max_concurrent": 3,
+        "timeout": 600
+      }
     }
   ]
 }

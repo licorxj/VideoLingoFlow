@@ -48,6 +48,215 @@
   },
   "models": [
     {
+      "id": "infinitalk/from-audio",
+      "name": "Infinitalk - From Audio",
+      "platform": "infinitalk",
+      "category": "video",
+      "family": "market",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "infinitalk/from-audio",
+      "model_options": [
+        "infinitalk/from-audio"
+      ],
+      "description": "Content generation using infinitalk/from-audio: image + audio driven video.",
+      "params": [
+        {
+          "name": "image_url",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "URL of the input image (jpeg/png/webp, max 10MB)."
+        },
+        {
+          "name": "audio_url",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "URL of the driving audio (mpeg/wav/aac/mp4/ogg, max 10MB)."
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "Text prompt guiding video generation (max 5000 chars)."
+        },
+        {
+          "name": "resolution",
+          "type": "string",
+          "required": false,
+          "default": "480p",
+          "enum": [
+            "480p",
+            "720p"
+          ],
+          "description": "Resolution of the generated video."
+        },
+        {
+          "name": "seed",
+          "type": "number",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "Random seed for reproducibility (10000-1000000)."
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/market/infinitalk/from-audio",
+      "pricing": {
+        "official_price": "N/A",
+        "kie_price": "N/A",
+        "credit_price": "",
+        "credit_unit": "per video",
+        "discount_rate": 0.0,
+        "provider": "infinitalk",
+        "interface_type": "video",
+        "example": "infinitalk/from-audio",
+        "anchor": "https://kie.ai",
+        "variants": 1,
+        "approx": true
+      }
+    },
+    {
+      "id": "kling-3.0/video",
+      "name": "Kling 3.0 Video",
+      "platform": "kling",
+      "category": "video",
+      "family": "market",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "kling-3.0/video",
+      "model_options": [
+        "kling-3.0/video"
+      ],
+      "description": "Generate high-quality videos with multi-shot and element references using Kling 3.0.",
+      "params": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "Video generation prompt (effective when multi_shots is false)."
+        },
+        {
+          "name": "image_urls",
+          "type": "array<string>",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "Reference / first-last frame image URLs (single-shot supports first+last frame)."
+        },
+        {
+          "name": "sound",
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "enum": null,
+          "description": "Whether to enable sound effects."
+        },
+        {
+          "name": "duration",
+          "type": "string",
+          "required": true,
+          "default": "5",
+          "enum": [
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "10",
+            "11",
+            "12",
+            "13",
+            "14",
+            "15"
+          ],
+          "description": "Total video duration in seconds (3-15)."
+        },
+        {
+          "name": "aspect_ratio",
+          "type": "string",
+          "required": true,
+          "default": "16:9",
+          "enum": [
+            "16:9",
+            "9:16",
+            "1:1"
+          ],
+          "description": "Video aspect ratio; optional when image_urls provided (auto-adapted)."
+        },
+        {
+          "name": "mode",
+          "type": "string",
+          "required": true,
+          "default": "pro",
+          "enum": [
+            "std",
+            "pro",
+            "4K"
+          ],
+          "description": "Generation mode: std(720p) / pro(1080p) / 4K(2160p)."
+        },
+        {
+          "name": "multi_shots",
+          "type": "boolean",
+          "required": true,
+          "default": false,
+          "enum": null,
+          "description": "Whether to use multi-shot mode."
+        },
+        {
+          "name": "multi_prompt",
+          "type": "array<object>",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "Shot prompts (effective when multi_shots is true)."
+        },
+        {
+          "name": "kling_elements",
+          "type": "array<object>",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "Referenced elements (image/video/audio). Max 3 elements."
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "0.335",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/market/kling/kling-3-0",
+      "pricing": {
+        "official_price": "N/A",
+        "kie_price": "0.335",
+        "credit_price": "",
+        "credit_unit": "per video",
+        "discount_rate": 0.0,
+        "provider": "kling",
+        "interface_type": "video",
+        "example": "kling-3.0/video",
+        "anchor": "https://kie.ai",
+        "variants": 1,
+        "approx": true
+      }
+    },
+    {
       "id": "gpt-image-2-text-to-image",
       "name": "GPT Image-2 - Text to Image",
       "platform": "gpt-image",

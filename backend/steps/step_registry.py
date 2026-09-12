@@ -14,9 +14,11 @@ from backend.steps.s_aigc_jimeng import S_AIGC_Jimeng
 from backend.steps.s_agi_comic import (
     S_AGI_Project, S_AGI_Deepen, S_AGI_Character, S_AGI_Voice, S_AGI_Scene, S_AGI_Prop, S_AGI_Chapter, S_AGI_Shot,
     S_AGI_Extract, S_AGI_Prompt,
+    S_AGI_ShotPrompt,
     S_AGI_ShotFrames, S_AGI_ShotVideo, S_AGI_ShotDub,
     S_AGI_ShotExport, S_AGI_ChapterExport,
 )
+from backend.steps.s_agi_data import S_AGI_Query, S_AGI_Write, S_AGI_AssetRegister
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
 from backend.steps.s_asr_result_validate import S_ASRResultValidate
@@ -60,10 +62,14 @@ from backend.steps.s_resolve_path import S_ResolvePath
 from backend.steps.s_translate_task_name import S_TranslateTaskName
 from backend.steps.s_json_to_text import S_JsonToText
 from backend.steps.s_json_editor import S_JsonEditor
+from backend.steps.s_json_get import S_JsonGet
 from backend.steps.s_json_visual_editor import S_JsonVisualEditor
 from backend.steps.s_text_editor import S_TextEditor
+from backend.steps.s_text_concat import S_TextConcat
 from backend.steps.s_subtitle_editor import S_SubtitleEditor
 from backend.steps.s_video_split import S_VideoSplit
+from backend.steps.s_video_clip_intro_outro import S_VideoClipIntroOutro
+from backend.steps.s_video_dedupe import S_VideoDedupe
 from backend.steps.s_video_region_crop import S_VideoRegionCrop
 from backend.steps.s_video_region_composite import S_VideoRegionComposite
 from backend.steps.s_cutia import S_Cutia
@@ -101,6 +107,11 @@ from backend.steps.s_musicgen import (
     S_MusicCover, S_MusicAddInstrumental, S_MusicAddVocals,
     S_MusicSeparate, S_MusicToWav, S_MusicUploadExtend,
 )
+from backend.steps.s_kie_image_upscale import S_KieImageUpscale
+from backend.steps.s_kie_video_upscale import S_KieVideoUpscale
+from backend.steps.s_kie_lip_sync import S_KieLipSync
+from backend.steps.s_kie_image_audio_to_video import S_KieImageAudioToVideo
+from backend.steps.s_kie_media_host import S_KieMediaHost
 from backend.steps.s_hyperframes_creative import S_HyperFramesCreative
 from backend.steps.s_hyperframes_render import S_HyperFramesRender
 from backend.steps.s_hyperframes_cli import S_HyperFramesCli
@@ -195,6 +206,7 @@ _STEPS = {
     "agi_prop": S_AGI_Prop(),
     "agi_extract": S_AGI_Extract(),
     "agi_prompt": S_AGI_Prompt(),
+    "agi_shot_prompt": S_AGI_ShotPrompt(),
     "agi_chapter": S_AGI_Chapter(),
     "agi_shot": S_AGI_Shot(),
     "agi_shot_frames": S_AGI_ShotFrames(),
@@ -202,6 +214,9 @@ _STEPS = {
     "agi_shot_dub": S_AGI_ShotDub(),
     "agi_shot_export": S_AGI_ShotExport(),
     "agi_chapter_export": S_AGI_ChapterExport(),
+    "agi_query": S_AGI_Query(),
+    "agi_write": S_AGI_Write(),
+    "agi_asset_register": S_AGI_AssetRegister(),
     "s_video_frame_extract": S_VideoFrameExtract(),
     "video_frame_extract": S_VideoFrameExtract(),
     "s_video_transcode": S_VideoTranscode(),
@@ -230,14 +245,22 @@ _STEPS = {
     "json_to_text": S_JsonToText(),
     "s_json_editor": S_JsonEditor(),
     "json_editor": S_JsonEditor(),
+    "s_json_get": S_JsonGet(),
+    "json_get": S_JsonGet(),
     "s_json_visual_editor": S_JsonVisualEditor(),
     "json_visual_editor": S_JsonVisualEditor(),
     "s_text_editor": S_TextEditor(),
     "text_editor": S_TextEditor(),
+    "s_text_concat": S_TextConcat(),
+    "text_concat": S_TextConcat(),
     "s_subtitle_editor": S_SubtitleEditor(),
     "subtitle_editor": S_SubtitleEditor(),
     "s_video_split": S_VideoSplit(),
     "video_split": S_VideoSplit(),
+    "s_video_clip_intro_outro": S_VideoClipIntroOutro(),
+    "video_clip_intro_outro": S_VideoClipIntroOutro(),
+    "s_video_dedupe": S_VideoDedupe(),
+    "video_dedupe": S_VideoDedupe(),
     "s_video_region_crop": S_VideoRegionCrop(),
     "video_region_crop": S_VideoRegionCrop(),
     "s_video_region_composite": S_VideoRegionComposite(),
@@ -327,6 +350,21 @@ _STEPS = {
     "s_music_to_wav": S_MusicToWav(),
     "music_upload_extend": S_MusicUploadExtend(),
     "s_music_upload_extend": S_MusicUploadExtend(),
+    # KIE AI 图片高清放大（直接调用 kieai_sdk，置于 AI生成类节点 分组）
+    "kie_image_upscale": S_KieImageUpscale(),
+    "s_kie_image_upscale": S_KieImageUpscale(),
+    # KIE AI 视频高清放大（直接调用 kieai_sdk，置于 AI生成类节点 分组）
+    "kie_video_upscale": S_KieVideoUpscale(),
+    "s_kie_video_upscale": S_KieVideoUpscale(),
+    # KIE AI 视频对口型（直接调用 kieai_sdk，置于 AI生成类节点 分组）
+    "kie_lip_sync": S_KieLipSync(),
+    "s_kie_lip_sync": S_KieLipSync(),
+    # KIE AI 图声生视频（图片+声音驱动，直接调用 kieai_sdk，置于 AI生成类节点 分组）
+    "kie_image_audio_to_video": S_KieImageAudioToVideo(),
+    "s_kie_image_audio_to_video": S_KieImageAudioToVideo(),
+    # KIE AI 图床网存（免费媒体暂存，直接调用 kieai_sdk 上传接口，置于 网络请求类节点 分组）
+    "kie_media_host": S_KieMediaHost(),
+    "s_kie_media_host": S_KieMediaHost(),
 }
 
 

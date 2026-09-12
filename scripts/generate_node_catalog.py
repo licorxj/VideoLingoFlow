@@ -32,6 +32,11 @@ CATEGORY_LABELS: Dict[str, str] = {
     "translation": "翻译相关节点",
     "flow_control": "流程控制节点",
     "network_request": "网络请求类节点",
+    "agi_story": "漫剧·剧本链",
+    "agi_asset": "漫剧·资产链",
+    "agi_shot": "漫剧·分镜链",
+    "agi_render": "漫剧·成片链",
+    "agi_data": "漫剧·数据链",
     "aigc": "AIGC流程链",
     "agent": "智能体",
     "utility": "工具类节点",
@@ -47,7 +52,8 @@ CATEGORY_LABELS: Dict[str, str] = {
 # 期望的分组展示顺序（其余分组按字母序追加在后）
 CATEGORY_ORDER: List[str] = [
     "io", "input", "output", "preview", "audio", "video",
-    "ai_gen", "ai", "translation", "aigc", "agent",
+    "ai_gen", "ai", "translation",
+    "agi_story", "agi_asset", "agi_shot", "agi_render", "agi_data", "aigc", "agent",
     "flow_control", "network_request", "utility", "file",
     "group_node", "process", "publish",
 ]

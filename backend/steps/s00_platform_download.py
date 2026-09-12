@@ -346,12 +346,14 @@ class S00PlatformDownload(BaseStep):
         if callback:
             callback(100, f"Downloaded: {len(produced)} files")
 
+        _outputs = {
+            ("image" if key == "cover" else key): os.path.relpath(path, task_dir)
+            for key, path in produced.items()
+        }
+        _outputs["filename"] = os.path.basename(produced.get("video", ""))
         return {
             "artifacts": [os.path.relpath(path, task_dir) for path in produced.values()],
-            "outputs": {
-                ("image" if key == "cover" else key): os.path.relpath(path, task_dir)
-                for key, path in produced.items()
-            },
+            "outputs": _outputs,
         }
 
     def _parse_vldl_output(self, stdout: str):

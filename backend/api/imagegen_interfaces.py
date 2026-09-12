@@ -5,7 +5,7 @@ import asyncio
 import requests
 from concurrent.futures import ThreadPoolExecutor
 from typing import Optional, List
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 
 from backend.imagegen.imagegen_interface_manager import get_imagegen_interface_manager
@@ -261,6 +261,30 @@ async def get_model_params(iface_id: str, model: str):
     return {
         "resolutions": meta.get("resolutions", ["1K", "2K"]),
         "aspect_ratios": meta.get("aspect_ratios", ["1:1", "16:9", "9:16"]),
+    }
+
+
+@router.get("/{iface_id}/param-options")
+async def get_imagegen_param_options(
+    iface_id: str,
+    model: str = Query("", description="模型名；留空取接口首个可用模型"),
+):
+    """返回分辨率/比例选项，供节点表单级联下拉。
+
+    model 允许留空（节点未显式选模型时），此时取接口首个有元数据的模型；
+    元数据缺失时返回通用兜底列表，保证前端下拉始终有可选项。
+    """
+    mgr = get_imagegen_interface_manager()
+    metadata = mgr.get_model_metadata(iface_id) or {}
+    target = model if model in metadata else ""
+    if not target:
+        models = mgr.get_models(iface_id) or []
+        target = next((m for m in models if m in metadata), models[0] if models else "")
+    meta = metadata.get(target, {}) if target else {}
+    return {
+        "model": target,
+        "resolutions": meta.get("resolutions") or ["1K", "2K"],
+        "aspect_ratios": meta.get("aspect_ratios") or ["1:1", "16:9", "9:16"],
     }
 
 

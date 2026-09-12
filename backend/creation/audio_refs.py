@@ -54,9 +54,13 @@ def resolve_audio_ref(ref: str) -> dict:
 
 
 def audio_ref_abspath(ref: str) -> str | None:
-    """返回引用指向的音频文件绝对路径;素材没有存储键时返回 None。"""
+    """返回引用指向的音频文件绝对路径;素材没有可用存储键时返回 None。
+
+    音色(vf_voices)没有 storage_key 列,按 主片段 → 参考音频 顺序取首个非空存储键。
+    """
     row = resolve_audio_ref(ref)
-    storage_key = row.get("storage_key") or ""
+    storage_key = (row.get("storage_key") or row.get("sample_storage_key")
+                   or row.get("reference_storage_key") or "")
     if not storage_key:
         return None
     from backend.voiceforge.database import storage_root

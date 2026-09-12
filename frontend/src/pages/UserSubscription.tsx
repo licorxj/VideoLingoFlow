@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { BadgeCheck, Clock3, ExternalLink, KeyRound, Loader2, LogIn, LogOut, Mail, RefreshCw, ShieldCheck, Sparkles, Unplug, UserPlus, UsersRound } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { BadgeCheck, CalendarDays, Clock3, Coins, Crown, ExternalLink, KeyRound, Loader2, LogIn, LogOut, Mail, MonitorSmartphone, RefreshCw, ShieldCheck, Sparkles, Unplug, UserPlus, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -102,11 +102,41 @@ function formatRemainingTime(value: string | undefined | null) {
   return days > 0 ? `${days} 天 ${hours} 小时` : `${hours} 小时`;
 }
 
-function SummaryField({ label, value }: { label: string; value: string }) {
+function SummaryField({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border/50 bg-background/60 px-4 py-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 text-sm font-semibold break-all">{value || "--"}</div>
+    <div className="min-w-0 rounded-xl border border-border/50 bg-muted/25 px-3 py-2">
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        {icon}
+        <span className="truncate">{label}</span>
+      </div>
+      <div className="mt-0.5 truncate text-sm font-semibold" title={value || "--"}>{value || "--"}</div>
+    </div>
+  );
+}
+
+function StatTile({
+  icon,
+  label,
+  value,
+  tone = "default",
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone?: "default" | "success";
+}) {
+  return (
+    <div
+      className={cn(
+        "min-w-0 rounded-xl border px-3 py-2 transition-colors",
+        tone === "success" ? "border-success/40 bg-success/5" : "border-border/50 bg-background/60"
+      )}
+    >
+      <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+        <span className="shrink-0 text-primary/80">{icon}</span>
+        <span className="truncate">{label}</span>
+      </div>
+      <div className="mt-0.5 truncate text-sm font-bold" title={value || "--"}>{value || "--"}</div>
     </div>
   );
 }
@@ -125,7 +155,7 @@ function PreferenceToggle({
       type="button"
       onClick={() => onChange(!checked)}
       className={cn(
-        "inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-all duration-200",
+        "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-all duration-200",
         checked
           ? "border-primary/40 bg-primary/10 shadow-sm shadow-primary/10"
           : "border-border/50 bg-background/50 hover:border-primary/25 hover:bg-primary/5"
@@ -133,18 +163,11 @@ function PreferenceToggle({
     >
       <span
         className={cn(
-          "flex h-4 w-4 shrink-0 items-center justify-center rounded-full border transition-all",
-          checked
-            ? "border-primary bg-primary text-primary-foreground"
-            : "border-border/70 bg-background"
+          "flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border transition-all",
+          checked ? "border-primary bg-primary text-primary-foreground" : "border-border/70 bg-background"
         )}
       >
-        <span
-          className={cn(
-            "h-2 w-2 rounded-full transition-all",
-            checked ? "bg-current" : "bg-transparent"
-          )}
-        />
+        <span className={cn("h-1.5 w-1.5 rounded-full transition-all", checked ? "bg-current" : "bg-transparent")} />
       </span>
       <span className="font-medium text-foreground">{title}</span>
     </button>
@@ -368,201 +391,191 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
   const openLink = (url: string) => window.open(url, "_blank", "noopener,noreferrer");
 
   return (
-    <PageBackground tone="settings" className={cn("space-y-5", !embedded && "max-w-7xl mx-auto")}>
+    <PageBackground tone="settings" className={cn("space-y-3", !embedded && "max-w-7xl mx-auto")}>
       {!embedded && (
-        <div className="relative overflow-hidden rounded-3xl border border-border/60 bg-card shadow-sm">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.14),transparent_30%)]" />
-          <div className="relative p-6 md:p-8 flex flex-col lg:flex-row gap-6 lg:items-end lg:justify-between">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <div className="w-11 h-11 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-extrabold tracking-tight">用户和订阅</h2>
-                  <p className="text-sm text-muted-foreground">连接晴沐智坊云端会员系统，管理登录、权益和本地使用额度</p>
-                </div>
+        <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.16),transparent_36%),radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.14),transparent_32%)]" />
+          <div className="relative flex flex-col gap-4 p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <ShieldCheck className="h-5 w-5" />
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant={TYPE_BADGE[userType]} className="px-3 py-1">{TYPE_LABEL[userType]}</Badge>
-                <Badge variant="outline" className="px-3 py-1">软件 ID：{status?.software_id || "vlf3387"}</Badge>
-                <Badge variant={canExecuteNode ? "success" : "destructive"} className="px-3 py-1">{canExecuteNode ? "可执行节点" : "额度不足"}</Badge>
+              <div className="space-y-1.5">
+                <h2 className="text-xl font-extrabold tracking-tight">用户和订阅</h2>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <Badge variant={TYPE_BADGE[userType]} className="px-2 py-0 text-[11px]">{TYPE_LABEL[userType]}</Badge>
+                  <Badge variant="outline" className="px-2 py-0 text-[11px]">软件 ID：{status?.software_id || "vlf3387"}</Badge>
+                  <Badge variant={canExecuteNode ? "success" : "destructive"} className="px-2 py-0 text-[11px]">
+                    {canExecuteNode ? "可执行节点" : "额度不足"}
+                  </Badge>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3 min-w-[300px]">
-              <div className="rounded-2xl bg-background/70 border border-border/50 p-4">
-                <div className="text-xs text-muted-foreground">每日节点额度</div>
-                <div className="text-lg font-bold mt-1">{usageText}</div>
-              </div>
-              <div className="rounded-2xl bg-background/70 border border-border/50 p-4">
-                <div className="text-xs text-muted-foreground">订阅权益</div>
-                <div className="text-lg font-bold mt-1">{projectEntitlements.length || 0} 条</div>
-              </div>
+            <div className="grid grid-cols-2 gap-2 sm:min-w-[300px]">
+              <StatTile icon={<Zap className="h-3.5 w-3.5" />} label="每日节点额度" value={usageText} />
+              <StatTile icon={<Crown className="h-3.5 w-3.5" />} label="订阅权益" value={`${projectEntitlements.length || 0} 条`} />
             </div>
           </div>
         </div>
       )}
 
-      {error && <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
+      {error && (
+        <div className="rounded-xl border border-destructive/25 bg-destructive/10 px-3 py-2 text-xs text-destructive">{error}</div>
+      )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><LogIn className="w-5 h-5 text-primary" />登录</CardTitle>
-            <CardDescription>登录后可查看权益并解锁订阅能力</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Input value={loginForm.username} onChange={(e) => setLoginForm((v) => ({ ...v, username: e.target.value }))} placeholder="用户名" />
-            <Input type="password" value={loginForm.password} onChange={(e) => setLoginForm((v) => ({ ...v, password: e.target.value }))} placeholder="密码" />
-            <div className="flex flex-wrap gap-2">
-              <PreferenceToggle
-                checked={rememberUsername}
-                title="记住账号"
-                onChange={handleRememberUsernameChange}
-              />
-              <PreferenceToggle
-                checked={rememberPassword}
-                title="记住密码"
-                onChange={handleRememberPasswordChange}
-              />
-              <PreferenceToggle
-                checked={autoLogin}
-                title="自动登录"
-                onChange={handleAutoLoginChange}
-              />
+      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
+        <Card className="overflow-hidden">
+          <CardHeader className="flex-row items-center gap-2 space-y-0 p-4 pb-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <LogIn className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <CardTitle className="text-base">登录</CardTitle>
+              <CardDescription className="text-xs">登录后可查看权益并解锁订阅能力</CardDescription>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button onClick={handleLogin} disabled={loading} className="sm:flex-1">
-                {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <LogIn className="w-4 h-4 mr-2" />}
+          </CardHeader>
+          <CardContent className="space-y-2.5 p-4 pt-0">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <Input className="h-9" value={loginForm.username} onChange={(e) => setLoginForm((v) => ({ ...v, username: e.target.value }))} placeholder="用户名" />
+              <Input className="h-9" type="password" value={loginForm.password} onChange={(e) => setLoginForm((v) => ({ ...v, password: e.target.value }))} placeholder="密码" />
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              <PreferenceToggle checked={rememberUsername} title="记住账号" onChange={handleRememberUsernameChange} />
+              <PreferenceToggle checked={rememberPassword} title="记住密码" onChange={handleRememberPasswordChange} />
+              <PreferenceToggle checked={autoLogin} title="自动登录" onChange={handleAutoLoginChange} />
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleLogin} disabled={loading} size="sm" className="flex-1">
+                {loading ? <Loader2 className="animate-spin" /> : <LogIn />}
                 登录
               </Button>
-              <Button onClick={() => setRegisterOpen(true)} variant="outline" className="sm:flex-1">
-                <UserPlus className="w-4 h-4 mr-2" />
+              <Button onClick={() => setRegisterOpen(true)} variant="outline" size="sm" className="flex-1">
+                <UserPlus />
                 注册
               </Button>
             </div>
-            <Button onClick={() => setResetPasswordOpen(true)} disabled={loading} variant="ghost" className="w-full">
-              <KeyRound className="w-4 h-4 mr-2" />
-              找回密码
-            </Button>
-            <Button onClick={handleLogout} disabled={loading || !status?.is_logged_in} variant="outline" className="w-full">
-              <LogOut className="w-4 h-4 mr-2" />
-              退出当前账号
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={() => setResetPasswordOpen(true)} disabled={loading} variant="ghost" size="xs" className="flex-1 text-muted-foreground">
+                <KeyRound />
+                找回密码
+              </Button>
+              <Button onClick={handleLogout} disabled={loading || !status?.is_logged_in} variant="ghost" size="xs" className="flex-1 text-muted-foreground">
+                <LogOut />
+                退出当前账号
+              </Button>
+            </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><Clock3 className="w-5 h-5 text-primary" />当前状态</CardTitle>
-            <CardDescription>账号状态与额度概览</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className={cn("rounded-2xl border p-4", userType === "subscribed" ? "border-success/40 bg-success/5" : "border-border/50 bg-background/60")}>
-              <div className="text-xs text-muted-foreground">当前用户类型</div>
-              <div className="mt-1 flex items-center gap-2">
-                <div className="text-lg font-bold">{TYPE_LABEL[userType]}</div>
-                <Badge variant={TYPE_BADGE[userType]}>{TYPE_LABEL[userType]}</Badge>
+        <Card className="overflow-hidden">
+          <CardHeader className="flex-row items-center justify-between gap-2 space-y-0 p-4 pb-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <Clock3 className="h-4 w-4" />
+              </span>
+              <div className="min-w-0">
+                <CardTitle className="text-base">当前状态</CardTitle>
+                <CardDescription className="text-xs">账号状态与额度概览</CardDescription>
               </div>
             </div>
-            <div className="rounded-2xl border border-border/50 bg-background/60 p-4">
-              <div className="text-xs text-muted-foreground">节点额度信息</div>
-              <div className="mt-1 text-base font-semibold">{usageText}</div>
-            </div>
+            <Badge variant={canExecuteNode ? "success" : "destructive"} className="shrink-0">
+              {canExecuteNode ? "可执行" : "额度不足"}
+            </Badge>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-2 p-4 pt-0">
+            <StatTile icon={<Crown className="h-3.5 w-3.5" />} label="当前用户类型" value={TYPE_LABEL[userType]} tone={userType === "subscribed" ? "success" : "default"} />
+            <StatTile icon={<Zap className="h-3.5 w-3.5" />} label="节点额度信息" value={usageText} />
+            <StatTile icon={<CalendarDays className="h-3.5 w-3.5" />} label="剩余时间" value={formatRemainingTime(getEntitlementTime(summaryEntitlement))} />
+            <StatTile icon={<Coins className="h-3.5 w-3.5" />} label="剩余积分点" value={getEntitlementPoints(summaryEntitlement)} />
           </CardContent>
         </Card>
       </div>
 
-      <Card>
-          <CardHeader>
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <CardTitle className="flex items-center gap-2"><UsersRound className="w-5 h-5 text-primary" />账号与订阅</CardTitle>
-                <CardDescription className="mt-1.5">将用户信息和本项目订阅状态集中展示</CardDescription>
-              </div>
-              <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm" title="刷新账号和订阅权益">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                <span className="ml-2">刷新数据</span>
-              </Button>
+      <Card className="overflow-hidden">
+        <CardHeader className="flex-row items-center justify-between gap-2 space-y-0 p-4 pb-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <Crown className="h-4 w-4" />
+            </span>
+            <div className="min-w-0">
+              <CardTitle className="text-base">账号与订阅</CardTitle>
+              <CardDescription className="text-xs">用户信息与本项目订阅状态</CardDescription>
             </div>
-          </CardHeader>
-          <CardContent className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="space-y-3">
-              <div className="text-sm font-semibold">用户信息</div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <SummaryField label="用户名" value={status?.user_info?.username || "--"} />
-                <SummaryField label="邮箱号" value={status?.user_info?.email || "--"} />
-                <SummaryField label="是否激活" value={status?.user_info?.is_active ? "已激活" : "未激活"} />
-                <SummaryField label="注册时间" value={formatDateTime(status?.user_info?.created_at)} />
-                <div className="md:col-span-2">
-                  <SummaryField label="上次登录时间" value={formatDateTime(status?.user_info?.last_login)} />
-                </div>
-              </div>
+          </div>
+          <Button onClick={handleRefresh} disabled={loading} variant="outline" size="xs" className="shrink-0" title="刷新账号和订阅权益">
+            {loading ? <Loader2 className="animate-spin" /> : <RefreshCw />}
+            刷新数据
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-2.5 p-4 pt-0">
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3 lg:grid-cols-5">
+            <SummaryField label="用户名" value={status?.user_info?.username || "--"} />
+            <SummaryField label="邮箱号" value={status?.user_info?.email || "--"} />
+            <SummaryField label="是否激活" value={status?.user_info?.is_active ? "已激活" : "未激活"} />
+            <SummaryField label="注册时间" value={formatDateTime(status?.user_info?.created_at)} />
+            <SummaryField label="上次登录时间" value={formatDateTime(status?.user_info?.last_login)} />
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-primary/15 bg-primary/5 px-3 py-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5">
+                <BadgeCheck className="h-3.5 w-3.5 text-primary" />
+                上次验证
+                <span className="font-semibold text-foreground">{formatDateTime(summaryEntitlement?.last_granted_at)}</span>
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <MonitorSmartphone className="h-3.5 w-3.5 text-primary" />
+                已绑定
+                <span className="font-semibold text-foreground">
+                  {getEntitlementBoundDeviceCount(summaryEntitlement)}/{getEntitlementDeviceLimit(summaryEntitlement)}
+                </span>
+                台设备
+              </span>
             </div>
-            <div className="space-y-3">
-              <div className="text-sm font-semibold">订阅权益</div>
-              <div className="grid grid-cols-1 gap-3">
-                <SummaryField label="剩余时间" value={formatRemainingTime(getEntitlementTime(summaryEntitlement))} />
-                <SummaryField label="剩余积分点" value={getEntitlementPoints(summaryEntitlement)} />
-                <SummaryField label="上次验证时间点" value={formatDateTime(summaryEntitlement?.last_granted_at)} />
-              </div>
-              <div className="flex flex-col gap-3 rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="text-sm font-medium text-foreground">
-                  当前已绑定 {getEntitlementBoundDeviceCount(summaryEntitlement)}/{getEntitlementDeviceLimit(summaryEntitlement)} 台设备
-                </div>
-                <Button
-                  onClick={handleUnbindDevice}
-                  disabled={loading || !status?.is_logged_in}
-                  variant="outline"
-                  size="sm"
-                  className="sm:min-w-[132px]"
-                >
-                  {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Unplug className="mr-2 h-4 w-4" />}
-                  解绑当前设备
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-      </Card>
-
-      <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2"><KeyRound className="w-5 h-5 text-primary" />快捷验码</CardTitle>
-            <CardDescription>登录后输入卡密，快速刷新本项目订阅权益</CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-col md:flex-row gap-3">
-            <Input value={cardCode} onChange={(e) => setCardCode(e.target.value)} placeholder="请输入卡密" className="md:flex-1" />
-            <Button onClick={handleVerifyCard} disabled={loading} className="md:min-w-[200px]">
-              {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BadgeCheck className="w-4 h-4 mr-2" />}
-              验证并刷新权益
+            <Button onClick={handleUnbindDevice} disabled={loading || !status?.is_logged_in} variant="outline" size="xs" className="shrink-0">
+              {loading ? <Loader2 className="animate-spin" /> : <Unplug />}
+              解绑当前设备
             </Button>
-          </CardContent>
+          </div>
+        </CardContent>
       </Card>
 
       <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Sparkles className="w-5 h-5 text-primary" />快捷入口</CardTitle>
-          <CardDescription>将常用入口收纳到页面底部，减少主视区干扰</CardDescription>
-        </CardHeader>
-        <CardContent className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          {[
-            ["购买订阅", "开通或续费当前软件权益", links.products],
-            ["购买积分", "购买晴沐智坊系列软件通用积分，用于在线服务如虚拟邮箱、视频去字幕去水印等服务的消耗", links.credits],
-            ["晴沐智坊主页", "访问账号与产品主页", links.home],
-            ["软件中心", "查看版本与更新信息", links.versions],
-          ].map(([title, desc, url]) => (
-            <button key={url} onClick={() => openLink(url)} className="w-full text-left rounded-2xl border border-border/60 bg-background/60 px-4 py-4 hover:border-primary/40 hover:bg-primary/5 transition-all active:scale-[0.99]">
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0 flex-1">
-                  <div className="font-bold">{title}</div>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{desc}</p>
-                </div>
-                <ExternalLink className="w-4 h-4 shrink-0 text-muted-foreground" />
-              </div>
-            </button>
-          ))}
+        <CardContent className="flex flex-col gap-2 p-3.5 md:flex-row md:items-center">
+          <div className="flex shrink-0 items-center gap-2 text-sm font-semibold md:w-[168px]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
+              <KeyRound className="h-3.5 w-3.5" />
+            </span>
+            快捷验码
+          </div>
+          <Input value={cardCode} onChange={(e) => setCardCode(e.target.value)} placeholder="请输入卡密，验证后立即刷新本项目订阅权益" className="h-9 md:flex-1" />
+          <Button onClick={handleVerifyCard} disabled={loading} size="sm" className="md:min-w-[150px]">
+            {loading ? <Loader2 className="animate-spin" /> : <BadgeCheck />}
+            验证并刷新
+          </Button>
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+        {[
+          { title: "购买订阅", desc: "开通或续费当前软件权益", url: links.products, icon: <Crown className="h-3.5 w-3.5" /> },
+          { title: "购买积分", desc: "购买通用积分，用于虚拟邮箱、视频去字幕去水印等在线服务消耗", url: links.credits, icon: <Coins className="h-3.5 w-3.5" /> },
+          { title: "晴沐智坊主页", desc: "访问账号与产品主页", url: links.home, icon: <Sparkles className="h-3.5 w-3.5" /> },
+          { title: "软件中心", desc: "查看版本与更新信息", url: links.versions, icon: <ExternalLink className="h-3.5 w-3.5" /> },
+        ].map((item) => (
+          <button
+            key={item.url}
+            onClick={() => openLink(item.url)}
+            title={item.desc}
+            className="group flex items-center gap-2 rounded-xl border border-border/60 bg-card/70 px-3 py-2.5 text-left transition-all hover:border-primary/40 hover:bg-primary/5 active:scale-[0.99]"
+          >
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">{item.icon}</span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold">{item.title}</span>
+              <span className="block truncate text-[11px] text-muted-foreground">{item.desc}</span>
+            </span>
+          </button>
+        ))}
+      </div>
 
       <Dialog open={registerOpen} onOpenChange={setRegisterOpen}>
         <DialogContent className="max-w-2xl">

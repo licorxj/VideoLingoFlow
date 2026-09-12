@@ -78,6 +78,26 @@ class S_FileRename(BaseStep):
             if not suffix:
                 raise ValueError("后缀不能为空")
             new_name = name_part + suffix + ext
+        elif rename_mode == "from_input":
+            # 文件名来自「文件名(来自输入)」文本端口
+            name_value = step_inputs.get("name", "") or ""
+            if not isinstance(name_value, str):
+                name_value = str(name_value)
+            name_value = name_value.strip()
+            # 若传入的是 .txt 文件路径，读取内容作为文件名
+            if name_value and os.path.isfile(name_value) and name_value.endswith(".txt"):
+                try:
+                    with open(name_value, "r", encoding="utf-8") as f:
+                        name_value = f.read().strip()
+                except Exception:
+                    pass
+            if not name_value:
+                raise ValueError("来自输入的文件名不能为空")
+            # 只取文件名（避免下游传入完整路径）
+            name_value = os.path.basename(name_value)
+            name_base, name_ext = os.path.splitext(name_value)
+            # 保留原扩展名：若输入名已带扩展名则使用原样，否则沿用源文件扩展名
+            new_name = name_value if name_ext else (name_value + ext)
         else:
             raise ValueError(f"未知的改名模式: {rename_mode}")
 

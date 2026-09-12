@@ -345,7 +345,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     "id": "file_rename",
     "name": "文件改名",
     "category": "utility",
-    "description": "给输入文件改名，支持自定义文件名、前缀、后缀方式",
+    "description": "给输入文件改名，支持自定义文件名、前缀、后缀，或从输入端口动态获取文件名；重名时自动追加序号",
     "icon": "FileEdit",
     "color": "#f97316",
     "inputs": [
@@ -354,6 +354,12 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "label": "输入",
         "type": "any",
         "required": true
+      },
+      {
+        "id": "name",
+        "label": "文件名(来自输入)",
+        "type": "text",
+        "required": false
       }
     ],
     "outputs": [
@@ -386,6 +392,10 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
           {
             "value": "suffix",
             "label": "添加后缀"
+          },
+          {
+            "value": "from_input",
+            "label": "来自输入(文本端口)"
           }
         ]
       },
@@ -2753,7 +2763,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "project_init",
     "name": "剪辑项目初始化",
-    "category": "video",
+    "category": "cutia",
     "description": "收集上游素材并构造初始剪辑JSON（默认时间线骨架+素材清单），供「Cutia 交互剪辑」接力整理筛选",
     "icon": "Clapperboard",
     "color": "#0ea5e9",
@@ -2803,7 +2813,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "add_track_media",
     "name": "添加剪辑素材到轨道",
-    "category": "video",
+    "category": "cutia",
     "description": "接收任意类型素材，按所选类型添加到剪辑项目轨道（可新建轨道/轨道尾部/自定义插入点），输出剪辑项目JSON",
     "icon": "Layers",
     "color": "#8b5cf6",
@@ -3045,7 +3055,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "cutia",
     "name": "推送到剪辑台",
-    "category": "video",
+    "category": "cutia",
     "description": "将剪辑项目JSON推送到剪辑工作台并发起系统提醒，等待剪辑后透传输出（素材编排由上游「剪辑项目初始化」完成）",
     "icon": "Clapperboard",
     "color": "#14b8a6",
@@ -3080,7 +3090,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "cutia_render",
     "name": "剪辑渲染",
-    "category": "process",
+    "category": "cutia",
     "description": "接收上游精选后的剪辑项目JSON，无头加载并渲染导出成片，无需人工打开剪辑工作台",
     "icon": "Clapperboard",
     "color": "#f97316",
@@ -3616,6 +3626,36 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "label": "自定义输入值",
         "type": "text",
         "placeholder": "输入要设置的值"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "json_get",
+    "name": "JSON取值",
+    "category": "utility",
+    "description": "按key表达式从输入JSON中取值，输出端口数量可在卡片上用+号任意增加（1~8），每个端口下对应一个取值表达式；结果以any类型输出，数据不落盘（内存流转给下游，并写入任务数据库）",
+    "icon": "Braces",
+    "color": "#f97316",
+    "dynamicPorts": true,
+    "inputs": [
+      {"id": "json", "label": "JSON", "type": "json"}
+    ],
+    "outputs": [
+      {"id": "out_1", "label": "取值1", "type": "any"}
+    ],
+    "defaultConfig": {
+      "outputCount": 1,
+      "key_exprs": [""]
+    },
+    "configFields": [
+      {
+        "key": "outputCount",
+        "label": "输出端口数",
+        "type": "number",
+        "min": 1,
+        "max": 8,
+        "description": "通过节点卡片上的 + / - 控制（1~8），每个端口对应一个取值表达式"
       }
     ],
     "isBuiltIn": true
@@ -6254,6 +6294,1285 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "max": 3600,
         "colSpan": "half",
         "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "kie_image_upscale",
+    "name": "图片高清放大-kie",
+    "category": "ai_gen",
+    "description": "调用 KIE AI 对图片做高清放大。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。",
+    "icon": "ZoomIn",
+    "color": "#0ea5e9",
+    "inputs": [
+      {
+        "id": "image",
+        "label": "待放大图片",
+        "type": "image",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "image",
+        "label": "放大后图片",
+        "type": "image"
+      },
+      {
+        "id": "images",
+        "label": "图片列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "处理参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "recraft/crisp-upscale",
+      "upscale_factor": "2",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key"
+      },
+      {
+        "key": "btn_usage_logs",
+        "label": "用量日志",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai/zh-CN/logs",
+        "description": "在 KIE 控制台查看调用量与扣费明细"
+      },
+      {
+        "key": "model",
+        "label": "放大模型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "recraft/crisp-upscale",
+            "label": "Recraft Crisp Upscale（锐利放大，$0.0025/张）"
+          },
+          {
+            "value": "topaz/image-upscale",
+            "label": "Topaz Image Upscale（可设倍数，$0.2/张）"
+          }
+        ],
+        "description": "KIE 平台提供的放大模型"
+      },
+      {
+        "key": "upscale_factor",
+        "label": "放大倍数",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "1",
+            "label": "1 倍"
+          },
+          {
+            "value": "2",
+            "label": "2 倍"
+          },
+          {
+            "value": "4",
+            "label": "4 倍"
+          }
+        ],
+        "dependsOn": "model",
+        "dependsValue": "topaz/image-upscale",
+        "description": "仅 Topaz 模型支持；Recraft 为固定锐利放大"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "放大任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "kie_video_upscale",
+    "name": "视频高清放大-kie",
+    "category": "ai_gen",
+    "description": "调用 KIE AI 对视频做高清放大。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。",
+    "icon": "Film",
+    "color": "#0ea5e9",
+    "inputs": [
+      {
+        "id": "video",
+        "label": "待放大视频",
+        "type": "video",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "video",
+        "label": "放大后视频",
+        "type": "video"
+      },
+      {
+        "id": "videos",
+        "label": "视频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "处理参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "topaz/video-upscale",
+      "upscale_factor": "2",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key"
+      },
+      {
+        "key": "btn_usage_logs",
+        "label": "用量日志",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai/zh-CN/logs",
+        "description": "在 KIE 控制台查看调用量与扣费明细"
+      },
+      {
+        "key": "model",
+        "label": "放大模型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "topaz/video-upscale",
+            "label": "Topaz Video Upscale（可设倍数，$0.07/次）"
+          }
+        ],
+        "description": "KIE 平台提供的视频放大模型"
+      },
+      {
+        "key": "upscale_factor",
+        "label": "放大倍数",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "1",
+            "label": "1 倍"
+          },
+          {
+            "value": "2",
+            "label": "2 倍"
+          },
+          {
+            "value": "4",
+            "label": "4 倍"
+          }
+        ],
+        "description": "放大倍数，留空/默认 2 倍"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 7200,
+        "colSpan": "half",
+        "description": "视频放大耗时较长，默认 900 秒，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "kie_lip_sync",
+    "name": "视频对口型-kie",
+    "category": "ai_gen",
+    "description": "调用 KIE AI 让视频人物口型匹配目标音频（视频 + 音频 → 对口型视频）。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。",
+    "icon": "Mic",
+    "color": "#0ea5e9",
+    "inputs": [
+      {
+        "id": "video",
+        "label": "待对口型视频",
+        "type": "video",
+        "required": true
+      },
+      {
+        "id": "audio",
+        "label": "目标音频",
+        "type": "audio",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "video",
+        "label": "对口型视频",
+        "type": "video"
+      },
+      {
+        "id": "videos",
+        "label": "视频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "处理参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "volcengine/video-to-video-lip-sync",
+      "mode": "basic",
+      "separate_vocal": false,
+      "open_scenedet": false,
+      "align_audio": true,
+      "align_audio_reverse": false,
+      "templ_start_seconds": 0,
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key"
+      },
+      {
+        "key": "btn_usage_logs",
+        "label": "用量日志",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai/zh-CN/logs",
+        "description": "在 KIE 控制台查看调用量与扣费明细"
+      },
+      {
+        "key": "model",
+        "label": "对口型模型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "volcengine/video-to-video-lip-sync",
+            "label": "Volcengine Lip Sync（$0.04/次）"
+          }
+        ],
+        "description": "KIE 平台提供的视频对口型模型"
+      },
+      {
+        "key": "mode",
+        "label": "生成模式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "basic",
+            "label": "basic（质量优先）"
+          },
+          {
+            "value": "lite",
+            "label": "lite（速度优先）"
+          }
+        ],
+        "description": "必填；basic 质量更好，lite 更快"
+      },
+      {
+        "key": "separate_vocal",
+        "label": "人声分离",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "对目标音频先做人声分离，再用纯人声驱动口型"
+      },
+      {
+        "key": "open_scenedet",
+        "label": "场景检测",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启镜头/场景检测，多镜头视频效果更好"
+      },
+      {
+        "key": "align_audio",
+        "label": "音画对齐",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "自动对齐音频与画面，默认开启"
+      },
+      {
+        "key": "align_audio_reverse",
+        "label": "反向对齐",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "在 align_audio 基础上使用反向对齐策略"
+      },
+      {
+        "key": "templ_start_seconds",
+        "label": "模板起始秒",
+        "type": "number",
+        "min": 0,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "从视频第 N 秒开始作为对口型模板，默认 0"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 7200,
+        "colSpan": "half",
+        "description": "口型合成耗时较长，默认 900 秒，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "kie_image_audio_to_video",
+    "name": "图声生视频-kie",
+    "category": "ai_gen",
+    "description": "用图片 + 声音驱动生成视频（数字人 / 对口型 / 角色演绎）。image1 为必填主图，kling-3.0/video 额外支持 image2~image5 共 5 张参考图；audio 输入口接驱动音频；提示词可来自连线文本或节点内填写。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；用量见「用量日志」。",
+    "icon": "UserRound",
+    "color": "#0ea5e9",
+    "inputs": [
+      {
+        "id": "image1",
+        "label": "主图片",
+        "type": "image",
+        "required": true
+      },
+      {
+        "id": "image2",
+        "label": "参考图2",
+        "type": "image"
+      },
+      {
+        "id": "image3",
+        "label": "参考图3",
+        "type": "image"
+      },
+      {
+        "id": "image4",
+        "label": "参考图4",
+        "type": "image"
+      },
+      {
+        "id": "image5",
+        "label": "参考图5",
+        "type": "image"
+      },
+      {
+        "id": "audio",
+        "label": "驱动音频",
+        "type": "audio",
+        "required": true
+      },
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "video",
+        "label": "生成视频",
+        "type": "video"
+      },
+      {
+        "id": "videos",
+        "label": "视频列表",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "infinitalk/from-audio",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "mode": "pro",
+      "duration": 5,
+      "aspect_ratio": "16:9",
+      "sound": false,
+      "resolution": "480p",
+      "seed": "",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key"
+      },
+      {
+        "key": "btn_usage_logs",
+        "label": "用量日志",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai/zh-CN/logs",
+        "description": "在 KIE 控制台查看调用量与扣费明细"
+      },
+      {
+        "key": "model",
+        "label": "生成模型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "infinitalk/from-audio",
+            "label": "Infinitalk From Audio（图+声）"
+          },
+          {
+            "value": "kling-3.0/video",
+            "label": "Kling 3.0（最多 5 张参考图，$0.335/次）"
+          },
+          {
+            "value": "kling/ai-avatar-standard",
+            "label": "Kling AI Avatar Standard（$0.335/次）"
+          },
+          {
+            "value": "kling/ai-avatar-pro",
+            "label": "Kling AI Avatar Pro（$0.335/次）"
+          }
+        ],
+        "description": "图片 + 声音驱动视频的模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线文本；开启后使用下方提示词（所有模型均需提示词）"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "描述画面内容与人物动作，开启「使用节点内提示词」后生效"
+      },
+      {
+        "key": "mode",
+        "label": "画质模式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "pro",
+            "label": "pro（1080P）"
+          },
+          {
+            "value": "std",
+            "label": "std（720P）"
+          },
+          {
+            "value": "4K",
+            "label": "4K（2160P）"
+          }
+        ],
+        "dependsOn": "model",
+        "dependsValue": "kling-3.0/video",
+        "description": "Kling 3.0 生成模式"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 3,
+        "max": 15,
+        "colSpan": "half",
+        "dependsOn": "model",
+        "dependsValue": "kling-3.0/video",
+        "description": "Kling 3.0 视频时长，3-15 秒"
+      },
+      {
+        "key": "aspect_ratio",
+        "label": "画面比例",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "16:9",
+            "label": "16:9"
+          },
+          {
+            "value": "9:16",
+            "label": "9:16"
+          },
+          {
+            "value": "1:1",
+            "label": "1:1"
+          }
+        ],
+        "dependsOn": "model",
+        "dependsValue": "kling-3.0/video",
+        "description": "Kling 3.0 画面比例（提供参考图时可不填，会自动适配）"
+      },
+      {
+        "key": "sound",
+        "label": "生成音效",
+        "type": "toggle",
+        "colSpan": "half",
+        "dependsOn": "model",
+        "dependsValue": "kling-3.0/video",
+        "description": "Kling 3.0 是否生成音效（与输入音频不同）"
+      },
+      {
+        "key": "resolution",
+        "label": "分辨率",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "480p",
+            "label": "480p"
+          },
+          {
+            "value": "720p",
+            "label": "720p"
+          }
+        ],
+        "dependsOn": "model",
+        "dependsValue": "infinitalk/from-audio",
+        "description": "Infinitalk 输出分辨率"
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "min": 10000,
+        "max": 1000000,
+        "colSpan": "half",
+        "dependsOn": "model",
+        "dependsValue": "infinitalk/from-audio",
+        "description": "Infinitalk 随机种子，留空随机"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 7200,
+        "colSpan": "half",
+        "description": "视频生成耗时较长，默认 900 秒，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "kie_media_host",
+    "name": "图床网存-kie",
+    "category": "network_request",
+    "description": "把本地图片 / 视频 / 音频上传到 KIE 免费媒体暂存，返回可直接访问的外链 URL，供其它接口（生图、生视频、对口型、图声生视频等）引用。支持 image / video / audio / file 四个输入口，可同时上传多个文件（已连接的口都会上传）。注意：本节点仅做文件暂存，不消耗生成额度；使用前请先注册 KIE 账号并获取 API Key，填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）。",
+    "icon": "Upload",
+    "color": "#0ea5e9",
+    "inputs": [
+      {
+        "id": "image",
+        "label": "图片",
+        "type": "image"
+      },
+      {
+        "id": "video",
+        "label": "视频",
+        "type": "video"
+      },
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio"
+      },
+      {
+        "id": "file",
+        "label": "其它文件",
+        "type": "filepath"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "url",
+        "label": "首个链接",
+        "type": "url"
+      },
+      {
+        "id": "urls",
+        "label": "链接列表",
+        "type": "json"
+      },
+      {
+        "id": "json",
+        "label": "上传明细",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "upload_path": "auto",
+      "timeout": 120
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key"
+      },
+      {
+        "key": "btn_usage_logs",
+        "label": "用量日志",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai/zh-CN/logs",
+        "description": "在 KIE 控制台查看调用量与扣费明细"
+      },
+      {
+        "key": "upload_path",
+        "label": "存储目录",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "auto",
+            "label": "自动（按扩展名归类）"
+          },
+          {
+            "value": "images",
+            "label": "images（图片）"
+          },
+          {
+            "value": "videos",
+            "label": "videos（视频）"
+          },
+          {
+            "value": "audios",
+            "label": "audios（音频）"
+          },
+          {
+            "value": "files",
+            "label": "files（其它）"
+          }
+        ],
+        "description": "上传路径 uploadPath；auto 按文件扩展名自动选择目录"
+      },
+      {
+        "key": "timeout",
+        "label": "超时(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 1200,
+        "colSpan": "half",
+        "description": "单个文件上传超时时间"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "agi_query",
+    "name": "项目数据查询",
+    "category": "agi_data",
+    "description": "AI 漫剧·项目数据查询(只读)：按目标读取项目/章节/分镜/人物/场景/道具/素材，输出 JSON 与文本。用于把项目内的提示词、台词、设定取出来交给外部节点(LLM/生图/生视频/配音)加工，不修改任何数据",
+    "icon": "Search",
+    "color": "#0891b2",
+    "inputs": [
+      {
+        "id": "creation_id",
+        "label": "创作项目ID",
+        "type": "text"
+      },
+      {
+        "id": "chapter_id",
+        "label": "章节ID(可选)",
+        "type": "any"
+      },
+      {
+        "id": "ids",
+        "label": "记录ID(可选)",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "creation_id",
+        "label": "创作项目ID",
+        "type": "text"
+      },
+      {
+        "id": "target",
+        "label": "数据目标",
+        "type": "text"
+      },
+      {
+        "id": "count",
+        "label": "记录数",
+        "type": "text"
+      },
+      {
+        "id": "ids",
+        "label": "记录ID列表",
+        "type": "json"
+      },
+      {
+        "id": "items",
+        "label": "数据(JSON)",
+        "type": "json"
+      },
+      {
+        "id": "text",
+        "label": "数据(文本)",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "creation_id": "",
+      "chapter_id": "",
+      "target": "shots",
+      "fields": "",
+      "asset_kind": "",
+      "status": "",
+      "limit": 0
+    },
+    "configFields": [
+      {
+        "key": "creation_id",
+        "label": "创作项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/list",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "creation_id",
+        "colSpan": "full",
+        "description": "数据来源项目；连线传入 creation_id 时优先"
+      },
+      {
+        "key": "chapter_id",
+        "label": "章节(可选)",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/{creation_id}/chapters",
+        "optionLabel": "title",
+        "optionValue": "id",
+        "followPort": "chapter_id",
+        "colSpan": "full",
+        "description": "选择后只读该章；不选则跨整项目读取（分镜列表目标）"
+      },
+      {
+        "key": "target",
+        "label": "数据目标",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "creation",
+            "label": "项目主数据"
+          },
+          {
+            "value": "chapters",
+            "label": "章节列表"
+          },
+          {
+            "value": "chapter",
+            "label": "单个章节(含分镜)"
+          },
+          {
+            "value": "shots",
+            "label": "分镜列表"
+          },
+          {
+            "value": "shot",
+            "label": "单个/多个分镜"
+          },
+          {
+            "value": "characters",
+            "label": "人物资产"
+          },
+          {
+            "value": "scenes",
+            "label": "场景资产"
+          },
+          {
+            "value": "props",
+            "label": "道具资产"
+          },
+          {
+            "value": "assets",
+            "label": "素材列表"
+          }
+        ],
+        "description": "单个章节/分镜目标需连接或填写记录ID"
+      },
+      {
+        "key": "fields",
+        "label": "保留字段",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如 id,index,dialogue,video_prompt",
+        "description": "逗号分隔；留空返回全部字段"
+      },
+      {
+        "key": "asset_kind",
+        "label": "素材类型",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如 shot_video / voiceover",
+        "description": "仅「素材列表」目标生效；留空返回全部素材"
+      },
+      {
+        "key": "status",
+        "label": "状态过滤",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如 pending / done",
+        "description": "按记录 status 字段精确过滤；留空不过滤"
+      },
+      {
+        "key": "limit",
+        "label": "条数上限",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "max": 500,
+        "description": "0 表示不限制"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "agi_write",
+    "name": "项目数据写入",
+    "category": "agi_data",
+    "description": "AI 漫剧·项目数据写入(只写)：把外部处理结果回写到项目指定数据点。同一份补丁可批量应用到多个记录ID，也可用带 id 的数组逐条写回；字段需在该类记录的白名单内",
+    "icon": "PencilLine",
+    "color": "#0891b2",
+    "inputs": [
+      {
+        "id": "creation_id",
+        "label": "创作项目ID",
+        "type": "text"
+      },
+      {
+        "id": "ids",
+        "label": "记录ID列表",
+        "type": "json"
+      },
+      {
+        "id": "data",
+        "label": "写入数据(JSON)",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "creation_id",
+        "label": "创作项目ID",
+        "type": "text"
+      },
+      {
+        "id": "target",
+        "label": "数据目标",
+        "type": "text"
+      },
+      {
+        "id": "count",
+        "label": "写入条数",
+        "type": "text"
+      },
+      {
+        "id": "ids",
+        "label": "记录ID列表",
+        "type": "json"
+      },
+      {
+        "id": "updated",
+        "label": "写入结果",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "creation_id": "",
+      "target": "shot",
+      "ids": "",
+      "data": ""
+    },
+    "configFields": [
+      {
+        "key": "creation_id",
+        "label": "创作项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/list",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "creation_id",
+        "colSpan": "full",
+        "description": "目标项目；连线传入 creation_id 时优先"
+      },
+      {
+        "key": "target",
+        "label": "数据目标",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "creation",
+            "label": "项目主数据"
+          },
+          {
+            "value": "chapter",
+            "label": "章节"
+          },
+          {
+            "value": "shot",
+            "label": "分镜"
+          },
+          {
+            "value": "character",
+            "label": "人物"
+          },
+          {
+            "value": "scene",
+            "label": "场景"
+          },
+          {
+            "value": "prop",
+            "label": "道具"
+          },
+          {
+            "value": "asset",
+            "label": "素材"
+          }
+        ],
+        "description": "写入不存在的字段会直接报错，便于及早发现拼写问题"
+      },
+      {
+        "key": "ids",
+        "label": "记录ID(可留空)",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "逗号分隔多个ID",
+        "description": "批量写同一份补丁时填写；已连接 ids 端口时以端口为准"
+      },
+      {
+        "key": "data",
+        "label": "写入数据",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "{\"video_prompt\": \"...\"} 或 [{\"id\": \"shot_x\", \"video_prompt\": \"...\"}]",
+        "description": "JSON 对象=同一补丁批量写入 ids；JSON 数组=按每项 id 逐条写入；已连接 data 端口时以端口为准"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "agi_asset_register",
+    "name": "素材登记入库",
+    "category": "agi_data",
+    "description": "AI 漫剧·素材登记入库(写素材)：把外部生图/生视频/配音等产物登记为项目资产，并按分镜/章节归属入库，供分镜导出与章节导出节点按分镜消费",
+    "icon": "PackagePlus",
+    "color": "#0891b2",
+    "inputs": [
+      {
+        "id": "creation_id",
+        "label": "创作项目ID",
+        "type": "text"
+      },
+      {
+        "id": "files",
+        "label": "素材文件",
+        "type": "any"
+      },
+      {
+        "id": "shot_id",
+        "label": "分镜ID(可选)",
+        "type": "text"
+      },
+      {
+        "id": "chapter_id",
+        "label": "章节ID(可选)",
+        "type": "any"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "creation_id",
+        "label": "创作项目ID",
+        "type": "text"
+      },
+      {
+        "id": "count",
+        "label": "登记数量",
+        "type": "text"
+      },
+      {
+        "id": "asset_ids",
+        "label": "素材ID列表",
+        "type": "json"
+      },
+      {
+        "id": "assets",
+        "label": "素材记录",
+        "type": "json"
+      },
+      {
+        "id": "paths",
+        "label": "素材路径",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "creation_id": "",
+      "shot_id": "",
+      "chapter_id": "",
+      "asset_kind": "auto",
+      "name": "",
+      "ref_id": "",
+      "duration_seconds": "",
+      "description": ""
+    },
+    "configFields": [
+      {
+        "key": "creation_id",
+        "label": "创作项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/list",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "creation_id",
+        "colSpan": "full",
+        "description": "素材归属项目；连线传入 creation_id 时优先"
+      },
+      {
+        "key": "chapter_id",
+        "label": "章节(可选)",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/{creation_id}/chapters",
+        "optionLabel": "title",
+        "optionValue": "id",
+        "followPort": "chapter_id",
+        "colSpan": "full",
+        "description": "素材归属章节；连线传入 chapter_id 时优先"
+      },
+      {
+        "key": "shot_id",
+        "label": "分镜(可选)",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/{creation_id}/shots?chapter_id={chapter_id}",
+        "optionLabel": "label",
+        "optionValue": "id",
+        "colSpan": "full",
+        "description": "素材归属分镜，导出时按分镜消费；连线传入 shot_id 时优先"
+      },
+      {
+        "key": "asset_kind",
+        "label": "素材类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "auto",
+            "label": "自动(按扩展名)"
+          },
+          {
+            "value": "shot_video",
+            "label": "分镜视频"
+          },
+          {
+            "value": "shot_render",
+            "label": "分镜图"
+          },
+          {
+            "value": "chapter_render",
+            "label": "章节成片"
+          },
+          {
+            "value": "chapter_cover",
+            "label": "章节封面"
+          },
+          {
+            "value": "character",
+            "label": "人物图"
+          },
+          {
+            "value": "scene_image",
+            "label": "场景图"
+          },
+          {
+            "value": "prop_image",
+            "label": "道具图"
+          },
+          {
+            "value": "voiceover",
+            "label": "配音"
+          },
+          {
+            "value": "bgm",
+            "label": "背景音乐"
+          },
+          {
+            "value": "sfx",
+            "label": "音效"
+          }
+        ],
+        "description": "自动：视频→shot_video，音频→voiceover，图片→shot_render"
+      },
+      {
+        "key": "name",
+        "label": "素材名称",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空用文件名；多文件时自动加序号"
+      },
+      {
+        "key": "ref_id",
+        "label": "关联ID",
+        "type": "text",
+        "colSpan": "half",
+        "description": "可选，关联人物/场景/道具等记录ID"
+      },
+      {
+        "key": "duration_seconds",
+        "label": "时长(秒)",
+        "type": "number",
+        "colSpan": "half",
+        "description": "音频/视频时长，可留空"
+      },
+      {
+        "key": "description",
+        "label": "备注",
+        "type": "textarea",
+        "colSpan": "full"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "agi_shot_prompt",
+    "name": "组装分镜提示词",
+    "category": "agi_shot",
+    "description": "AI 漫剧·组装分镜提示词：把分镜用到的角色图/场景图/道具图按【image1】/【image2】顺序组装，细化为 8 个故事走向关键帧的生图提示词(JSON)，并产出有序参考图供「分镜首尾帧」图生图使用",
+    "icon": "ScrollText",
+    "color": "#ea580c",
+    "inputs": [
+      {
+        "id": "shot_id",
+        "label": "分镜ID(单个)",
+        "type": "any"
+      },
+      {
+        "id": "chapter_id",
+        "label": "章节ID(批处理)",
+        "type": "any"
+      },
+      {
+        "id": "chapter_ids",
+        "label": "多章节ID列表(可选)",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "shot_id",
+        "label": "分镜ID",
+        "type": "text"
+      },
+      {
+        "id": "shot_ids",
+        "label": "分镜ID列表",
+        "type": "json"
+      },
+      {
+        "id": "image_prompts",
+        "label": "组装提示词",
+        "type": "json"
+      },
+      {
+        "id": "image_prompt_refs",
+        "label": "有序参考图",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "creation_id": "",
+      "chapter_id": "",
+      "shot_id": "",
+      "llm_model": "",
+      "force": false
+    },
+    "configFields": [
+      {
+        "key": "creation_id",
+        "label": "创作项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/list",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "creation_id",
+        "colSpan": "full",
+        "description": "项目骨架数据源；连线传入时优先"
+      },
+      {
+        "key": "chapter_id",
+        "label": "章节(批处理)",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/{creation_id}/chapters",
+        "optionLabel": "title",
+        "optionValue": "id",
+        "followPort": "chapter_id",
+        "colSpan": "full",
+        "description": "选择后整章批处理；连线传入时优先"
+      },
+      {
+        "key": "shot_id",
+        "label": "分镜(单个)",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/{creation_id}/shots?chapter_id={chapter_id}",
+        "optionLabel": "label",
+        "optionValue": "id",
+        "colSpan": "full",
+        "description": "先选择创作项目与章节；连线传入时优先"
+      },
+      {
+        "key": "llm_model",
+        "label": "LLM 模型",
+        "type": "api-select",
+        "apiEndpoint": "/api/llm/interfaces/enabled",
+        "colSpan": "half",
+        "placeholder": "跟随路由默认模型"
+      },
+      {
+        "key": "force",
+        "label": "强制重组装",
+        "type": "toggle",
+        "colSpan": "full",
+        "description": "开启后忽略已组装提示词，重新生成"
       }
     ],
     "isBuiltIn": true

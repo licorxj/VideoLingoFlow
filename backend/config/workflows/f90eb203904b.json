@@ -1,0 +1,380 @@
+{
+  "id": "f90eb203904b",
+  "name": "音轨分离测试",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1789109251030",
+      "type": "workflow",
+      "position": {
+        "x": 3225,
+        "y": 1155
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 409
+      }
+    },
+    {
+      "id": "node_2_1789109268828",
+      "type": "workflow",
+      "position": {
+        "x": 3810,
+        "y": 1305
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "extract_audio",
+        "label": "音频分离",
+        "config": {
+          "format": "auto"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 184
+      }
+    },
+    {
+      "id": "node_3_1789109274932",
+      "type": "workflow",
+      "position": {
+        "x": 4365,
+        "y": 1335
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "audio_transcode",
+        "label": "音频质量转码",
+        "config": {
+          "format": "wav",
+          "sample_rate": "44100",
+          "bit_depth": "24",
+          "channels": "1",
+          "bitrate": "192"
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 296
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1789109300146",
+      "type": "workflow",
+      "position": {
+        "x": 5775,
+        "y": 660
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "track_separation",
+        "label": "音轨分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_6s",
+          "format": "wav"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 296
+      },
+      "dragging": false
+    },
+    {
+      "id": "node_5_1789109310618",
+      "type": "workflow",
+      "position": {
+        "x": 5160,
+        "y": 1005
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "track_separation",
+        "label": "音轨分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_6s",
+          "format": "wav"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 296
+      },
+      "dragging": false
+    },
+    {
+      "id": "node_6_1789109319197",
+      "type": "workflow",
+      "position": {
+        "x": 5790,
+        "y": 1410
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "track_separation",
+        "label": "音轨分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_6s",
+          "format": "wav"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 296
+      },
+      "dragging": false
+    },
+    {
+      "id": "n_mtwli1rglvpj",
+      "type": "workflow",
+      "position": {
+        "x": 5175,
+        "y": 1710
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "track_separation",
+        "label": "音轨分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_6s",
+          "format": "wav"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 296
+      },
+      "dragging": false
+    },
+    {
+      "id": "n_mtwli5858nnv",
+      "type": "workflow",
+      "position": {
+        "x": 5775,
+        "y": 2775
+      },
+      "selected": true,
+      "data": {
+        "nodeType": "track_separation",
+        "label": "音轨分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_6s",
+          "format": "wav"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 296
+      },
+      "dragging": false
+    },
+    {
+      "id": "n_mtwli5msu6dv",
+      "type": "workflow",
+      "position": {
+        "x": 5190,
+        "y": 2415
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "track_separation",
+        "label": "音轨分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_6s",
+          "format": "wav"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 296
+      },
+      "dragging": false
+    },
+    {
+      "id": "n_mtwli5z0icow",
+      "type": "workflow",
+      "position": {
+        "x": 5760,
+        "y": 2085
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "track_separation",
+        "label": "音轨分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_6s",
+          "format": "wav"
+        },
+        "status": "pending"
+      },
+      "measured": {
+        "width": 420,
+        "height": 296
+      },
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1789109251030",
+      "sourceHandle": "out-video",
+      "target": "node_2_1789109268828",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_1_1789109251030out-video-node_2_1789109268828in-video"
+    },
+    {
+      "source": "node_2_1789109268828",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1789109274932",
+      "targetHandle": "in-audio",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#60a5fa",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_2_1789109268828out-audio-node_3_1789109274932in-audio"
+    },
+    {
+      "source": "node_3_1789109274932",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1789109300146",
+      "targetHandle": "in-audio",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#34d399",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_3_1789109274932out-audio-node_4_1789109300146in-audio"
+    },
+    {
+      "source": "node_3_1789109274932",
+      "sourceHandle": "out-audio",
+      "target": "node_5_1789109310618",
+      "targetHandle": "in-audio",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_3_1789109274932out-audio-node_5_1789109310618in-audio"
+    },
+    {
+      "source": "node_3_1789109274932",
+      "sourceHandle": "out-audio",
+      "target": "node_6_1789109319197",
+      "targetHandle": "in-audio",
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#22d3ee",
+        "strokeWidth": 2
+      },
+      "id": "xy-edge__node_3_1789109274932out-audio-node_6_1789109319197in-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#f472b6",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1789109274932",
+      "sourceHandle": "out-audio",
+      "target": "n_mtwli1rglvpj",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1789109274932out-audio-n_mtwli1rglvpjin-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1789109274932",
+      "sourceHandle": "out-audio",
+      "target": "n_mtwli5z0icow",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1789109274932out-audio-n_mtwli5z0icowin-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#facc15",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1789109274932",
+      "sourceHandle": "out-audio",
+      "target": "n_mtwli5msu6dv",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1789109274932out-audio-n_mtwli5msu6dvin-audio"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#a78bfa",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1789109274932",
+      "sourceHandle": "out-audio",
+      "target": "n_mtwli5858nnv",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1789109274932out-audio-n_mtwli5858nnvin-audio"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-11T14:49:43",
+  "updatedAt": "2026-09-11T14:50:08",
+  "revision": 1
+}

@@ -107,7 +107,7 @@ export interface LoopWorkflowDefinition extends GroupWorkflowDefinition {
 export interface ConfigField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "date" | "time" | "button";
+  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "date" | "time" | "button";
   placeholder?: string;
   options?: { value: string; label: string }[];
   dependsOn?: string;
@@ -120,6 +120,8 @@ export interface ConfigField {
   link?: { label?: string; url: string };
   /** chips 选项右侧追加的动作按钮：点击调用后端接口（如安装即梦插件） */
   action?: { label: string; url: string; method?: "GET" | "POST"; busyLabel?: string };
+  /** button 类型：点击在新标签页打开的外链（如「获取key」「用量日志」） */
+  url?: string;
   fileFilter?: string[];
   apiEndpoint?: string;
   apiUrl?: string;
@@ -143,7 +145,7 @@ export interface ConfigField {
 export interface NodeTypeDef {
   id: string;
   name: string;
-  category: "io" | "preview" | "audio" | "video" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agent" | "utility" | "file" | "group_node" | "input" | "process" | "ai" | "output" | "publish";
+  category: "io" | "preview" | "audio" | "video" | "cutia" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "agent" | "utility" | "file" | "group_node" | "input" | "process" | "ai" | "output" | "publish";
   description: string;
   icon: string;
   color: string;
@@ -211,11 +213,17 @@ export const CATEGORIES = {
   preview: { label: "预览节点", color: "#14b8a6", icon: "Eye" },
   audio: { label: "音频处理节点", color: "#0ea5e9", icon: "Volume2" },
   video: { label: "视频处理节点", color: "#ef4444", icon: "Film" },
+  cutia: { label: "剪辑互通", color: "#fb923c", icon: "Clapperboard" },
   ai_gen: { label: "AI生成类节点", color: "#10b981", icon: "Sparkles" },
   music_gen: { label: "AI音乐", color: "#a78bfa", icon: "Music" },
   translation: { label: "翻译相关节点", color: "#8b5cf6", icon: "Languages" },
   flow_control: { label: "流程控制节点", color: "#6366f1", icon: "GitBranch" },
   network_request: { label: "网络请求类节点", color: "#0f766e", icon: "Globe" },
+  agi_story: { label: "漫剧·剧本链", color: "#db2777", icon: "Rocket" },
+  agi_asset: { label: "漫剧·资产链", color: "#c026d3", icon: "Users" },
+  agi_shot: { label: "漫剧·分镜链", color: "#9333ea", icon: "Clapperboard" },
+  agi_render: { label: "漫剧·成片链", color: "#7c3aed", icon: "FileVideo" },
+  agi_data: { label: "漫剧·数据链", color: "#0891b2", icon: "Database" },
   aigc: { label: "AIGC流程链", color: "#22c55e", icon: "Boxes" },
   asset: { label: "素材库", color: "#84cc16", icon: "Library" },
   agent: { label: "智能体", color: "#a855f7", icon: "Bot" },
@@ -413,6 +421,15 @@ export function getVisibleOutputs(nodeType: NodeTypeDef, config: Record<string, 
   }
   if (nodeType.id === "pi_agent") {
     return dynamicPorts(nodeType.outputs, config.outputCount, "output");
+  }
+  if (nodeType.id === "json_get") {
+    // 动态取值端口：按 outputCount 生成 out_1..out_n（全部 any）
+    const n = Math.min(Math.max(Number(config.outputCount) || 1, 1), 8);
+    const ports: PortDef[] = [];
+    for (let i = 1; i <= n; i++) {
+      ports.push({ id: `out_${i}`, label: `取值${i}`, type: "any" });
+    }
+    return ports.length ? ports : nodeType.outputs;
   }
   if (nodeType.id === "output_merge_list") {
     // 合并节点仅有一个静态 json 输出，不随端口数变化

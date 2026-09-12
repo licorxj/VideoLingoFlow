@@ -166,6 +166,8 @@ share/
 原始项目代码/
 # 本机私有（付费核心仓库 / 历史参考代码 / IDE 私有文档），不上传
 收费代码编译/
+# 临时克隆的付费核心仓库（一次性构建用），不随主仓库分发
+_tmp_billing_clone/
 原始项目代码-不要参考/
 .trae/
 # 任务工作区（用户素材/产物）
@@ -240,3 +242,24 @@ celerybeat.pid
 
 # Backend tests (not tracked)
 backend/tests/
+
+# 测试文件（统一忽略，不随仓库分发）
+**/test_*.py
+**/*_test.py
+**/tests/
+**/__tests__/
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+**/*.test.js
+**/*.spec.js
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+
+# 调试文件
+debug-*.md
+**/.debug/
+*.debug

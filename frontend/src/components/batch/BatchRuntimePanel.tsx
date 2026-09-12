@@ -1,4 +1,5 @@
-import { Activity, Cpu, Gauge, HardDrive, Layers3, ServerCog } from "lucide-react";
+import { useState } from "react";
+import { Activity, ChevronDown, ChevronUp, Cpu, Gauge, HardDrive, Layers3, ServerCog } from "lucide-react";
 import { RuntimeStatus } from "@/api/batch";
 import { cn } from "@/lib/utils";
 
@@ -33,6 +34,7 @@ function StatCard({
 }
 
 export default function BatchRuntimePanel({ runtime, loading = false }: Props) {
+  const [expanded, setExpanded] = useState(true);
   const batch = runtime?.batch;
   const control = runtime?.control_plane;
   const gpu = runtime?.gpu_service;
@@ -50,28 +52,40 @@ export default function BatchRuntimePanel({ runtime, loading = false }: Props) {
 
   return (
     <div className="rounded-2xl border border-border/60 bg-card/40 p-3.5">
-      <div className="mb-3 flex items-center gap-2">
-        <ServerCog className="h-4 w-4 text-primary" />
-        <div>
-          <div className="text-sm font-semibold">系统运行态</div>
-          <div className="text-[11px] text-muted-foreground">
-            批次投递、Worker、资源容量与 GPU 服务实时状态
+      <div className={cn("flex items-center justify-between gap-2", expanded && "mb-3")}>
+        <div className="flex min-w-0 items-center gap-2">
+          <ServerCog className="h-4 w-4 shrink-0 text-primary" />
+          <div className="min-w-0">
+            <div className="text-sm font-semibold">系统运行态</div>
+            <div className="text-[11px] text-muted-foreground">
+              批次投递、Worker、资源容量与 GPU 服务实时状态
+            </div>
           </div>
         </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((value) => !value)}
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border/60 bg-background/60 px-2.5 py-1 text-[11px] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
+          title={expanded ? "折叠系统运行态" : "展开系统运行态"}
+          aria-expanded={expanded}
+        >
+          {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+          {expanded ? "折叠" : "展开"}
+        </button>
       </div>
 
-      {!runtime && (
+      {expanded && !runtime && (
         <div className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700">
           {loading ? "正在获取系统运行态..." : "系统运行态暂未返回，请确认后端已重启并可访问 /api/control/runtime/status"}
         </div>
       )}
-      {!!runtime?.control_plane?.error && (
+      {expanded && !!runtime?.control_plane?.error && (
         <div className="mb-3 rounded-xl border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-[11px] text-amber-700">
           {runtime.control_plane.error}
         </div>
       )}
 
-      <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+      <div className={cn("grid gap-2.5 md:grid-cols-2 xl:grid-cols-4", !expanded && "hidden")}>
         <StatCard
           icon={Layers3}
           label="批次在途任务数"
@@ -108,7 +122,7 @@ export default function BatchRuntimePanel({ runtime, loading = false }: Props) {
         />
       </div>
 
-      <div className="mt-3 grid gap-2.5 xl:grid-cols-[1.4fr_1fr]">
+      <div className={cn("mt-3 grid gap-2.5 xl:grid-cols-[1.4fr_1fr]", !expanded && "hidden")}>
         <div className="rounded-xl border border-border/50 bg-background/40 px-3 py-2.5">
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
             <Gauge className="h-3.5 w-3.5 text-sky-500" />

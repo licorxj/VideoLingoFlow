@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { historyApi } from "@/api/history";
 import { tasksApi } from "@/api/tasks";
 import TaskCard from "@/components/task/TaskCard";
+import ArchivedProjectsDialog from "@/components/history/ArchivedProjectsDialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/shared/PageHeader";
@@ -24,6 +25,7 @@ import {
   Trash2,
   CheckSquare,
   ListChecks,
+  ArchiveRestore,
 } from "lucide-react";
 
 export default function History() {
@@ -32,6 +34,7 @@ export default function History() {
   const [keyword, setKeyword] = useState("");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
   const [loading, setLoading] = useState(true);
+  const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
 
   const load = async () => {
@@ -202,6 +205,15 @@ export default function History() {
             <SelectItem value="asc">最早创建</SelectItem>
           </SelectContent>
         </Select>
+        <Button
+          variant="outline"
+          size="sm"
+          className="ml-auto flex-shrink-0"
+          onClick={() => setShowArchived(true)}
+        >
+          <ArchiveRestore className="mr-1.5 h-4 w-4" />
+          加载已归档项目
+        </Button>
       </div>
 
       {loading ? (
@@ -230,6 +242,12 @@ export default function History() {
           }
         />
       )}
+
+      <ArchivedProjectsDialog
+        open={showArchived}
+        onClose={() => setShowArchived(false)}
+        onRestored={load}
+      />
     </PageBackground>
   );
 }

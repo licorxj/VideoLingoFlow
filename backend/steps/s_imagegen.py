@@ -70,8 +70,8 @@ class S_ImageGen(BaseStep):
             interface = interface[0] if interface else ""
 
         model = node_config.get("model", "")
-        resolution = node_config.get("resolution", "1K")
-        aspect_ratio = node_config.get("aspect_ratio", "1:1")
+        resolution = step_inputs.get("resolution", "") or node_config.get("resolution", "1K")
+        aspect_ratio = step_inputs.get("aspect_ratio", "") or node_config.get("aspect_ratio", "1:1")
         num_images = int(node_config.get("num_images", 1))
         custom_prompt_enabled = node_config.get("custom_prompt_enabled", False)
         custom_prompt = node_config.get("custom_prompt", "")

@@ -15,6 +15,7 @@ LLM / 生图(imagegen) / 生视频(videogen) / TTS 引擎，出片合成走 ffmp
 import os
 import json
 import random
+import inspect
 import shutil
 import threading
 import time
@@ -36,6 +37,38 @@ def _inputs(step) -> dict:
 
 def _node_id(step) -> str:
     return getattr(step, "_node_id", "unknown")
+
+
+def _as_id_list(value) -> list:
+    """端口值转 id 列表：支持列表、JSON 数组字符串、逗号/换行分隔字符串。"""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        out = []
+        for item in value:
+            out.extend(_as_id_list(item))
+        return out
+    text = str(value).strip()
+    if not text:
+        return []
+    try:
+        parsed = json.loads(text)
+    except Exception:  # noqa: BLE001
+        parsed = None
+    if isinstance(parsed, list):
+        out = []
+        for item in parsed:
+            out.extend(_as_id_list(item))
+        return out
+    if isinstance(parsed, (str, int, float)):
+        return [str(parsed)]
+    out = []
+    for line in text.replace("\r", "\n").split("\n"):
+        for piece in line.split(","):
+            piece = piece.strip()
+            if piece:
+                out.append(piece)
+    return out
 
 
 def _read_text(value, task_dir: str = "") -> str:
@@ -241,13 +274,16 @@ def _concat_with_transitions(paths: list, out_path: str, transition: str = "none
                             "-map", f"[{last_a}]", "-y", out_path])
 
 
-def _build_chapter_cover(chapter: dict, cfg: dict, out_dir: str, nid: str):
-    """按章节标题/简介生成封面图（返回绝对路径）；生图失败返回 None。"""
+def _build_chapter_cover(chapter: dict, cfg: dict, out_dir: str, nid: str, style: str = ""):
+    """按章节标题/简介生成封面图（返回绝对路径）；生图失败返回 None。
+
+    画风与全片统一：默认模板带上项目【画风锁定】（style）；节点自定义 cover_prompt 则原样使用。
+    """
     title = chapter.get("title") or "未命名章节"
     summary = (chapter.get("summary") or "").strip()
     prompt = (cfg.get("cover_prompt") or "").strip()
     if not prompt:
-        prompt = (f"电影剧集章节封面海报，章节《{title}》。{summary}。"
+        prompt = (f"{_style_prefix(style)}电影剧集章节封面海报，章节《{title}》。{summary}。"
                   f"主体角色与场景象征性呈现，电影级光影构图，留白用于标题排版。")
     asp = cfg.get("aspect_ratio")
     if asp in (None, "", "original"):
@@ -353,7 +389,23 @@ _STEP_PROMPT_FILES = {
     "agi_scene": "scene_extract.md",
     "agi_chapter": "chapter_plan.md",
     "agi_shot": "storyboard_break.md",
+    "agi_shot_prompt": "shot_assemble.md",
+    "agi_voice": "voice_sample.md",
 }
+
+
+def _as_text(value) -> str:
+    """把 LLM 返回/上游传入的任意值规整为文本：str 原样，dict/list 序列化为 JSON，None 为空串。"""
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    if isinstance(value, (dict, list)):
+        try:
+            return json.dumps(value, ensure_ascii=False)
+        except Exception:  # noqa: BLE001
+            return str(value)
+    return str(value)
 
 
 def _load_prompt(filename: str) -> str:
@@ -370,6 +422,83 @@ def _load_prompt(filename: str) -> str:
         if len(parts) >= 3:
             text = parts[2].strip()
     return text
+
+
+def _load_prompt_meta(filename: str) -> dict:
+    """解析模板的 YAML frontmatter 为 dict（供「规则随文件生效」的场景）；缺失或异常返回 {}。"""
+    if not filename:
+        return {}
+    try:
+        with open(os.path.join(_PROMPT_DIR, filename), encoding="utf-8") as f:
+            text = f.read().lstrip()
+    except Exception:  # noqa: BLE001
+        return {}
+    if not text.startswith("---"):
+        return {}
+    parts = text.split("---", 2)
+    if len(parts) < 3:
+        return {}
+    try:
+        import yaml
+        meta = yaml.safe_load(parts[1]) or {}
+    except Exception:  # noqa: BLE001
+        return {}
+    return meta if isinstance(meta, dict) else {}
+
+
+# 视频提示词拼装规则的兜底默认值：video_prompt.md 的 frontmatter 可逐项覆盖
+_VIDEO_PROMPT_FILE = "video_prompt.md"
+_VIDEO_PROMPT_RULE_DEFAULTS = {
+    "segment_seconds": 3,                       # 每段秒数（段头时间轴按此步进）
+    "join_word": "切到",                         # 第 2 段起的衔接词（空串=不写）
+    "reference_prefix": "@",                    # 角色引用前缀（空串=不写 @ 引用）
+    "time_range_format": "{start}-{end}秒：",     # 段头模板，可用 {start}/{end}
+    "include_dialogues": True,                  # 是否把 dialogues 并入提示词
+    "dialogue_format": "，{character}说：「{content}」",
+    "scene_join_fallback": "；",                 # 无分段结构时的兜底连接符
+    "camera_position": "head",                  # camera_prompt 位置：head / tail / none
+}
+
+
+def _coerce_rule(value, default):
+    """按兜底默认值的类型规整规则值（MD/节点配置可能是字符串）；不合法时回退默认值。"""
+    try:
+        if isinstance(default, bool):
+            if isinstance(value, str):
+                return value.strip().lower() in ("1", "true", "yes", "on", "是")
+            return bool(value)
+        if isinstance(default, int) and not isinstance(value, bool):
+            return int(value)
+        if isinstance(default, float):
+            return float(value)
+    except Exception:  # noqa: BLE001
+        return default
+    if isinstance(default, str):
+        # 文本类规则：允许显式空串（如 join_word/reference_prefix 置空表示不写）
+        return value if isinstance(value, str) else str(value)
+    return value
+
+
+def _video_prompt_rules(cfg: dict) -> dict:
+    """视频提示词拼装规则：内置默认 ← video_prompt.md frontmatter ← 节点显式配置（后者优先）。"""
+    rules = dict(_VIDEO_PROMPT_RULE_DEFAULTS)
+    for source in (_load_prompt_meta(_VIDEO_PROMPT_FILE), cfg or {}):
+        if not isinstance(source, dict):
+            continue
+        for key, value in source.items():
+            if key in rules and value is not None:  # 空串视为显式设置（用于关闭某项）
+                rules[key] = _coerce_rule(value, rules[key])
+    return rules
+
+
+def _rule_format(template: str, default: str, **fields) -> str:
+    """套用规则模板；模板缺占位符或损坏时回退内置模板。"""
+    for tpl in (template, default):
+        try:
+            return (tpl or default).format(**fields)
+        except Exception:  # noqa: BLE001
+            continue
+    return default
 
 
 def _system_prompt(step_name: str, system: str = None) -> str:
@@ -402,6 +531,30 @@ def _pick_interface(manager_getter, cfg_key: str, cfg: dict) -> str:
     if not enabled:
         raise RuntimeError(f"未配置可用接口（{cfg_key}），请先在「设置 → 其他能力接口」中添加并启用")
     return enabled[0]["id"]
+
+
+def _pick_tts_interface(cfg: dict, mode: str) -> str:
+    """按用途挑选 TTS 接口：音色设计用 design_interface，音色克隆用 clone_interface。
+
+    未显式配置时依次回退旧键 ``tts_interface``、首个支持该模式的已启用接口
+    （controllable_clone 会自动降级到 clone）。
+    """
+    explicit = cfg.get("design_interface") if mode == "voice_design" else cfg.get("clone_interface")
+    explicit = str(explicit or "").strip() or str(cfg.get("tts_interface") or "").strip()
+    if explicit:
+        return explicit
+    try:
+        from backend.tts.tts_interface_manager import get_tts_interface_manager
+        enabled = get_tts_interface_manager().get_enabled()
+    except Exception:  # noqa: BLE001
+        enabled = []
+    candidates = ["controllable_clone", "clone"] if mode != "voice_design" else ["voice_design"]
+    for cand in candidates:
+        for iface in enabled:
+            modes = (iface.get("config") or {}).get("modes") or {}
+            if (modes.get(cand) or {}).get("enabled"):
+                return iface["id"]
+    raise RuntimeError(f"没有支持「{mode}」模式的已启用 TTS 接口，请先在「设置 → TTS 接口」中配置")
 
 
 # --------------------------------------------------------------------------- #
@@ -449,18 +602,76 @@ def _log_generation(kind: str, *, prompt: str = "", interface: str = "", model: 
         pass
 
 
+def _call_engine(fn, args=(), **kwargs):
+    """按目标方法的签名过滤参数：不支持的键直接剔除，避免接口能力差异导致 TypeError。
+
+    方法签名声明 ``**kwargs``（多数引擎 wrapper 如此）时原样传入，由引擎自行取舍。
+    """
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return fn(*args, **kwargs)
+    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in params.values()):
+        return fn(*args, **kwargs)
+    return fn(*args, **{k: v for k, v in kwargs.items() if k in params})
+
+
+def _as_int(value, default: int = 0) -> int:
+    """把节点配置里的数值（可能是字符串）转 int；空值/非法值回退 default。"""
+    try:
+        if value in (None, ""):
+            return default
+        return int(float(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_float(value, default: float = 0.0) -> float:
+    """把节点配置里的数值转 float；空值/非法值回退 default。"""
+    try:
+        if value in (None, ""):
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _image_capability_params(cfg: dict) -> dict:
+    """生图能力参数（模型/分辨率/反向提示词）；留空不传，交接口默认值决定。"""
+    params = {}
+    if cfg.get("image_model"):
+        params["model"] = str(cfg["image_model"])
+    if cfg.get("image_resolution"):
+        params["resolution"] = str(cfg["image_resolution"])
+    if cfg.get("negative_prompt"):
+        params["negative_prompt"] = str(cfg["negative_prompt"])
+    return params
+
+
 def _gen_images(prompt: str, out_dir: str, cfg: dict, num: int = 1, aspect: str = "1:1",
-                ref_images=None, seed=None) -> list:
+                ref_images=None, seed=None, mode: str = "txt2img", image: str = None) -> list:
+    """生图封装；mode=txt2img(文生图) 或 img2img(图生图)。
+
+    img2img 时：mode 透传 img2img，ref_images 作为一致性参考图，image 作为 init 底图
+    （引擎不支持时由 ``_call_engine`` 过滤忽略）。模型优先取 ``img2img_model``（图生图），
+    否则回退 ``image_model``。
+    """
     from backend.imagegen.imagegen_factory import get_imagegen_engine
     from backend.imagegen.imagegen_interface_manager import get_imagegen_interface_manager
     iface = _pick_interface(get_imagegen_interface_manager, "image_interface", cfg)
     engine = get_imagegen_engine(iface)
+    params = _image_capability_params(cfg)
+    if mode == "img2img" and cfg.get("img2img_model"):
+        params["model"] = str(cfg["img2img_model"])
     t0, paths, err = time.time(), [], None
     try:
-        paths = engine.generate(prompt=prompt, output_dir=out_dir, mode="txt2img",
-                                aspect_ratio=aspect, num_images=num,
-                                ref_images=list(ref_images) if ref_images else None,
-                                seed=seed) or []
+        kw = dict(prompt=prompt, output_dir=out_dir, mode=mode,
+                  aspect_ratio=aspect, num_images=num,
+                  ref_images=list(ref_images) if ref_images else None,
+                  seed=seed, **params)
+        if image:
+            kw["image"] = image
+        paths = _call_engine(engine.generate, **kw) or []
         if not paths:
             raise RuntimeError("生图未返回任何结果")
     except Exception as e:  # noqa: BLE001
@@ -468,7 +679,8 @@ def _gen_images(prompt: str, out_dir: str, cfg: dict, num: int = 1, aspect: str 
         raise
     finally:
         _log_generation("image", prompt=prompt, interface=iface,
-                        model=(cfg.get("image_model") or ""), mode="txt2img",
+                        model=(params.get("model") or cfg.get("image_model") or ""),
+                        mode=mode,
                         result=paths, error=err,
                         duration_ms=int((time.time() - t0) * 1000))
     return paths
@@ -481,11 +693,22 @@ def _gen_video(prompt: str, out_dir: str, cfg: dict, ref_images=None,
     iface = _pick_interface(get_videogen_interface_manager, "video_interface", cfg)
     engine = get_videogen_engine(iface)
     t0, paths, err = time.time(), [], None
+    video_kwargs = {
+        "prompt": prompt, "output_dir": out_dir,
+        "model": (cfg.get("video_model") or ""),
+        "mode": "img2video",
+        "resolution": (cfg.get("resolution") or "720P"),
+        "duration": duration,
+        "num_videos": max(1, _as_int(cfg.get("num_videos"), 1)),
+        "ref_images": ref_images or None,
+    }
+    if aspect:
+        # 节点「比例」配置（原实现漏传，导致该项设置不生效）
+        video_kwargs["ratio"] = aspect
+    if cfg.get("negative_prompt"):
+        video_kwargs["negative_prompt"] = str(cfg["negative_prompt"])
     try:
-        paths = engine.generate(prompt=prompt, output_dir=out_dir,
-                                model=(cfg.get("video_model") or "") or "",
-                                mode="img2video", resolution=(cfg.get("resolution") or "720P"),
-                                duration=duration, num_videos=1, ref_images=ref_images or None) or []
+        paths = _call_engine(engine.generate, **video_kwargs) or []
         if not paths:
             raise RuntimeError("生视频未返回任何结果")
     except Exception as e:  # noqa: BLE001
@@ -505,6 +728,11 @@ def _tts(text: str, out_path: str, cfg: dict, ref_audio: str = None) -> bool:
     iface = _pick_interface(get_tts_interface_manager, "tts_interface", cfg)
     engine = get_tts_engine(iface)
     kwargs = {}
+    # 能力接口参数：模型 / 语速（引擎签名不支持时由 _call_engine 自动剔除）
+    if cfg.get("tts_model"):
+        kwargs["model"] = str(cfg["tts_model"])
+    if _as_float(cfg.get("tts_speed"), 0.0) > 0:
+        kwargs["speed"] = _as_float(cfg["tts_speed"], 1.0)
     mode = (cfg.get("tts_mode") or "preset_voice")
     if mode == "controllable_clone" and ref_audio:
         kwargs["mode"] = "controllable_clone"
@@ -518,7 +746,7 @@ def _tts(text: str, out_path: str, cfg: dict, ref_audio: str = None) -> bool:
             kwargs["voice"] = cfg.get("tts_voice")
     t0, err = time.time(), None
     try:
-        ok = engine.synthesize(text, str(out_path), **kwargs)
+        ok = _call_engine(engine.synthesize, (text, str(out_path)), **kwargs)
         if not ok or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
             raise RuntimeError(f"TTS 合成失败：{text[:30]}…")
     except Exception as e:  # noqa: BLE001
@@ -578,15 +806,22 @@ def _resolve_creation_of(shot_id=None, chapter_id=None):
     return cid, chid
 
 
-def _resolve_shot_targets(shot_id: str, chapter_id: str) -> list:
-    """单分镜或整章批处理：返回待处理的 shot_id 列表（按 order_no）。"""
+def _resolve_shot_targets(shot_id: str, chapter_id: str, chapter_ids=None) -> list:
+    """单分镜 / 整章 / 多章节批处理：返回待处理的 shot_id 列表（按 order_no）。
+
+    优先级：shot_id > chapter_ids（可多章）> chapter_id（单章）。
+    """
     from backend import creation as agi
     if shot_id:
         return [shot_id]
-    if chapter_id:
-        chapter = agi.get_chapter(chapter_id, with_shots=True)
-        return [s["id"] for s in (chapter.get("shots") or [])]
-    return []
+    ids = [str(x).strip() for x in (chapter_ids or []) if str(x).strip()]
+    if chapter_id and chapter_id not in ids:
+        ids.insert(0, chapter_id)
+    out = []
+    for cid in ids:
+        chapter = agi.get_chapter(cid, with_shots=True)
+        out.extend(s["id"] for s in (chapter.get("shots") or []))
+    return out
 
 
 def _asset_abs(agi, p):
@@ -637,7 +872,114 @@ def _collect_ref_images(agi, shot: dict, creation: dict, scene_assets: list,
                     break
             if len(refs) >= max_refs:
                 break
+            return refs[:max_refs]
     return refs[:max_refs]
+
+
+def _merge_images_to_one(paths: list, out_path: str, max_w: int = 1024) -> str:
+    """把多张参考图横向拼成一张（道具合并用）；失败返回首张路径。"""
+    try:
+        from PIL import Image
+    except Exception:  # noqa: BLE001
+        return paths[0] if paths else ""
+    imgs = []
+    for p in paths:
+        try:
+            imgs.append(Image.open(p).convert("RGB"))
+        except Exception:  # noqa: BLE001
+            continue
+    if not imgs:
+        return ""
+    if len(imgs) == 1:
+        try:
+            imgs[0].save(out_path)
+        except Exception:  # noqa: BLE001
+            return paths[0]
+        return out_path
+    # 统一高度后横向拼接
+    h = min(max(im.height for im in imgs), 768)
+    scaled = [im.resize((max(1, int(im.width * h / im.height)), h)) for im in imgs]
+    total_w = sum(im.width for im in scaled)
+    canvas = Image.new("RGB", (min(total_w, max_w * len(scaled)), h), (255, 255, 255))
+    x = 0
+    for im in scaled:
+        canvas.paste(im, (x, 0))
+        x += im.width
+    try:
+        canvas.save(out_path)
+    except Exception:  # noqa: BLE001
+        return paths[0]
+    return out_path
+
+
+def _collect_assembled_refs(agi, shot: dict, creation: dict, scene_assets: list,
+                            prop_assets: list, task_dir: str, nid: str) -> list:
+    """组装分镜生图的有序参考图：image1=场景图, image2=道具图(多道具先合并), image3+=角色图。
+
+    返回绝对路径列表（按上述顺序，跳过缺失项）。道具合并图落 task_dir/output，跨节点可解析。
+    """
+    refs = []
+    # 1) 场景图：优先取该分镜绑定场景的资产图，回退章节概念场景图
+    sid = shot.get("scene_id")
+    scene_abs = None
+    if sid:
+        for a in agi.list_assets(creation.get("id") or "", asset_kind="scene_image", scene_id=sid):
+            for p in (a.get("paths") or []):
+                scene_abs = _asset_abs(agi, p)
+                if scene_abs:
+                    break
+            if scene_abs:
+                break
+    if not scene_abs:
+        for a in scene_assets:
+            for p in (a.get("paths") or []):
+                scene_abs = _asset_abs(agi, p)
+                if scene_abs:
+                    break
+            if scene_abs:
+                break
+    if scene_abs:
+        refs.append(scene_abs)
+    # 2) 道具图：多张先合并为一张
+    prop_paths = []
+    for a in prop_assets:
+        for p in (a.get("paths") or []):
+            ap = _asset_abs(agi, p)
+            if ap:
+                prop_paths.append(ap)
+    if prop_paths:
+        if len(prop_paths) == 1:
+            refs.append(prop_paths[0])
+        else:
+            out_dir = os.path.join(task_dir, "output")
+            os.makedirs(out_dir, exist_ok=True)
+            merged = _merge_images_to_one(prop_paths, os.path.join(out_dir, f"prop_merge_{nid}.png"))
+            if merged:
+                refs.append(merged)
+    # 3) 角色图：按出场人物取角色库多视角首图
+    chars_by_name = {c.get("name"): c for c in (creation.get("characters") or [])}
+    for c in (shot.get("characters") or []):
+        name = c if isinstance(c, str) else (c.get("name") or "")
+        name = str(name or "").strip()
+        if not name:
+            continue
+        lib_id = (chars_by_name.get(name) or {}).get("character_lib_id")
+        if not lib_id:
+            continue
+        try:
+            vdir = agi.get_character(lib_id).get("images_dir")
+            if not vdir:
+                continue
+            vabs = agi.resolve_public_path(vdir)
+            if not os.path.isdir(vabs):
+                continue
+            for fn in sorted(os.listdir(vabs)):
+                if fn.lower().endswith((".png", ".jpg", ".jpeg", ".webp")):
+                    refs.append(os.path.join(str(vabs), fn))
+                    break
+        except Exception:  # noqa: BLE001
+            continue
+    return refs
 
 
 def _srt_time(sec: float) -> str:
@@ -679,15 +1021,44 @@ def _burn_subtitle(video: str, srt_path: str, out_path: str) -> bool:
         return False
 
 
-def _style_hint(agi, creation_id: str, cfg: dict) -> str:
-    """画风来源：节点配置优先，否则取项目骨架中的【画风锁定】段（剧本深化产出）。"""
+_STYLE_LOCK_RE = re.compile(r"【画风锁定】\s*([\s\S]+?)(?=\n\n【|$)")
+
+
+def _style_lock(script_text: str) -> str:
+    """抽取项目骨架里的【画风锁定】段（立项预设/自定义输入/剧本深化产出的统一画风）。"""
+    m = _STYLE_LOCK_RE.search(script_text or "")
+    return m.group(1).strip() if m else ""
+
+
+def _tag_text(value) -> str:
+    """把标签字段（list 或逗号分隔字符串）规整为逗号分隔文本。"""
+    if isinstance(value, str):
+        items = value.replace("，", ",").split(",")
+    elif isinstance(value, (list, tuple, set)):
+        items = list(value)
+    else:
+        items = []
+    return ",".join(str(x).strip() for x in items if str(x or "").strip())
+
+
+def _style_prefix(style: str) -> str:
+    """画风前缀：有画风时拼成「画风；」，为空则不加，避免出现前导分号。"""
+    s = (style or "").strip()
+    return f"{s}；" if s else ""
+
+
+def _style_hint(agi, creation_id: str, cfg: dict, script_text: str = "") -> str:
+    """项目统一画风（全链路唯一来源，禁止各节点自行硬编码风格词）。
+
+    优先级：节点画风补充 > 项目骨架【画风锁定】 > 项目画风标签。
+    """
     v = (cfg.get("art_style_prompt") or "").strip()
     if v:
         return v
     try:
-        st = agi.get_creation(creation_id).get("script_text") or ""
-        m = re.search(r"【画风锁定】\s*([\s\S]+?)(?=\n\n【|$)", st)
-        return m.group(1).strip() if m else ""
+        proj = agi.get_creation(creation_id) or {}
+        locked = _style_lock(script_text or proj.get("script_text") or "")
+        return locked or _tag_text(proj.get("art_style_tags"))
     except Exception:  # noqa: BLE001
         return ""
 
@@ -826,6 +1197,9 @@ class S_AGI_Project(BaseStep):
                 preset = agi.get_style_preset(preset_id)
             except Exception:  # noqa: BLE001
                 preset = None
+        # 统一画风（写库后全链路唯一来源）：自定义输入 > 预设画风
+        art_style = ((cfg.get("art_style_custom") or "").strip()
+                     or ((preset.get("art_style") or "").strip() if preset else ""))
         creation = agi.create_creation(
             name,
             description=brief[:500] if brief else "",
@@ -834,14 +1208,14 @@ class S_AGI_Project(BaseStep):
             art_style_tags=cfg.get("art_style_tags") or (preset.get("name") if preset else ""),
             audience_tags=cfg.get("audience_tags")
             or (",".join(preset.get("audience_tags") or []) if preset else ""),
+            video_aspect_ratio=(cfg.get("video_aspect_ratio") or "").strip() or "16:9",
         )
         cid = creation["id"]
         if callback:
             callback(20, f"已创建创作项目《{name}》")
 
-        system = "你是资深动漫总编剧，擅长搭建世界观与整体故事骨架。只输出 JSON，不要多余说明。"
-        _style_line = (f"\n【画风/风格】{preset['art_style']}"
-                       if preset and preset.get("art_style") else "")
+        system = "你是资深漫剧总编剧，擅长搭建世界观与整体故事骨架。只输出 JSON，不要多余说明。"
+        _style_line = f"\n【画风/风格】{art_style}" if art_style else ""
         prompt = (f"为 AI 漫剧项目《{name}》搭建故事骨架。\n【创意/要求】\n{brief}{_style_line}\n\n"
                   f"返回 JSON：{{worldview:世界观设定, outline:整体故事大纲, "
                   f"script_text:可分集展开的总剧本文本}}。")
@@ -849,16 +1223,17 @@ class S_AGI_Project(BaseStep):
                             model=(cfg.get("llm_model") or ""))
         worldview, outline, script = "", "", ""
         if isinstance(resp, dict):
-            worldview = resp.get("worldview") or ""
-            outline = resp.get("outline") or ""
-            script = resp.get("script_text") or resp.get("script") or ""
+            # 模型可能不守约定返回嵌套对象：统一规整为文本，避免后续切片/入库崩溃
+            worldview = _as_text(resp.get("worldview"))
+            outline = _as_text(resp.get("outline"))
+            script = _as_text(resp.get("script_text") or resp.get("script") or "")
         script_text = "\n\n".join(
             f"【{head}】\n{body}" for head, body in
             (("世界观", worldview), ("大纲", outline), ("总剧本", script)) if body
         ) or brief
-        # 预设画风写入【画风锁定】段，下游生图节点自动取用（_style_hint）
-        if preset and preset.get("art_style") and "【画风锁定】" not in (script_text or ""):
-            script_text = f"【画风锁定】\n{preset['art_style']}\n\n{script_text}"
+        # 统一画风写入【画风锁定】段：下游所有生图节点经 _style_hint 统一取用，风格不漂移
+        if art_style and "【画风锁定】" not in (script_text or ""):
+            script_text = f"【画风锁定】\n{art_style}\n\n{script_text}"
         agi.update_creation(cid, description=(outline or worldview or brief)[:500],
                             script_text=script_text)
         if callback:
@@ -907,7 +1282,8 @@ class S_AGI_Deepen(BaseStep):
         skeleton = proj.get("script_text") or ""
         n_ch = max(1, int(cfg.get("num_chapters") or 3))
         n_char = max(1, int(cfg.get("num_characters") or 3))
-        art_in = (cfg.get("art_style_input") or "")
+        # 画风一致性：项目已锁定画风（立项预设/自定义输入）时沿用，禁止被 LLM 改写
+        art_in = ((cfg.get("art_style_input") or "").strip() or _style_lock(skeleton))
         extra = (cfg.get("extra_requirements") or "")
         model = cfg.get("llm_model") or ""
         replace_chapters = bool(cfg.get("replace_chapters"))
@@ -926,7 +1302,7 @@ class S_AGI_Deepen(BaseStep):
             '"visual_anchor": "外貌造型锚点(发型/服装/标志特征,30字内)"}]\n'
             '}'
         )
-        system = "你是资深动漫总编剧兼美术监督。只输出符合 schema 的 JSON，禁止输出任何解释性文本。"
+        system = "你是资深漫剧总编剧兼美术监督。只输出符合 schema 的 JSON，禁止输出任何解释性文本。"
         prompt = (
             f"深化以下 AI 漫剧项目骨架，完成：剧本简介、{n_ch} 个章节的内容规划、"
             f"{n_char} 个人物设计提炼、画风元素锁定。\n"
@@ -955,10 +1331,12 @@ class S_AGI_Deepen(BaseStep):
         agi.update_creation(creation_id, description=synopsis)
 
         # 入库 2：画风元素锁定 → script_text 幂等追加【画风锁定】段
+        # 风格一致性：已有锁定/人工指定时以它为准，LLM 产出仅在无锁定时采用
         art = data.get("art_style") or {}
-        style_text = "；".join(str(art.get(k) or "").strip()
-                               for k in ("style_bible", "palette", "lighting", "texture")
-                               if str(art.get(k) or "").strip())
+        style_text = art_in or "；".join(
+            str(art.get(k) or "").strip()
+            for k in ("style_bible", "palette", "lighting", "texture")
+            if str(art.get(k) or "").strip())
         if style_text:
             base = re.split(r"【画风锁定】", skeleton)[0].strip()
             agi.update_creation(creation_id,
@@ -1050,7 +1428,7 @@ class S_AGI_Character(BaseStep):
         existing_norm = {_normalize_name(n): (n, i) for n, i in existing_map.items()}
 
         style = _style_hint(agi, creation_id, cfg)
-        system = ("你是资深动漫编剧兼角色设计师，擅长为 AI 漫剧设计立体、有记忆点的人物。"
+        system = ("你是资深漫剧编剧兼角色设计师，擅长为 AI 漫剧设计立体、有记忆点的人物。"
                   "只输出 JSON，不要多余说明。")
         fields_hint = ("请返回 JSON 数组，每个元素包含字段："
                        "name(姓名), gender(性别), age(年龄), personality(性格), "
@@ -1145,8 +1523,20 @@ class S_AGI_Character(BaseStep):
                          f"已写入人物：{name}")
 
             if cfg.get("generate_images"):
-                base = (f"{style}；动漫风格角色设定图，{name}，{c.get('gender','')}性，"
-                        f"{c.get('age','')}岁，{c.get('personality','')}，清晰五官，高质感。")
+                # 画风统一取自项目（_style_hint）；造型锚点必须进 prompt，保证角色差异化与形象稳定
+                gender_txt = f"{c.get('gender')}性" if str(c.get("gender") or "").strip() else ""
+                age_txt = f"{c.get('age')}岁" if str(c.get("age") or "").strip() else ""
+                saved_prompt = str(member.get("final_prompt") or "").strip()
+                if saved_prompt:
+                    # 优先使用项目内已存的最终提示词：可由「生成提示词」节点或外部 LLM
+                    # 优化后经「项目数据写入」回写，实现外部节点介入生图
+                    base = saved_prompt if saved_prompt.endswith(("。", ".", "！", "!")) else saved_prompt + "。"
+                else:
+                    base = (f"{_style_prefix(style)}角色设定图，"
+                            + "，".join(p for p in (
+                                name, look, gender_txt, age_txt,
+                                str(c.get("personality") or "").strip(), "清晰五官", "高质感") if p)
+                            + "。")
                 # 确定性种子：显式指定 → 沿用已存 → 随机（重生成一致性）
                 try:
                     explicit = int(cfg["seed"]) if cfg.get("seed") not in (None, "") else None
@@ -1225,14 +1615,21 @@ class S_AGI_Character(BaseStep):
 
 
 class S_AGI_Voice(BaseStep):
-    """人物音色生产：为项目人物合成音色样本，登记到 voiceforge 音频素材库并绑定 voice_ref。
+    """人物音色生产：按「生成对象」为人物生成专属音色样本，登记到配音谷音色库并绑定 voice_ref。
 
-    打通配音链路：本节点产出的 vf:assets 引用会绑定到人物 voice_ref，
-    供「分镜配音」按人物音色克隆（controllable_clone）使用。
+    服务化执行链路：
+      1) 解析生成对象：全部人物 / 卡片列表勾选的子集，逐角色读取「设计模式 + 参考音频」；
+      2) 一次性把所有目标角色的属性交给 LLM 设计 15~25 字朗读台词（模板 voice_sample.md）；
+      3) 逐角色调用 voiceforge 服务层合成：设计走「设计接口」，克隆走「克隆接口」+ 参考音频；
+      4) 音色样本登记进配音谷音色库 vf_voices，把 vf:voices:<id> 绑定到人物 voice_ref，
+         供「分镜配音」按人物音色克隆（controllable_clone）使用。
     """
     step_id = "agi_voice"
     step_name = "人物音色生产"
     dependencies = []
+
+    # 卡片「设计模式」取值 → TTS 引擎模式
+    _MODE_MAP = {"design": "voice_design", "clone": "controllable_clone"}
 
     def check_artifact(self, task_dir: str) -> bool:
         return os.path.isfile(_cache_path(task_dir, _node_id(self), "voice"))
@@ -1240,11 +1637,109 @@ class S_AGI_Voice(BaseStep):
     def validate_inputs(self, task_dir: str) -> bool:
         return True
 
+    # ------------------------------------------------------------------ #
+    # 生成对象解析
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _parse_target_cfg(cfg: dict) -> dict:
+        """把卡片保存的 voice_targets 解析成 {角色id 或 名称: 配置} 字典。"""
+        raw = cfg.get("voice_targets")
+        if isinstance(raw, str):
+            try:
+                raw = json.loads(raw)
+            except Exception:  # noqa: BLE001
+                raw = []
+        if not isinstance(raw, list):
+            raw = []
+        out = {}
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            key = str(item.get("id") or item.get("name") or "").strip()
+            if key:
+                out[key] = item
+        return out
+
+    def _resolve_targets(self, cfg: dict, characters: list) -> list:
+        """返回待生成音色的人物列表：[{character, name, mode, ref_audio}]。"""
+        mode = str(cfg.get("target_mode") or "all").strip()
+        configured = self._parse_target_cfg(cfg)
+        default_mode = str(cfg.get("default_mode") or "design").strip().lower()
+        if default_mode not in self._MODE_MAP:
+            default_mode = "design"
+
+        targets = []
+        for i, c in enumerate(characters):
+            name = str(c.get("name") or "").strip() or f"人物{i + 1}"
+            item = configured.get(str(c.get("id") or "")) or configured.get(name) or {}
+            if mode == "list":
+                # 列表模式下未列出 / 未勾选的人物不处理
+                if not item or not item.get("enabled", True):
+                    continue
+            t_mode = str(item.get("mode") or default_mode).strip().lower()
+            if t_mode not in self._MODE_MAP:
+                t_mode = default_mode
+            targets.append({
+                "character": c,
+                "name": name,
+                "mode": t_mode,
+                "ref_audio": str(item.get("ref_audio") or "").strip(),
+            })
+        return targets
+
+    # ------------------------------------------------------------------ #
+    # LLM 台词设计（一次性覆盖所有待生成角色）
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _character_profile_line(idx: int, t: dict) -> str:
+        c = t["character"]
+        parts = [
+            f"性别：{c.get('gender') or '未设定'}",
+            f"年龄：{c.get('age') or '未设定'}",
+            f"性格：{c.get('personality') or '未设定'}",
+            f"职业/背景：{c.get('occupation') or '未设定'}",
+            f"音色设计：{c.get('voice_design') or '未设定'}",
+        ]
+        return f"{idx}. 【{t['name']}】" + "；".join(parts)
+
+    @staticmethod
+    def _fallback_line(t: dict) -> str:
+        """LLM 不可用时的兜底台词（贴合人物音色描述，控制在 15~25 字内）。"""
+        c = t["character"]
+        design = str(c.get("voice_design") or "").strip()
+        base = f"你好，我是{t['name']}。"
+        if design:
+            line = f"{base}{design}"[:25]
+            return line if len(line) >= 8 else base
+        return base
+
+    def _design_sample_lines(self, cfg: dict, targets: list) -> dict:
+        """一次性让 LLM 为所有角色各设计一句 15~25 字台词，返回 {角色名: 台词}。"""
+        profiles = [self._character_profile_line(i + 1, t) for i, t in enumerate(targets)]
+        prompt = (
+            "请为下面每个角色各设计一句用于生成/克隆音色的朗读台词（15~25 字）：\n\n"
+            + "\n".join(profiles)
+            + "\n\n务必为每个角色输出一项，name 与上面的角色名完全一致。"
+        )
+        resp = _llm("agi_voice", prompt, json_mode=True, model=(cfg.get("llm_model") or ""))
+        lines = {}
+        for item in _extract_list(resp):
+            if isinstance(item, dict):
+                key = str(item.get("name") or "").strip()
+                value = str(item.get("sample_text") or "").strip()
+                if key and value:
+                    lines[key] = value
+        return lines
+
+    # ------------------------------------------------------------------ #
     def run(self, task_dir: str, callback=None, cancel_callback=None) -> dict:
+        from pathlib import Path
+
         from backend import creation as agi
+        from backend.creation.audio_refs import make_voice_ref
         from backend.utils.audio_processor import get_audio_duration
-        from backend.voiceforge.database import storage_root, initialize_database
-        from backend.voiceforge.storage import resolve_storage_key
+        from backend.voiceforge.database import initialize_database
+        from backend.voiceforge.services import register_voice_sample, synthesize_voice_clip
         initialize_database()  # 幂等；空库环境下自动建表
         cfg = _cfg(self)
         inp = _inputs(self)
@@ -1254,64 +1749,110 @@ class S_AGI_Voice(BaseStep):
 
         creation_id = (inp.get("creation_id") or cfg.get("creation_id") or "").strip()
         if not creation_id:
-            raise RuntimeError("缺少 creation_id：请连接「人物资产创作」节点的 creation_id 输出")
+            raise RuntimeError("缺少 creation_id：请连接「项目立项」节点的 creation_id 输出")
         proj = agi.get_creation(creation_id, with_detail=True)
         characters = proj.get("characters") or []
         if not characters:
             raise RuntimeError("项目内没有人物，请先运行「人物资产创作」")
 
-        overwrite = bool(cfg.get("overwrite"))
-        template = cfg.get("sample_text") or "你好，我是{name}。{voice_design}"
+        if callback:
+            callback(3, "解析生成对象…")
+        targets = self._resolve_targets(cfg, characters)
+        if not targets:
+            raise RuntimeError("「生成对象」为空：列表模式下请至少勾选一个人物")
 
-        created = []
-        samples = []
-        total = max(1, len(characters))
-        for i, c in enumerate(characters):
-            name = c.get("name") or f"人物{i+1}"
+        overwrite = bool(cfg.get("overwrite"))
+        if callback:
+            callback(6, f"待生成音色：{len(targets)} 位人物")
+
+        missing = [t["name"] for t in targets
+                   if t["mode"] == "clone" and not (t["ref_audio"] and os.path.isfile(t["ref_audio"]))]
+        if missing:
+            raise RuntimeError("以下人物选择了「克隆」模式但未设置有效参考音频（需为存在的音频文件绝对路径）："
+                               + "、".join(missing))
+
+        # 台词设计（一次性请求覆盖所有角色；失败自动回退兜底台词，不阻断音色生产）
+        lines = {}
+        try:
+            if callback:
+                callback(9, "LLM 正在设计各人物音色台词…")
+            lines = self._design_sample_lines(cfg, targets)
+            if callback:
+                callback(14, f"台词设计完成（{len(lines)}/{len(targets)}）")
+        except Exception as e:  # noqa: BLE001
+            if callback:
+                callback(14, f"台词设计失败，改用兜底台词：{e}")
+
+        speed = _as_float(cfg.get("tts_speed"), 0.0) or None
+        created, samples, failed = [], [], []
+        total = max(1, len(targets))
+        for i, t in enumerate(targets):
+            c = t["character"]
+            name = t["name"]
             if c.get("voice_ref") and not overwrite:
-                created.append({"name": name, "member_id": c["id"],
+                created.append({"name": name, "member_id": c["id"], "mode": t["mode"],
                                 "voice_ref": c["voice_ref"], "skipped": True})
                 continue
-            text = template.replace("{name}", name).replace(
-                "{voice_design}", c.get("voice_design") or "自然清晰的中文配音")
-            tmp = os.path.join(out_dir, f"voice_sample_{i+1}_{nid}.wav")
-            # 用人物自己的 voice_design 作为音色设计指令合成样本
-            tts_cfg = dict(cfg)
-            tts_cfg["tts_mode"] = "voice_design"
-            tts_cfg["tts_voice_design"] = c.get("voice_design") or "自然清晰的中文配音"
+            tts_mode = self._MODE_MAP[t["mode"]]
+            interface = _pick_tts_interface(cfg, tts_mode)
+            model = str((cfg.get("design_model") if tts_mode == "voice_design"
+                         else cfg.get("clone_model")) or "").strip()
+            text = lines.get(name) or self._fallback_line(t)
+            instruct = str(c.get("voice_design") or "").strip() or "自然清晰的中文配音"
+            tmp = os.path.join(out_dir, f"voice_sample_{i + 1}_{nid}.wav")
             if callback:
-                callback(10 + int(70 * (i + 1) / total), f"合成音色样本：{name}")
+                callback(15 + int(70 * (i + 1) / total),
+                         f"{'设计' if tts_mode == 'voice_design' else '克隆'}音色样本：{name}")
             _set_gen_ctx(creation_id=creation_id, step_id=self.step_id,
                          target_type="character", target_id=c.get("id") or "",
                          upstream_task_id="")
-            _tts(text, tmp, tts_cfg)
+            # TTS 服务层合成（含重试与落盘校验）
+            try:
+                synthesize_voice_clip(
+                    interface, text, Path(tmp), tts_mode,
+                    voice_design=instruct if tts_mode == "voice_design" else "",
+                    controllable_clone=instruct if tts_mode == "controllable_clone" else "",
+                    ref_audio=t["ref_audio"] if tts_mode == "controllable_clone" else "",
+                    speed=speed, model=model or None)
+            except Exception as e:  # noqa: BLE001
+                failed.append(f"{name}（{e}）")
+                continue
+
             try:
                 dur = get_audio_duration(tmp) or 0.0
             except Exception:  # noqa: BLE001
                 dur = 0.0
 
-            # 登记到 voiceforge 音频素材库（vf:assets 引用，可被 voice_ref/audio_ref_abspath 消费）
-            asset_id = uuid.uuid4().hex
-            key = f"assets/{asset_id}.wav"
-            dest = resolve_storage_key(key)
-            dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(tmp, str(dest))
-            rec = agi.add_audio_asset(
-                f"{name} 音色样本", "voice", storage_key=key,
-                file_name=f"{_safe_name(name)}_voice.wav", duration=dur,
-                description=c.get("voice_design") or "")
-            agi.update_creation_character(c["id"], voice_ref=rec["ref"])
-            created.append({"name": name, "member_id": c["id"], "voice_ref": rec["ref"],
-                            "sample": str(dest), "duration": dur})
-            samples.append(tmp)  # 任务内样本副本；持久副本在 voiceforge，经 vf 引用指向
+            # 登记到配音谷音色库（vf:voices 引用，可被 voice_ref/audio_ref_abspath 消费）
+            voice = register_voice_sample(
+                name=name, interface_id=interface, mode=tts_mode, sample_text=text,
+                sample_clip=Path(tmp),
+                voice_design=instruct if tts_mode == "voice_design" else "",
+                controllable_clone=instruct if tts_mode == "controllable_clone" else "",
+                reference_audio=t["ref_audio"] if tts_mode == "controllable_clone" else "",
+                description="；".join(x for x in (c.get("personality"), c.get("occupation")) if x),
+                gender=str(c.get("gender") or ""), age=str(c.get("age") or ""),
+                tags=["AI漫剧", *(["克隆"] if tts_mode != "voice_design" else ["设计"])])
+            ref = make_voice_ref(voice["id"])
+            agi.update_creation_character(c["id"], voice_ref=ref)
+            created.append({"name": name, "member_id": c["id"], "mode": t["mode"],
+                            "voice_ref": ref, "voice_id": voice["id"],
+                            "sample_text": text, "duration": dur})
+            samples.append(tmp)
+
+        if failed and not created:
+            raise RuntimeError("音色生产失败：" + "；".join(failed))
+        if callback and failed:
+            callback(90, "部分人物音色生产失败：" + "；".join(failed))
 
         cache = _write_cache(task_dir, nid, "voice",
-                             {"creation_id": creation_id, "voices": created})
+                             {"creation_id": creation_id, "voices": created, "failed": failed})
         return {
             "artifacts": [cache] + [os.path.relpath(p, task_dir) for p in samples],
             "outputs": {
                 "creation_id": creation_id,
                 "voices": json.dumps(created, ensure_ascii=False),
+                "failed": json.dumps(failed, ensure_ascii=False),
                 "audio": samples[-1] if samples else "",
             },
         }
@@ -1347,6 +1888,7 @@ class S_AGI_Scene(BaseStep):
         screenplay = _project_screenplay(proj)
         mode = _resolve_asset_mode(cfg, screenplay)
         style = _style_hint(agi, creation_id, cfg)
+        proj_asp = (cfg.get("aspect_ratio") or "").strip() or (proj.get("video_aspect_ratio") or "") or "16:9"
         n = max(1, int(cfg.get("num_scenes") or 6))
         system = "你是 AI 漫剧的场景美术指导，擅长用画面语言描述场景。只输出 JSON 数组。"
         existing_scenes = {}
@@ -1406,9 +1948,11 @@ class S_AGI_Scene(BaseStep):
             _set_gen_ctx(creation_id=creation_id, step_id=self.step_id,
                          target_type="scene", target_id=scene["id"], upstream_task_id="")
             if cfg.get("generate_images"):
-                p = f"{style}；动漫风格场景概念图，{desc}，氛围感强，电影级构图。"
+                # 优先用项目内已存的最终提示词（可被「生成提示词」或外部 LLM 优化后回写）
+                p = (str(scene.get("final_prompt") or "").strip()
+                     or f"{_style_prefix(style)}场景概念图，{desc}，氛围感强，电影级构图。")
                 try:
-                    imgs = _gen_images(p, out_dir, cfg, num=1, aspect="16:9")
+                    imgs = _gen_images(p, out_dir, cfg, num=1, aspect=proj_asp)
                     saved = _finalize(out_dir, nid, f"scene_{i+1}", imgs)
                     for abs_p in saved:
                         # 仅新建场景登记独立资产，避免复用场景时重复堆积
@@ -1516,7 +2060,9 @@ class S_AGI_Prop(BaseStep):
             _set_gen_ctx(creation_id=creation_id, step_id=self.step_id,
                          target_type="prop", target_id=prop["id"], upstream_task_id="")
             if cfg.get("generate_images"):
-                gen = f"{style}；动漫风格，白色背景单品道具图，{prompt_txt}，清晰无阴影，产品级展示。"
+                # 优先用项目内已存的最终提示词（可被「生成提示词」或外部 LLM 优化后回写）
+                gen = (str(prop.get("final_prompt") or "").strip()
+                       or f"{_style_prefix(style)}白色背景单品道具图，{prompt_txt}，清晰无阴影，产品级展示。")
                 try:
                     imgs = _gen_images(gen, out_dir, cfg, num=1, aspect="1:1")
                     saved = _finalize(out_dir, nid, f"prop_{i+1}", imgs)
@@ -1736,7 +2282,7 @@ class S_AGI_Prompt(BaseStep):
         agi.get_creation(creation_id)
         style = _style_hint(agi, creation_id, cfg)
         asset_type = (cfg.get("asset_type") or "scene").strip().lower()
-        if asset_type not in ("character", "scene", "prop"):
+        if asset_type not in ("character", "scene", "prop", "shot"):
             asset_type = "scene"
         model = cfg.get("llm_model") or ""
         ids = inp.get("ids")
@@ -1753,8 +2299,19 @@ class S_AGI_Prompt(BaseStep):
             assets = (agi.get_creation(creation_id, with_detail=True).get("characters") or [])
         elif asset_type == "scene":
             assets = agi.list_scenes(creation_id)
-        else:
+        elif asset_type == "prop":
             assets = agi.list_props(creation_id)
+        else:
+            # 分镜提示词：按章节取分镜（支持 chapter_ids 多章节批量；不指定则全项目）
+            chapters = _as_id_list(inp.get("chapter_ids") or cfg.get("chapter_ids"))
+            single = (inp.get("chapter_id") or cfg.get("chapter_id") or "").strip()
+            if single:
+                chapters.append(single)
+            if not chapters:
+                chapters = [c["id"] for c in agi.list_chapters(creation_id)]
+            assets = []
+            for cid in dict.fromkeys(chapters):
+                assets.extend(agi.get_chapter(cid, with_shots=True).get("shots") or [])
         if id_list:
             assets = [a for a in assets if a.get("id") in set(id_list)]
 
@@ -1771,13 +2328,44 @@ class S_AGI_Prompt(BaseStep):
                 src = (f"场景：{a.get('name')}\n地点：{a.get('location')}\n时间：{a.get('time')}\n"
                        f"光影：{a.get('lighting')}\n描述：{a.get('prompt')}")
                 label = f"场景 {a.get('name')}"
-            else:
+            elif asset_type == "prop":
                 src = (f"道具：{a.get('name')}\n类别：{a.get('type')}\n"
                        f"描述：{a.get('description')}\n生图要素：{a.get('prompt')}")
                 label = f"道具 {a.get('name')}"
-            prompt = (f"为「{label}」生成最终生图提示词（用于动漫风格图像生成）。\n"
+            else:
+                _sc = "；".join(str(x) for x in (a.get("scene_descriptions") or []))
+                _ch = "、".join(
+                    str(c if isinstance(c, str) else (c or {}).get("name") or "").strip()
+                    for c in (a.get("characters") or []))
+                src = (f"分镜 #{a.get('order_no')}\n画面描述：{_sc}\n出场人物：{_ch}\n"
+                       f"镜头类型：{a.get('shot_type')}\n拍摄角度：{a.get('angle')}\n"
+                       f"运镜：{a.get('movement')}\n氛围光影：{a.get('atmosphere')}\n"
+                       f"地点：{a.get('location')}\n时间段：{a.get('time')}")
+                label = f"分镜 #{a.get('order_no')}"
+            style_line = (f"【整体画风】{style}\n" if style
+                          else "【整体画风】项目未指定，请勿自创画风，只描述主体与构图。\n")
+            if asset_type == "shot":
+                # 分镜提示词一次生成两条：image_prompt 供首尾帧生图，video_prompt 供生视频；
+                # 由后续「分镜首尾帧」「分镜视频制作」节点优先消费，也可人工/外部改写
+                prompt = (f"为「{label}」生成两条提示词：image_prompt（首/尾帧静态画面）"
+                          f"与 video_prompt（视频运镜与动态画面，不含台词）。\n"
+                          f"【分镜信息】\n{src}\n{style_line}"
+                          f"输出 JSON：{{\"image_prompt\": \"…\", \"video_prompt\": \"…\"}}，各不超过 200 字。")
+                resp = _llm(self.step_id, prompt, system=system, json_mode=True, model=model)
+                payload = resp if isinstance(resp, dict) else {}
+                img_p = str(payload.get("image_prompt") or "").strip()
+                vid_p = str(payload.get("video_prompt") or "").strip()
+                if not img_p and isinstance(resp, str):
+                    img_p = resp.strip()
+                agi.update_shot(a["id"], image_prompt=img_p, video_prompt=vid_p)
+                results.append({"id": a.get("id"), "order_no": a.get("order_no"),
+                                "image_prompt": img_p, "video_prompt": vid_p})
+                if callback:
+                    callback(int(90 * (i + 1) / max(1, len(assets))), f"提示词：{label}")
+                continue
+            prompt = (f"为「{label}」生成最终生图提示词，画风必须与项目统一画风一致。\n"
                       f"【资产描述】\n{src}\n"
-                      f"【整体画风】{style or '动漫风格'}\n"
+                      f"{style_line}"
                       f"输出：直接给出 final_prompt 文本（聚焦视觉要素：主体/构图/光影/画风，不超过 200 字）。")
             final = _llm(self.step_id, prompt, system=system, json_mode=False, model=model)
             final = (final if isinstance(final, str) else str(final)).strip()
@@ -1830,7 +2418,11 @@ class S_AGI_Chapter(BaseStep):
         brief = _read_text(inp.get("text"), task_dir) or (proj.get("script_text") or "")
         n = max(1, int(cfg.get("num_chapters") or 1))
         system = "你是 AI 漫剧主编剧，擅长拆分章节、控制节奏。只输出 JSON 数组。"
+        style = _style_hint(agi, creation_id, cfg)
+        style_line = (f"【画风】{style}（章节内的画面描写须与该画风自洽，不要另立风格）\n"
+                      if style else "")
         prompt = (f"基于以下剧本/简介，规划 {n} 个章节。\n【剧本】\n{brief}\n"
+                  f"{style_line}"
                   f"返回 JSON 数组，每个元素：{{title:章节标题, original_text:章节剧情原文, "
                   f"summary:本章简述}}。")
         resp = _llm(self.step_id, prompt, system=system, json_mode=True,
@@ -1944,8 +2536,13 @@ class S_AGI_Shot(BaseStep):
         brief = _read_text(inp.get("text"), task_dir) or (chapter.get("original_text") or "")
         n = max(1, int(cfg.get("num_shots") or 8))
         system = "你是 AI 漫剧分镜师，擅长把章节拆成镜头语言。只输出 JSON 数组。"
+        # 画风来自项目，分镜只描述画面内容；不写画种词，避免与项目统一画风冲突
+        style = _style_hint(agi, creation_id, cfg)
+        style_line = (f"【画风】{style}（scene_descriptions 只写画面内容/景别/光影，"
+                      f"不要写画种或画风词，画风由项目统一控制）\n" if style else "")
         prompt = (f"为以下章节设计 {n} 个分镜。\n【章节】\n{brief}\n"
                   f"【出场人物库】{char_names}\n"
+                  f"{style_line}"
                   f"返回 JSON 数组，每个元素：{{characters:出场人物名数组, "
                   f"scene_descriptions:场景描述数组, dialogues:对话数组(每项{{character,content}}), "
                   f"shot_type:镜头类型(如特写/中景/全景), angle:拍摄角度, movement:运镜方式, "
@@ -2028,8 +2625,125 @@ class S_AGI_Shot(BaseStep):
         }
 
 
+class S_AGI_ShotPrompt(BaseStep):
+    """组装分镜提示词：把分镜用到的角色图/场景图/道具图按【image1】/【image2】…顺序组装，
+
+    细化成 8 个故事走向关键帧图、拼成一张图的生图提示词(JSON)，写入分镜 ``image_prompt``；
+    同时把有序参考图(场景→道具合并→角色)写入 ``image_prompt_refs``，供「分镜首尾帧」
+    以图生图方式生成分镜图时按序注入，保证画风/角色一致性。
+    """
+
+    step_id = "agi_shot_prompt"
+    step_name = "组装分镜提示词"
+    dependencies = []
+
+    def check_artifact(self, task_dir: str) -> bool:
+        return os.path.isfile(_cache_path(task_dir, _node_id(self), "shotprompt"))
+
+    def validate_inputs(self, task_dir: str) -> bool:
+        return True
+
+    def run(self, task_dir: str, callback=None, cancel_callback=None) -> dict:
+        from backend import creation as agi
+        cfg = _cfg(self)
+        inp = _inputs(self)
+        nid = _node_id(self)
+
+        shot_id = (inp.get("shot_id") or cfg.get("shot_id") or "").strip()
+        chapter_id = (inp.get("chapter_id") or cfg.get("chapter_id") or "").strip()
+        chapter_ids = _as_id_list(inp.get("chapter_ids") or cfg.get("chapter_ids"))
+        targets = _resolve_shot_targets(shot_id, chapter_id, chapter_ids)
+        if not targets:
+            raise RuntimeError("缺少 shot_id / chapter_id / chapter_ids：连接「分镜剧本」输出，或填 chapter_id 批量处理整章")
+        if chapter_ids and not chapter_id:
+            chapter_id = chapter_ids[0]
+
+        creation_id, _ = _resolve_creation_of(shot_id=targets[0])
+        creation = agi.get_creation(creation_id, with_detail=True)
+        scene_assets = [a for a in agi.list_assets(creation_id, asset_kind="scene_image")
+                        if not a.get("shot_id")]
+        prop_assets = [a for a in agi.list_assets(creation_id, asset_kind="prop_image")
+                       if not a.get("shot_id")]
+        style = _style_hint(agi, creation_id, cfg)
+        style_line = (f"【整体画风】{style}\n" if style else "")
+        model = cfg.get("llm_model") or ""
+        force = bool(cfg.get("force", False))
+        batch = len(targets) > 1
+
+        results = []
+        for idx, sid in enumerate(targets):
+            shot = agi.get_shot(sid)
+            if not force and str(shot.get("image_prompt") or "").strip():
+                if callback:
+                    callback(int(90 * (idx + 1) / len(targets)),
+                             f"分镜 {idx + 1} 已组装提示词，跳过")
+                results.append({"shot_id": sid,
+                                "image_prompt": shot.get("image_prompt"),
+                                "image_prompt_refs": shot.get("image_prompt_refs") or ""})
+                continue
+            refs = _collect_assembled_refs(agi, shot, creation, scene_assets, prop_assets,
+                                           task_dir, nid)
+            ref_labels = []
+            if len(refs) >= 1:
+                ref_labels.append("【image1】=场景图")
+            if len(refs) >= 2:
+                ref_labels.append("【image2】=道具图(已合并)")
+            for k in range(2, len(refs)):
+                ref_labels.append(f"【image{k + 1}】=角色图")
+            ref_desc = "；".join(ref_labels) if ref_labels else "（无可用参考图）"
+            char_names = [c if isinstance(c, str) else (c.get("name") or "")
+                          for c in (shot.get("characters") or []) if (c if isinstance(c, str) else c.get("name"))]
+            prompt = (
+                f"为「分镜 #{shot.get('order_no')}」组装一张分镜生图提示词：把分镜细化为 8 个"
+                f"故事走向关键帧图，拼成单张图的生图提示词；并在提示词中按参考图顺序标注"
+                f"【image1】…标记：{ref_desc}。\n"
+                f"【分镜信息】\n画面描述：{';'.join(shot.get('scene_descriptions') or [])}\n"
+                f"出场人物：{'、'.join(char_names)}\n镜头类型：{shot.get('shot_type')}\n"
+                f"运镜：{shot.get('movement')}\n氛围光影：{shot.get('atmosphere')}\n"
+                f"地点：{shot.get('location')}\n时间段：{shot.get('time')}\n"
+                f"{style_line}"
+                f"只输出 JSON：{{\"storyboard\": \"生图提示词正文(含【imageN】标记, 不超过 300 字)\", "
+                f"\"keyframes\": [\"关键帧1\", ..., \"关键帧8\"]}}。"
+            )
+            resp = _llm(self.step_id, prompt, system="你是 AI 漫剧分镜生图提示词工程师，"
+                       "擅长把分镜拆成多宫格故事走向并把参考图嵌入提示词。",
+                       json_mode=True, model=model)
+            payload = resp if isinstance(resp, dict) else {}
+            storyboard = str(payload.get("storyboard")
+                             or (resp if isinstance(resp, str) else "")).strip()
+            keyframes = payload.get("keyframes") or []
+            if not storyboard:
+                # 兜底：用分镜画面描述直接拼装
+                storyboard = (f"{_style_prefix(style)}分镜 #{shot.get('order_no')} 多宫格故事走向："
+                              + "；".join(shot.get("scene_descriptions") or []))
+            agi.update_shot(sid, image_prompt=storyboard,
+                            image_prompt_refs=json.dumps(refs, ensure_ascii=False))
+            results.append({"shot_id": sid, "image_prompt": storyboard,
+                            "image_prompt_refs": json.dumps(refs, ensure_ascii=False),
+                            "keyframes": keyframes})
+            if callback:
+                callback(int(90 * (idx + 1) / len(targets)), f"分镜 {idx + 1}/{len(targets)} 提示词已组装")
+
+        head = results[0]
+        cache = _write_cache(task_dir, nid, "shotprompt", {"results": results})
+        return {
+            "artifacts": [cache],
+            "outputs": {
+                "shot_id": "" if batch else head["shot_id"],
+                "shot_ids": json.dumps([r["shot_id"] for r in results], ensure_ascii=False),
+                "image_prompts": json.dumps([r["image_prompt"] for r in results], ensure_ascii=False),
+                "image_prompt_refs": json.dumps([r.get("image_prompt_refs") for r in results], ensure_ascii=False),
+            },
+        }
+
+
 class S_AGI_ShotFrames(BaseStep):
-    """分镜首尾帧：为分镜生成首/尾帧概念图（支持整章批处理），可注入角色/场景参考图。"""
+    """分镜首尾帧：为分镜生成首/尾帧概念图（支持整章批处理），可注入角色/场景参考图。
+
+    生图模式 gen_mode：txt2img(文生图) 或 img2img(图生图)。img2img 时优先使用
+    「组装分镜提示词」节点产出的有序参考图（image1=场景, image2=道具, image3+=角色），
+    保证分镜图与角色/场景一致。
+    """
     step_id = "agi_shot_frames"
     step_name = "分镜首尾帧"
     dependencies = []
@@ -2050,15 +2764,19 @@ class S_AGI_ShotFrames(BaseStep):
 
         shot_id = (inp.get("shot_id") or cfg.get("shot_id") or "").strip()
         chapter_id = (inp.get("chapter_id") or cfg.get("chapter_id") or "").strip()
-        targets = _resolve_shot_targets(shot_id, chapter_id)
+        chapter_ids = _as_id_list(inp.get("chapter_ids") or cfg.get("chapter_ids"))
+        targets = _resolve_shot_targets(shot_id, chapter_id, chapter_ids)
         if not targets:
-            raise RuntimeError("缺少 shot_id / chapter_id：连接「分镜剧本」输出，或填 chapter_id 批处理整章")
+            raise RuntimeError("缺少 shot_id / chapter_id / chapter_ids：连接「分镜剧本」输出，或填 chapter_id 批量处理整章")
+        if chapter_ids and not chapter_id:
+            chapter_id = chapter_ids[0]
 
         force = bool(cfg.get("force", False))
         cfg, use_lock = _resolve_effective_cfg(cfg, chapter_id, self.step_id)
         first_shot = agi.get_shot(targets[0])
         creation_id, _ = _resolve_creation_of(shot_id=targets[0])
         creation = agi.get_creation(creation_id, with_detail=True)
+        shot_asp = (cfg.get("aspect_ratio") or "").strip() or (creation.get("video_aspect_ratio") or "") or "16:9"
         scene_assets = [a for a in agi.list_assets(creation_id, asset_kind="scene_image")
                         if not a.get("shot_id")]
         style = _style_hint(agi, creation_id, cfg)
@@ -2096,15 +2814,38 @@ class S_AGI_ShotFrames(BaseStep):
                 (f"{n}（{_looks[n]}）" if _looks.get(n) else n)
                 for n in [c if isinstance(c, str) else c.get("name", "")
                           for c in (shot.get("characters") or [])] if n)
-            base = f"{style}；动漫分镜关键帧，{scene_txt}"
-            if char_txt:
-                base += f"，画面中人物：{char_txt}"
-            refs = _collect_ref_images(agi, shot, creation, scene_assets, max_refs,
-                                       use_char=use_char, use_scene=use_scene) if max_refs else []
+            # 优先使用分镜已存的画面提示词：可由「组装分镜提示词」/「生成提示词」节点或外部
+            # LLM 优化后经「项目数据写入」回写，实现外部节点介入分镜生图
+            saved_image_prompt = str(shot.get("image_prompt") or "").strip()
+            if saved_image_prompt:
+                base = (saved_image_prompt if saved_image_prompt.endswith(("。", ".", "！", "!"))
+                        else saved_image_prompt + "。")
+            else:
+                base = f"{_style_prefix(style)}分镜关键帧，{scene_txt}"
+                if char_txt:
+                    base += f"，画面中人物：{char_txt}"
+            # 参考图：img2img 模式优先用「组装分镜提示词」产出的有序参考图
+            #（image1=场景, image2=道具, image3+=角色），保证图生图一致性；否则回退通用收集
+            if gen_mode == "img2img":
+                _saved_refs = str(shot.get("image_prompt_refs") or "").strip()
+                refs = []
+                if _saved_refs:
+                    try:
+                        refs = [p for p in json.loads(_saved_refs) if p and os.path.isfile(p)]
+                    except Exception:  # noqa: BLE001
+                        refs = []
+                if not refs:
+                    refs = _collect_ref_images(agi, shot, creation, scene_assets, max_refs,
+                                               use_char=use_char, use_scene=use_scene) if max_refs else []
+            else:
+                refs = _collect_ref_images(agi, shot, creation, scene_assets, max_refs,
+                                           use_char=use_char, use_scene=use_scene) if max_refs else []
+            init_image = refs[0] if (gen_mode == "img2img" and refs) else None
             r = {"shot_id": sid, "first_frame": "", "last_frame": ""}
             if cfg.get("generate_first", True):
                 p = base + "，分镜起始画面，构图完整，可作为视频首帧。"
-                imgs = _gen_images(p, out_dir, cfg, num=1, aspect="16:9", ref_images=refs)
+                imgs = _gen_images(p, out_dir, cfg, num=1, aspect=shot_asp, ref_images=refs,
+                                  mode=gen_mode, image=init_image)
                 saved = _finalize(out_dir, nid, f"first_{idx + 1}", imgs)
                 for abs_p in saved:
                     agi.register_asset(creation_id, "scene_image", chapter_id=ch_id,
@@ -2113,7 +2854,8 @@ class S_AGI_ShotFrames(BaseStep):
                 local_files.extend(saved)
             if cfg.get("generate_last", True):
                 p = base + "，分镜结束画面，与起始呼应，可作为视频尾帧。"
-                imgs = _gen_images(p, out_dir, cfg, num=1, aspect="16:9", ref_images=refs)
+                imgs = _gen_images(p, out_dir, cfg, num=1, aspect=shot_asp, ref_images=refs,
+                                  mode=gen_mode, image=init_image)
                 saved = _finalize(out_dir, nid, f"last_{idx + 1}", imgs)
                 for abs_p in saved:
                     agi.register_asset(creation_id, "scene_image", chapter_id=ch_id,
@@ -2123,7 +2865,7 @@ class S_AGI_ShotFrames(BaseStep):
             results.append(r)
             if callback:
                 callback(int(90 * (idx + 1) / len(targets)),
-                         f"分镜 {idx + 1}/{len(targets)} 首尾帧完成（参考图 {len(refs)} 张）")
+                         f"分镜 {idx + 1}/{len(targets)} 首尾帧完成（{gen_mode}，参考图 {len(refs)} 张）")
 
         if not use_lock and chapter_id:
             _write_locked_cfg(chapter_id, self.step_id, cfg)
@@ -2167,9 +2909,12 @@ class S_AGI_ShotVideo(BaseStep):
 
         shot_id = (inp.get("shot_id") or cfg.get("shot_id") or "").strip()
         chapter_id = (inp.get("chapter_id") or cfg.get("chapter_id") or "").strip()
-        targets = _resolve_shot_targets(shot_id, chapter_id)
+        chapter_ids = _as_id_list(inp.get("chapter_ids") or cfg.get("chapter_ids"))
+        targets = _resolve_shot_targets(shot_id, chapter_id, chapter_ids)
         if not targets:
-            raise RuntimeError("缺少 shot_id / chapter_id：连接「分镜剧本」输出，或填 chapter_id 批处理整章")
+            raise RuntimeError("缺少 shot_id / chapter_id / chapter_ids：连接「分镜剧本」输出，或填 chapter_id 批量处理整章")
+        if chapter_ids and not chapter_id:
+            chapter_id = chapter_ids[0]
 
         force = bool(cfg.get("force", False))
         cfg, use_lock = _resolve_effective_cfg(cfg, chapter_id, self.step_id)
@@ -2178,9 +2923,17 @@ class S_AGI_ShotVideo(BaseStep):
         prompt_override = _read_text(inp.get("text"), task_dir)
         camera = (cfg.get("camera_prompt") or "")
         duration = max(1, int(cfg.get("duration") or 5))
-        aspect = (cfg.get("aspect_ratio") or "16:9")
+        _proj_asp = ""
+        try:
+            _cid0, _ = _resolve_creation_of(shot_id=targets[0])
+            _proj_asp = (agi.get_creation(_cid0) or {}).get("video_aspect_ratio") or ""
+        except Exception:  # noqa: BLE001
+            _proj_asp = ""
+        aspect = (cfg.get("aspect_ratio") or "").strip() or _proj_asp or "16:9"
         batch = len(targets) > 1
         retry_failed = bool(cfg.get("retry_failed", False))
+        # 视频提示词拼装规则（video_prompt.md frontmatter ← 节点显式配置），每次运行解析一次
+        rules = _video_prompt_rules(cfg)
 
         results = []
         local_files = []
@@ -2222,36 +2975,58 @@ class S_AGI_ShotVideo(BaseStep):
             if not (first and last):
                 raise RuntimeError(f"分镜 {sid} 缺少首帧/尾帧：请先运行「分镜首尾帧」")
 
-            if prompt_override:
+            # 分镜级提示词优先：video_prompt → image_prompt → 端口 text → 规则拼装。
+            # 前者可由「生成提示词」节点或外部 LLM 优化后经「项目数据写入」回写，
+            # 每镜独立生效（端口 text 与规则拼装则整批共用）。
+            shot_prompt = (str(shot.get("video_prompt") or "").strip()
+                           or str(shot.get("image_prompt") or "").strip())
+            if shot_prompt:
+                prompt = shot_prompt
+            elif prompt_override:
                 prompt = prompt_override
             else:
-                # 按 video_prompt.md 规范拼装：3 秒一段、@角色引用、后续段用"切到"衔接
+                # 规则来自 video_prompt.md（frontmatter 参数），改文件即生效；
+                # 节点显式配置同名项优先，文件缺失时回退内置默认值
+                seg = max(1, int(rules.get("segment_seconds") or 3))
+                prefix = rules.get("reference_prefix") or ""
                 at_chars = "".join(
-                    f"@{c}" for c in
+                    f"{prefix}{c}" for c in
                     [x if isinstance(x, str) else (x.get("name") or "")
-                     for x in (shot.get("characters") or [])] if c)
+                     for x in (shot.get("characters") or [])] if c) if prefix else ""
+                tpl = rules.get("time_range_format") or ""
+                _def_tpl = _VIDEO_PROMPT_RULE_DEFAULTS["time_range_format"]
+                join_word = rules.get("join_word") or ""
                 _scenes = list(shot.get("scene_descriptions") or [])
                 _lines = []
                 for _i, _s in enumerate(_scenes):
-                    _head = f"{_i * 3}-{(_i + 1) * 3}秒："
-                    if _i:
-                        _head += "切到"
-                    _lines.append(_head + (at_chars + "，" if at_chars else "") + _s)
-                for _j, _d in enumerate(shot.get("dialogues") or []):
-                    if not isinstance(_d, dict) or not _d.get("content"):
-                        continue
-                    _tail = f"，{_d.get('character') or ''}说：「{_d['content']}」"
-                    if _j < len(_lines):
-                        _lines[_j] += _tail
-                    else:
-                        _lines.append(f"{len(_lines) * 3}-{(len(_lines) + 1) * 3}秒："
-                                      + (at_chars + "，" if at_chars else "")
-                                      + _d["content"])
+                    _head = _rule_format(tpl, _def_tpl, start=_i * seg, end=(_i + 1) * seg)
+                    if _i and join_word:
+                        _head += join_word
+                    _lines.append(_head + (at_chars + "，" if at_chars else "") + str(_s))
+                if rules.get("include_dialogues"):
+                    for _j, _d in enumerate(shot.get("dialogues") or []):
+                        if not isinstance(_d, dict) or not _d.get("content"):
+                            continue
+                        _tail = _rule_format(rules.get("dialogue_format") or "",
+                                             _VIDEO_PROMPT_RULE_DEFAULTS["dialogue_format"],
+                                             character=_d.get("character") or "",
+                                             content=_d["content"])
+                        if _j < len(_lines):
+                            _lines[_j] += _tail
+                        else:
+                            _head = _rule_format(tpl, _def_tpl,
+                                                 start=len(_lines) * seg, end=(len(_lines) + 1) * seg)
+                            _lines.append(_head + (at_chars + "，" if at_chars else "")
+                                          + str(_d["content"]))
                 prompt = "\n".join(_lines) if _lines else ""
+                cam_pos = rules.get("camera_position") or "head"
                 if not prompt:
-                    prompt = "；".join(_scenes) + (f"，{camera}" if camera else "")
-                elif camera:
+                    prompt = (rules.get("scene_join_fallback") or "；").join(
+                        str(_s) for _s in _scenes) + (f"，{camera}" if camera else "")
+                elif camera and cam_pos == "head":
                     prompt = f"{camera}\n" + prompt
+                elif camera and cam_pos == "tail":
+                    prompt = f"{prompt}\n{camera}"
             if callback:
                 callback(int(90 * idx / len(targets)), f"分镜 {idx + 1}/{len(targets)} 提交生视频…")
             vids = _gen_video(prompt, out_dir, cfg, ref_images=[first, last],
@@ -2306,9 +3081,12 @@ class S_AGI_ShotDub(BaseStep):
 
         shot_id = (inp.get("shot_id") or cfg.get("shot_id") or "").strip()
         chapter_id = (inp.get("chapter_id") or cfg.get("chapter_id") or "").strip()
-        targets = _resolve_shot_targets(shot_id, chapter_id)
+        chapter_ids = _as_id_list(inp.get("chapter_ids") or cfg.get("chapter_ids"))
+        targets = _resolve_shot_targets(shot_id, chapter_id, chapter_ids)
         if not targets:
-            raise RuntimeError("缺少 shot_id / chapter_id：连接「分镜剧本」输出，或填 chapter_id 批处理整章")
+            raise RuntimeError("缺少 shot_id / chapter_id / chapter_ids：连接「分镜剧本」输出，或填 chapter_id 批量处理整章")
+        if chapter_ids and not chapter_id:
+            chapter_id = chapter_ids[0]
 
         force = bool(cfg.get("force", False))
         cfg, use_lock = _resolve_effective_cfg(cfg, chapter_id, self.step_id)
@@ -2436,9 +3214,12 @@ class S_AGI_ShotExport(BaseStep):
 
         shot_id = (inp.get("shot_id") or cfg.get("shot_id") or "").strip()
         chapter_id = (inp.get("chapter_id") or cfg.get("chapter_id") or "").strip()
-        targets = _resolve_shot_targets(shot_id, chapter_id)
+        chapter_ids = _as_id_list(inp.get("chapter_ids") or cfg.get("chapter_ids"))
+        targets = _resolve_shot_targets(shot_id, chapter_id, chapter_ids)
         if not targets:
-            raise RuntimeError("缺少 shot_id / chapter_id：连接「分镜剧本」输出，或填 chapter_id 批处理整章")
+            raise RuntimeError("缺少 shot_id / chapter_id / chapter_ids：连接「分镜剧本」输出，或填 chapter_id 批量处理整章")
+        if chapter_ids and not chapter_id:
+            chapter_id = chapter_ids[0]
 
         force = bool(cfg.get("force", False))
         cfg, use_lock = _resolve_effective_cfg(cfg, chapter_id, self.step_id)
@@ -2568,8 +3349,52 @@ class S_AGI_ChapterExport(BaseStep):
         os.makedirs(out_dir, exist_ok=True)
 
         chapter_id = (inp.get("chapter_id") or cfg.get("chapter_id") or "").strip()
+        chapter_ids = _as_id_list(inp.get("chapter_ids") or cfg.get("chapter_ids"))
+        if chapter_id and chapter_id not in chapter_ids:
+            chapter_ids.insert(0, chapter_id)
+
+        if len(chapter_ids) > 1:
+            # 多章节批量：逐章复用本节点逻辑（此时忽略 renders 端口与 reuse_stitch_id，
+            # 每章按自身分镜资产拼接），产物/缓存按章节后缀区分避免互相覆盖
+            artifacts_all = []
+            per_chapter = []
+            total = len(chapter_ids)
+            for idx, cid in enumerate(chapter_ids):
+                sub_cfg = dict(cfg)
+                sub_cfg["chapter_id"] = cid
+                sub_cfg["reuse_stitch_id"] = ""
+                sub = S_AGI_ChapterExport()
+                sub._node_config = sub_cfg
+                sub._step_inputs = {**inp, "chapter_id": cid, "chapter_ids": "", "renders": ""}
+                sub._node_id = f"{nid}_{cid}"
+
+                def _sub_progress(pct, msg, _idx=idx, _total=total):
+                    if callback:
+                        callback(int((_idx + float(pct or 0) / 100.0) * 100 / _total),
+                                 f"[{_idx + 1}/{_total}] {msg}")
+
+                out = sub.run(task_dir, callback=_sub_progress, cancel_callback=cancel_callback)
+                artifacts_all.extend(out.get("artifacts") or [])
+                per_chapter.append({
+                    "chapter_id": cid,
+                    "render": (out.get("outputs") or {}).get("render", ""),
+                })
+                if callback:
+                    callback(int(100 * (idx + 1) / total), f"章节成片 {idx + 1}/{total} 完成")
+
+            return {
+                "artifacts": artifacts_all,
+                "outputs": {
+                    "chapter_id": "",
+                    "render": "",
+                    "chapter_ids": json.dumps(chapter_ids, ensure_ascii=False),
+                    "renders": json.dumps(
+                        [p["render"] for p in per_chapter if p["render"]], ensure_ascii=False),
+                },
+            }
+
         if not chapter_id:
-            raise RuntimeError("缺少 chapter_id")
+            raise RuntimeError("缺少 chapter_id / chapter_ids")
         chapter = agi.get_chapter(chapter_id)
         creation_id = chapter.get("creation_id")
 
@@ -2633,7 +3458,9 @@ class S_AGI_ChapterExport(BaseStep):
         if make_cover:
             _set_gen_ctx(creation_id=creation_id, chapter_id=chapter_id, step_id=self.step_id,
                          target_type="chapter", target_id=chapter_id, upstream_task_id="")
-            cover_img = _build_chapter_cover(chapter, cfg, out_dir, nid)
+            # 封面画风同样取自项目，避免与正片风格不一致
+            cover_img = _build_chapter_cover(chapter, cfg, out_dir, nid,
+                                             _style_hint(agi, creation_id, cfg))
             if cover_img:
                 if tdims:
                     cw, ch = tdims

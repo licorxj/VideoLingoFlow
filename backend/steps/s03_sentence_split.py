@@ -1648,8 +1648,9 @@ Return ONLY the JSON object, no explanation.""".format(
         pause_threshold = float(self._get_param("pause_split_threshold", 1.0))
         split_on_speaker = self._get_bool_param("split_on_speaker", False)
         # 是否执行各操作的勾选开关（与内置节点默认配置保持一致）
-        merge_short_enabled = self._get_bool_param("merge_short_enabled", True)
-        merge_gap_enabled = self._get_bool_param("merge_gap_enabled", True)
+        # 默认 False：不勾选 = 不合并，避免旧工作流缺 key 时意外合并
+        merge_short_enabled = self._get_bool_param("merge_short_enabled", False)
+        merge_gap_enabled = self._get_bool_param("merge_gap_enabled", False)
         pause_split_enabled = self._get_bool_param("pause_split_enabled", True)
         if not pause_split_enabled:
             pause_threshold = 0  # 关闭停顿断句（含最终合并的间隔限制）

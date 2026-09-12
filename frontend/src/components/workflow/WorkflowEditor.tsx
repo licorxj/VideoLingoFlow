@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn } from "@/lib/utils";
 import {
   type GroupOutputMapping, type WorkflowNode, type WorkflowEdge, type Workflow, type NodeTypeDef,
-  getNodeTypeDefFromNode, getNodeTypeDef, getVisibleOutputs, canConnect, findDownstreamCandidates,
+  getNodeTypeDefFromNode, getNodeTypeDef, getVisibleOutputs, getNodeInputs, canConnect, findDownstreamCandidates,
   PORT_COLORS, isGroupNodeData, isLoopNodeData, type DownstreamCandidate,
 } from "@/lib/workflowTypes";
 import WorkflowNodeComponent from "./WorkflowNode";
@@ -30,7 +30,7 @@ import { buildGroupNode, createNodeDataFromType, expandGroupNodesForExecution, g
 import { buildLoopNode, ungroupLoopNode } from "@/lib/loopWorkflow";
 import { useProjectStore } from "@/stores/projectStore";
 import { useControlStore } from "@/stores/controlStore";
-import { getSubscriptionError, isDeviceLimitError, isSubscriptionBlocked, getQuotaExhaustedMessage } from "@/api/subscription";
+import { getSubscriptionError, isDeviceLimitError, isSubscriptionBlocked, getQuotaExhaustedMessage, notifyQuotaExhausted } from "@/api/subscription";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import ExecutionModeModal, { type ExecutionMode } from "./ExecutionModeModal";
 import { createNodeType } from "@/api/nodeTypes";
@@ -324,6 +324,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const ensureTaskAllowed = useCallback(async () => {
     const status = await useSubscriptionStore.getState().fetchStatus();
     if (status && !status.can_create_task) {
+      notifyQuotaExhausted();
       alert(getQuotaExhaustedMessage(status));
       return false;
     }
@@ -337,6 +338,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       return true;
     }
     const status = useSubscriptionStore.getState().status;
+    notifyQuotaExhausted();
     alert(getQuotaExhaustedMessage(status));
     return true;
   }, []);
@@ -598,9 +600,12 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         // 仅把 activeTaskId 指向固定调试任务，使执行/节点执行固定到该任务边界内。
         try {
           // POST + body 传画布快照，避免把全量画布塞进 URL query（超长 URL 会 414）
+          // 使用 ReactFlow 实例最新数据（含 updateNodeData 的改动如组合节点改名）
+          const snapNodes = reactFlowInstanceRef.current?.getNodes() || nodes;
+          const snapEdges = reactFlowInstanceRef.current?.getEdges() || edges;
           const debugRes = await client.post("/api/workflows/" + wfId + "/debug-task", {
-            nodes: wf.nodes || [],
-            edges: wf.edges || [],
+            nodes: snapNodes,
+            edges: snapEdges,
           });
           const debugTaskId = debugRes.data?.task_id;
           if (debugTaskId) {
@@ -682,8 +687,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     const srcType = getNodeTypeDefFromNode(sourceNode as any);
     const tgtType = getNodeTypeDefFromNode(targetNode as any);
     if (!srcType || !tgtType) return;
-    const srcPort = srcType.outputs.find((p) => p.id === (connection.sourceHandle || "").replace("out-", ""));
-    const tgtPort = tgtType.inputs.find((p) => p.id === (connection.targetHandle || "").replace("in-", ""));
+    const srcPort = getVisibleOutputs(srcType, (sourceNode.data as any)?.config || {}).find((p) => p.id === (connection.sourceHandle || "").replace("out-", ""));
+    const tgtPort = getNodeInputs(tgtType, (targetNode.data as any)?.config || {}).find((p) => p.id === (connection.targetHandle || "").replace("in-", ""));
     if (!srcPort || !tgtPort) return;
     if (!canConnect(srcPort.type, tgtPort.type)) return;
     setEdges((eds) => addEdge({ ...connection, type: edgeType, animated: true, style: { stroke: randomEdgeColor(), strokeWidth: 2 } }, eds));
@@ -1006,12 +1011,18 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     return downstream;
   }, [edges]);
 
-  const getWorkflowJSON = (): Workflow => ({
-    id: currentWfId && currentWfId !== "new" ? currentWfId : undefined as any,
-    name: workflowName, description: workflowDesc,
-    nodes: nodes as WorkflowNode[], edges: edges as WorkflowEdge[],
-    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-  });
+  const getWorkflowJSON = (): Workflow => {
+    // 优先从 ReactFlow 实例读取节点/边（确保 useReactFlow().updateNodeData 的改动不丢失），
+    // 回退到 useNodesState/useEdgesState 管理的变量（实例尚未就绪时）。
+    const rfNodes = reactFlowInstanceRef.current?.getNodes() || nodes;
+    const rfEdges = reactFlowInstanceRef.current?.getEdges() || edges;
+    return {
+      id: currentWfId && currentWfId !== "new" ? currentWfId : undefined as any,
+      name: workflowName, description: workflowDesc,
+      nodes: rfNodes as WorkflowNode[], edges: rfEdges as WorkflowEdge[],
+      createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    };
+  };
 
   const handleSave = async () => {
     setSaving(true);

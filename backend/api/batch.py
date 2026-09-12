@@ -25,6 +25,11 @@ class BatchDeleteTasksRequest(BaseModel):
     task_ids: List[str] = Field(default_factory=list)
 
 
+class BatchArchiveRequest(BaseModel):
+    target_dir: str = Field(..., description="归档目标文件夹")
+    tasks: dict = Field(default_factory=dict, description="task_id -> 勾选的相对文件路径列表；缺省表示该任务全部文件")
+
+
 class ConfigUpdateRequest(BaseModel):
     max_concurrent_tasks: int = Field(default=3, ge=1, le=20)
     task_start_interval: float = Field(default=0, ge=0, description="任务启动间隔(秒)")
@@ -85,6 +90,32 @@ async def resume_all_unfinished():
         except Exception as e:
             results.append({"batch_id": batch["id"], "error": str(e)})
     return {"results": results}
+
+
+@router.get("/{batch_id}/archive-files")
+async def get_batch_archive_files(batch_id: str):
+    """列出批次下各任务的产物清单，供归档弹窗按 视频/字幕/图片/其他 分段勾选。"""
+    try:
+        be = get_batch_executor()
+        return be.get_archive_files(batch_id)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
+
+
+@router.post("/{batch_id}/archive")
+async def archive_batch(batch_id: str, req: BatchArchiveRequest):
+    """归档批次：复制产物到目标文件夹、删除本地任务目录、在库中标记为已归档。"""
+    try:
+        be = get_batch_executor()
+        return be.archive_batch(batch_id, req.target_dir, req.tasks)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal error: {e}")
 
 
 @router.get("/{batch_id}")

@@ -37,7 +37,8 @@ def _apply_affix(text: str, affix: str, mode) -> str:
     if isinstance(mode, dict):
         mode = mode.get("value", "suffix")
     mode = str(mode).strip().lower()
-    if mode == "prefix":
+    # 兼容中英文值
+    if mode in ("prefix", "前缀", "pre"):
         return affix + text
     return text + affix
 

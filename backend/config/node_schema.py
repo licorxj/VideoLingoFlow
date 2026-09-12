@@ -12,6 +12,11 @@ NODE_CATEGORIES = [
     {"value": "translation", "label": "翻译相关节点", "color": "#8b5cf6", "icon": "Languages"},
     {"value": "flow_control", "label": "流程控制节点", "color": "#6366f1", "icon": "GitBranch"},
     {"value": "network_request", "label": "网络请求类节点", "color": "#0f766e", "icon": "Globe"},
+    {"value": "agi_story", "label": "漫剧·剧本链", "color": "#db2777", "icon": "Rocket"},
+    {"value": "agi_asset", "label": "漫剧·资产链", "color": "#c026d3", "icon": "Users"},
+    {"value": "agi_shot", "label": "漫剧·分镜链", "color": "#9333ea", "icon": "Clapperboard"},
+    {"value": "agi_render", "label": "漫剧·成片链", "color": "#7c3aed", "icon": "FileVideo"},
+    {"value": "agi_data", "label": "漫剧·数据链", "color": "#0891b2", "icon": "Database"},
     {"value": "aigc", "label": "AIGC流程链", "color": "#22c55e", "icon": "Boxes"},
     {"value": "asset", "label": "素材库", "color": "#84cc16", "icon": "Library"},
     {"value": "agent", "label": "智能体", "color": "#a855f7", "icon": "Bot"},
@@ -50,6 +55,7 @@ CONFIG_FIELD_TYPES = [
     {"value": "slider", "label": "滑块", "supportedProperties": ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"]},
     {"value": "number", "label": "数字", "supportedProperties": ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"]},
     {"value": "button", "label": "按钮", "supportedProperties": ["description", "hint", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"]},
+    {"value": "voice-target-list", "label": "音色目标列表", "supportedProperties": ["apiEndpoint", "optionLabel", "optionValue", "placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"]},
 ]
 
 EXEC_TYPES = [

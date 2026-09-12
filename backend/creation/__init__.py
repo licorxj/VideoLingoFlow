@@ -82,6 +82,8 @@ from backend.creation.store import (
     remove_prop,
     remove_scene,
     remove_shot,
+    review_asset,
+    review_stats,
     set_script,
     add_style_preset,
     delete_style_preset,
@@ -109,6 +111,7 @@ __all__ = [
     "add_creation_scene", "get_scene", "list_scenes", "update_scene", "remove_scene",
     "add_creation_prop", "get_prop", "list_props", "update_prop", "remove_prop",
     "register_asset", "list_assets", "update_asset", "append_asset_paths", "remove_asset",
+    "review_asset", "review_stats", "ASSET_REVIEW_STATUSES",
     # 公共素材库
     "create_character", "get_character", "list_characters", "update_character", "delete_character",
     "add_image", "get_image", "list_images", "update_image", "delete_image",

@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { Bell, CheckCircle2, Cpu, HardDrive, MemoryStick, Megaphone, MonitorCog, PanelLeft, PanelLeftClose, RefreshCw, TriangleAlert, UserRound, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { changeControlProjectMember, listControlProjectMembers, listControlProjects, removeControlProjectMember, type ControlProjectMember } from "@/api/controlPlane";
-import { batchApi, type RuntimeStatus } from "@/api/batch";
+import { batchApi, type SystemMetrics } from "@/api/batch";
+import { publicInfoApi } from "@/api/publicInfo";
 import { useProjectStore } from "@/stores/projectStore";
 import { useControlStore } from "@/stores/controlStore";
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
@@ -83,29 +84,52 @@ function ResourceMetric({
 }
 
 function SystemResourceMetrics() {
-  const [runtime, setRuntime] = useState<RuntimeStatus | null>(null);
+  const [system, setSystem] = useState<SystemMetrics | null>(null);
+  const [stale, setStale] = useState(false);
 
   useEffect(() => {
     let mounted = true;
+    let failures = 0;
     const refresh = async () => {
       try {
-        const next = await batchApi.getRuntimeStatus();
-        if (mounted) setRuntime(next);
+        const next = await batchApi.getSystemMetrics();
+        if (!mounted) return;
+        setSystem(next);
+        failures = 0;
+        setStale(false);
       } catch {
-        if (mounted) setRuntime(null);
+        if (!mounted) return;
+        failures += 1;
+        // 连续失败才标记陈旧，避免偶发抖动误报
+        if (failures >= 3) setStale(true);
       }
     };
     refresh();
-    const timer = window.setInterval(refresh, 5000);
+    const timer = window.setInterval(refresh, 2000);
     return () => {
       mounted = false;
       window.clearInterval(timer);
     };
   }, []);
 
-  const system = runtime?.system;
+  const age = typeof system?.age_seconds === "number" ? system.age_seconds : null;
+  const outdated = stale || (age !== null && age > 10);
+  const title = outdated
+    ? "系统指标刷新异常，展示的可能是稍早的数据"
+    : age !== null
+      ? `系统指标更新于 ${age.toFixed(1)} 秒前`
+      : undefined;
+
   return (
-    <div className="hidden xl:flex items-center gap-1.5 mr-1 rounded-lg border border-cyan-400/80 bg-cyan-400/5 px-1.5 py-1 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.12),0_0_10px_rgba(34,211,238,0.12)]">
+    <div
+      title={title}
+      className={cn(
+        "hidden xl:flex items-center gap-1.5 mr-1 rounded-lg border px-1.5 py-1 transition-colors",
+        outdated
+          ? "border-amber-400/80 bg-amber-400/5 shadow-[inset_0_0_0_1px_rgba(251,191,36,0.12),0_0_10px_rgba(251,191,36,0.12)]"
+          : "border-cyan-400/80 bg-cyan-400/5 shadow-[inset_0_0_0_1px_rgba(34,211,238,0.12),0_0_10px_rgba(34,211,238,0.12)]"
+      )}
+    >
       <ResourceMetric label="CPU" value={system?.cpu_percent} icon={Cpu} tone="text-sky-500" />
       <ResourceMetric label="RAM" value={system?.ram_percent} icon={MemoryStick} tone="text-emerald-500" />
       <ResourceMetric label="GPU" value={system?.gpu_percent} icon={MonitorCog} tone="text-violet-500" />
@@ -137,6 +161,7 @@ export default function Header({
   const [subscriptionOpen, setSubscriptionOpen] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [appVersion, setAppVersion] = useState("");
 
   useEffect(() => {
     refreshSession().then(async (session) => {
@@ -147,6 +172,22 @@ export default function Header({
   useEffect(() => {
     fetchSubscriptionStatus();
   }, [fetchSubscriptionStatus]);
+
+  // 顶栏版本角标：从后端读取本地版本（不访问云端），失败时保留兜底展示
+  useEffect(() => {
+    let mounted = true;
+    publicInfoApi
+      .getVersion()
+      .then((data) => {
+        if (mounted) setAppVersion(data?.version || "");
+      })
+      .catch(() => {
+        // 版本获取失败不阻塞顶栏其它功能
+      });
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (notificationOpen) inbox.markNotificationsRead();
@@ -205,7 +246,7 @@ export default function Header({
             VideoLingoFlow <span className="text-sm font-medium text-muted-foreground">（流连视听）</span>
           </h1>
           <span className="text-[10px] font-semibold text-primary bg-primary/10 px-1.5 py-0.5 rounded-md uppercase tracking-widest">
-            v2.0
+            {appVersion ? `v${appVersion.replace(/^v/i, "")}` : "v2.0"}
           </span>
         </div>
       </div>
@@ -372,6 +413,18 @@ export default function Header({
                         </span>
                       </div>
                       <p className="mt-1 whitespace-pre-wrap text-sm leading-6 text-foreground/90">{item.description}</p>
+                      {item.link === "subscription" && (
+                        <button
+                          onClick={() => {
+                            setNotificationOpen(false);
+                            setSubscriptionOpen(true);
+                          }}
+                          className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+                        >
+                          <UserRound className="w-3.5 h-3.5" />
+                          前往「用户和订阅」开通更多权益
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field
 
 from backend.auth.cloud_auth_service import get_cloud_auth_service
 from backend.auth.subscription_guard import get_subscription_guard
+from backend.utils.quota_notice import notify_quota_exhausted
 
 
 router = APIRouter()
@@ -113,6 +114,20 @@ async def verify_card(req: CardRequest):
     guard = get_subscription_guard()
     guard.recover_usage()
     return guard.get_subscription_state(force_refresh=True)
+
+
+@router.post("/quota-notice")
+async def quota_notice():
+    """额度不足时写入一条系统通知（供前端本地预校验拦截时调用）。
+
+    额度充足时不做任何事，保证前端无法凭空制造「额度已用完」的提醒。
+    通知按天去重，同一天只提醒一次。
+    """
+    guard = get_subscription_guard()
+    state = guard.get_subscription_state(force_refresh=False)
+    if state.get("can_execute_node"):
+        return {"notified": False, "state": state}
+    return {"notified": notify_quota_exhausted(state), "state": state}
 
 
 @router.get("/links")

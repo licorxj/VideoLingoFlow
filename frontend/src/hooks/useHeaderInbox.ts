@@ -20,6 +20,8 @@ export type RuntimeNotification = {
   read: boolean;
   batchId?: string;
   taskId?: string;
+  /** 后端通知携带的跳转标记，例如 "subscription" 表示引导前往「用户和订阅」 */
+  link?: string;
 };
 
 type AnnouncementResponse = {
@@ -222,14 +224,16 @@ export function useHeaderInbox() {
       // 首轮只建立时间基线，不弹历史通知
       if (!baselineReadyRef.current) return;
       for (const raw of data.notifications || []) {
+        const rawKind = pickValue(raw, ["kind"]);
         pushNotification({
           id: pickValue(raw, ["id"]) || `${pickValue(raw, ["created_at"])}-${pickValue(raw, ["title"])}`,
-          kind: "info",
+          kind: rawKind === "success" || rawKind === "error" || rawKind === "dispatch" ? rawKind : "info",
           title: pickValue(raw, ["title"]) || "系统通知",
           description: pickValue(raw, ["description", "content"]) || "",
           createdAt: Date.parse(pickValue(raw, ["created_at"])) || Date.now(),
           read: false,
           taskId: pickValue(raw, ["task_id"]) || undefined,
+          link: pickValue(raw, ["link"]) || undefined,
         });
       }
     } catch {
