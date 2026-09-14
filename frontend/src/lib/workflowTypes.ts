@@ -107,7 +107,7 @@ export interface LoopWorkflowDefinition extends GroupWorkflowDefinition {
 export interface ConfigField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "date" | "time" | "button";
+  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "reorder-list" | "date" | "time" | "button";
   placeholder?: string;
   options?: { value: string; label: string }[];
   dependsOn?: string;

@@ -2032,6 +2032,90 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     "isBuiltIn": true
   },
   {
+    "id": "video_concat",
+    "name": "视频拼接",
+    "category": "video",
+    "description": "将主视频/片段1~3/封面图按设定顺序与缩放方式一次性拼装为单个视频，封面图可选插入开头或结尾。",
+    "icon": "Clapperboard",
+    "color": "#3b82f6",
+    "inputs": [
+      { "id": "main", "label": "主视频", "type": "video", "required": false },
+      { "id": "segment1", "label": "片段1", "type": "video", "required": false },
+      { "id": "segment2", "label": "片段2", "type": "video", "required": false },
+      { "id": "segment3", "label": "片段3", "type": "video", "required": false },
+      { "id": "cover", "label": "封面图", "type": "image", "required": false }
+    ],
+    "outputs": [
+      { "id": "video", "label": "拼接视频", "type": "video" }
+    ],
+    "defaultConfig": {
+      "segment_order": ["main", "segment1", "segment2", "segment3"],
+      "scale_mode": "stretch",
+      "cover_position": "start",
+      "cover_duration": 3,
+      "output_format": "mp4"
+    },
+    "configFields": [
+      {
+        "key": "segment_order",
+        "label": "片段排序",
+        "type": "reorder-list",
+        "options": [
+          { "value": "main", "label": "主视频" },
+          { "value": "segment1", "label": "片段1" },
+          { "value": "segment2", "label": "片段2" },
+          { "value": "segment3", "label": "片段3" }
+        ],
+        "description": "调整主视频与片段1/2/3 的拼接先后顺序（上下箭头排序）"
+      },
+      {
+        "key": "scale_mode",
+        "label": "片段尺寸缩放方式",
+        "type": "select",
+        "options": [
+          { "value": "stretch", "label": "拉伸（填满，可能变形）" },
+          { "value": "crop", "label": "裁切（等比覆盖，裁剪多余）" }
+        ],
+        "description": "各片段统一缩放到参考视频分辨率的方式"
+      },
+      {
+        "key": "cover_position",
+        "label": "封面图位置",
+        "type": "select",
+        "options": [
+          { "value": "none", "label": "不插入" },
+          { "value": "start", "label": "开头" },
+          { "value": "end", "label": "结尾" }
+        ]
+      },
+      {
+        "key": "cover_duration",
+        "label": "封面时长(秒)",
+        "type": "number",
+        "min": 0.1,
+        "max": 60,
+        "colSpan": "half",
+        "dependsOn": "cover_position",
+        "dependsValue": ["start", "end"],
+        "placeholder": "3"
+      },
+      {
+        "key": "output_format",
+        "label": "输出格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          { "value": "mp4", "label": "MP4" },
+          { "value": "mkv", "label": "MKV" },
+          { "value": "mov", "label": "MOV" },
+          { "value": "webm", "label": "WebM" },
+          { "value": "avi", "label": "AVI" }
+        ]
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
     "id": "cover",
     "name": "AI封面设计",
     "category": "ai_gen",
@@ -2808,6 +2892,36 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "description": "关闭时只导入素材清单，不自动编排到时间线"
       }
     ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "add_media_to_library",
+    "name": "添加素材到剪辑",
+    "category": "video",
+    "description": "将任意类型素材注册到剪辑工作台的素材库（不写入时间线轨道），供后续剪辑操作调用",
+    "icon": "LibraryBig",
+    "color": "#0d9488",
+    "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑项目",
+        "type": "json"
+      },
+      {
+        "id": "media",
+        "label": "素材",
+        "type": "any"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "project",
+        "label": "剪辑项目",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {},
+    "configFields": [],
     "isBuiltIn": true
   },
   {
@@ -4167,7 +4281,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     "id": "run_wait",
     "name": "运行等待",
     "category": "flow_control",
-    "description": "开启后等待指定时长，超时抛出等待超时错误结束工作流；关闭则跳过并透传输入",
+    "description": "开启后等待指定时长，超时可选择抛出错误或标记完成继续；关闭则跳过并透传输入。进入等待时会发送系统通知提醒用户。",
     "icon": "Hourglass",
     "color": "#6366f1",
     "inputs": [
@@ -4187,14 +4301,15 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     ],
     "defaultConfig": {
       "enabled": false,
-      "wait_seconds": 60
+      "wait_seconds": 60,
+      "timeout_action": "error"
     },
     "configFields": [
       {
         "key": "enabled",
         "label": "启用等待",
         "type": "toggle",
-        "description": "开启后等待指定时长，超时抛出等待超时错误结束工作流；关闭则跳过并透传输入"
+        "description": "开启后等待指定时长，超时按「超时操作」配置处理；关闭则跳过并透传输入"
       },
       {
         "key": "wait_seconds",
@@ -4206,6 +4321,18 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "dependsOn": "enabled",
         "dependsValue": true,
         "placeholder": "60"
+      },
+      {
+        "key": "timeout_action",
+        "label": "超时操作",
+        "type": "select",
+        "options": [
+          { "value": "error", "label": "抛出错误（结束工作流）" },
+          { "value": "complete", "label": "标记完成（继续执行下游）" }
+        ],
+        "colSpan": "full",
+        "dependsOn": "enabled",
+        "dependsValue": true
       }
     ],
     "isBuiltIn": true

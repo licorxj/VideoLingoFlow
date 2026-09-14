@@ -151,7 +151,13 @@ class S_TranslateTaskName(BaseStep):
 
         # 5. Optionally replace task_name in task.json
         print(f"[TranslateTaskName] replace_task_name={replace_task_name!r}, translated_name={translated_name!r}")
-        if replace_task_name and translated_name:
+        if not replace_task_name:
+            print("[TranslateTaskName] SKIP writing task_name: replace_task_name 未勾选(节点配置 replace_task_name=false)")
+        elif not translated_name:
+            # 译文为空：LLM 可能返回了空串/被过滤掉。不要静默跳过，明确告警，
+            # 避免用户误以为「勾了命名却不生效」。此时不改写 task_name，保留原值。
+            print("[TranslateTaskName] SKIP writing task_name: 翻译结果为空(LLM 返回空)，保留原 task_name")
+        else:
             try:
                 with open(task_json_path, "r", encoding="utf-8") as f:
                     task_data = json.load(f)
@@ -162,8 +168,6 @@ class S_TranslateTaskName(BaseStep):
                 print(f"[TranslateTaskName] Updated task_name: {old_name} -> {translated_name}")
             except Exception as e:
                 print(f"[TranslateTaskName] WARNING: failed to update task_name: {e}")
-        else:
-            print(f"[TranslateTaskName] SKIP writing task_name: condition not met")
 
         # 6. Save to task_name.txt
         out_path = os.path.join(task_dir, "cache", "task_name.txt")

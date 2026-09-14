@@ -63,6 +63,7 @@ BUILTIN_STEP_REGISTRY = {
     "video_publish": ("backend.steps.s_video_publish", "S_VideoPublish"),
     "resolve_path": ("backend.steps.s_resolve_path", "S_ResolvePath"),
     "translate_task_name": ("backend.steps.s_translate_task_name", "S_TranslateTaskName"),
+    "get_task_info": ("backend.steps.s_get_task_info", "S_GetTaskInfo"),
     "json_to_text": ("backend.steps.s_json_to_text", "S_JsonToText"),
     "json_editor": ("backend.steps.s_json_editor", "S_JsonEditor"),
     "json_visual_editor": ("backend.steps.s_json_visual_editor", "S_JsonVisualEditor"),

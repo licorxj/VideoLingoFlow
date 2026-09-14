@@ -1370,7 +1370,7 @@
         ],
         "Stems": [
             "Vocals",
-            "Bass", 
+            "Bass",
             "Drums",
             "Other"
         ]
@@ -1387,7 +1387,7 @@
         "Stems": [
             "Vocals",
             "Bass",
-            "Drums", 
+            "Drums",
             "Other"
         ]
     },
@@ -2389,6 +2389,446 @@
             "Bass",
             "Drums",
             "Other"
+        ]
+    },
+    "Roformer Model: BandSplit Roformer | 4-stems FT by SYH99999": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/BandSplit_Roformer_4stems_FT_by_SYH99999.pth",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_BandSplit_Roformer_4stems_FT_by_SYH99999.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/BandSplit_Roformer_4stems_FT_by_SYH99999.pth",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_BandSplit_Roformer_4stems_FT_by_SYH99999.yaml"
+        ]
+    },
+    "Roformer Model: BandSplit Roformer | Inst-EXP-Value-Residual by Unwa": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/BS_Inst_EXP_VRL.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_bs_roformer_inst_exp_vrl.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/BS_Inst_EXP_VRL.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_bs_roformer_inst_exp_vrl.yaml"
+        ]
+    },
+    "Roformer Model: BandSplit Roformer | Revive by Unwa": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/bs_roformer_revive_by_unwa.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_bs_roformer_revive_by_unwa.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/bs_roformer_revive_by_unwa.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_bs_roformer_revive_by_unwa.yaml"
+        ]
+    },
+    "Roformer Model: BandSplit Roformer | Revive v2 by Unwa": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/bs_roformer_revive_v2_by_unwa.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_bs_roformer_revive_by_unwa.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/bs_roformer_revive_v2_by_unwa.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_bs_roformer_revive_by_unwa.yaml"
+        ]
+    },
+    "Roformer Model: BandSplit Roformer | Vocals by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/bs_roformer_voc_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_bs_roformer_voc_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/BandSplit/bs_roformer_voc_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/BandSplit/config_bs_roformer_voc_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | 4-stems FT Large v1 by SYH99999": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/MelBand_Roformer_4stems_FT_Large_v1_by_SYH99999.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_MelBand_Roformer_4stems_FT_Large_by_SYH99999.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/MelBand_Roformer_4stems_FT_Large_v1_by_SYH99999.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_MelBand_Roformer_4stems_FT_Large_by_SYH99999.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | 4-stems FT Large v2 by SYH99999": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/MelBand_Roformer_4stems_FT_Large_v2_by_SYH99999.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_MelBand_Roformer_4stems_FT_Large_by_SYH99999.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/MelBand_Roformer_4stems_FT_Large_v2_by_SYH99999.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_MelBand_Roformer_4stems_FT_Large_by_SYH99999.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | 4-stems Large v1 by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/MelBand_Roformer_4stems_Large_v1_by_Aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_MelBand_Roformer_4stems_Large_v1_by_Aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/MelBand_Roformer_4stems_Large_v1_by_Aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_MelBand_Roformer_4stems_Large_v1_by_Aname.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | 4-stems XL v1 by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/MelBand_Roformer_4stems_XL_v1_by_Aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_MelBand_Roformer_4stems_XL_v1_by_Aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/MelBand_Roformer_4stems_XL_v1_by_Aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_MelBand_Roformer_4stems_XL_v1_by_Aname.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Small by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_small_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_small_by_aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_small_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_small_by_aname.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | DeReverb Mono by anvuew": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/dereverb_mel_band_roformer_mono_anvuew_sdr_20.4029.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_dereverb_anvuew.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/dereverb_mel_band_roformer_mono_anvuew_sdr_20.4029.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_dereverb_anvuew.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental v1 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_v1_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_v1_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental v2 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_v2_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_v2_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental v3 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_v3_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_v3_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Bleedless v1 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_bleedless_v1_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_bleedless_v1_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Bleedless v2 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_bleedless_v2_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_bleedless_v2_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental DeNoise-DeBleed by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_denoise_debleed_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_denoise_debleed_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v1 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v1_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v1_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v2 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v2_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v2_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v3 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v3_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v3_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v4 Noise by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v4_noise_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v4_noise_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v5 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v5_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v5_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v5 Noise by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v5_noise_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v5_noise_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v6 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v6_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v6_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v6 Noise by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v6_noise_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v6_noise_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v7 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v7_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v7_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v7 Noise by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v7_noise_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v7_noise_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness v8 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v8_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_v8_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Instrumental Fullness vX by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_vX_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_inst_fullness_vX_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | instrumental Metal preview by Mesk": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_inst_metal_prev_by_mesk.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_metal_prev_by_mesk.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_inst_metal_prev_by_mesk.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_inst_metal_prev_by_mesk.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Karaoke by becruily": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_karaoke_becruily.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_karaoke_becruily.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_karaoke_becruily.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_karaoke_becruily.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Vocals by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Vocals Bleedless by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_vocals_fullness_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_test_by_aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_vocals_fullness_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_test_by_aname.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Vocals Fullness v1 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v1_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v1_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Vocals Fullness v2 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v2_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v2_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Vocals Fullness v3 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v3_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v3_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Vocals Fullness v4 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v4_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v4_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer | Vocals Fullness v5 by Gabox": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v5_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/mel_band_roformer_voc_fullness_v5_gabox.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_voc_gabox.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer Kim | InstVoc Duality v2 by Unwa": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_instvoc_duality_v2.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_instvoc_duality.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_instvoc_duality_v2.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_instvoc_duality.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer Kim | Vocals v1 by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_v1_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_v1_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer Kim | Vocals v2 by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_v2_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_v2_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer Kim | Vocals v3 by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_v3_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_v3_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer Kim | Vocals Fullness v1 by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_fullness_v1_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_fullness_v1_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ]
+    },
+    "Roformer Model: MelBand Roformer Kim | Vocals Fullness v2 by Aname": {
+        "Github": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_fullness_v2_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
+        ],
+        "HuggingFace": [
+            "https://huggingface.co/Politrees/UVR_resources/resolve/main/models/Roformer/MelBand/melband_roformer_kim_vocals_fullness_v2_by_aname.ckpt",
+            "https://raw.githubusercontent.com/Bebra777228/UVR_resources/refs/heads/main/UVR_resources/configs/Roformer/MelBand/config_melband_roformer_vocals_fullness_aname.yaml"
         ]
     }
 }

@@ -1,4 +1,5 @@
 """Demucs separation engine: wraps the demucs CLI for vocal/background separation."""
+import json
 import os
 import sys
 import shutil
@@ -16,6 +17,63 @@ _MODEL_CACHE = os.environ.get(
         "_model_cache",
     ),
 )
+
+
+# ---------------------------------------------------------------------------
+# UVR HuggingFace mirror for Demucs weights (备用下载源，国内可达)
+# ---------------------------------------------------------------------------
+# demucs 官方权重托管在 dl.fbaipublicfiles.com，国内常被墙。当官方源不可达时，
+# 将权重下载 URL 改写为 UVR 资源包在 HuggingFace 的镜像（与官方文件同名同 hash）。
+# 仅替换下载地址、不动 bag 定义与加载逻辑，因此官方源可达时行为完全不变。
+_DEMUCS_MIRROR_FILE = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), "demucs_mirror.json"
+)
+_UVR_MIRROR_PATCHED = False
+
+
+def _build_uvr_mirror_map() -> dict:
+    """Return {weight_filename: uvrf_url} loaded from demucs_mirror.json."""
+    try:
+        with open(_DEMUCS_MIRROR_FILE, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data.get("weights", {}) or {}
+    except Exception as exc:  # best effort
+        print(f"[Demucs] Failed to load mirror map: {exc}", flush=True)
+        return {}
+
+
+def _enable_uvr_mirror() -> bool:
+    """Monkey-patch demucs.pretrained so weight URLs point to the UVR HF mirror.
+
+    Returns True once the patch is (or was) active. The patch only rewrites the
+    download URL inside ``_parse_remote_files``; bag definitions and the loading
+    pipeline stay untouched, so already-cached official downloads keep working.
+    """
+    global _UVR_MIRROR_PATCHED
+    if _UVR_MIRROR_PATCHED:
+        return True
+    try:
+        import demucs.pretrained as _pretrained
+    except Exception:
+        return False
+    mirror = _build_uvr_mirror_map()
+    if not mirror:
+        return False
+
+    _orig_parse = _pretrained._parse_remote_files
+
+    def _patched_parse(remote_file_list):
+        models = _orig_parse(remote_file_list)
+        for sig, url in list(models.items()):
+            fname = url.rsplit("/", 1)[-1]
+            if fname in mirror:
+                models[sig] = mirror[fname]
+        return models
+
+    _pretrained._parse_remote_files = _patched_parse
+    _UVR_MIRROR_PATCHED = True
+    print("[Demucs] UVR HF mirror enabled for weight downloads.", flush=True)
+    return True
 
 
 class DemucsSeparation(SeparationBase):
@@ -264,7 +322,20 @@ class DemucsSeparation(SeparationBase):
                 print(f"[Demucs] Model {model_name} max segment: {max_seg:.1f}s", flush=True)
             return (model_name, max_seg)
         except Exception as exc:
-            print(f"[Demucs] Model preload failed: {exc}", flush=True)
+            # Official source unreachable (e.g. blocked in CN) -> fall back to UVR HF mirror
+            print(f"[Demucs] Official source failed ({exc}); trying UVR mirror...", flush=True)
+            if _enable_uvr_mirror():
+                try:
+                    from demucs import pretrained
+                    model = pretrained.get_model(model_name)
+                    max_seg = getattr(model, "segment", None)
+                    if max_seg is not None:
+                        print(f"[Demucs] Model {model_name} max segment: {max_seg:.1f}s", flush=True)
+                    return (model_name, max_seg)
+                except Exception as exc2:
+                    print(f"[Demucs] UVR mirror also failed: {exc2}", flush=True)
+            else:
+                print(f"[Demucs] Model preload failed: {exc}", flush=True)
             return None
 
     def _probe_demucs_runtime(self):

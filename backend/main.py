@@ -17,6 +17,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from starlette.background import BackgroundTask
 from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import ClientDisconnect
 from starlette.types import Scope, Receive, Send
 
 from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, musicgen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects, creation_tasks, notifications, agent_ws
@@ -112,6 +113,10 @@ class CorrelationMiddleware(BaseHTTPMiddleware):
             response.headers["X-Correlation-ID"] = correlation_id.get()
             response.headers["X-Request-Duration-Ms"] = str(round((time.perf_counter() - started) * 1000, 2))
             return response
+        except ClientDisconnect:
+            # 客户端提前断开（取消/刷新/上传中断）：返回 499 收敛，
+            # 避免异常冒泡到 uvicorn 打印 "Exception in ASGI application" 堆栈
+            return Response(status_code=499)
         finally:
             correlation_id.reset(token)
 
@@ -238,12 +243,18 @@ async def proxy_llm_router(request: Request, path: str):
         upstream_url = f"{upstream_url}?{request.url.query}"
     client = httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=None, write=60.0, pool=5.0), trust_env=False)
     try:
+        body = await request.body()
+    except ClientDisconnect:
+        # 客户端提前断开（取消/刷新/大 body 中断），避免向 ASGI 抛异常导致日志刷屏
+        await client.aclose()
+        return Response(status_code=499)
+    try:
         upstream_response = await client.send(
             client.build_request(
                 request.method,
                 upstream_url,
                 headers=_proxy_headers(request.headers),
-                content=await request.body(),
+                content=body,
             ),
             stream=True,
         )
@@ -276,12 +287,18 @@ async def proxy_cutia(request: Request, path: str = ""):
         upstream_url = f"{upstream_url}?{request.url.query}"
     client = httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=None, write=60.0, pool=5.0), trust_env=False)
     try:
+        body = await request.body()
+    except ClientDisconnect:
+        # 客户端提前断开（取消/刷新/大 body 中断），避免向 ASGI 抛异常导致日志刷屏
+        await client.aclose()
+        return Response(status_code=499)
+    try:
         upstream_response = await client.send(
             client.build_request(
                 request.method,
                 upstream_url,
                 headers=_proxy_headers(request.headers),
-                content=await request.body(),
+                content=body,
             ),
             stream=True,
         )

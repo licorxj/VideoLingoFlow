@@ -451,3 +451,61 @@ class BSRoformerSeparation(SeparationBase):
             raise Exception(f"FFmpeg fallback background failed: {bg_res.stderr[:500]}")
 
         return {"vocals": vocals_dst, "background": bg_dst}
+
+
+# ----------------------------------------------------------------------
+# 注册 UVR 资源包扩展的 Roformer 模型
+# ----------------------------------------------------------------------
+def _register_extra_roformer_models():
+    """把 backend/separation/bs_roformer_extra_models.json 中的模型注入
+    bs-roformer-infer 的 MODEL_REGISTRY，使资源包里的 MelBand / BandSplit
+    等社区模型也能被本引擎加载。
+
+    官方 bs-roformer-infer 的 registry 只内置了 10 个 BS Roformer 模型，
+    而 UVR 资源包提供了更多（含 MelBand 系列）配置。这里仅做注册表扩展，
+    不改动 venv 内的依赖包，模型权重/配置仍由 bs_modelsmap.json 提供的
+    下载地址获取（缺失时引擎会回退 FFmpeg）。
+    """
+    import json as _json
+    import re as _re
+
+    try:
+        from bs_roformer import MODEL_REGISTRY as _REG
+        from bs_roformer.model_registry import BSModel as _BSModel
+    except Exception:
+        return
+
+    _extra = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "bs_roformer_extra_models.json"
+    )
+    if not os.path.exists(_extra):
+        return
+    try:
+        with open(_extra, encoding="utf-8") as _f:
+            _data = _json.load(_f)
+    except Exception:
+        return
+
+    for _m in _data.get("models", []):
+        _key = _m["name"].lower()
+        if _key in _REG._by_name:
+            continue  # 官方已注册，跳过（避免覆盖）
+        _internal = _re.sub(r"[^\w\-]+", "_", _m["slug"])
+        _base = _internal
+        _i = 1
+        while _internal in _REG._models:
+            _internal = f"{_base}_{_i}"
+            _i += 1
+        _model = _BSModel(
+            slug=_internal,
+            name=_m["name"],
+            checkpoint=_m["checkpoint"],
+            config=_m["config"],
+            category=_m.get("category", "vocals"),
+        )
+        _REG._models[_internal] = _model
+        _REG._by_name[_key] = _internal
+        _REG._by_checkpoint[_m["checkpoint"].lower()] = _internal
+
+
+_register_extra_roformer_models()

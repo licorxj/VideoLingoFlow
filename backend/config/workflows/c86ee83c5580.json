@@ -41,13 +41,15 @@
           "no_input": ""
         },
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 492
+        "height": 435
       },
-      "selected": false
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_3_1788682640602",
@@ -61,12 +63,12 @@
         "label": "HyperFrames 创意",
         "config": {
           "mode": "create",
-          "subject": "制作片尾宣传片，宣传主要内容为视频创作软件VideoLingoFlow ，以极具视觉冲击感和科技感的动画方式制作软件片尾宣传，宣传文案为：本片使用VideoLingoFlow制作，随心所欲，随意创想！，10秒左右。输入素材为软件条形log",
+          "subject": "为系列教材视频制作一个通用甜头动画，输入二为图片背景，输入一为软件logo ，将logo放在中下部，画面中央写上文字：VideoLingoFlow系列精译出品，主意，背景图上的上部已经有系列教程的名称，不要遮挡，整体以科技动效进入，2秒，然后消融渐出1秒",
           "brief_path": "",
           "workflow": "motion-graphics",
           "run_mode": "autonomous",
           "style_preset": "科技风",
-          "aspect": "16:9",
+          "aspect": "4:3",
           "language": "中文",
           "project_dir": "",
           "update_skills": false,
@@ -74,7 +76,7 @@
           "settle_timeout": 1800,
           "cli_command": "npx",
           "cli_package": "hyperframes@latest",
-          "extra_instruction": "补充:1:软件logo：\"X:\\PCTMoveData\\Pictures\\logo\\VLF\\long-tou.png\"\n2：软件名称VideoLingoFlow ，中文名称：流连视听，发布版本2.2.8\n3：官网地址：https://www.licorxj.online/home\n4：Windows全量包下载：\n夸克：https://pan.quark.cn/s/b53ec157469e\n度盘： https://pan.baidu.com/s/19YzunwZo7UezBD9V9FPgjQ?pwd=tg9m\ngithub地址：https://github.com/licorxj/VideoLingoFlow"
+          "extra_instruction": "背景图保持原始尺寸不要裁切，logo是透明png图片，要保持透明显示"
         },
         "status": "completed",
         "disableExecute": false,
@@ -83,14 +85,14 @@
         "outputs": {
           "brief": "cache/hyperframes_node_3_1788682640602/BRIEF.md",
           "project_dir": "cache/hyperframes_node_3_1788682640602",
-          "summary": "10秒科技风片尾动画：数据粒子汇聚揭示Logo，依次浮现VideoLingoFlow/流连视听品牌名、v2.2.8版本号、主宣传文案及官网GitHub信息，暗色系+青蓝光效，无旁白。"
+          "summary": "3秒科技风片头动画：背景图上叠加Logo与'VideoLingoFlow系列精译出品'文字，扫描线/粒子动效入场2秒后消融渐出1秒"
         },
         "error": "",
         "logLines": [
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\ef10a5f29b084a89a12e1360049539d3\\cache\\.step_node_3_1788682640602_result.json, exiting 0",
-          "[step_worker] start node_type=hyperframes_creative node_id=node_3_1788682640602 pid=17464",
+          "[step_worker] start node_type=hyperframes_creative node_id=node_3_1788682640602 pid=37500",
           "[step_worker] step instance created: S_HyperFramesCreative",
-          "[step_worker] step_inputs keys=['source']",
+          "[step_worker] step_inputs keys=['source', 'assets']",
           "[step_worker] node_config keys=['mode', 'subject', 'brief_path', 'workflow', 'run_mode', 'style_preset', 'aspect', 'language', 'project_dir', 'update_skills', 'skills_timeout', 'settle_timeout', 'cli_command', 'cli_package', 'extra_instruction']",
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\ef10a5f29b084a89a12e1360049539d3, kwargs=['callback', 'cancel_callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
@@ -101,7 +103,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 1087
+        "height": 944
       },
       "selected": false,
       "dragging": false,
@@ -130,30 +132,35 @@
           "settle_timeout": 3600,
           "cli_command": "npx",
           "cli_package": "hyperframes@latest",
-          "extra_instruction": "log放大显示，并做由大到小的动画过渡。元素做大一些，不要集中在画面中央，太小无法阅读"
+          "extra_instruction": ""
         },
-        "status": "failed",
-        "progress": -1,
-        "message": "节点子进程异常退出(code=1):  底部官网地址 + GitHub 信息依次淡入 |\n| 8.0–9.5s | 品牌名呼吸光效持续至结束 |\n\n### 用户要求落实\n- ✅ Logo 放大显示（480px 宽，2.8x → 1x 缩放动画）\n- ✅ 元素做大，不集中画面中央（品牌名 80px、中文名 46px、宣传文案 44px、分布在上中下三个区域）\n- ✅ 由大到小动画过渡（Logo 从 scale(2.8) 缩放至 scale(1)）\n- ✅ 科技风暗色系 + 青蓝光效 + 粒子 + 扫描线 + glitch\n\n### 发布\n- 发布失败：HeyGen API 网络连接超时（`UND_ERR_CONNECT_TIMEOUT`），与成片质量无关\n\n{\"status\": \"success\", \"message\": \"10秒科技风片尾动画已渲染完成，1920×1080 H.264 30fps。Logo从大到小缩放揭示，包含粒子汇聚、扫描线、glitch故障、品牌信息逐层浮现等动效。发布因外部API超时失败。\", \"video\": \"my-video/output.mp4\", \"ur",
-        "outputs": {},
-        "error": "节点子进程异常退出(code=1):  底部官网地址 + GitHub 信息依次淡入 |\n| 8.0–9.5s | 品牌名呼吸光效持续至结束 |\n\n### 用户要求落实\n- ✅ Logo 放大显示（480px 宽，2.8x → 1x 缩放动画）\n- ✅ 元素做大，不集中画面中央（品牌名 80px、中文名 46px、宣传文案 44px、分布在上中下三个区域）\n- ✅ 由大到小动画过渡（Logo 从 scale(2.8) 缩放至 scale(1)）\n- ✅ 科技风暗色系 + 青蓝光效 + 粒子 + 扫描线 + glitch\n\n### 发布\n- 发布失败：HeyGen API 网络连接超时（`UND_ERR_CONNECT_TIMEOUT`），与成片质量无关\n\n{\"status\": \"success\", \"message\": \"10秒科技风片尾动画已渲染完成，1920×1080 H.264 30fps。Logo从大到小缩放揭示，包含粒子汇聚、扫描线、glitch故障、品牌信息逐层浮现等动效。发布因外部API超时失败。\", \"video\": \"my-video/output.mp4\", \"ur",
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "project_dir": "cache/hyperframes_node_3_1788682640602",
+          "brief": "cache/hyperframes_node_3_1788682640602/BRIEF.md",
+          "url": "",
+          "video": "cache/hyperframes_render_node_5_1788683544296.mp4"
+        },
+        "error": "",
         "logLines": [
+          "[step_worker] step_inputs keys=['brief', 'project_dir', 'assets']",
+          "[step_worker] node_config keys=['stage', 'workflow', 'brief_path', 'output_name', 'output_path', 'publish', 'project_dir', 'update_skills', 'skills_timeout', 'settle_timeout', 'cli_command', 'cli_package', 'extra_instruction']",
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\ef10a5f29b084a89a12e1360049539d3, kwargs=['callback', 'cancel_callback'])",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\ef10a5f29b084a89a12e1360049539d3\\cache\\.step_node_5_1788683544296_result.json, exiting 0",
-          "[step_worker] start node_type=hyperframes_render node_id=node_5_1788683544296 pid=46544",
+          "[step_worker] start node_type=hyperframes_render node_id=node_5_1788683544296 pid=54168",
           "[step_worker] step instance created: S_HyperFramesRender",
           "[step_worker] step_inputs keys=['brief', 'project_dir', 'assets']",
           "[step_worker] node_config keys=['stage', 'workflow', 'brief_path', 'output_name', 'output_path', 'publish', 'project_dir', 'update_skills', 'skills_timeout', 'settle_timeout', 'cli_command', 'cli_package', 'extra_instruction']",
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\ef10a5f29b084a89a12e1360049539d3, kwargs=['callback', 'cancel_callback'])"
         ],
-        "disableExecute": true,
+        "disableExecute": false,
         "note": "构建以及渲染",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 980
+        "height": 876
       },
       "selected": false,
       "dragging": false,
@@ -185,7 +192,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 283
+        "height": 252
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -194,8 +201,8 @@
       "id": "node_10_1789166092018",
       "type": "workflow",
       "position": {
-        "x": 3345,
-        "y": 435
+        "x": 3840,
+        "y": 315
       },
       "selected": false,
       "data": {
@@ -209,26 +216,145 @@
           "backgroundColor": "rgba(0,0,0,0.6)",
           "subtitlePosition": "bottom"
         },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
         "outputs": {},
+        "error": "",
+        "workbench_url": "",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 208
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "n_mtyfk616atmt",
+      "type": "workflow",
+      "position": {
+        "x": 1545,
+        "y": 645
+      },
+      "selected": true,
+      "data": {
+        "nodeType": "file_load",
+        "label": "文件加载",
+        "config": {
+          "filePath": "Y:\\VideoLingoLc\\control_plane_workspaces\\ad7713d430a64a07b46e0d689b3f95c6\\output\\cover_gen_byfram_1_gen_image_node_3_1782641542678.png"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "filepath": "Y:\\VideoLingoLc\\control_plane_workspaces\\ad7713d430a64a07b46e0d689b3f95c6\\output\\cover_gen_3x4_1_gen_image_node_1_1782507205161.png"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 210
-      }
+        "height": 248
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1789221109599",
+      "type": "workflow",
+      "position": {
+        "x": 4260,
+        "y": 720
+      },
+      "data": {
+        "nodeType": "archive_artifacts",
+        "label": "产物文件归档",
+        "config": {
+          "operation": "copy",
+          "targetType": "custom",
+          "customPath": "X:\\PCTMoveData\\Videos\\VLF",
+          "useSubfolder": false,
+          "subfolderNaming": "by_name",
+          "renameEnabled": false,
+          "renameMode": "seq",
+          "prefix": "",
+          "suffix": ""
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 310
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_1_1789223066411",
+      "type": "workflow",
+      "position": {
+        "x": 3345,
+        "y": 405
+      },
+      "data": {
+        "nodeType": "merge_dub_video",
+        "label": "音视频合成",
+        "config": {
+          "video_mute": true,
+          "audio_volume": 1.05,
+          "audio_fade_in": 0,
+          "audio_fade_out": 0
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 266
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1789223129532",
+      "type": "workflow",
+      "position": {
+        "x": 3315,
+        "y": 735
+      },
+      "data": {
+        "nodeType": "audio_asset_library",
+        "label": "音频素材库",
+        "config": {
+          "source": "https://eleven-public-cdn.elevenlabs.io/payloadcms/847iwrl9579.mp3",
+          "asset_name": ""
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 309
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     }
   ],
   "edges": [
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#f97316",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_3_1788682640602",
       "sourceHandle": "out-brief",
@@ -239,10 +365,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
+        "stroke": "#f97316",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_3_1788682640602",
       "sourceHandle": "out-project_dir",
@@ -253,10 +380,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_3_1788682640602",
       "sourceHandle": "out-summary",
@@ -271,19 +399,19 @@
       "target": "node_9_1789165974780",
       "targetHandle": "in-any",
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_1_1788682606968out-no_input-node_9_1789165974780in-any"
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_9_1789165974780",
       "sourceHandle": "out-filepath",
@@ -292,21 +420,99 @@
       "id": "xy-edge__node_9_1789165974780out-filepath-node_3_1788682640602in-source"
     },
     {
-      "source": "node_5_1788683544296",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1788682606968",
+      "sourceHandle": "out-no_input",
+      "target": "n_mtyfk616atmt",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1788682606968out-no_input-n_mtyfk616atmtin-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "n_mtyfk616atmt",
+      "sourceHandle": "out-filepath",
+      "target": "node_3_1788682640602",
+      "targetHandle": "in-assets",
+      "id": "xy-edge__n_mtyfk616atmtout-filepath-node_3_1788682640602in-assets"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789223066411",
+      "sourceHandle": "out-video",
+      "target": "node_1_1789221109599",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1789223066411out-video-node_1_1789221109599in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789223066411",
       "sourceHandle": "out-video",
       "target": "node_10_1789166092018",
       "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1789223066411out-video-node_10_1789166092018in-video"
+    },
+    {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
-      "id": "xy-edge__node_5_1788683544296out-video-node_10_1789166092018in-video"
+      "source": "node_5_1788683544296",
+      "sourceHandle": "out-video",
+      "target": "node_1_1789223066411",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_5_1788683544296out-video-node_1_1789223066411in-video"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1788683544296",
+      "sourceHandle": "out-video",
+      "target": "node_3_1789223129532",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_5_1788683544296out-video-node_3_1789223129532in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1789223129532",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1789223066411",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1789223129532out-audio-node_1_1789223066411in-audio"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-06T16:22:16",
-  "updatedAt": "2026-09-12T17:30:15",
-  "revision": 12
+  "updatedAt": "2026-09-12T22:58:17",
+  "revision": 18
 }
