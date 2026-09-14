@@ -77,6 +77,43 @@ _POST_TO_FRAME_JS = """
 }
 """
 
+# 编码器能力预检：不同 Chromium 内核自带的编解码器不同（chrome-headless-shell
+# 通常缺少 H.264/AAC 的专有编码实现）。导出前先探测，避免编码器不可用时
+# Output.start() 静默卡住、后端白白等到超时。
+_CODEC_PROBE_JS = """
+async () => {
+  const probe = async (Ctor, config) => {
+    if (typeof Ctor === 'undefined') return 'unsupported-api';
+    try {
+      const r = await Ctor.isConfigSupported(config);
+      return r && r.supported ? 'ok' : 'unsupported-codec';
+    } catch (e) {
+      return 'error:' + ((e && e.message) || String(e));
+    }
+  };
+  const vCfg = (codec) => ({
+    codec, width: 1920, height: 1080, bitrate: 6000000, framerate: 30,
+  });
+  return {
+    hasWebCodecs: typeof VideoEncoder !== 'undefined',
+    avc: await probe(VideoEncoder, vCfg('avc1.42001f')),
+    avcMain: await probe(VideoEncoder, vCfg('avc1.4d0028')),
+    vp9: await probe(VideoEncoder, vCfg('vp09.00.10.08')),
+    vp8: await probe(VideoEncoder, vCfg('vp8')),
+  };
+}
+"""
+
+# 无进度终止：导出开始后若长时间收不到任何进度变化，判定为卡死并主动失败
+DEFAULT_STALL_TIMEOUT = 600.0
+
+_MP4_ADVICE = (
+    "当前浏览器内核不支持 H.264 编码，MP4 导出会卡在编码器初始化且永远等不到进度。"
+    "请改用 WebM(VP9) 导出；若必须 MP4，可导出 WebM 后用 ffmpeg 转码："
+    "ffmpeg -i 成片.webm -c:v libx264 -crf 20 -c:a aac 成片.mp4"
+)
+_WEBM_ADVICE = "当前浏览器内核不支持 VP9/VP8 编码，请改用 MP4(H.264) 导出或安装完整版 Chromium 内核。"
+
 
 class HeadlessRenderError(Exception):
     """无头剪辑渲染失败。"""
@@ -91,6 +128,30 @@ def resolve_backend_base_url() -> str:
     port = str(os.environ.get("VIDEOLINGO_BACKEND_PORT") or DEFAULT_BACKEND_PORT).strip()
     host = str(os.environ.get("VIDEOLINGO_BACKEND_HOST") or "127.0.0.1").strip()
     return f"http://{host}:{port}"
+
+
+def _resolve_stall_timeout(timeout: float, explicit: Optional[float]) -> float:
+    """确定「无进度即终止」的阈值（秒）。
+
+    优先级：构造参数 > 环境变量 VIDEOLINGO_RENDER_STALL_TIMEOUT > 默认值。
+    默认值取 DEFAULT_STALL_TIMEOUT，但不小于总超时的 10%，避免长任务误判。
+    """
+    raw = explicit
+    if raw is None:
+        raw = os.environ.get("VIDEOLINGO_RENDER_STALL_TIMEOUT") or ""
+        raw = raw.strip() or None
+    try:
+        if raw is not None:
+            return max(60.0, float(raw))
+    except (TypeError, ValueError):
+        pass
+    return max(120.0, min(DEFAULT_STALL_TIMEOUT, max(60.0, float(timeout)) * 0.25))
+
+
+def _skip_codec_probe() -> bool:
+    """是否跳过导出前的编码器能力预检（误判时可用环境变量关闭）。"""
+    flag = (os.environ.get("VIDEOLINGO_RENDER_SKIP_CODEC_PROBE") or "").strip().lower()
+    return flag in {"1", "true", "yes", "on"}
 
 
 def ensure_chromium_installed(progress: Optional[Callable[[int, str], None]] = None) -> None:
@@ -169,11 +230,13 @@ class CutiaHeadlessRenderer:
         browser_channel: Optional[str] = None,
         timeout: float = 3600.0,
         headless: bool = True,
+        stall_timeout: Optional[float] = None,
     ) -> None:
         self.base_url = (base_url or resolve_backend_base_url()).rstrip("/")
         self.browser_channel = (browser_channel or "").strip() or None
         self.timeout = max(60.0, float(timeout))
         self.headless = headless
+        self.stall_timeout = _resolve_stall_timeout(self.timeout, stall_timeout)
 
     # ------------------------------------------------------------------ #
     # 公开入口
@@ -223,10 +286,22 @@ class CutiaHeadlessRenderer:
                         f"无法启动无头浏览器（channel={self.browser_channel or 'chromium'}）：{exc}"
                     ) from exc
 
+                crash_state: dict[str, Any] = {"reason": None}
                 try:
                     context = browser.new_context(viewport={"width": 1920, "height": 1080})
                     context.add_init_script(_INIT_SCRIPT)
                     page = context.new_page()
+
+                    def _mark_crash(reason: str):
+                        def _handler(*_args):
+                            if not crash_state["reason"]:
+                                crash_state["reason"] = reason
+                        return _handler
+
+                    page.on("crash", _mark_crash("无头浏览器页面崩溃（渲染进程被终止，通常是内存不足或编码器异常）"))
+                    context.on("close", _mark_crash("无头浏览器上下文已关闭"))
+                    browser.on("disconnected", _mark_crash("无头浏览器已断开连接（进程被杀或崩溃）"))
+
                     page.route(
                         re.compile(re.escape(HOST_PATH)),
                         lambda route: route.fulfill(
@@ -240,7 +315,10 @@ class CutiaHeadlessRenderer:
                         progress(5, "正在启动无头剪辑渲染器")
                     page.goto(f"{self.base_url}{HOST_PATH}", wait_until="domcontentloaded")
 
-                    self._wait_message(page, "ready", deadline, progress, 5, 15, "正在加载剪辑工作台")
+                    self._wait_message(
+                        page, "ready", deadline, progress, 5, 15, "正在加载剪辑工作台",
+                        crash_state=crash_state,
+                    )
 
                     if progress:
                         progress(15, "正在载入剪辑项目与素材")
@@ -257,12 +335,21 @@ class CutiaHeadlessRenderer:
                     )
                     state = self._wait_message(
                         page, "loaded", deadline, progress, 15, 30, "正在载入剪辑项目与素材",
-                        fail_key="loadFailed",
+                        fail_key="loadFailed", crash_state=crash_state,
                     )
                     if state.get("loadFailed"):
                         raise HeadlessRenderError(
                             state["loadFailed"].get("message") or "剪辑项目载入 Cutia 失败"
                         )
+
+                    if not _skip_codec_probe():
+                        if progress:
+                            progress(28, "正在检测浏览器编码能力")
+                        try:
+                            caps = page.evaluate(_CODEC_PROBE_JS) or {}
+                        except Exception:  # noqa: BLE001 - 探测失败不阻断导出
+                            caps = {}
+                        self._ensure_codec_available(caps, export_format)
 
                     if progress:
                         progress(30, "正在渲染导出成片")
@@ -279,7 +366,10 @@ class CutiaHeadlessRenderer:
                         },
                     )
 
-                    return self._await_export(page, deadline, progress)
+                    return self._await_export(
+                        page, deadline, progress,
+                        crash_state=crash_state, stall_timeout=self.stall_timeout,
+                    )
                 finally:
                     browser.close()
 
@@ -291,8 +381,47 @@ class CutiaHeadlessRenderer:
         if not delivered:
             raise HeadlessRenderError("宿主页面未找到剪辑工作台 iframe，无法投递消息。")
 
+    def _raise_if_crashed(self, crash_state: Optional[dict]) -> None:
+        """浏览器崩溃/断开时立即失败，不再空等到总超时。"""
+        if not crash_state:
+            return
+        reason = crash_state.get("reason")
+        if reason:
+            raise HeadlessRenderError(
+                f"{reason}。请尝试改用 WebM(VP9) 导出、降低画质或缩短时间线分段渲染。"
+            )
+
     def _read_state(self, page) -> dict:
-        return page.evaluate(_READ_STATE_JS) or {}
+        try:
+            return page.evaluate(_READ_STATE_JS) or {}
+        except Exception as exc:  # noqa: BLE001 - 页面崩溃时 Playwright 抛出底层错误
+            message = str(exc).lower()
+            if "crash" in message or "target closed" in message or "browser has been closed" in message:
+                raise HeadlessRenderError(
+                    f"无头浏览器页面已崩溃或关闭：{exc}。"
+                    "通常是内存不足或编码器初始化失败，建议改用 WebM(VP9) 导出并缩短时间线。"
+                ) from exc
+            raise
+
+    def _ensure_codec_available(self, caps: dict, export_format: str) -> None:
+        """导出前校验目标格式所需编码器是否可用，避免静默卡死。
+
+        探测本身失败（无 WebCodecs API / 页面异常）时不阻断，交由后续流程兜底。
+        """
+        if not caps or caps.get("hasWebCodecs") is False:
+            return
+        fmt = str(export_format or "mp4").lower()
+        if fmt in {"webm", "webmvp9", "vp9"}:
+            needed, label, advice = ("vp9", "vp8"), "VP9/VP8", _WEBM_ADVICE
+        else:
+            needed, label, advice = ("avc", "avcMain"), "H.264(avc)", _MP4_ADVICE
+        if any(caps.get(key) == "ok" for key in needed):
+            return
+        detail = "，".join(f"{key}={caps.get(key)}" for key in needed)
+        raise HeadlessRenderError(
+            f"当前无头浏览器内核不支持 {label} 编码（{detail}），无法导出 {fmt.upper()}。"
+            f"{advice}（临时跳过该预检可设置环境变量 VIDEOLINGO_RENDER_SKIP_CODEC_PROBE=1）"
+        )
 
     def _wait_message(
         self,
@@ -304,8 +433,10 @@ class CutiaHeadlessRenderer:
         end_percent: int,
         message: str,
         fail_key: Optional[str] = None,
+        crash_state: Optional[dict] = None,
     ) -> dict:
         while time.time() < deadline:
+            self._raise_if_crashed(crash_state)
             state = self._read_state(page)
             if state.get(key):
                 return state
@@ -319,12 +450,22 @@ class CutiaHeadlessRenderer:
         page,
         deadline: float,
         progress: Optional[Callable[[int, str], None]],
+        crash_state: Optional[dict] = None,
+        stall_timeout: Optional[float] = None,
     ) -> dict:
-        """等待导出完成，期间把 Cutia 的帧进度换算为节点进度。"""
+        """等待导出完成，期间把 Cutia 的帧进度换算为节点进度。
+
+        若导出已开始但长时间收不到任何进度变化，判定为编码器卡死并主动失败，
+        避免后端一直空等到总超时。
+        """
+        stall = max(60.0, float(stall_timeout or DEFAULT_STALL_TIMEOUT))
         last_percent = -1
         uploading = False
+        started = False
+        last_activity = time.time()
 
         while time.time() < deadline:
+            self._raise_if_crashed(crash_state)
             state = self._read_state(page)
 
             failed = state.get("failed")
@@ -339,22 +480,51 @@ class CutiaHeadlessRenderer:
                     progress(100, "剪辑成片已导出")
                 return state["complete"]
 
-            if progress:
-                if state.get("uploading"):
-                    if not uploading:
-                        uploading = True
+            active = False
+            if state.get("started") and not started:
+                started = True
+                active = True
+            if state.get("uploading"):
+                # 回传成片阶段无细粒度进度，持续刷新活跃时间，交由总超时兜底
+                if not uploading:
+                    uploading = True
+                    if progress:
                         progress(95, "正在回传剪辑成片")
-                elif state.get("started"):
-                    raw = (state.get("progress") or {}).get("progress")
-                    if isinstance(raw, (int, float)):
-                        percent = 30 + int(max(0.0, min(1.0, float(raw))) * 60)
-                        if percent != last_percent:
-                            last_percent = percent
+                active = True
+            elif state.get("started"):
+                raw = (state.get("progress") or {}).get("progress")
+                if isinstance(raw, (int, float)):
+                    percent = 30 + int(max(0.0, min(1.0, float(raw))) * 60)
+                    if percent != last_percent:
+                        last_percent = percent
+                        active = True
+                        if progress:
                             progress(percent, "正在渲染导出成片")
+
+            if active:
+                last_activity = time.time()
+            elif time.time() - last_activity > stall:
+                raise HeadlessRenderError(self._stall_message(started, last_percent, stall))
 
             time.sleep(0.5)
 
         raise HeadlessRenderError("剪辑渲染导出超时，请尝试降低画质或缩短时间线后重试。")
+
+    @staticmethod
+    def _stall_message(started: bool, last_percent: int, stall: float) -> str:
+        minutes = max(1, int(stall // 60))
+        if not started:
+            return (
+                f"剪辑渲染已触发但连续 {minutes} 分钟未收到任何导出进度，已主动终止。"
+                "最常见原因是所选格式的编码器在当前浏览器内核不可用（如 H.264/MP4），"
+                "请改用 WebM(VP9) 导出；若必须 MP4，可导出 WebM 后用 ffmpeg 转码。"
+            )
+        at = last_percent if last_percent > 0 else 30
+        return (
+            f"剪辑渲染已开始但连续 {minutes} 分钟进度无变化（卡在约 {at}%），已主动终止。"
+            "建议：改用 WebM(VP9)、降低画质/分辨率，或缩短时间线分段渲染后重试。"
+            "（如需放宽该阈值，设置环境变量 VIDEOLINGO_RENDER_STALL_TIMEOUT=<秒>）"
+        )
 
 
 def render_project(
@@ -369,6 +539,7 @@ def render_project(
     base_url: Optional[str] = None,
     browser_channel: Optional[str] = None,
     timeout: float = 3600.0,
+    stall_timeout: Optional[float] = None,
     progress: Optional[Callable[[int, str], None]] = None,
 ) -> dict:
     """便捷函数：按任务项目执行一次无头渲染。"""
@@ -376,6 +547,7 @@ def render_project(
         base_url=base_url,
         browser_channel=browser_channel,
         timeout=timeout,
+        stall_timeout=stall_timeout,
     )
     return renderer.render(
         task_id=task_id,

@@ -165,6 +165,29 @@ function CanvasNodeCard({ data }: NodeProps) {
 
 const nodeTypes = { tfCard: CanvasNodeCard };
 
+// ---------------- 会话持久化（切页/刷新后原地续上） ----------------
+const LS_ACTIVE = "tf-canvas:active-project";
+const LS_VIEWPORT = "tf-canvas:viewport";
+const LS_CHAT = (id: number) => `tf-canvas:chat:${id}`;
+const LS_SNAP = (id: number) => `tf-canvas:snapshot:${id}`;
+
+function readJSON<T>(key: string): T | null {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeJSON(key: string, value: unknown) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* 容量超限时静默降级 */
+  }
+}
+
 // ---------------- 项目设置可选项 ----------------
 const VIDEO_RATIOS = [
   { value: "16:9", label: "16:9 横屏" },
@@ -277,30 +300,67 @@ export default function CreationCanvas() {
   const [activeId, setActiveId] = useState<number | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, , onEdgesChange] = useEdgesState<any>([]);
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "assistant", kind: "md", text: "我是创作 Agent（决策层）。直接下达创作指令，我会拆解任务、派发执行层子 Agent 并汇报进度。" },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    const savedId = Number(localStorage.getItem(LS_ACTIVE) || 0);
+    const saved = savedId ? readJSON<ChatMessage[]>(LS_CHAT(savedId)) : null;
+    return saved?.length ? saved : [
+      { role: "assistant", kind: "md", text: "我是创作 Agent（决策层）。直接下达创作指令，我会拆解任务、派发执行层子 Agent 并汇报进度。" },
+    ];
+  });
+
+  // 切换项目时载入该项目的会话记录
+  useEffect(() => {
+    if (!activeId) return;
+    const saved = readJSON<ChatMessage[]>(LS_CHAT(activeId));
+    setMessages(saved?.length ? saved : [
+      { role: "assistant", kind: "md", text: "我是创作 Agent（决策层）。直接下达创作指令，我会拆解任务、派发执行层子 Agent 并汇报进度。" },
+    ]);
+  }, [activeId]);
+
+  // 会话记录持久化（每项目保留最近 80 条）
+  useEffect(() => {
+    if (!activeId) return;
+    writeJSON(LS_CHAT(activeId), messages.slice(-80));
+  }, [messages, activeId]);
   const [draft, setDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pollRef = useRef<number | null>(null);
 
   const loadProjects = useCallback(() => {
     toonflowApi.listProjects().then(({ data }) => {
-      setProjects(data.projects || []);
-      setActiveId((prev) => prev ?? data.projects?.[0]?.id ?? null);
+      const list: TfProject[] = data.projects || [];
+      setProjects(list);
+      const saved = Number(localStorage.getItem(LS_ACTIVE) || 0);
+      const restored = saved && list.some((p) => p.id === saved) ? saved : list[0]?.id ?? null;
+      setActiveId((prev) => prev ?? restored);
     }).catch(() => undefined);
   }, []);
 
   const loadSnapshot = useCallback((id: number) => {
+    // 先用缓存快照瞬时恢复画面，再向服务端刷新
+    const cached = readJSON<Snapshot>(LS_SNAP(id));
+    if (cached) {
+      setSnap(cached);
+      setNodes(snapshotToNodes(cached, id));
+    }
     setLoading(true);
     toonflowApi.getCanvas(id)
       .then(({ data }) => {
         setSnap(data);
         setNodes(snapshotToNodes(data as Snapshot, id));
+        writeJSON(LS_SNAP(id), data);
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
   }, [setNodes]);
+
+  // 记住当前项目，切走/刷新后回到同一个项目
+  useEffect(() => {
+    if (activeId) localStorage.setItem(LS_ACTIVE, String(activeId));
+  }, [activeId]);
+
+  // 记住画布视口（缩放/平移）
+  const [initialViewport] = useState(() => readJSON<{ x: number; y: number; zoom: number }>(LS_VIEWPORT));
 
   useEffect(() => { loadProjects(); }, [loadProjects]);
 
@@ -643,7 +703,9 @@ export default function CreationCanvas() {
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             nodeTypes={nodeTypes}
-            fitView
+            fitView={!initialViewport}
+            defaultViewport={initialViewport || undefined}
+            onMoveEnd={(_, vp) => writeJSON(LS_VIEWPORT, vp)}
             proOptions={{ hideAttribution: true }}
           >
             <Background variant={BackgroundVariant.Dots} gap={22} size={1.4} />

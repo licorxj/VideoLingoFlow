@@ -2070,6 +2070,48 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
             );
           }
 
+          if (field.type === "reorder-list") {
+            const opts = field.options || [];
+            const rawSel: string[] = Array.isArray(config[field.key]) ? config[field.key] : [];
+            // 以当前选择顺序为基础，补齐未出现的选项（保持 options 原始顺序）
+            const present = new Set(rawSel);
+            const ordered = [
+              ...rawSel.filter((v) => opts.some((o) => o.value === v)),
+              ...opts.map((o) => o.value).filter((v) => !present.has(v)),
+            ];
+            const labelOf = (v: string) => opts.find((o) => o.value === v)?.label || v;
+            const move = (idx: number, dir: -1 | 1) => {
+              const next = [...ordered];
+              const j = idx + dir;
+              if (j < 0 || j >= next.length) return;
+              [next[idx], next[j]] = [next[j], next[idx]];
+              onConfigChange(field.key, next);
+            };
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="space-y-1">
+                  {ordered.map((v, idx) => (
+                    <div key={v} className="flex items-center gap-1.5 rounded-md border border-border/50 bg-background px-2 py-1">
+                      <span className="flex-1 text-[11px] truncate">{labelOf(v)}</span>
+                      <button type="button" disabled={idx === 0}
+                        onClick={() => move(idx, -1)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="w-5 h-5 grid place-items-center rounded text-muted-foreground hover:text-foreground disabled:opacity-30">↑</button>
+                      <button type="button" disabled={idx === ordered.length - 1}
+                        onClick={() => move(idx, 1)}
+                        onPointerDown={(e) => e.stopPropagation()}
+                        className="w-5 h-5 grid place-items-center rounded text-muted-foreground hover:text-foreground disabled:opacity-30">↓</button>
+                    </div>
+                  ))}
+                </div>
+                {field.description && (
+                  <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{field.description}</p>
+                )}
+              </div>
+            );
+          }
+
           if (field.type === "account-select") {
             return <div key={field.key} className={fieldSpanClass(field)}><AccountSelectField field={field} value={value} onConfigChange={onConfigChange} /></div>;
           }

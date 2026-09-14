@@ -60,6 +60,7 @@ from backend.steps.s_video_publish import S_VideoPublish
 from backend.steps.s_xiaopai_publish import S_XiaopaiPublish
 from backend.steps.s_resolve_path import S_ResolvePath
 from backend.steps.s_translate_task_name import S_TranslateTaskName
+from backend.steps.s_get_task_info import S_GetTaskInfo
 from backend.steps.s_json_to_text import S_JsonToText
 from backend.steps.s_json_editor import S_JsonEditor
 from backend.steps.s_json_get import S_JsonGet
@@ -72,6 +73,7 @@ from backend.steps.s_video_clip_intro_outro import S_VideoClipIntroOutro
 from backend.steps.s_video_dedupe import S_VideoDedupe
 from backend.steps.s_video_region_crop import S_VideoRegionCrop
 from backend.steps.s_video_region_composite import S_VideoRegionComposite
+from backend.steps.s_add_media_to_library import S_AddMediaToLibrary
 from backend.steps.s_cutia import S_Cutia
 from backend.steps.s_project_init import S_ProjectInit
 from backend.steps.s_track_add_media import S_TrackAddMedia
@@ -118,6 +120,7 @@ from backend.steps.s_hyperframes_cli import S_HyperFramesCli
 from backend.steps.s_hyperframes_agent import S_HyperFramesAgent
 from backend.steps.s_image_grid_split import S_ImageGridSplit
 from backend.steps.s_video_scale import S_VideoScale
+from backend.steps.s_video_concat import S_VideoConcat
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -223,6 +226,9 @@ _STEPS = {
     "video_transcode": S_VideoTranscode(),
     "video_scale": S_VideoScale(),
     "s_video_scale": S_VideoScale(),
+    # 视频拼接（video 分组，单 ffmpeg 命令完成拼接）
+    "video_concat": S_VideoConcat(),
+    "s_video_concat": S_VideoConcat(),
     "s_audio_cut_by_subtitle": StepAudioCutBySubtitle(),
     "audio_cut_by_subtitle": StepAudioCutBySubtitle(),
     "s_video_cut_by_subtitle": StepVideoCutBySubtitle(),
@@ -241,6 +247,8 @@ _STEPS = {
     "resolve_path": S_ResolvePath(),
     "s_translate_task_name": S_TranslateTaskName(),
     "translate_task_name": S_TranslateTaskName(),
+    # 获取任务信息（流程控制分组，只读 task.json + 输入节点配置，输出文本）
+    "get_task_info": S_GetTaskInfo(),
     "s_json_to_text": S_JsonToText(),
     "json_to_text": S_JsonToText(),
     "s_json_editor": S_JsonEditor(),
@@ -267,6 +275,7 @@ _STEPS = {
     "video_region_composite": S_VideoRegionComposite(),
     "project_init": S_ProjectInit(),
     "add_track_media": S_TrackAddMedia(),
+    "add_media_to_library": S_AddMediaToLibrary(),
     "s_cutia": S_Cutia(),
     "cutia": S_Cutia(),
     "s_cutia_render": S_CutiaRender(),

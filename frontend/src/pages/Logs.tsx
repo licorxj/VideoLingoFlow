@@ -276,7 +276,7 @@ export default function Logs() {
 
       {/* Terminal area */}
       <div ref={containerRef} onScroll={handleScroll}
-        className="flex-1 overflow-y-auto bg-white font-mono text-[14px] leading-[1.7] min-h-0">
+        className="flex-1 overflow-y-auto bg-background text-foreground font-mono text-[14px] leading-[1.7] min-h-0">
         {filtered.length === 0 ? (
           <div className="flex items-center justify-center h-full">
             <div className="text-center space-y-3 opacity-30">
@@ -310,7 +310,7 @@ export default function Logs() {
               return (
                 <div key={i}
                   className={cn(
-                    "flex px-3 py-px hover:bg-white/[0.03] group transition-colors duration-75",
+                    "flex px-3 py-px hover:bg-foreground/[0.04] group transition-colors duration-75",
                     log.level === "error" ? "bg-destructive/[0.06]" : log.level === "warning" ? "bg-warning/[0.04]" : ""
                   )}>
                   <span className="text-muted-foreground/40 select-none flex-shrink-0 w-[16px] text-right pr-3 text-[10px] leading-[1.7] group-hover:text-muted-foreground/70">

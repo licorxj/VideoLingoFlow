@@ -7,8 +7,8 @@
       "id": "node_1_1780590163157",
       "type": "workflow",
       "position": {
-        "x": -1965,
-        "y": -1485
+        "x": -2460,
+        "y": -1275
       },
       "data": {
         "nodeType": "input",
@@ -37,12 +37,12 @@
           "no_input": ""
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 628
+        "height": 558
       },
       "selected": false,
       "dragging": false,
@@ -67,11 +67,11 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 310
+        "height": 278
       },
       "selected": false,
       "dragging": false,
@@ -107,12 +107,12 @@
           "text": "cache/sentences_text_node_2_1780807148463.txt"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 671
+        "height": 602
       },
       "selected": false,
       "dragging": false,
@@ -138,7 +138,7 @@
           "subtitle": "cache/summarize_result_node_1_1780948332813.json"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "可以把人名放到术语表",
         "workbench_url": "",
         "logLines": [
@@ -154,7 +154,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 398
+        "height": 357
       },
       "selected": false,
       "dragging": false,
@@ -185,7 +185,7 @@
           "reflect": "cache/translation_reflect_node_1_1780954897405_zh.json"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": "",
         "logLines": [
           "[step_worker] step_inputs keys=['summary', 'subtitle', 'language', 'prompt_template']",
@@ -229,13 +229,13 @@
           "bilingual": "output/tran_subtitles_bilingual_node_1_1781200299298.srt"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "翻译后字幕",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 525
+        "height": 471
       },
       "selected": false,
       "dragging": false,
@@ -245,8 +245,8 @@
       "id": "node_2_1781207780159",
       "type": "workflow",
       "position": {
-        "x": 2190,
-        "y": -690
+        "x": 2175,
+        "y": -780
       },
       "data": {
         "nodeType": "merge_sub_video",
@@ -264,13 +264,13 @@
           "video": "output/video_with_subs_node_2_1781207780159.mp4"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "字幕自行按需接入",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 655
+        "height": 589
       },
       "selected": false,
       "dragging": false,
@@ -281,7 +281,7 @@
       "type": "workflow",
       "position": {
         "x": -1935,
-        "y": -585
+        "y": -840
       },
       "data": {
         "nodeType": "video_preview",
@@ -294,12 +294,12 @@
         "message": "Completed",
         "outputs": {},
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 478
+        "height": 444
       },
       "selected": false,
       "dragging": false,
@@ -328,13 +328,13 @@
         "message": "Completed",
         "outputs": {},
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "翻译字幕+原视频",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 478
+        "height": 444
       },
       "selected": false,
       "dragging": false,
@@ -365,7 +365,7 @@
           "overwrite_generate": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -388,7 +388,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 669
+        "height": 597
       },
       "selected": false,
       "dragging": false,
@@ -413,7 +413,7 @@
           "min_sentence_duration": 0.1
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -425,7 +425,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 525
+        "height": 476
       },
       "selected": false,
       "dragging": false,
@@ -461,12 +461,12 @@
           "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\cache\\input_video.mp4"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 845
+        "height": 753
       },
       "selected": false,
       "dragging": false,
@@ -492,7 +492,7 @@
           "mute_original": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -504,7 +504,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 655
+        "height": 589
       },
       "selected": false,
       "dragging": false,
@@ -526,7 +526,7 @@
           "model": "mdx"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -548,7 +548,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 469
+        "height": 419
       },
       "selected": false,
       "dragging": false,
@@ -573,7 +573,7 @@
           "subtitlePosition": "bottom"
         },
         "status": "pending",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -583,7 +583,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 453
+        "height": 420
       },
       "selected": false,
       "dragging": false,
@@ -608,7 +608,7 @@
           "log_request": true
         },
         "status": "pending",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -628,7 +628,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 474
+        "height": 418
       },
       "selected": false,
       "dragging": false,
@@ -638,8 +638,8 @@
       "id": "node_1_1782640383627",
       "type": "workflow",
       "position": {
-        "x": -270,
-        "y": -300
+        "x": -180,
+        "y": -15
       },
       "data": {
         "nodeType": "video_frame_extract",
@@ -651,7 +651,7 @@
           "avoid_subtitles": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -663,7 +663,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 399
+        "height": 358
       },
       "selected": false,
       "dragging": false,
@@ -673,8 +673,8 @@
       "id": "node_1_1782672877872",
       "type": "workflow",
       "position": {
-        "x": 3375,
-        "y": 510
+        "x": 4515,
+        "y": 690
       },
       "data": {
         "nodeType": "video_publish",
@@ -701,7 +701,7 @@
           "desc_affix": ""
         },
         "status": "pending",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -721,7 +721,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 752
+        "height": 641
       },
       "selected": false,
       "dragging": false,
@@ -746,7 +746,7 @@
           "log_request": true
         },
         "status": "pending",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -766,7 +766,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 474
+        "height": 418
       },
       "selected": false,
       "dragging": false,
@@ -788,7 +788,7 @@
           "custom_value": ""
         },
         "status": "pending",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -798,7 +798,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 340
+        "height": 299
       },
       "selected": false,
       "dragging": false,
@@ -823,11 +823,11 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 436
+        "height": 407
       },
       "selected": false,
       "dragging": false,
@@ -851,11 +851,11 @@
         "outputs": {},
         "error": "permanent",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 211
+        "height": 188
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -902,12 +902,12 @@
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\cache\\.step_node_2_1788911469302_result.json, exiting 0"
         ],
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 651
+        "height": 580
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -933,20 +933,22 @@
           "json": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\cache/translation_reflect_node_1_1780954897405_zh.json"
         },
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 340
+        "height": 305
       },
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_4_1789162754347",
       "type": "workflow",
       "position": {
-        "x": 4185,
-        "y": -195
+        "x": 3315,
+        "y": 30
       },
       "data": {
         "nodeType": "video_clip_intro_outro",
@@ -958,18 +960,19 @@
           "outro_duration": "108"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
           "video": "cache/video_clip/main_node_4_1789162754347.mp4",
           "outro": "cache/video_clip/outro_node_4_1789162754347.mp4"
         },
-        "error": ""
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 400
+        "height": 393
       },
       "selected": false,
       "dragging": false,
@@ -979,8 +982,8 @@
       "id": "node_5_1789164547575",
       "type": "workflow",
       "position": {
-        "x": 555,
-        "y": 600
+        "x": -600,
+        "y": 1035
       },
       "selected": false,
       "data": {
@@ -1000,7 +1003,7 @@
           "output_prefix": "img"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -1017,11 +1020,12 @@
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\cache\\.step_node_5_1789164547575_result.json, exiting 0"
-        ]
+        ],
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 830
+        "height": 712
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1030,8 +1034,8 @@
       "id": "node_6_1789164732196",
       "type": "workflow",
       "position": {
-        "x": -390,
-        "y": 840
+        "x": -1245,
+        "y": 1245
       },
       "data": {
         "nodeType": "file_load",
@@ -1040,19 +1044,253 @@
           "filePath": "X:/PCTMoveData/Videos/下载/That's AI (2026) - Short Film_node_2_1783324281016/That's AI (2026) - Short Film_node_2_1783324281016.jpg"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
           "filepath": "X:\\PCTMoveData\\Videos\\下载\\That's AI (2026) - Short Film_node_2_1783324281016\\That's AI (2026) - Short Film_node_2_1783324281016.jpg"
         },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 252
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1789358030742",
+      "type": "workflow",
+      "position": {
+        "x": 45,
+        "y": 1260
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "project_init",
+        "label": "剪辑项目初始化",
+        "config": {
+          "arrange_tracks": true
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "project": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\output\\editing_project.json"
+        },
         "error": ""
       },
       "measured": {
         "width": 420,
-        "height": 283
+        "height": 245
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1789358075480",
+      "type": "workflow",
+      "position": {
+        "x": 1005,
+        "y": 1290
       },
       "selected": false,
+      "data": {
+        "nodeType": "add_media_to_library",
+        "label": "添加素材到剪辑",
+        "config": {},
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "project": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\output\\editing_project.json",
+          "asset_id": "7a1924efe63a4f45a6ad91afbb1173b9",
+          "asset_type": "video"
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 265
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1789358164246",
+      "type": "workflow",
+      "position": {
+        "x": 495,
+        "y": 1515
+      },
+      "data": {
+        "nodeType": "video_asset_library",
+        "label": "视频素材库",
+        "config": {
+          "source": "ff2d902c728d4d4a8bbdbddc7e6766db",
+          "asset_name": "",
+          "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Cmaterials%5Cvideos%5C01f72cbdabdf493faf1ded64c9327122.mp4"
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\asset.mp4",
+          "info": {
+            "source": "ff2d902c728d4d4a8bbdbddc7e6766db",
+            "source_type": "local",
+            "kind": "video",
+            "asset": {
+              "path": "data/materials/videos/01f72cbdabdf493faf1ded64c9327122.mp4",
+              "width": 1920,
+              "height": 1080,
+              "duration_seconds": 7.000998,
+              "group_tags": [
+                "VLF"
+              ],
+              "custom_tags": [
+                "出场动画"
+              ],
+              "description": "VLF软件宣传素材-出场",
+              "deleted_at": null,
+              "id": "ff2d902c728d4d4a8bbdbddc7e6766db",
+              "version": 1,
+              "created_at": "2026-09-11T23:06:32",
+              "updated_at": "2026-09-11T23:06:32",
+              "absolute_path": "Y:\\VideoLingoLc\\data\\materials\\videos\\01f72cbdabdf493faf1ded64c9327122.mp4"
+            },
+            "file": {
+              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\asset.mp4",
+              "name": "asset.mp4",
+              "size_bytes": 2130886,
+              "copied": true,
+              "from": "Y:\\VideoLingoLc\\data\\materials\\videos\\01f72cbdabdf493faf1ded64c9327122.mp4"
+            }
+          }
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] start node_type=video_asset_library node_id=node_1_1789358164246 pid=30252",
+          "[step_worker] step instance created: S_VideoAssetLibrary",
+          "[step_worker] step_inputs keys=['any']",
+          "[step_worker] node_config keys=['source', 'asset_name', 'preview']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\cache\\.step_node_1_1789358164246_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 504
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1789358247035",
+      "type": "workflow",
+      "position": {
+        "x": 1545,
+        "y": 1305
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "editor_agent",
+        "label": "剪辑AI Agent",
+        "config": {
+          "instruction": "将图片作为封面放片头，时间3秒，素材视频放在片尾作为片尾，做好转场剪辑。",
+          "expert_role": "general",
+          "imagegen_iface_id": "kieai",
+          "imagegen_model": "z-image",
+          "videogen_iface_id": "seedance_video",
+          "videogen_model": "doubao-seedance-1-5-pro-251215"
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "project": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\output\\editing_project.json",
+          "artifacts": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\output\\editor_agent_node_2_1789358247035.json",
+          "result": "Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\output\\editor_agent_result_node_2_1789358247035.txt"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] start node_type=editor_agent node_id=node_2_1789358247035 pid=50036",
+          "[step_worker] step instance created: S_EditorAgent",
+          "[step_worker] step_inputs keys=['project']",
+          "[step_worker] node_config keys=['instruction', 'expert_role', 'imagegen_iface_id', 'imagegen_model', 'videogen_iface_id', 'videogen_model']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\cache\\.step_node_2_1789358247035_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 539
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1789358409523",
+      "type": "workflow",
+      "position": {
+        "x": 2100,
+        "y": 1350
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "cutia_render",
+        "label": "剪辑渲染",
+        "config": {
+          "export_format": "mp4",
+          "quality": "high",
+          "fps": 0,
+          "include_audio": true,
+          "browser_channel": "",
+          "timeout_minutes": 60
+        },
+        "status": "running",
+        "progress": 5,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 369
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1789358601215",
+      "type": "workflow",
+      "position": {
+        "x": 75,
+        "y": 585
+      },
+      "selected": true,
+      "data": {
+        "nodeType": "image_compare",
+        "label": "图片对比",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 524
+      },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     }
@@ -1262,19 +1500,6 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781939413425",
-      "sourceHandle": "out-video",
-      "target": "node_1_1782672877872",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1781939413425out-video-node_1_1782672877872in-video"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
         "stroke": "#6366f1",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -1361,7 +1586,9 @@
       "sourceHandle": "out-image",
       "target": "node_1_1782672877872",
       "targetHandle": "in-cover_portrait",
-      "id": "xy-edge__node_1_1782640383627out-image-node_1_1782672877872in-cover_portrait"
+      "id": "xy-edge__node_1_1782640383627out-image-node_1_1782672877872in-cover_portrait",
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1396,7 +1623,7 @@
       "targetHandle": "in-json",
       "type": "bezier",
       "style": {
-        "stroke": "#6366f1",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1405,7 +1632,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#6366f1",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1469,10 +1696,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1782725550457",
       "sourceHandle": "out-result",
@@ -1486,19 +1713,19 @@
       "target": "node_5_1789140229937",
       "targetHandle": "in-json",
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_1_1780954897405out-reflect-node_5_1789140229937in-json"
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_5_1789140229937",
       "sourceHandle": "out-json",
@@ -1508,10 +1735,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781939413425",
       "sourceHandle": "out-video",
@@ -1521,10 +1748,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1782640383627",
       "sourceHandle": "out-image",
@@ -1534,10 +1761,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_6_1789164732196",
       "sourceHandle": "out-filepath",
@@ -1546,21 +1773,138 @@
       "id": "xy-edge__node_6_1789164732196out-filepath-node_5_1789164547575in-image"
     },
     {
+      "source": "node_5_1789164547575",
+      "sourceHandle": "out-text",
+      "target": "node_1_1789358030742",
+      "targetHandle": "in-image",
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_5_1789164547575out-text-node_1_1789358030742in-image"
+    },
+    {
+      "source": "node_1_1789358030742",
+      "sourceHandle": "out-project",
+      "target": "node_2_1789358075480",
+      "targetHandle": "in-project",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1789358030742out-project-node_2_1789358075480in-project"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789358030742",
+      "sourceHandle": "out-project",
+      "target": "node_1_1789358164246",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1789358030742out-project-node_1_1789358164246in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789358164246",
+      "sourceHandle": "out-video",
+      "target": "node_2_1789358075480",
+      "targetHandle": "in-media",
+      "id": "xy-edge__node_1_1789358164246out-video-node_2_1789358075480in-media"
+    },
+    {
+      "source": "node_2_1789358075480",
+      "sourceHandle": "out-project",
+      "target": "node_2_1789358247035",
+      "targetHandle": "in-project",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1789358075480out-project-node_2_1789358247035in-project"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_4_1789162754347",
+      "sourceHandle": "out-video",
+      "target": "node_1_1789358030742",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_4_1789162754347out-video-node_1_1789358030742in-video"
+    },
+    {
+      "source": "node_2_1789358247035",
+      "sourceHandle": "out-project",
+      "target": "node_3_1789358409523",
+      "targetHandle": "in-project",
       "type": "bezier",
       "animated": true,
       "style": {
-        "stroke": "#22d3ee",
+        "stroke": "#ff0099",
         "strokeWidth": 2
+      },
+      "id": "xy-edge__node_2_1789358247035out-project-node_3_1789358409523in-project"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#ff0099",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1789358409523",
+      "sourceHandle": "out-video",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_3_1789358409523out-video-node_1_1782672877872in-video"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_5_1789164547575",
       "sourceHandle": "out-text",
       "target": "node_1_1782672877872",
       "targetHandle": "in-cover_landscape",
       "id": "xy-edge__node_5_1789164547575out-text-node_1_1782672877872in-cover_landscape"
+    },
+    {
+      "source": "node_5_1789164547575",
+      "sourceHandle": "out-text",
+      "target": "node_4_1789358601215",
+      "targetHandle": "in-image1",
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_5_1789164547575out-text-node_4_1789358601215in-image1"
     }
   ],
   "type": "user",
   "createdAt": "2026-07-08T01:39:55",
-  "updatedAt": "2026-09-12T06:23:04",
-  "revision": 22
+  "updatedAt": "2026-09-14T12:03:37",
+  "revision": 26
 }

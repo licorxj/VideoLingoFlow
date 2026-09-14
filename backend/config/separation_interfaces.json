@@ -16,8 +16,14 @@
           "htdemucs",
           "htdemucs_ft",
           "htdemucs_6s",
+          "hdemucs_mmi",
           "mdx",
-          "mdx_extra"
+          "mdx_q",
+          "mdx_extra",
+          "mdx_extra_q",
+          "repro_mdx_a",
+          "repro_mdx_a_hybrid_only",
+          "repro_mdx_a_time_only"
         ],
         "model_details": {
           "HDemucs": {
@@ -39,6 +45,30 @@
           "MDX Extra": {
             "name": "MDX Extra",
             "description": "MDX 增强版，更高的分离精度但速度较慢"
+          },
+          "HDemucs MMI": {
+            "name": "HDemucs MMI",
+            "description": "Hybrid Transformer Demucs MMI（v4），使用额外元数据训练，人声分离更干净，适合追求纯净人声"
+          },
+          "MDX Q": {
+            "name": "MDX Q",
+            "description": "MDX 量化版（v3），模型体积更小、加载更快，分离精度略低于 mdx"
+          },
+          "MDX Extra Q": {
+            "name": "MDX Extra Q",
+            "description": "MDX Extra 量化版（v3），MDX Extra 的量化变体，更快更小，精度略低"
+          },
+          "Repro MDX A": {
+            "name": "Repro MDX A",
+            "description": "Repro MDX A（v3）混合(hybrid)模型，额外输出吉他/钢琴，6 轨分离（人声/鼓/贝斯/吉他/钢琴/其他）"
+          },
+          "Repro MDX A Hybrid Only": {
+            "name": "Repro MDX A Hybrid Only",
+            "description": "Repro MDX A 仅混合分支（v3），输出人声/鼓/贝斯/其他/吉他/钢琴"
+          },
+          "Repro MDX A Time Only": {
+            "name": "Repro MDX A Time Only",
+            "description": "Repro MDX A 仅时域分支（v3），轻量 4 轨分离（人声/鼓/贝斯/其他）"
           }
         },
         "segment": 7,
@@ -114,12 +144,100 @@
           "roformer-model-bs-roformer-chorus-male-female-by-sucial",
           "roformer-model-bs-roformer-male-female-by-aufr33",
           "roformer-model-bs-roformer-instrumental-resurrection-by-unwa",
-          "roformer-model-bs-roformer-de-reverb"
+          "roformer-model-bs-roformer-de-reverb",
+          "Roformer Model: BandSplit Roformer | 4-stems FT by SYH99999",
+          "Roformer Model: BandSplit Roformer | SDR 1053 by Viperx",
+          "Roformer Model: BandSplit Roformer | SDR 1296 by Viperx",
+          "Roformer Model: BandSplit Roformer | SDR 1297 by Viperx",
+          "Roformer Model: BandSplit Roformer | Chorus Male-Female by Sucial",
+          "Roformer Model: BandSplit Roformer | Male-Female by aufr33",
+          "Roformer Model: BandSplit Roformer | Dereverb by anvuew",
+          "Roformer Model: BandSplit Roformer | Inst-EXP-Value-Residual by Unwa",
+          "Roformer Model: BandSplit Roformer | Revive by Unwa",
+          "Roformer Model: BandSplit Roformer | Revive v2 by Unwa",
+          "Roformer Model: BandSplit Roformer | Vocals by Gabox",
+          "Roformer Model: MelBand Roformer | 4-stems FT Large v1 by SYH99999",
+          "Roformer Model: MelBand Roformer | 4-stems FT Large v2 by SYH99999",
+          "Roformer Model: MelBand Roformer | 4-stems Large v1 by Aname",
+          "Roformer Model: MelBand Roformer | 4-stems XL v1 by Aname",
+          "Roformer Model: MelBand Roformer | SDR 1143 by Viperx",
+          "Roformer Model: MelBand Roformer | Small by Aname",
+          "Roformer Model: MelBand Roformer | Aspiration by Sucial",
+          "Roformer Model: MelBand Roformer | Aspiration Less Aggressive by Sucial",
+          "Roformer Model: MelBand Roformer | Bleed Suppressor v1 by Unwa & 97chris",
+          "Roformer Model: MelBand Roformer | Crowd by Aufr33 & Viperx",
+          "Roformer Model: MelBand Roformer | DeReverb by anvuew",
+          "Roformer Model: MelBand Roformer | DeReverb Mono by anvuew",
+          "Roformer Model: MelBand Roformer | DeReverb Less Aggressive by anvuew",
+          "Roformer Model: MelBand Roformer | DeReverb Big by Sucial",
+          "Roformer Model: MelBand Roformer | DeReverb Super Big by Sucial",
+          "Roformer Model: MelBand Roformer | DeReverb-Echo by Sucial",
+          "Roformer Model: MelBand Roformer | DeReverb-Echo v2 by Sucial",
+          "Roformer Model: MelBand Roformer | DeReverb-Echo Fused by Sucial",
+          "Roformer Model: MelBand Roformer | Denoise by Aufr33",
+          "Roformer Model: MelBand Roformer | Denoise Aggr by Aufr33",
+          "Roformer Model: MelBand Roformer | Instrumental by becruily",
+          "Roformer Model: MelBand Roformer | Instrumental by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental v1 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental v2 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental v3 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Bleedless v1 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Bleedless v2 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental DeNoise-DeBleed by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v1 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v2 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v3 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v4 Noise by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v5 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v5 Noise by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v6 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v6 Noise by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v7 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v7 Noise by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v8 by Gabox",
+          "Roformer Model: MelBand Roformer | Instrumental Fullness vX by Gabox",
+          "Roformer Model: MelBand Roformer | instrumental Metal preview by Mesk",
+          "Roformer Model: MelBand Roformer | Karaoke by Aufr33 & Viperx",
+          "Roformer Model: MelBand Roformer | Karaoke by becruily",
+          "Roformer Model: MelBand Roformer | Karaoke by Gabox",
+          "Roformer Model: MelBand Roformer | Vocals by becruily",
+          "Roformer Model: MelBand Roformer | Vocals by Kimberley Jensen",
+          "Roformer Model: MelBand Roformer | Vocals by Gabox",
+          "Roformer Model: MelBand Roformer | Vocals Bleedless by Aname",
+          "Roformer Model: MelBand Roformer | Vocals Fullness by Aname",
+          "Roformer Model: MelBand Roformer | Vocals Fullness v1 by Gabox",
+          "Roformer Model: MelBand Roformer | Vocals Fullness v2 by Gabox",
+          "Roformer Model: MelBand Roformer | Vocals Fullness v3 by Gabox",
+          "Roformer Model: MelBand Roformer | Vocals Fullness v4 by Gabox",
+          "Roformer Model: MelBand Roformer | Vocals Fullness v5 by Gabox",
+          "Roformer Model: MelBand Roformer Kim | Inst v1 by Unwa",
+          "Roformer Model: MelBand Roformer Kim | Inst v1e by Unwa",
+          "Roformer Model: MelBand Roformer Kim | Inst v1e Plus by Unwa",
+          "Roformer Model: MelBand Roformer Kim | Inst v2 by Unwa",
+          "Roformer Model: MelBand Roformer Kim | InstVoc Duality v1 by Unwa",
+          "Roformer Model: MelBand Roformer Kim | InstVoc Duality v2 by Unwa",
+          "Roformer Model: MelBand Roformer Kim | FT by Unwa",
+          "Roformer Model: MelBand Roformer Kim | FT v2 by Unwa",
+          "Roformer Model: MelBand Roformer Kim | FT v2 Bleedless by Unwa",
+          "Roformer Model: MelBand Roformer Kim | Big Beta v4 FT by Unwa",
+          "Roformer Model: MelBand Roformer Kim | Big Beta v5e FT by Unwa",
+          "Roformer Model: MelBand Roformer Kim | Big Beta v6 FT by Unwa",
+          "Roformer Model: MelBand Roformer Kim | Big Beta v6x FT by Unwa",
+          "Roformer Model: MelBand Roformer Kim | SYHFT by SYH99999",
+          "Roformer Model: MelBand Roformer Kim | SYHFT v2 by SYH99999",
+          "Roformer Model: MelBand Roformer Kim | SYHFT v2.5 by SYH99999",
+          "Roformer Model: MelBand Roformer Kim | SYHFT v3 by SYH99999",
+          "Roformer Model: MelBand Roformer Kim | Big SYHFT v1 by SYH99999",
+          "Roformer Model: MelBand Roformer Kim | Vocals v1 by Aname",
+          "Roformer Model: MelBand Roformer Kim | Vocals v2 by Aname",
+          "Roformer Model: MelBand Roformer Kim | Vocals v3 by Aname",
+          "Roformer Model: MelBand Roformer Kim | Vocals Fullness v1 by Aname",
+          "Roformer Model: MelBand Roformer Kim | Vocals Fullness v2 by Aname"
         ],
         "model_details": {
           "BS-RoFormer SW": {
             "name": "BS-RoFormer SW",
-            "description": "默认推荐，6 轨分离（人声/鼓/贝斯/吉他/钢琴/其他），由 jarredou 训练"
+            "description": "默认推荐，6 轨分离（人声/鼓/贝斯/吉他/钢琴/其他），由 jarredou 训练？"
           },
           "Vocals Revive V3e": {
             "name": "Vocals Revive V3e",
@@ -156,6 +274,358 @@
           "De-Reverb": {
             "name": "De-Reverb",
             "description": "去混响/去回声模型，用于消除音频中的混响效果"
+          },
+          "Roformer Model: BandSplit Roformer | 4-stems FT by SYH99999": {
+            "name": "Roformer Model: BandSplit Roformer | 4-stems FT by SYH99999",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 SYH99999。"
+          },
+          "Roformer Model: BandSplit Roformer | SDR 1053 by Viperx": {
+            "name": "Roformer Model: BandSplit Roformer | SDR 1053 by Viperx",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 Viperx。"
+          },
+          "Roformer Model: BandSplit Roformer | SDR 1296 by Viperx": {
+            "name": "Roformer Model: BandSplit Roformer | SDR 1296 by Viperx",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 Viperx。"
+          },
+          "Roformer Model: BandSplit Roformer | SDR 1297 by Viperx": {
+            "name": "Roformer Model: BandSplit Roformer | SDR 1297 by Viperx",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 Viperx。"
+          },
+          "Roformer Model: BandSplit Roformer | Chorus Male-Female by Sucial": {
+            "name": "Roformer Model: BandSplit Roformer | Chorus Male-Female by Sucial",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 Sucial。"
+          },
+          "Roformer Model: BandSplit Roformer | Male-Female by aufr33": {
+            "name": "Roformer Model: BandSplit Roformer | Male-Female by aufr33",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 aufr33。"
+          },
+          "Roformer Model: BandSplit Roformer | Dereverb by anvuew": {
+            "name": "Roformer Model: BandSplit Roformer | Dereverb by anvuew",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 anvuew。"
+          },
+          "Roformer Model: BandSplit Roformer | Inst-EXP-Value-Residual by Unwa": {
+            "name": "Roformer Model: BandSplit Roformer | Inst-EXP-Value-Residual by Unwa",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: BandSplit Roformer | Revive by Unwa": {
+            "name": "Roformer Model: BandSplit Roformer | Revive by Unwa",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: BandSplit Roformer | Revive v2 by Unwa": {
+            "name": "Roformer Model: BandSplit Roformer | Revive v2 by Unwa",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: BandSplit Roformer | Vocals by Gabox": {
+            "name": "Roformer Model: BandSplit Roformer | Vocals by Gabox",
+            "description": "BandSplit Roformer（频段分割 RoPE Transformer）：人声分离，输出 vocals + 伴奏，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | 4-stems FT Large v1 by SYH99999": {
+            "name": "Roformer Model: MelBand Roformer | 4-stems FT Large v1 by SYH99999",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 SYH99999。"
+          },
+          "Roformer Model: MelBand Roformer | 4-stems FT Large v2 by SYH99999": {
+            "name": "Roformer Model: MelBand Roformer | 4-stems FT Large v2 by SYH99999",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 SYH99999。"
+          },
+          "Roformer Model: MelBand Roformer | 4-stems Large v1 by Aname": {
+            "name": "Roformer Model: MelBand Roformer | 4-stems Large v1 by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer | 4-stems XL v1 by Aname": {
+            "name": "Roformer Model: MelBand Roformer | 4-stems XL v1 by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer | SDR 1143 by Viperx": {
+            "name": "Roformer Model: MelBand Roformer | SDR 1143 by Viperx",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Viperx。"
+          },
+          "Roformer Model: MelBand Roformer | Small by Aname": {
+            "name": "Roformer Model: MelBand Roformer | Small by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer | Aspiration by Sucial": {
+            "name": "Roformer Model: MelBand Roformer | Aspiration by Sucial",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Sucial。"
+          },
+          "Roformer Model: MelBand Roformer | Aspiration Less Aggressive by Sucial": {
+            "name": "Roformer Model: MelBand Roformer | Aspiration Less Aggressive by Sucial",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Sucial。"
+          },
+          "Roformer Model: MelBand Roformer | Bleed Suppressor v1 by Unwa & 97chris": {
+            "name": "Roformer Model: MelBand Roformer | Bleed Suppressor v1 by Unwa & 97chris",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa & 97chris。"
+          },
+          "Roformer Model: MelBand Roformer | Crowd by Aufr33 & Viperx": {
+            "name": "Roformer Model: MelBand Roformer | Crowd by Aufr33 & Viperx",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aufr33 & Viperx。"
+          },
+          "Roformer Model: MelBand Roformer | DeReverb by anvuew": {
+            "name": "Roformer Model: MelBand Roformer | DeReverb by anvuew",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 anvuew。"
+          },
+          "Roformer Model: MelBand Roformer | DeReverb Mono by anvuew": {
+            "name": "Roformer Model: MelBand Roformer | DeReverb Mono by anvuew",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 anvuew。"
+          },
+          "Roformer Model: MelBand Roformer | DeReverb Less Aggressive by anvuew": {
+            "name": "Roformer Model: MelBand Roformer | DeReverb Less Aggressive by anvuew",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 anvuew。"
+          },
+          "Roformer Model: MelBand Roformer | DeReverb Big by Sucial": {
+            "name": "Roformer Model: MelBand Roformer | DeReverb Big by Sucial",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 Sucial。"
+          },
+          "Roformer Model: MelBand Roformer | DeReverb Super Big by Sucial": {
+            "name": "Roformer Model: MelBand Roformer | DeReverb Super Big by Sucial",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 Sucial。"
+          },
+          "Roformer Model: MelBand Roformer | DeReverb-Echo by Sucial": {
+            "name": "Roformer Model: MelBand Roformer | DeReverb-Echo by Sucial",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 Sucial。"
+          },
+          "Roformer Model: MelBand Roformer | DeReverb-Echo v2 by Sucial": {
+            "name": "Roformer Model: MelBand Roformer | DeReverb-Echo v2 by Sucial",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 Sucial。"
+          },
+          "Roformer Model: MelBand Roformer | DeReverb-Echo Fused by Sucial": {
+            "name": "Roformer Model: MelBand Roformer | DeReverb-Echo Fused by Sucial",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 Sucial。"
+          },
+          "Roformer Model: MelBand Roformer | Denoise by Aufr33": {
+            "name": "Roformer Model: MelBand Roformer | Denoise by Aufr33",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 Aufr33。"
+          },
+          "Roformer Model: MelBand Roformer | Denoise Aggr by Aufr33": {
+            "name": "Roformer Model: MelBand Roformer | Denoise Aggr by Aufr33",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 Aufr33。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental by becruily": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental by becruily",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 becruily。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental v1 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental v1 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental v2 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental v2 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental v3 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental v3 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Bleedless v1 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Bleedless v1 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Bleedless v2 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Bleedless v2 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental DeNoise-DeBleed by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental DeNoise-DeBleed by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：去混响/去噪模型，输出干声/湿声（非人声分离，人声分离节点会拒绝），作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v1 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v1 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v2 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v2 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v3 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v3 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v4 Noise by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v4 Noise by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v5 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v5 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v5 Noise by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v5 Noise by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v6 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v6 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v6 Noise by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v6 Noise by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v7 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v7 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v7 Noise by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v7 Noise by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness v8 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness v8 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Instrumental Fullness vX by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Instrumental Fullness vX by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | instrumental Metal preview by Mesk": {
+            "name": "Roformer Model: MelBand Roformer | instrumental Metal preview by Mesk",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：伴奏/乐器分离，输出 vocals + instrumental，作者 Mesk。"
+          },
+          "Roformer Model: MelBand Roformer | Karaoke by Aufr33 & Viperx": {
+            "name": "Roformer Model: MelBand Roformer | Karaoke by Aufr33 & Viperx",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：卡拉OK 去人声，输出伴奏，作者 Aufr33 & Viperx。"
+          },
+          "Roformer Model: MelBand Roformer | Karaoke by becruily": {
+            "name": "Roformer Model: MelBand Roformer | Karaoke by becruily",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：卡拉OK 去人声，输出伴奏，作者 becruily。"
+          },
+          "Roformer Model: MelBand Roformer | Karaoke by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Karaoke by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：卡拉OK 去人声，输出伴奏，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals by becruily": {
+            "name": "Roformer Model: MelBand Roformer | Vocals by becruily",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 becruily。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals by Kimberley Jensen": {
+            "name": "Roformer Model: MelBand Roformer | Vocals by Kimberley Jensen",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Kimberley Jensen。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Vocals by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals Bleedless by Aname": {
+            "name": "Roformer Model: MelBand Roformer | Vocals Bleedless by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals Fullness by Aname": {
+            "name": "Roformer Model: MelBand Roformer | Vocals Fullness by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals Fullness v1 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Vocals Fullness v1 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals Fullness v2 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Vocals Fullness v2 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals Fullness v3 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Vocals Fullness v3 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals Fullness v4 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Vocals Fullness v4 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer | Vocals Fullness v5 by Gabox": {
+            "name": "Roformer Model: MelBand Roformer | Vocals Fullness v5 by Gabox",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Gabox。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Inst v1 by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | Inst v1 by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Inst v1e by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | Inst v1e by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Inst v1e Plus by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | Inst v1e Plus by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Inst v2 by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | Inst v2 by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | InstVoc Duality v1 by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | InstVoc Duality v1 by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | InstVoc Duality v2 by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | InstVoc Duality v2 by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | FT by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | FT by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | FT v2 by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | FT v2 by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | FT v2 Bleedless by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | FT v2 Bleedless by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Big Beta v4 FT by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | Big Beta v4 FT by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Big Beta v5e FT by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | Big Beta v5e FT by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Big Beta v6 FT by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | Big Beta v6 FT by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Big Beta v6x FT by Unwa": {
+            "name": "Roformer Model: MelBand Roformer Kim | Big Beta v6x FT by Unwa",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Unwa。"
+          },
+          "Roformer Model: MelBand Roformer Kim | SYHFT by SYH99999": {
+            "name": "Roformer Model: MelBand Roformer Kim | SYHFT by SYH99999",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 SYH99999。"
+          },
+          "Roformer Model: MelBand Roformer Kim | SYHFT v2 by SYH99999": {
+            "name": "Roformer Model: MelBand Roformer Kim | SYHFT v2 by SYH99999",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 SYH99999。"
+          },
+          "Roformer Model: MelBand Roformer Kim | SYHFT v2.5 by SYH99999": {
+            "name": "Roformer Model: MelBand Roformer Kim | SYHFT v2.5 by SYH99999",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 SYH99999。"
+          },
+          "Roformer Model: MelBand Roformer Kim | SYHFT v3 by SYH99999": {
+            "name": "Roformer Model: MelBand Roformer Kim | SYHFT v3 by SYH99999",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 SYH99999。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Big SYHFT v1 by SYH99999": {
+            "name": "Roformer Model: MelBand Roformer Kim | Big SYHFT v1 by SYH99999",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 SYH99999。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Vocals v1 by Aname": {
+            "name": "Roformer Model: MelBand Roformer Kim | Vocals v1 by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Vocals v2 by Aname": {
+            "name": "Roformer Model: MelBand Roformer Kim | Vocals v2 by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Vocals v3 by Aname": {
+            "name": "Roformer Model: MelBand Roformer Kim | Vocals v3 by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Vocals Fullness v1 by Aname": {
+            "name": "Roformer Model: MelBand Roformer Kim | Vocals Fullness v1 by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
+          },
+          "Roformer Model: MelBand Roformer Kim | Vocals Fullness v2 by Aname": {
+            "name": "Roformer Model: MelBand Roformer Kim | Vocals Fullness v2 by Aname",
+            "description": "MelBand Roformer（梅尔频段 Roformer）：人声分离，输出 vocals + 伴奏，作者 Aname。"
           }
         },
         "format": "wav",
@@ -167,6 +637,183 @@
         "max_concurrent": 1,
         "custom_params": [],
         "segment": 18
+      }
+    },
+    {
+      "id": "mdx_net_onnx",
+      "name": "MDX-NET (ONNX)",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "UVR MDX-NET ONNX 人声/伴奏分离引擎（ConvTDFNet + onnxruntime），模型多、速度快，适合追求快速人声分离",
+      "config": {
+        "sdk_module": "backend.separation.sep_mdx_net",
+        "sdk_class": "MDXNetOnnxSeparation",
+        "model": "UVR_MDXNET_1_9703",
+        "model_options": [
+          "Kim_Inst",
+          "Kim_Vocal_1",
+          "Kim_Vocal_2",
+          "kuielab_a_bass",
+          "kuielab_a_drums",
+          "kuielab_a_other",
+          "kuielab_a_vocals",
+          "kuielab_b_bass",
+          "kuielab_b_drums",
+          "kuielab_b_other",
+          "kuielab_b_vocals",
+          "Reverb_HQ_By_FoxJoy",
+          "UVR-MDX-NET_Crowd_HQ_1",
+          "UVR_MDXNET_1_9703",
+          "UVR_MDXNET_2_9682",
+          "UVR_MDXNET_3_9662",
+          "UVR-MDX-NET-Inst_1",
+          "UVR-MDX-NET-Inst_2",
+          "UVR-MDX-NET-Inst_3",
+          "UVR-MDX-NET-Inst_HQ_1",
+          "UVR-MDX-NET-Inst_HQ_2",
+          "UVR-MDX-NET-Inst_HQ_3",
+          "UVR-MDX-NET-Inst_HQ_4",
+          "UVR-MDX-NET-Inst_HQ_5",
+          "UVR-MDX-NET-Inst_Main",
+          "UVR_MDXNET_KARA",
+          "UVR_MDXNET_KARA_2",
+          "UVR_MDXNET_Main",
+          "UVR-MDX-NET-Voc_FT",
+          "UVR_MDXNET_9482"
+        ],
+        "model_details": {
+          "Kim_Inst": {
+            "name": "Kim Inst",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "Kim_Vocal_1": {
+            "name": "Kim Vocal 1",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "Kim_Vocal_2": {
+            "name": "Kim Vocal 2",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "kuielab_a_bass": {
+            "name": "kuielab_a_bass",
+            "description": "UVR MDX-NET ONNX 模型（主分离：bass）"
+          },
+          "kuielab_a_drums": {
+            "name": "kuielab_a_drums",
+            "description": "UVR MDX-NET ONNX 模型（主分离：drums）"
+          },
+          "kuielab_a_other": {
+            "name": "kuielab_a_other",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "kuielab_a_vocals": {
+            "name": "kuielab_a_vocals",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "kuielab_b_bass": {
+            "name": "kuielab_b_bass",
+            "description": "UVR MDX-NET ONNX 模型（主分离：bass）"
+          },
+          "kuielab_b_drums": {
+            "name": "kuielab_b_drums",
+            "description": "UVR MDX-NET ONNX 模型（主分离：drums）"
+          },
+          "kuielab_b_other": {
+            "name": "kuielab_b_other",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "kuielab_b_vocals": {
+            "name": "kuielab_b_vocals",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "Reverb_HQ_By_FoxJoy": {
+            "name": "Reverb HQ By FoxJoy",
+            "description": "UVR MDX-NET ONNX 模型（主分离：reverb）"
+          },
+          "UVR-MDX-NET_Crowd_HQ_1": {
+            "name": "UVR-MDX-NET Crowd HQ 1 By Aufr33",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR_MDXNET_1_9703": {
+            "name": "UVR-MDX-NET 1",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR_MDXNET_2_9682": {
+            "name": "UVR-MDX-NET 2",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR_MDXNET_3_9662": {
+            "name": "UVR-MDX-NET 3",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR-MDX-NET-Inst_1": {
+            "name": "UVR-MDX-NET Inst 1",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "UVR-MDX-NET-Inst_2": {
+            "name": "UVR-MDX-NET Inst 2",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "UVR-MDX-NET-Inst_3": {
+            "name": "UVR-MDX-NET Inst 3",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "UVR-MDX-NET-Inst_HQ_1": {
+            "name": "UVR-MDX-NET Inst HQ 1",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "UVR-MDX-NET-Inst_HQ_2": {
+            "name": "UVR-MDX-NET Inst HQ 2",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "UVR-MDX-NET-Inst_HQ_3": {
+            "name": "UVR-MDX-NET Inst HQ 3",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "UVR-MDX-NET-Inst_HQ_4": {
+            "name": "UVR-MDX-NET Inst HQ 4",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "UVR-MDX-NET-Inst_HQ_5": {
+            "name": "UVR-MDX-NET Inst HQ 5",
+            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+          },
+          "UVR-MDX-NET-Inst_Main": {
+            "name": "UVR-MDX-NET Inst Main",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR_MDXNET_KARA": {
+            "name": "UVR-MDX-NET Karaoke",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR_MDXNET_KARA_2": {
+            "name": "UVR-MDX-NET Karaoke 2",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR_MDXNET_Main": {
+            "name": "UVR-MDX-NET Main",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR-MDX-NET-Voc_FT": {
+            "name": "UVR-MDX-NET Voc FT",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          },
+          "UVR_MDXNET_9482": {
+            "name": "UVR_MDXNET_9482",
+            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+          }
+        },
+        "format": "wav",
+        "format_options": [
+          "wav",
+          "mp3"
+        ],
+        "timeout": 1800,
+        "max_concurrent": 1,
+        "custom_params": [],
+        "segment": 12,
+        "two_stems": "vocals"
       }
     }
   ]
