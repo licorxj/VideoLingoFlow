@@ -252,6 +252,33 @@
       "user_prompt": "请将以下文本缩短至原文的 {{ target_ratio }} 左右（即缩短约 {{ max_reduction_pct }}%）。\n\n【原文】\n{{ read_text }}\n\n【精简结果】"
     },
     {
+      "id": "s09_subtitle_reduction_batch",
+      "name": "字幕缩减(批量组装)",
+      "description": "一次请求批量精简多条朗读文本，按 index 回填，保留关键信息",
+      "placeholders": [
+        {
+          "tag": "segments",
+          "label": "片段数据",
+          "description": "待缩减片段JSON数组（index/read_text/target_ratio/max_reduction_pct）",
+          "type": "json_string"
+        },
+        {
+          "tag": "raw_segments",
+          "label": "原始片段",
+          "description": "待缩减片段原始列表，支持Jinja2循环",
+          "type": "list"
+        },
+        {
+          "tag": "count",
+          "label": "句子条数",
+          "description": "本批待缩减的句子数量",
+          "type": "number"
+        }
+      ],
+      "system_prompt": "你是一个专业的字幕朗读文本精简专家。请对给定的多条朗读文本逐条精简，使其适合更快的语音合成。\n\n## 严格要求\n1. 仅返回 JSON 对象：{\"segments\": [{\"index\": <原样回填>, \"read_text\": <精简文本>}]}。\n2. 每条必须保留输入中的 index，条数与输入一致，不要遗漏、不要新增、不要改变顺序。\n3. 每条按其自带的 max_reduction_pct 缩短（约缩短到 target_ratio）。\n4. 仅删除冗余修饰词、填充词、重复表达。\n5. 保留全部关键信息（数字、日期、专有名词、动作主体）。\n6. 必须保持完整句子结构，不能变成短语。\n7. 如果是中文：删除'其实','真的','非常','特别'等填充词。\n8. 如果是英文：删除冗余冠词，将被动语态改为主动语态。\n9. 无法在不损伤原意的前提下缩短的句子，原样返回其 read_text。\n10. 只输出 JSON，不要任何解释、代码块或前后缀。",
+      "user_prompt": "请对以下 {{ count }} 条朗读文本逐条精简，每条按其自带的 max_reduction_pct 缩短（约缩短到 target_ratio）。\n\n【待精简文本】\n{{ segments }}\n\n【输出】\n{\"segments\": [{\"index\": 0, \"read_text\": \"精简后的文本\"}]}"
+    },
+    {
       "id": "gen_title",
       "name": "封面标题生成",
       "description": "从字幕内容中提取和生成视频封面标题",

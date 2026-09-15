@@ -36,11 +36,19 @@ def _detect_silence(audio_path: str, start: float, end: float,
                     threshold_db: float = -30.0, min_duration: float = 0.5) -> List[float]:
     """Detect silence_end points in [start, end] using ffmpeg silencedetect.
 
-    Returns a list of timestamps (in seconds) where silence ends.
+    Returns a list of **absolute** timestamps (in seconds) where silence ends.
+
+    关键：`-ss` / `-to` 必须作为**输入侧**选项写在 `-i` 之前。
+    若写成输出侧选项（`-i file -ss X -to Y`），ffmpeg 会先把输出时间轴平移
+    到 0 再送进滤镜链，silencedetect 报告的是**相对于 -ss 起点**的时间
+    （实测：同一段音频在同一窗口 [10,50] 上，输入侧写法报 `10 / 40`，
+    输出侧写法报 `20 / 50.15`）。调用方按绝对秒使用这些值的结果是：
+    窗口判定必然失败，算法静默退化成按 max_duration 硬切，把句子从中间劈开。
     """
     cmd = [
-        "ffmpeg", "-y", "-i", audio_path,
+        "ffmpeg", "-hide_banner",
         "-ss", str(start), "-to", str(end),
+        "-i", audio_path,
         "-af", f"silencedetect=n={threshold_db}dB:d={min_duration}",
         "-f", "null", "-",
     ]
@@ -58,7 +66,14 @@ def _detect_silence(audio_path: str, start: float, end: float,
                 silence_ends.append(val)
             except (IndexError, ValueError):
                 continue
-    return silence_ends
+
+    # 兜底：个别 ffmpeg 构建即便用输入侧 seek 仍可能把时间轴平移到 0，
+    # 表现为所有返回值都早于窗口起点，此时按相对值换算回绝对秒。
+    if silence_ends and max(silence_ends) < start:
+        silence_ends = [t + start for t in silence_ends]
+
+    # 只保留落在检测窗口内的结果，避免误读到窗口外的静音点
+    return [t for t in silence_ends if start <= t <= end]
 
 
 def split_audio_at_silence(audio_path: str, max_duration: float,
@@ -104,22 +119,14 @@ def split_audio_at_silence(audio_path: str, max_duration: float,
         silence_points = _detect_silence(audio_path, win_start, win_end)
 
         if silence_points:
-            # Find the first silence_end that is past the ideal cut point
+            # 在检测窗口内取最贴近理想切点的静音边界：过早下刀会让段数膨胀、
+            # 过晚会超过 max_duration；两者都不如"最接近"稳妥。
             ideal_cut = pos + max_duration
-            split_at = None
-            for t in silence_points:
-                if t > ideal_cut - silence_win and t <= ideal_cut + silence_win:
-                    split_at = t
-                    break
-                # Also accept the first one that is close enough
-                if t >= ideal_cut:
-                    split_at = t
-                    break
-            # Fallback: pick the closest to ideal_cut
-            if split_at is None and silence_points:
-                split_at = min(silence_points, key=lambda t: abs(t - ideal_cut))
+            candidates = [t for t in silence_points if win_start <= t <= win_end]
+            split_at = min(candidates, key=lambda t: abs(t - ideal_cut)) if candidates else None
 
-            if split_at is not None and win_start <= split_at <= win_end:
+            # split_at 必须严格推进，否则可能落入死循环
+            if split_at is not None and split_at > pos:
                 segments.append((pos, split_at))
                 pos = split_at
                 continue
