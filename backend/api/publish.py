@@ -596,6 +596,61 @@ def _get_exec_cmd(cmd_name: str, prefer_path: str | None = None) -> str:
     return cmd_name
 
 
+def _run_cmd(cmd, **kwargs):
+    """统一子进程调用：强制 UTF-8 解码，避免 Windows GBK 下读取 git/npm 输出时 UnicodeDecodeError。"""
+    kwargs.setdefault("capture_output", True)
+    kwargs.setdefault("text", True)
+    kwargs.setdefault("encoding", "utf-8")
+    kwargs.setdefault("errors", "replace")
+    return subprocess.run(cmd, **kwargs)
+
+
+def _manager_fallback(func_name: str):
+    """构造「进程内调用 backend.manager 函数」的回退动作。"""
+
+    def _inner():
+        import importlib
+        mgr = importlib.import_module("backend.manager")
+        getattr(mgr, func_name)()
+
+    return _inner
+
+
+def _manager_control(path: str, fallback=None) -> bool:
+    """通过 Manager 的 HTTP 控制端点操作 Social 服务。
+
+    Social 服务的子进程句柄由 Manager 进程持有；主后端进程内直接调用
+    backend.manager 的函数既停不掉旧进程，也会让新拉起的进程脱离管控。
+    因此优先走 Manager HTTP 接口，Manager 不可达时回退进程内调用。
+    """
+    try:
+        from backend.manager import MANAGER_PORT
+        port = int(MANAGER_PORT)
+    except Exception:
+        port = 18001
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            f"http://127.0.0.1:{port}{path}",
+            data=b"",
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            print(f"[UpdateSocialProject] Manager {path} -> HTTP {resp.status}")
+            return True
+    except Exception as e:
+        print(f"[UpdateSocialProject] Manager HTTP {path} 失败: {e}")
+        if fallback is None:
+            return False
+        try:
+            fallback()
+            return True
+        except Exception as e2:
+            print(f"[UpdateSocialProject] 进程内调用 {path} 失败: {e2}")
+            return False
+
+
 def _run_async_update_project():
     global _update_status
     import subprocess
@@ -629,7 +684,7 @@ def _run_async_update_project():
             # 分发版：先释放随仓库携带的 git 归档（保留原项目历史与更新能力）
             try:
                 import sys as _sys
-                subprocess.run(
+                _run_cmd(
                     [_sys.executable, os.path.join(root_dir, "thirdparty", "git_restore.py")],
                     capture_output=True, text=True, timeout=180,
                 )
@@ -637,13 +692,13 @@ def _run_async_update_project():
                 print(f"[UpdateSocialProject] git_restore skipped/error: {_e}")
             # 仍无 .git（归档缺失等）再全新初始化
             if not os.path.exists(git_dir):
-                subprocess.run([git_bin, "init"], cwd=project_dir, capture_output=True, timeout=30, shell=is_win)
-                subprocess.run([git_bin, "remote", "add", "origin", repo_url], cwd=project_dir, capture_output=True, timeout=30, shell=is_win)
-                subprocess.run([git_bin, "remote", "set-url", "origin", repo_url], cwd=project_dir, capture_output=True, timeout=30, shell=is_win)
+                _run_cmd([git_bin, "init"], cwd=project_dir, capture_output=True, timeout=30, shell=is_win)
+                _run_cmd([git_bin, "remote", "add", "origin", repo_url], cwd=project_dir, capture_output=True, timeout=30, shell=is_win)
+                _run_cmd([git_bin, "remote", "set-url", "origin", repo_url], cwd=project_dir, capture_output=True, timeout=30, shell=is_win)
 
         # 拉取远端最新代码（自动匹配当前分支，不写死 master）
-        subprocess.run([git_bin, "fetch", "origin"], cwd=project_dir, capture_output=True, text=True, timeout=120, shell=is_win)
-        branch = subprocess.run(
+        _run_cmd([git_bin, "fetch", "origin"], cwd=project_dir, capture_output=True, text=True, timeout=120, shell=is_win)
+        branch = _run_cmd(
             [git_bin, "rev-parse", "--abbrev-ref", "HEAD"],
             cwd=project_dir, capture_output=True, text=True, timeout=30, shell=is_win,
         ).stdout.strip() or "master"
@@ -651,7 +706,7 @@ def _run_async_update_project():
             branch = "master"
 
         # 强制同步到远端最新（覆盖本地修改，适合第三方嵌入场景；数据库在 .gitignore 内不受影响）
-        res = subprocess.run(
+        res = _run_cmd(
             [git_bin, "reset", "--hard", f"origin/{branch}"],
             cwd=project_dir, capture_output=True, text=True, timeout=120, shell=is_win,
         )
@@ -676,11 +731,10 @@ def _run_async_update_project():
         if rebuild_frontend:
             # 静态托管模式：代码更新后必须重新构建 dist，前端才会生效。
             # 构建期间先停掉前端静态服务，避免读到半写入的文件。
-            try:
-                from backend.manager import stop_social_frontend
-                stop_social_frontend()
-            except Exception as e:
-                print(f"[UpdateSocialProject] Stop frontend skipped/error: {e}")
+            _manager_control(
+                "/manager/stop-social-frontend",
+                fallback=_manager_fallback("stop_social_frontend"),
+            )
 
             # 重建前先备份当前（可能含用户微调的）前端 dist，失败可回滚
             _backup_frontend_dist(project_dir)
@@ -692,11 +746,11 @@ def _run_async_update_project():
             frontend_dir = os.path.join(project_dir, "frontend")
             npm_cmd = _get_exec_cmd("npm")
             if not os.path.isdir(os.path.join(frontend_dir, "node_modules")):
-                subprocess.run(
+                _run_cmd(
                     [npm_cmd, "install", "--prefer-offline", "--registry=https://registry.npmmirror.com"],
                     cwd=frontend_dir, capture_output=True, text=True, timeout=300, shell=is_win,
                 )
-            res = subprocess.run(
+            res = _run_cmd(
                 [npm_cmd, "run", "build"],
                 cwd=frontend_dir, capture_output=True, text=True, timeout=600, shell=is_win,
             )
@@ -711,13 +765,20 @@ def _run_async_update_project():
             if rebuild_frontend:
                 # 重建前端时同步重建并重启 MCP（TS 需重新编译），再重启前后端
                 _rebuild_and_restart_mcp(project_dir, is_win)
-                from backend.manager import restart_social_backend_only, start_social_frontend
-                restart_social_backend_only()
-                start_social_frontend()
+                _manager_control(
+                    "/manager/restart-social",
+                    fallback=_manager_fallback("restart_social_backend_only"),
+                )
+                _manager_control(
+                    "/manager/start-social-frontend",
+                    fallback=_manager_fallback("start_social_frontend"),
+                )
             else:
                 # 默认：仅重启后端，完全不动前端静态页面与 MCP，保护用户微调
-                from backend.manager import restart_social_backend_only
-                restart_social_backend_only()
+                _manager_control(
+                    "/manager/restart-social",
+                    fallback=_manager_fallback("restart_social_backend_only"),
+                )
         except Exception as e:
             print(f"[UpdateSocialProject] Restart skipped/error: {e}")
 
@@ -752,9 +813,11 @@ def _update_backend_python_deps(project_dir: str, is_win: bool):
         else os.path.join(venv_dir, "bin", "python")
     )
     if not os.path.isfile(venv_python):
-        # venv 不存在则由 manager 的启动流程负责创建，这里跳过
-        print("[UpdateSocialProject] venv 不存在，跳过依赖更新（下次启动将自动创建）")
-        return
+        # 无独立 .venv：Social 后端由 Manager 直接用主 venv 解释器运行 app.py，
+        # 依赖必须装到该解释器，否则更新后新依赖缺失。
+        import sys as _sys
+        venv_python = _sys.executable
+        print("[UpdateSocialProject] 未找到独立 .venv，改用当前解释器安装依赖")
 
     # 基于 requirements.txt 内容哈希判断是否需要更新，避免每次更新都重装
     try:
@@ -773,14 +836,10 @@ def _update_backend_python_deps(project_dir: str, is_win: bool):
         print("[UpdateSocialProject] 后端依赖无变更，跳过")
         return
 
-    pip = (
-        os.path.join(venv_dir, "Scripts", "pip.exe") if is_win
-        else os.path.join(venv_dir, "bin", "pip")
-    )
     try:
-        subprocess.run(
-            [pip, "install", "-r", req_file, "--no-cache-dir", "-i", "https://mirrors.aliyun.com/pypi/simple/"],
-            cwd=backend_dir, capture_output=True, text=True, timeout=600, shell=is_win,
+        _run_cmd(
+            [venv_python, "-m", "pip", "install", "-r", req_file, "--no-cache-dir", "-i", "https://mirrors.aliyun.com/pypi/simple/"],
+            cwd=backend_dir, timeout=600, shell=is_win,
         )
         with open(hash_file, "w") as f:
             f.write(req_hash)
@@ -796,16 +855,18 @@ def _rebuild_and_restart_mcp(project_dir: str, is_win: bool):
         return
     npm_cmd = _get_exec_cmd("npm")
     try:
-        subprocess.run(
+        _run_cmd(
             [npm_cmd, "install", "--prefer-offline", "--registry=https://registry.npmmirror.com"],
             cwd=mcp_dir, capture_output=True, text=True, timeout=300, shell=is_win,
         )
-        subprocess.run(
+        _run_cmd(
             [npm_cmd, "run", "build"],
             cwd=mcp_dir, capture_output=True, text=True, timeout=300, shell=is_win,
         )
-        from backend.manager import restart_social_mcp_only
-        restart_social_mcp_only()
+        _manager_control(
+            "/manager/restart-mcp",
+            fallback=_manager_fallback("restart_social_mcp_only"),
+        )
         print("[UpdateSocialProject] MCP 已重新编译并重启")
     except Exception as e:
         print(f"[UpdateSocialProject] MCP 重建/重启失败（可忽略）: {e}")

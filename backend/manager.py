@@ -18,8 +18,24 @@ import functools
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-MANAGER_PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 18001
-BACKEND_PORT = int(sys.argv[2]) if len(sys.argv) > 2 else 11001
+
+def _argv_port(index: int, default: int) -> int:
+    """解析命令行端口参数。
+
+    本模块被主后端进程（uvicorn backend.main:app）import 时，sys.argv 是 uvicorn 的
+    参数而非端口，直接 int() 会抛 ValueError，导致所有 in-process 调用失败。
+    因此仅在参数为纯数字时才采用，否则回退默认值。
+    """
+    try:
+        if len(sys.argv) > index:
+            return int(sys.argv[index])
+    except (TypeError, ValueError):
+        pass
+    return default
+
+
+MANAGER_PORT = _argv_port(1, 18001)
+BACKEND_PORT = _argv_port(2, 11001)
 SOCIAL_BACKEND_PORT = 5409
 SOCIAL_FRONTEND_PORT = 5173
 
@@ -36,6 +52,9 @@ LOCAL_HOST = "127.0.0.1"
 LAN_HOST = "0.0.0.0"
 # 隐藏窗口创建标志：新进程无控制台窗口（区别于 CREATE_NEW_CONSOLE 的可见新窗口）
 CREATE_HIDDEN = getattr(subprocess, "CREATE_NO_WINDOW", 0x08000000)
+# 隐藏窗口 + 独立进程组：脱离 Manager 所在控制台，避免控制台 Ctrl+C 广播连带杀死
+# （与 celery worker 的启动方式一致，见 start_voiceforge_worker）
+CREATE_HIDDEN_GROUP = CREATE_HIDDEN | getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
 
 _backend_process: subprocess.Popen | None = None
 _backend_start_time: float = 0
@@ -65,6 +84,11 @@ _op_lock = threading.RLock()
 # 健康监督：服务期望运行状态登记（True=期望运行，崩溃自动拉起；False=已主动停止，不干预）
 _desired: dict[str, bool] = {}
 _last_auto_restart: dict[str, float] = {}
+# 连续自动重启失败计数：避免"启动即死"的服务被无限拉起刷屏
+_auto_restart_failures: dict[str, int] = {}
+_MAX_AUTO_RESTARTS = 5
+# 稳定运行超过该时长视为健康，清零连续失败计数
+_STABLE_UPTIME = 60.0
 _shutting_down = threading.Event()
 _manager_shutdown_callback = None
 _AUTO_RESTART_COOLDOWN = 30.0
@@ -162,25 +186,32 @@ def _cooldown_restart(name: str, starter):
     now = time.time()
     if now - _last_auto_restart.get(name, 0) < _AUTO_RESTART_COOLDOWN:
         return
+    failures = _auto_restart_failures.get(name, 0)
+    if failures >= _MAX_AUTO_RESTARTS:
+        if failures == _MAX_AUTO_RESTARTS:
+            print(f"[Manager] Watchdog gave up on {name}: 连续 {_MAX_AUTO_RESTARTS} 次自动重启均失败，停止拉起，需人工介入")
+            _auto_restart_failures[name] = failures + 1
+        return
     _last_auto_restart[name] = now
-    print(f"[Manager] Watchdog restarting {name}...")
+    _auto_restart_failures[name] = failures + 1
+    print(f"[Manager] Watchdog restarting {name}... (attempt {failures + 1}/{_MAX_AUTO_RESTARTS})")
     starter()
 
 
 def _watchdog_tick():
     """健康监督：仅对"期望运行但已崩溃"的服务自动拉起；主动停止的服务不干预。"""
     checks = [
-        ("main_backend", _backend_process, start_backend, BACKEND_PORT),
-        ("social_backend", _social_backend_process, start_social_backend, SOCIAL_BACKEND_PORT),
-        ("social_frontend", _social_frontend_process, start_social_frontend, SOCIAL_FRONTEND_PORT),
-        ("social_mcp", _social_mcp_process, start_social_mcp, SOCIAL_MCP_PORT),
-        ("llm_router", _llm_router_process, start_llm_router, LLM_ROUTER_PORT),
-        ("cutia", _cutia_process, start_cutia, CUTIA_PORT),
-        ("voiceforge_worker", _voiceforge_worker_process, start_voiceforge_worker, None),
-        ("control_plane_worker", _control_plane_worker_process, start_control_plane_worker, None),
-        ("gpu_service", _gpu_service_process, start_gpu_service, None),
+        ("main_backend", _backend_process, start_backend, BACKEND_PORT, _backend_start_time),
+        ("social_backend", _social_backend_process, start_social_backend, SOCIAL_BACKEND_PORT, _social_backend_start_time),
+        ("social_frontend", _social_frontend_process, start_social_frontend, SOCIAL_FRONTEND_PORT, _social_frontend_start_time),
+        ("social_mcp", _social_mcp_process, start_social_mcp, SOCIAL_MCP_PORT, _social_mcp_start_time),
+        ("llm_router", _llm_router_process, start_llm_router, LLM_ROUTER_PORT, _llm_router_start_time),
+        ("cutia", _cutia_process, start_cutia, CUTIA_PORT, _cutia_start_time),
+        ("voiceforge_worker", _voiceforge_worker_process, start_voiceforge_worker, None, _voiceforge_worker_start_time),
+        ("control_plane_worker", _control_plane_worker_process, start_control_plane_worker, None, _control_plane_worker_start_time),
+        ("gpu_service", _gpu_service_process, start_gpu_service, None, _gpu_service_start_time),
     ]
-    for name, proc, starter, port in checks:
+    for name, proc, starter, port, started_at in checks:
         if _shutting_down.is_set():
             return
         with _lock:
@@ -196,6 +227,9 @@ def _watchdog_tick():
             if port is not None and _check_port(port):
                 continue  # 句柄退出但端口仍在监听：真实服务还活着
             _cooldown_restart(name, starter)
+        elif started_at and (time.time() - started_at) > _STABLE_UPTIME:
+            # 稳定运行足够久：视为健康，清空连续失败计数
+            _auto_restart_failures.pop(name, None)
 
 
 def _watchdog_loop():
@@ -743,7 +777,9 @@ def start_social_mcp():
             cwd=mcp_dir,
             env=env,
             shell=True,
-            creationflags=CREATE_HIDDEN if os.name == "nt" else 0,
+            # 独立进程组：否则会跟随 Manager 控制台收到 Ctrl+C 广播而被误杀，
+            # 看门狗随即拉起，形成"启动→被杀→重启"的死循环
+            creationflags=CREATE_HIDDEN_GROUP if os.name == "nt" else 0,
         )
         _assign_to_job(proc)
         with _lock:

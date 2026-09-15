@@ -5,7 +5,6 @@ import MaterialManagement from '../views/MaterialManagement.vue'
 import PublishCenter from '../views/PublishCenter.vue'
 import PublishHistory from '../views/PublishHistory.vue'
 import Settings from '../views/Settings.vue'
-import Author from '../views/Author.vue'
 
 const routes = [
   { path: '/', name: 'Dashboard', component: Dashboard, meta: { icon: 'HomeFilled', title: '仪表盘' } },
@@ -17,10 +16,7 @@ const routes = [
   { path: '/publish-history', name: 'PublishHistory', component: PublishHistory, meta: { icon: 'Clock', title: '发布历史' } },
   { path: '/publish-history/:batchId', name: 'PublishHistoryDetail', component: () => import('../views/PublishHistoryDetail.vue') },
   { path: '/changelog', name: 'Changelog', component: () => import('../views/Changelog.vue'), meta: { icon: 'Notebook', title: '更新日志' } },
-  { path: '/settings', name: 'Settings', component: Settings, meta: { icon: 'Setting', title: '系统设置', isBottom: true } },
-  { path: '/author', name: 'Author', component: Author, meta: { icon: 'UserFilled', title: '关于作者', isBottom: true } },
-  { path: '/sponsor', name: 'Sponsor', component: () => import('../views/Sponsor.vue'), meta: { icon: 'Coffee', title: '赞助作者' } },
-  { path: '/feedback', name: 'Feedback', component: () => import('../views/Feedback.vue'), meta: { icon: 'ChatDotRound', title: '一键反馈' } }
+  { path: '/settings', name: 'Settings', component: Settings, meta: { icon: 'Setting', title: '系统设置', isBottom: true } }
 ]
 
 const router = createRouter({
