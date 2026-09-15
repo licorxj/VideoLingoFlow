@@ -160,6 +160,10 @@ social_update:
   # false（默认）：仅拉取云端代码并更新 Social 后端，前端保持当前构建版本；
   # true：拉取代码后同时更新前端并重新构建（npm run build），重启前后端服务。
   rebuild_frontend: false
+  # 可选：显式指定 git 可执行文件绝对路径。
+  # 当测试机 / 服务器上 git 未加入 PATH（如 Scoop、便携版、Chocolatey 安装）时填写，
+  # 例如：C:\Program Files\Git\cmd\git.exe 或 /usr/bin/git
+  git_path: ""
 aigc:
   comfyui:
     instances:

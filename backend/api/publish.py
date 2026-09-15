@@ -554,6 +554,8 @@ async def clear_cache():
         raise HTTPException(status_code=502, detail=str(e))
 
 
+import os
+import subprocess
 import threading
 import time
 import shutil
@@ -566,23 +568,31 @@ _update_status = {
 }
 
 
-def _get_exec_cmd(cmd_name: str) -> str:
+def _get_exec_cmd(cmd_name: str, prefer_path: str | None = None) -> str:
     import os
+    # 显式指定路径（来自 config 的 social_update.git_path）优先，兼容测试机 git 不在 PATH
+    if prefer_path and os.path.exists(prefer_path):
+        return prefer_path
     found = shutil.which(cmd_name)
     if found:
         return found
     if os.name == "nt":
+        # Windows 常见安装路径：Git for Windows / 便携版 / Scoop / Chocolatey
+        extra = [
+            r"C:\Program Files\Git\cmd\git.exe",
+            r"C:\Program Files (x86)\Git\cmd\git.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Programs\Git\cmd\git.exe"),
+            r"C:\Program Files\Git\bin\git.exe",
+            os.path.expandvars(r"%USERPROFILE%\scoop\shims\git.exe"),
+            r"C:\ProgramData\chocolatey\bin\git.exe",
+            os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WindowsApps\git.exe"),
+        ]
+        for p in extra:
+            if os.path.exists(p):
+                return p
         found_cmd = shutil.which(f"{cmd_name}.cmd") or shutil.which(f"{cmd_name}.exe") or shutil.which(f"{cmd_name}.bat")
         if found_cmd:
             return found_cmd
-        if cmd_name == "git":
-            for p in [
-                r"C:\Program Files\Git\cmd\git.exe",
-                r"C:\Program Files (x86)\Git\cmd\git.exe",
-                os.path.expandvars(r"%LOCALAPPDATA%\Programs\Git\cmd\git.exe"),
-            ]:
-                if os.path.exists(p):
-                    return p
     return cmd_name
 
 
@@ -601,7 +611,14 @@ def _run_async_update_project():
     repo_url = "https://github.com/DevilJie/social-auto-upload-web-ui.git"
 
     is_win = os.name == "nt"
-    git_bin = _get_exec_cmd("git")
+    # 优先从 config 读取显式 git 路径（测试机若 git 不在 PATH 时填写）
+    git_path = ""
+    try:
+        from backend.config.config_manager import config as _app_config
+        git_path = str(_app_config.get("social_update.git_path", "") or "").strip()
+    except Exception as _e:
+        print(f"[UpdateSocialProject] Read social_update.git_path skipped/error: {_e}")
+    git_bin = _get_exec_cmd("git", prefer_path=git_path)
 
     try:
         if not os.path.exists(project_dir):
