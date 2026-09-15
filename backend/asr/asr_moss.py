@@ -265,6 +265,60 @@ class MossTranscribeDiarizeLocal(ASRBase):
             })
         return words
 
+    # ── 退化兜底断句 ─────────────────────────────────────────────────────
+    @staticmethod
+    def _fallback_sentence_split(text: str, start: float, end: float,
+                                 max_chars: int = 40) -> list:
+        """模型未输出结构化分段时的兜底断句。
+
+        少数情况下（典型是 chunk 起始被硬切在句子中间）模型会把整段输出成一条
+        ``[t][Sxx]全文[t]``，VAD 断句信息随之丢失，下游句子切分、翻译与 TTS
+        时间轴都会退化。这里按句末标点 + 字数上限切句，并按字数比例把父段
+        时间窗分摊到各句，保证至少维持可用的时间粒度。
+        """
+        text = (text or "").strip()
+        if not text:
+            return []
+
+        end_chars = "。！？!?；;…"
+        pieces: list = []
+        buf = ""
+        for ch in text:
+            if ch == "\n":
+                if buf.strip():
+                    pieces.append(buf.strip())
+                buf = ""
+                continue
+            buf += ch
+            if ch in end_chars and len(buf) >= 4:
+                pieces.append(buf.strip())
+                buf = ""
+            elif len(buf) >= max_chars:
+                pieces.append(buf.strip())
+                buf = ""
+        if buf.strip():
+            pieces.append(buf.strip())
+
+        pieces = [p for p in pieces if p]
+        if not pieces:
+            return []
+
+        _start, _end = float(start), float(end)
+        dur = max(0.0, _end - _start)
+        total = sum(len(p) for p in pieces) or 1
+
+        out: list = []
+        cursor = _start
+        for i, piece in enumerate(pieces):
+            piece_end = _end if i == len(pieces) - 1 else cursor + dur * len(piece) / total
+            out.append({
+                "start": round(cursor, 4),
+                "end": round(piece_end, 4),
+                "text": piece,
+            })
+            cursor = piece_end
+        return out
+
     # ── 音频时长估算（用于按长度放大生成预算，避免长音频被截断）──────────
     @staticmethod
     def _estimate_duration(path: str) -> float:
@@ -290,11 +344,14 @@ class MossTranscribeDiarizeLocal(ASRBase):
         """按音频时长估算安全生成预算。
 
         MOSS 单次推理联合输出带时间戳/说话人标签的转录文本，token 量随时长近似
-        线性增长。固定 2048 对长音频（>~3 分钟）会提前耗尽生成预算，导致该 chunk
-        尾部（甚至中部）内容被截断而丢失，表现为结果中出现断层。这里按 ~14
-        token/秒 线性放大并保留余量；下限 2048 兼容极短视频。
+        线性增长。预算不足会提前耗尽生成上限，导致该 chunk 尾部（甚至中部）内容
+        被截断而丢失，表现为结果中出现断层。这里按 ~25 token/秒 线性放大并保留
+        余量，下限 8192 对齐上游推荐值（短音频默认 5120，长音频可到 65536）。
+
+        注意：这只是**上限**。模型正常输出 EOS 时会提前结束，因此放宽上限不会
+        增加正常情况下的推理耗时，只影响原本会被截断的场景。
         """
-        return max(2048, int(duration * 14) + 512)
+        return max(8192, int(duration * 25) + 1024)
 
     # ── 主入口 ──────────────────────────────────────────────────────────
     def transcribe(
@@ -352,6 +409,11 @@ class MossTranscribeDiarizeLocal(ASRBase):
             callback(85, "解析转录结果...")
 
         parsed = parse_transcript(raw_text)
+        print(
+            f"[MOSS] parsed {len(parsed)} segments, raw_len={len(raw_text)}, "
+            f"head={raw_text[:160]!r}",
+            flush=True,
+        )
 
         segments: list = []
         speakers: set = set()
@@ -371,6 +433,35 @@ class MossTranscribeDiarizeLocal(ASRBase):
                 "speaker_id": speaker,
                 "words": words,
             })
+
+        # 退化防护：模型偶发把整段音频压成一条 segment（无 [t][Sxx] 断句），
+        # 会让下游句子切分/翻译/TTS 对齐全部失效。此处识别"单条长段"并按
+        # 句末标点做兜底断句，至少恢复可用的时间粒度。
+        if (len(segments) == 1
+                and len(segments[0]["text"]) >= 40
+                and segments[0]["end"] - segments[0]["start"] >= 60):
+            parent = segments[0]
+            pieces = self._fallback_sentence_split(
+                parent["text"], parent["start"], parent["end"])
+            if len(pieces) > 1:
+                print(
+                    f"[MOSS] Warning: single giant segment "
+                    f"({len(parent['text'])} chars / "
+                    f"{parent['end'] - parent['start']:.0f}s), "
+                    f"fallback split into {len(pieces)} sentences",
+                    flush=True,
+                )
+                segments = []
+                for j, piece in enumerate(pieces, start=1):
+                    segments.append({
+                        "id": j,
+                        "start": piece["start"],
+                        "end": piece["end"],
+                        "text": piece["text"],
+                        "speaker_id": parent["speaker_id"],
+                        "words": self._synthesize_words(
+                            piece["text"], piece["start"], piece["end"]),
+                    })
 
         full_text = " ".join(s["text"] for s in segments if s["text"]).strip()
 

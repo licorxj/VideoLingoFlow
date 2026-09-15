@@ -665,7 +665,9 @@ class S08DubTask(BaseStep):
             callback(80, f"语速预测：{len(overflow)}/{len(timed)} 句预测超长，调用 LLM 缩减...")
         try:
             stats["reduced"] = reduce_overflow_texts(
-                overflow, step_name="s09_subtitle_reduction"
+                overflow,
+                step_name="s09_subtitle_reduction",
+                log=lambda msg: logger.info(f"[DubTask] {msg}"),
             )
         except Exception as e:
             logger.warning(f"[DubTask] LLM 缩减异常（不中断任务）: {e}")
