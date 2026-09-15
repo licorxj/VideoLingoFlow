@@ -69,9 +69,11 @@ export default function LoopContainerCard({
   const handleStyle = (portType: string, idx: number, total: number) => ({
     top: ((idx + 1) / (total + 1)) * 100 + "%",
     background: PORT_COLORS[portType as PortType] || "#6366f1",
-    width: 12,
-    height: 12,
-    border: "2px solid white",
+    width: 18,
+    height: 18,
+    border: "2px solid hsl(var(--background))",
+    borderRadius: 9999,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
   });
 
   const saveName = () => {

@@ -521,6 +521,20 @@
   to { stroke-dashoffset: -12; }
 }
 
+/* 节点连接端口：命中区放大后配合悬浮高亮，提升点选与拖拽连线的手感 */
+.react-flow__handle {
+  transition: box-shadow 0.15s ease, filter 0.15s ease;
+  cursor: crosshair;
+}
+.react-flow__handle:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 0 0 5px rgba(99, 102, 241, 0.22) !important;
+}
+/* 正在拖拽连线时，让可连接的目标端口更醒目 */
+.react-flow__handle.connectingto {
+  box-shadow: 0 0 0 6px rgba(16, 185, 129, 0.28) !important;
+}
+
 /* LLM Router - sidebar gradient */
 .sidebar-gradient {
   background: linear-gradient(180deg, hsl(var(--sidebar)) 0%, hsl(var(--background)) 100%);

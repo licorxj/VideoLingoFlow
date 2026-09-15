@@ -40,6 +40,7 @@ from backend.steps.s14_output import StepOutput
 from backend.steps.s15_extract_audio import StepExtractAudio
 from backend.steps.s16_vocal_separation import StepVocalSeparation
 from backend.steps.s17_track_separation import S17TrackSeparation
+from backend.steps.s19_audio_enhance import S19AudioEnhance
 from backend.steps.s18_audio_transcode import StepAudioTranscode
 from backend.steps.s_path_to_title import S_PathToTitle
 from backend.steps.s_file_rename import S_FileRename
@@ -96,6 +97,8 @@ from backend.steps.s_voice_character import S_VoiceCharacter
 from backend.steps.s_material_library import (
     S_ImageAssetLibrary, S_VideoAssetLibrary, S_CharacterAssetLibrary, S_VoiceAssetLibrary,
 )
+from backend.steps.s_material_storage import S_MaterialStorage
+from backend.steps.s_dub_visual_check import S_DubVisualCheck
 from backend.steps.s_seedream import (
     S_SeedreamTxt2Img, S_SeedreamImg2Img, S_SeedreamFusion,
     S_SeedreamGrid, S_SeedreamWebSearch, S_SeedreamLayer,
@@ -189,6 +192,8 @@ _STEPS = {
     "output": StepOutput(),
     "s16_vocal_separation": StepVocalSeparation(),
     "vocal_separation": StepVocalSeparation(),
+    "s19_audio_enhance": S19AudioEnhance(),
+    "audio_enhance": S19AudioEnhance(),
     "s_llm_request": S_LLMRequest(),
     "llm_request": S_LLMRequest(),
     "s_http_request": S_HttpRequest(),
@@ -312,6 +317,12 @@ _STEPS = {
     "character_asset_library": S_CharacterAssetLibrary(),
     "s_voice_asset_library": S_VoiceAssetLibrary(),
     "voice_asset_library": S_VoiceAssetLibrary(),
+    # 素材入库（asset 分组，自动识别类型并写入对应素材库数据库）
+    "material_storage": S_MaterialStorage(),
+    "s_material_storage": S_MaterialStorage(),
+    # 配音可视化检查（translation 分组，卡片按钮打开检查页）
+    "dub_visual_check": S_DubVisualCheck(),
+    "s_dub_visual_check": S_DubVisualCheck(),
     "s_voice_character": S_VoiceCharacter(),
     "voice_character": S_VoiceCharacter(),
     # Seedream 生图能力节点（每种能力一个节点，置于 AI生成类节点 分组）

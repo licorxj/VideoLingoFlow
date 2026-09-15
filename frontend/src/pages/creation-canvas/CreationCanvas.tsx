@@ -157,8 +157,8 @@ function CanvasNodeCard({ data }: NodeProps) {
         <div className="text-xs font-semibold truncate">{d.title}</div>
         {d.desc && <div className="text-[11px] text-muted-foreground line-clamp-2 leading-snug mt-0.5">{d.desc}</div>}
       </div>
-      <Handle type="source" position={Position.Right} isConnectable={false} className="!opacity-0" />
-      <Handle type="target" position={Position.Left} isConnectable={false} className="!opacity-0" />
+      <Handle type="source" position={Position.Right} isConnectable={false} className="!opacity-0 pointer-events-none" />
+      <Handle type="target" position={Position.Left} isConnectable={false} className="!opacity-0 pointer-events-none" />
     </div>
   );
 }

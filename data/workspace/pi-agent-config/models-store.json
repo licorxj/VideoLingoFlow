@@ -41,45 +41,6 @@
         }
       },
       {
-        "id": "deepseek-ai/deepseek-v4-pro-0813",
-        "name": "DeepSeek V4 Pro 0813",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false,
-          "requiresReasoningContentOnAssistantMessages": true,
-          "thinkingFormat": "deepseek"
-        },
-        "contextWindow": 1000000,
-        "maxTokens": 384000,
-        "thinkingLevelMap": {
-          "minimal": null,
-          "low": null,
-          "medium": null,
-          "high": "high",
-          "max": "max"
-        }
-      },
-      {
         "id": "google/gemma-3-12b-it",
         "name": "Gemma 3 12B IT",
         "api": "openai-completions",
@@ -597,11 +558,42 @@
         },
         "contextWindow": 262144,
         "maxTokens": 16384
+      },
+      {
+        "id": "z-ai/glm-5.3-flash",
+        "name": "GLM-5.3-Flash",
+        "api": "openai-completions",
+        "provider": "nvidia",
+        "baseUrl": "https://integrate.api.nvidia.com/v1",
+        "headers": {
+          "NVCF-POLL-SECONDS": "3600"
+        },
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStore": false,
+          "supportsDeveloperRole": false,
+          "supportsReasoningEffort": false,
+          "maxTokensField": "max_tokens",
+          "supportsStrictMode": false,
+          "supportsLongCacheRetention": false
+        },
+        "contextWindow": 1000000,
+        "maxTokens": 131072
       }
     ],
-    "checkedAt": 1789211353096,
-    "lastModified": 1788948056000,
-    "etag": "W/\"dc33628f4e110320dbc11bfd2f05297d\""
+    "checkedAt": 1789399338549,
+    "lastModified": 1789389617000,
+    "etag": "W/\"42c726d9800b69c1266c8d2d8f730c7f\""
   },
   "xiaomi": {
     "models": [
@@ -676,7 +668,7 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1789211353060,
+    "checkedAt": 1789399339951,
     "lastModified": 1787571286000,
     "etag": "W/\"3db76cd3404affdf755b2efc443b74c3\""
   },
@@ -1187,7 +1179,7 @@
         }
       }
     ],
-    "checkedAt": 1789211353097,
+    "checkedAt": 1789399338589,
     "lastModified": 1788432026000,
     "etag": "W/\"82d850ac898f9406a8bedcd62f25e6da\""
   },
@@ -2453,7 +2445,7 @@
         }
       }
     ],
-    "checkedAt": 1789211353019,
+    "checkedAt": 1789399341938,
     "lastModified": 1788784749000,
     "etag": "W/\"1cca1d47130c92b44203cbe8314876b0\""
   },
@@ -4309,7 +4301,7 @@
         }
       }
     ],
-    "checkedAt": 1789211353027,
+    "checkedAt": 1789399339200,
     "lastModified": 1789122481000,
     "etag": "W/\"28072739aa66bd465a4694f6e8f6f9de\""
   },
@@ -4706,7 +4698,7 @@
         }
       }
     ],
-    "checkedAt": 1789211353017,
+    "checkedAt": 1789399339593,
     "lastModified": 1788432010000,
     "etag": "W/\"5fdc170fdb3eb24c0e164a059918e474\""
   }

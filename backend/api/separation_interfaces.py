@@ -54,10 +54,25 @@ async def list_interfaces():
     return {"interfaces": mask_deep(mgr.list_raw())}
 
 
+def _interface_has_category(iface: dict, category: str) -> bool:
+    """True when the interface declares at least one model of the given category."""
+    details = (iface.get("config") or {}).get("model_details") or {}
+    return any((detail or {}).get("category") == category for detail in details.values())
+
+
 @router.get("/enabled")
-async def list_enabled():
+async def list_enabled(scope: str = None):
+    """List enabled separation interfaces.
+
+    scope filters to interfaces that declare at least one model of that category
+    (e.g. scope=enhancement for the audio-enhance node), so nodes only offer
+    engines that can actually do the requested job.
+    """
     mgr = get_separation_interface_manager()
-    return {"interfaces": mgr.get_enabled()}
+    interfaces = mgr.get_enabled()
+    if scope:
+        interfaces = [i for i in interfaces if _interface_has_category(i, scope)]
+    return {"interfaces": interfaces}
 
 
 @router.get("/models")
@@ -74,8 +89,13 @@ async def list_model_options():
 
 
 @router.get("/config-fields")
-async def get_sep_config_fields():
-    """Return dynamically generated config fields for the separation node."""
+async def get_sep_config_fields(scope: str = None):
+    """Return dynamically generated config fields for the separation node.
+
+    scope="vocal" filters model options to those that actually isolate vocals
+    (used by the vocal-separation node, so non-vocal / enhancement models such
+    as instrument or de-reverb MDX-NET models are hidden from the dropdown).
+    """
     mgr = get_separation_interface_manager()
     interfaces = mgr.list_all()
 
@@ -88,12 +108,22 @@ async def get_sep_config_fields():
         engine_options.append({"value": iface["id"], "label": iface["name"]})
         model_options = cfg.get("model_options", [])
         models_by_engine[iface["id"]] = model_options
-        
+
         # Build model details with descriptions
         model_details = cfg.get("model_details", {})
         details_list = []
         for model_id in model_options:
             detail = model_details.get(model_id, {})
+            category = detail.get("category")
+            if scope:
+                if scope == "vocal":
+                    # Untagged engines (spleeter/demucs/...) are vocal-capable by
+                    # default, so keep them for the vocal-separation node.
+                    if category not in (None, "vocal"):
+                        continue
+                elif category != scope:
+                    # e.g. scope=enhancement only shows tagged enhancement models
+                    continue
             details_list.append({
                 "value": model_id,
                 "label": model_id,

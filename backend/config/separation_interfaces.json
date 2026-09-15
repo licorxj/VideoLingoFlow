@@ -645,7 +645,7 @@
       "type": "sdk",
       "builtin": true,
       "enabled": true,
-      "description": "UVR MDX-NET ONNX 人声/伴奏分离引擎（ConvTDFNet + onnxruntime），模型多、速度快，适合追求快速人声分离",
+      "description": "UVR MDX-NET ONNX 分离引擎（ConvTDFNet + onnxruntime）。含人声/伴奏/乐器/去混响等多类模型，调用时按模型类别自动映射输出，非人声类会在回调中提示",
       "config": {
         "sdk_module": "backend.separation.sep_mdx_net",
         "sdk_class": "MDXNetOnnxSeparation",
@@ -685,123 +685,153 @@
         "model_details": {
           "Kim_Inst": {
             "name": "Kim Inst",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "Kim_Vocal_1": {
             "name": "Kim Vocal 1",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "Kim_Vocal_2": {
             "name": "Kim Vocal 2",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "kuielab_a_bass": {
             "name": "kuielab_a_bass",
-            "description": "UVR MDX-NET ONNX 模型（主分离：bass）"
+            "description": "伴奏/乐器分离：提取低音。用途：单独获取贝斯音轨，用于混音、扒谱与练习。",
+            "category": "stem"
           },
           "kuielab_a_drums": {
             "name": "kuielab_a_drums",
-            "description": "UVR MDX-NET ONNX 模型（主分离：drums）"
+            "description": "伴奏/乐器分离：提取鼓组。用途：单独获取鼓组音轨，用于混音、扒谱与练习。",
+            "category": "stem"
           },
           "kuielab_a_other": {
             "name": "kuielab_a_other",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "伴奏/乐器分离：提取其他声部。用途：提取剩余的其他乐器声部。",
+            "category": "stem"
           },
           "kuielab_a_vocals": {
             "name": "kuielab_a_vocals",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "kuielab_b_bass": {
             "name": "kuielab_b_bass",
-            "description": "UVR MDX-NET ONNX 模型（主分离：bass）"
+            "description": "伴奏/乐器分离：提取低音。用途：单独获取贝斯音轨，用于混音、扒谱与练习。",
+            "category": "stem"
           },
           "kuielab_b_drums": {
             "name": "kuielab_b_drums",
-            "description": "UVR MDX-NET ONNX 模型（主分离：drums）"
+            "description": "伴奏/乐器分离：提取鼓组。用途：单独获取鼓组音轨，用于混音、扒谱与练习。",
+            "category": "stem"
           },
           "kuielab_b_other": {
             "name": "kuielab_b_other",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "伴奏/乐器分离：提取其他声部。用途：提取剩余的其他乐器声部。",
+            "category": "stem"
           },
           "kuielab_b_vocals": {
             "name": "kuielab_b_vocals",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "Reverb_HQ_By_FoxJoy": {
             "name": "Reverb HQ By FoxJoy",
-            "description": "UVR MDX-NET ONNX 模型（主分离：reverb）"
+            "description": "音频增强(去混响/降噪)：提取混响/噪声。用途：去除音频中的混响与噪声，输出增强后的干净音频，用于后期降噪与修复。",
+            "category": "enhancement"
           },
           "UVR-MDX-NET_Crowd_HQ_1": {
             "name": "UVR-MDX-NET Crowd HQ 1 By Aufr33",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取观众/合唱人声。用途：去除观众/合唱等背景人声，保留主唱与伴奏，清理现场录音的人群噪声。",
+            "category": "vocal"
           },
           "UVR_MDXNET_1_9703": {
             "name": "UVR-MDX-NET 1",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "UVR_MDXNET_2_9682": {
             "name": "UVR-MDX-NET 2",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "UVR_MDXNET_3_9662": {
             "name": "UVR-MDX-NET 3",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "UVR-MDX-NET-Inst_1": {
             "name": "UVR-MDX-NET Inst 1",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR-MDX-NET-Inst_2": {
             "name": "UVR-MDX-NET Inst 2",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR-MDX-NET-Inst_3": {
             "name": "UVR-MDX-NET Inst 3",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_1": {
             "name": "UVR-MDX-NET Inst HQ 1",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_2": {
             "name": "UVR-MDX-NET Inst HQ 2",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_3": {
             "name": "UVR-MDX-NET Inst HQ 3",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_4": {
             "name": "UVR-MDX-NET Inst HQ 4",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_5": {
             "name": "UVR-MDX-NET Inst HQ 5",
-            "description": "UVR MDX-NET ONNX 模型（主分离：instrument）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR-MDX-NET-Inst_Main": {
             "name": "UVR-MDX-NET Inst Main",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR_MDXNET_KARA": {
             "name": "UVR-MDX-NET Karaoke",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR_MDXNET_KARA_2": {
             "name": "UVR-MDX-NET Karaoke 2",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "category": "stem"
           },
           "UVR_MDXNET_Main": {
             "name": "UVR-MDX-NET Main",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "UVR-MDX-NET-Voc_FT": {
             "name": "UVR-MDX-NET Voc FT",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           },
           "UVR_MDXNET_9482": {
             "name": "UVR_MDXNET_9482",
-            "description": "UVR MDX-NET ONNX 模型（主分离：vocals）"
+            "description": "人声分离：提取人声。用途：从歌曲/混音中分离干净人声，用于配音、翻唱、语音识别等。",
+            "category": "vocal"
           }
         },
         "format": "wav",

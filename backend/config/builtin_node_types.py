@@ -382,7 +382,7 @@ BUILTIN_NODE_TYPES = [
         "defaultConfig": {"method": "spleeter", "model": "", "format": "wav"},
         "configFields": [
             {"key": "method", "label": "分离接口", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/enabled", "optionLabel": "name", "optionValue": "id", "colSpan": "full"},
-            {"key": "model", "label": "分离模型", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/config-fields", "dependsOn": "method", "optionLabel": "label", "optionValue": "value", "placeholder": "留空则使用接口默认模型", "colSpan": "full"},
+            {"key": "model", "label": "分离模型", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/config-fields?scope=vocal", "dependsOn": "method", "optionLabel": "label", "optionValue": "value", "placeholder": "留空则使用接口默认模型", "colSpan": "full"},
             {"key": "format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
                 {"value": "", "label": "跟随全局设置"},
                 {"value": "wav", "label": "WAV (无损)"},
@@ -412,6 +412,31 @@ BUILTIN_NODE_TYPES = [
             {"key": "method", "label": "分离接口", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/enabled", "optionLabel": "name", "optionValue": "id", "colSpan": "full"},
             {"key": "model", "label": "分离模型", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/config-fields", "dependsOn": "method", "optionLabel": "label", "optionValue": "value", "placeholder": "留空则使用接口默认模型", "colSpan": "full"},
             {"key": "format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
+                {"value": "wav", "label": "WAV (无损)"},
+                {"value": "mp3", "label": "MP3"},
+            ]},
+        ],
+    },
+    {
+        "id": "audio_enhance",
+        "name": "音频增强",
+        "execution_domain": "process",
+        "category": "audio",
+        "description": "通过音频增强接口/模型处理音频（去混响、降噪、音质增强），输出增强后的音频",
+        "icon": "Sparkles",
+        "color": "#0ea5e9",
+        "inputs": [{"id": "audio", "label": "音频", "type": "audio", "required": True}],
+        "outputs": [
+            {"id": "audio", "label": "增强音频", "type": "audio", "color": "#10b981"},
+            {"id": "background", "label": "残差/副产物", "type": "audio", "color": "#f59e0b"},
+            {"id": "extra", "label": "第三路输出", "type": "audio", "color": "#6366f1"},
+        ],
+        "defaultConfig": {"method": "mdx_net_onnx", "model": "", "format": "wav"},
+        "configFields": [
+            {"key": "method", "label": "增强接口", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/enabled?scope=enhancement", "optionLabel": "name", "optionValue": "id", "colSpan": "full"},
+            {"key": "model", "label": "增强模型", "type": "api-select", "apiEndpoint": "/api/separation-interfaces/config-fields?scope=enhancement", "dependsOn": "method", "optionLabel": "label", "optionValue": "value", "placeholder": "留空则使用接口的默认增强模型", "colSpan": "full"},
+            {"key": "format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
+                {"value": "", "label": "跟随全局设置"},
                 {"value": "wav", "label": "WAV (无损)"},
                 {"value": "mp3", "label": "MP3"},
             ]},
@@ -661,6 +686,40 @@ BUILTIN_NODE_TYPES = [
             "source": "",
             "asset_name": ""
         }
+    },
+    {
+        "id": "material_storage",
+        "name": "素材入库",
+        "execution_domain": "thread",
+        "category": "asset",
+        "description": "将接入的视频/图片/音频素材归档到项目公共素材库并写入数据库。后端自动识别素材类型，按前端设置的素材属性（名称/分组标签/自定义标签/描述）入库，支持视频、图片、音频三种类型。",
+        "icon": "LibraryBig",
+        "color": "#84cc16",
+        "inputs": [
+            {"id": "media", "label": "素材", "type": "any", "required": False}
+        ],
+        "outputs": [
+            {"id": "material", "label": "素材路径", "type": "any"},
+            {"id": "library_ref", "label": "素材库引用", "type": "text"},
+            {"id": "asset_type", "label": "素材类型", "type": "text"},
+            {"id": "asset_id", "label": "素材ID", "type": "text"}
+        ],
+        "defaultConfig": {
+            "asset_name": "",
+            "group_tags": "",
+            "custom_tags": "",
+            "description": ""
+        },
+        "configFields": [
+            {"key": "asset_name", "label": "素材名称", "type": "text",
+             "placeholder": "留空则使用文件名", "description": "入库后在素材库中显示的素材名称"},
+            {"key": "group_tags", "label": "分组标签", "type": "text",
+             "placeholder": "逗号分隔，如：宣传片,产品", "description": "按分组归类素材，便于素材库筛选"},
+            {"key": "custom_tags", "label": "自定义标签", "type": "text",
+             "placeholder": "逗号分隔，如：高清,竖屏", "description": "自定义检索标签（音频素材会作为素材标签写入）"},
+            {"key": "description", "label": "素材描述", "type": "textarea",
+             "placeholder": "对素材的补充说明", "description": "素材的备注信息，入库后记录在素材库"}
+        ]
     },
     {
         "id": "voice_character",
@@ -1045,6 +1104,36 @@ BUILTIN_NODE_TYPES = [
             {"key": "dialect_name", "label": "方言", "type": "text", "placeholder": "四川话", "dependsOn": "ai_dialect_colloquial", "description": "填写目标方言名称，启用方言口语化时写入任务单(方言)列"},
             {"key": "speed_predict_reduce", "label": "语速预测+句子缩减", "type": "checkbox", "description": "启用后预测每句 TTS 朗读时长（多语言兼容），预测时长远大于句子时间槽时由 LLM 缩减朗读文本；短句（中文<3字/英文<2词）不缩减"},
             {"key": "min_sentence_duration", "label": "单句最短时长(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 5, "step": 0.05, "defaultValue": 0.2, "description": "执行前单句时长检测阈值：任意单句时长小于该值(秒)将报错，默认0.2秒"},
+        ],
+    },
+    {
+        "id": "dub_visual_check",
+        "name": "配音审听及微调",
+        "execution_domain": "thread",
+        "category": "translation",
+        "description": "读取上游配音任务 JSON，打开审听页面逐句试听与微调：可修改朗读文本/指令、更换参考音频、按语速重生单条或批量重生；本节点把上游输入 JSON 透传到输出（json），可选等待审听完成后再继续下游。",
+        "icon": "ListMusic",
+        "color": "#8b5cf6",
+        "inputs": [
+            {"id": "json", "label": "配音任务JSON", "type": "json", "required": False}
+        ],
+        "outputs": [
+            {"id": "json", "label": "配音任务JSON", "type": "json"}
+        ],
+        "defaultConfig": {
+            "wait_audition": False,
+            "wait_seconds": 600,
+        },
+        "configFields": [
+            {"key": "open_check", "label": "打开检查页面", "type": "button",
+             "description": "打开配音微调弹窗：分页列出每条配音，支持勾选、试听、更换参考音频、单条/批量重生与 TTS 接口设置"},
+            {"key": "wait_audition", "label": "是否等待审听", "type": "checkbox",
+             "description": "勾选后本节点进入等待：在检查页完成试听微调，到达等待时长后自动透传输入 JSON 到输出并继续下游"},
+            {"key": "wait_seconds", "label": "等待时间（秒）", "type": "number",
+             "min": 1, "max": 86400, "colSpan": "half",
+             "dependsOn": "wait_audition", "dependsValue": True,
+             "placeholder": "600",
+             "description": "等待审听的最长时间（秒），到期后自动继续；仅在勾选「是否等待审听」时生效"},
         ],
     },
     {

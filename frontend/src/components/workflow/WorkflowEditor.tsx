@@ -1945,6 +1945,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               onInit={(inst) => { reactFlowInstanceRef.current = inst; setReactFlowInstance(inst); }} onDragOver={onDragOver} onDrop={onDrop}
               onPaneContextMenu={(e) => { e.preventDefault(); setContextMenu({ visible: true, position: { x: e.clientX, y: e.clientY } }); }}
               nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView snapToGrid snapGrid={[15, 15]}
+              connectionRadius={30}
               selectionOnDrag selectionKeyCode="Shift" multiSelectionKeyCode="Shift"
               minZoom={0.05} maxZoom={4}
               defaultEdgeOptions={{ type: edgeType, animated: true, style: { stroke: "#6366f1", strokeWidth: 2 } }}

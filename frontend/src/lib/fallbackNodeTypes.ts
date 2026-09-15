@@ -587,7 +587,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "key": "model",
         "label": "分离模型",
         "type": "api-select",
-        "apiEndpoint": "/api/separation-interfaces/config-fields",
+        "apiEndpoint": "/api/separation-interfaces/config-fields?scope=vocal",
         "dependsOn": "method",
         "optionLabel": "label",
         "optionValue": "value",
@@ -600,6 +600,90 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "type": "select",
         "colSpan": "half",
         "options": [
+          {
+            "value": "wav",
+            "label": "WAV (无损)"
+          },
+          {
+            "value": "mp3",
+            "label": "MP3"
+          }
+        ]
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "audio_enhance",
+    "name": "音频增强",
+    "category": "process",
+    "description": "通过音频增强接口/模型处理音频（去混响、降噪、音质增强），输出增强后的音频",
+    "icon": "Sparkles",
+    "color": "#0ea5e9",
+    "inputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "增强音频",
+        "type": "audio",
+        "color": "#10b981"
+      },
+      {
+        "id": "background",
+        "label": "残差/副产物",
+        "type": "audio",
+        "color": "#f59e0b"
+      },
+      {
+        "id": "extra",
+        "label": "第三路输出",
+        "type": "audio",
+        "color": "#6366f1"
+      }
+    ],
+    "defaultConfig": {
+      "method": "mdx_net_onnx",
+      "model": "",
+      "format": "wav"
+    },
+    "configFields": [
+      {
+        "key": "method",
+        "label": "增强接口",
+        "type": "api-select",
+        "apiEndpoint": "/api/separation-interfaces/enabled?scope=enhancement",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "colSpan": "full"
+      },
+      {
+        "key": "model",
+        "label": "增强模型",
+        "type": "api-select",
+        "apiEndpoint": "/api/separation-interfaces/config-fields?scope=enhancement",
+        "dependsOn": "method",
+        "optionLabel": "label",
+        "optionValue": "value",
+        "placeholder": "留空则使用接口的默认增强模型",
+        "colSpan": "full"
+      },
+      {
+        "key": "format",
+        "label": "输出格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "跟随全局设置"
+          },
           {
             "value": "wav",
             "label": "WAV (无损)"
@@ -2111,6 +2195,105 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
           { "value": "webm", "label": "WebM" },
           { "value": "avi", "label": "AVI" }
         ]
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "material_storage",
+    "name": "素材入库",
+    "category": "asset",
+    "description": "将接入的视频/图片/音频素材归档到项目公共素材库并写入数据库。后端自动识别素材类型，按前端设置的素材属性（名称/分组标签/自定义标签/描述）入库，支持视频、图片、音频三种类型。",
+    "icon": "LibraryBig",
+    "color": "#84cc16",
+    "inputs": [
+      { "id": "media", "label": "素材", "type": "any", "required": false }
+    ],
+    "outputs": [
+      { "id": "material", "label": "素材路径", "type": "any" },
+      { "id": "library_ref", "label": "素材库引用", "type": "text" },
+      { "id": "asset_type", "label": "素材类型", "type": "text" },
+      { "id": "asset_id", "label": "素材ID", "type": "text" }
+    ],
+    "defaultConfig": {
+      "asset_name": "",
+      "group_tags": "",
+      "custom_tags": "",
+      "description": ""
+    },
+    "configFields": [
+      {
+        "key": "asset_name",
+        "label": "素材名称",
+        "type": "text",
+        "placeholder": "留空则使用文件名",
+        "description": "入库后在素材库中显示的素材名称"
+      },
+      {
+        "key": "group_tags",
+        "label": "分组标签",
+        "type": "text",
+        "placeholder": "逗号分隔，如：宣传片,产品",
+        "description": "按分组归类素材，便于素材库筛选"
+      },
+      {
+        "key": "custom_tags",
+        "label": "自定义标签",
+        "type": "text",
+        "placeholder": "逗号分隔，如：高清,竖屏",
+        "description": "自定义检索标签（音频素材会作为素材标签写入）"
+      },
+      {
+        "key": "description",
+        "label": "素材描述",
+        "type": "textarea",
+        "placeholder": "对素材的补充说明",
+        "description": "素材的备注信息，入库后记录在素材库"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "dub_visual_check",
+    "name": "配音审听及微调",
+    "category": "translation",
+    "description": "读取上游配音任务 JSON，打开审听页面逐句试听与微调：可修改朗读文本/指令、更换参考音频、按语速重生单条或批量重生；本节点把上游输入 JSON 透传到输出（json），可选等待审听完成后再继续下游。",
+    "icon": "ListMusic",
+    "color": "#8b5cf6",
+    "inputs": [
+      { "id": "json", "label": "配音任务JSON", "type": "json", "required": false }
+    ],
+    "outputs": [
+      { "id": "json", "label": "配音任务JSON", "type": "json" }
+    ],
+    "defaultConfig": {
+      "wait_audition": false,
+      "wait_seconds": 600
+    },
+    "configFields": [
+      {
+        "key": "open_check",
+        "label": "打开检查页面",
+        "type": "button",
+        "description": "打开配音微调弹窗：分页列出每条配音，支持勾选、试听、更换参考音频、单条/批量重生与 TTS 接口设置"
+      },
+      {
+        "key": "wait_audition",
+        "label": "是否等待审听",
+        "type": "checkbox",
+        "description": "勾选后本节点进入等待：在检查页完成试听微调，到达等待时长后自动透传输入 JSON 到输出并继续下游"
+      },
+      {
+        "key": "wait_seconds",
+        "label": "等待时间（秒）",
+        "type": "number",
+        "min": 1,
+        "max": 86400,
+        "colSpan": "half",
+        "dependsOn": "wait_audition",
+        "dependsValue": true,
+        "placeholder": "600",
+        "description": "等待审听的最长时间（秒），到期后自动继续；仅在勾选「是否等待审听」时生效"
       }
     ],
     "isBuiltIn": true
