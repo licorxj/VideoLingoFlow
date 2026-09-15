@@ -119,8 +119,8 @@ import { ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   HomeFilled, User, Picture, Upload,
-  Clock, Setting, Expand, Fold, UserFilled, Document, Notebook, ChatDotRound,
-  Sunny, Moon, Coffee, Promotion
+  Clock, Setting, Expand, Fold, Document, Notebook,
+  Sunny, Moon, Promotion
 } from '@element-plus/icons-vue'
 import { useAppStore } from '@/stores/app'
 
@@ -139,14 +139,11 @@ const navItems = [
   { path: '/image-publish', icon: Picture, title: '图集发布' },
   { path: '/drafts', icon: Document, title: '草稿箱' },
   { path: '/publish-history', icon: Clock, title: '发布历史' },
-  { path: '/changelog', icon: Notebook, title: '更新日志' },
-  { path: '/author', icon: UserFilled, title: '关于作者' },
-  { path: '/feedback', icon: ChatDotRound, title: '一键反馈' }
+  { path: '/changelog', icon: Notebook, title: '更新日志' }
 ]
 
-// 底部区：赞助作者（醒目版）+ 系统设置
+// 底部区：系统设置
 const bottomItems = [
-  { path: '/sponsor', icon: Coffee, title: '赞助作者', _isSponsor: true },
   { path: '/settings', icon: Setting, title: '系统设置' }
 ]
 
@@ -158,9 +155,6 @@ const sponsorBubbles = [
   { name: '老王', amount: 20, color: '#f59e0b' }
 ]
 const currentBubbleIndex = ref(0)
-setInterval(() => {
-  currentBubbleIndex.value = (currentBubbleIndex.value + 1) % sponsorBubbles.length
-}, 4000)
 
 const activeMenu = computed(() => route.path)
 
