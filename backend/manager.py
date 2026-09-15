@@ -1187,11 +1187,16 @@ def start_cutia():
     has_full_nm = os.path.isdir(os.path.join(cutia_root, "node_modules"))
 
     standalone_env = str(os.environ.get("CUTIA_STANDALONE", "")).strip().lower()
+    force_dev = str(os.environ.get("CUTIA_FORCE_DEV", "")).strip().lower() in ("1", "true", "yes", "on")
     if standalone_env:
         standalone = standalone_env in ("1", "true", "yes", "on")
+    elif force_dev:
+        standalone = False
     else:
-        # 未显式指定：standalone 产物存在且完整 node_modules 已被裁剪 -> 自动 standalone（小体积分发）
-        standalone = has_standalone and not has_full_nm
+        # 默认优先 standalone 生产服务：dev 模式（Turbopack 按需编译）在无头渲染场景下，
+        # chunk 编译会阻塞请求导致 /cutia 代理返回 502、页面脚本加载不全而整体卡死。
+        # 需要热更新调试前端时，设置 CUTIA_FORCE_DEV=1（或 CUTIA_STANDALONE=0）回退 dev。
+        standalone = has_standalone
 
     bun_cmd = os.environ.get("BUN_CMD", "bun")
 

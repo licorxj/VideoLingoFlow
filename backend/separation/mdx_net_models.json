@@ -10,7 +10,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "Kim_Vocal_1": {
       "file": "Kim_Vocal_1.onnx",
@@ -22,7 +24,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "Kim_Vocal_2": {
       "file": "Kim_Vocal_2.onnx",
@@ -34,7 +38,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "kuielab_a_bass": {
       "file": "kuielab_a_bass.onnx",
@@ -46,7 +52,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "bass"
+      "stem": "bass",
+      "category": "stem",
+      "target": "bass"
     },
     "kuielab_a_drums": {
       "file": "kuielab_a_drums.onnx",
@@ -58,7 +66,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "drums"
+      "stem": "drums",
+      "category": "stem",
+      "target": "drums"
     },
     "kuielab_a_other": {
       "file": "kuielab_a_other.onnx",
@@ -70,7 +80,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "other",
+      "category": "stem",
+      "target": "other"
     },
     "kuielab_a_vocals": {
       "file": "kuielab_a_vocals.onnx",
@@ -82,7 +94,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "kuielab_b_bass": {
       "file": "kuielab_b_bass.onnx",
@@ -94,7 +108,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "bass"
+      "stem": "bass",
+      "category": "stem",
+      "target": "bass"
     },
     "kuielab_b_drums": {
       "file": "kuielab_b_drums.onnx",
@@ -106,7 +122,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "drums"
+      "stem": "drums",
+      "category": "stem",
+      "target": "drums"
     },
     "kuielab_b_other": {
       "file": "kuielab_b_other.onnx",
@@ -118,7 +136,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "other",
+      "category": "stem",
+      "target": "other"
     },
     "kuielab_b_vocals": {
       "file": "kuielab_b_vocals.onnx",
@@ -130,7 +150,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "Reverb_HQ_By_FoxJoy": {
       "file": "Reverb_HQ_By_FoxJoy.onnx",
@@ -142,7 +164,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "reverb"
+      "stem": "reverb",
+      "category": "enhancement",
+      "target": "reverb"
     },
     "UVR-MDX-NET_Crowd_HQ_1": {
       "file": "UVR-MDX-NET_Crowd_HQ_1.onnx",
@@ -154,7 +178,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "crowd",
+      "category": "vocal",
+      "target": "crowd"
     },
     "UVR_MDXNET_1_9703": {
       "file": "UVR_MDXNET_1_9703.onnx",
@@ -166,7 +192,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "UVR_MDXNET_2_9682": {
       "file": "UVR_MDXNET_2_9682.onnx",
@@ -178,7 +206,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "UVR_MDXNET_3_9662": {
       "file": "UVR_MDXNET_3_9662.onnx",
@@ -190,7 +220,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "UVR-MDX-NET-Inst_1": {
       "file": "UVR-MDX-NET-Inst_1.onnx",
@@ -202,7 +234,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR-MDX-NET-Inst_2": {
       "file": "UVR-MDX-NET-Inst_2.onnx",
@@ -214,7 +248,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR-MDX-NET-Inst_3": {
       "file": "UVR-MDX-NET-Inst_3.onnx",
@@ -226,7 +262,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR-MDX-NET-Inst_HQ_1": {
       "file": "UVR-MDX-NET-Inst_HQ_1.onnx",
@@ -238,7 +276,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR-MDX-NET-Inst_HQ_2": {
       "file": "UVR-MDX-NET-Inst_HQ_2.onnx",
@@ -250,7 +290,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR-MDX-NET-Inst_HQ_3": {
       "file": "UVR-MDX-NET-Inst_HQ_3.onnx",
@@ -262,7 +304,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR-MDX-NET-Inst_HQ_4": {
       "file": "UVR-MDX-NET-Inst_HQ_4.onnx",
@@ -274,7 +318,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR-MDX-NET-Inst_HQ_5": {
       "file": "UVR-MDX-NET-Inst_HQ_5.onnx",
@@ -286,7 +332,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "instrument"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR-MDX-NET-Inst_Main": {
       "file": "UVR-MDX-NET-Inst_Main.onnx",
@@ -298,7 +346,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR_MDXNET_KARA": {
       "file": "UVR_MDXNET_KARA.onnx",
@@ -310,7 +360,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR_MDXNET_KARA_2": {
       "file": "UVR_MDXNET_KARA_2.onnx",
@@ -322,7 +374,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "instrument",
+      "category": "stem",
+      "target": "instrument"
     },
     "UVR_MDXNET_Main": {
       "file": "UVR_MDXNET_Main.onnx",
@@ -334,7 +388,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "UVR-MDX-NET-Voc_FT": {
       "file": "UVR-MDX-NET-Voc_FT.onnx",
@@ -346,7 +402,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     },
     "UVR_MDXNET_9482": {
       "file": "UVR_MDXNET_9482.onnx",
@@ -358,7 +416,9 @@
       "denoise": true,
       "margin": 44100,
       "chunks": 15,
-      "stem": "vocals"
+      "stem": "vocals",
+      "category": "vocal",
+      "target": "vocals"
     }
   }
 }

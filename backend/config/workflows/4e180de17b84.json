@@ -40,7 +40,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 564
+        "height": 503
       },
       "selected": false,
       "dragging": false,
@@ -69,7 +69,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 310
+        "height": 277
       },
       "selected": false,
       "dragging": false,
@@ -86,12 +86,10 @@
         "nodeType": "summarize",
         "label": "内容总结",
         "config": {},
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/summarize_result_node_1_1780948332813.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -108,7 +106,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 398
+        "height": 286
       },
       "selected": false,
       "dragging": false,
@@ -130,13 +128,10 @@
           "processing_language": "from_input",
           "target_language": "from_input"
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/translation_direct_node_1_1780954897405_zh.json",
-          "reflect": "cache/translation_reflect_node_1_1780954897405_zh.json"
-        },
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": "",
@@ -153,7 +148,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 532
+        "height": 373
       },
       "selected": false,
       "dragging": false,
@@ -182,7 +177,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 478
+        "height": 444
       },
       "selected": false,
       "dragging": false,
@@ -212,14 +207,11 @@
           "overwrite_generate": false,
           "voice_role_1": "白桦"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "cache/dub_task_node_1_1781709944783.json",
-          "pandas": "cache/dub_task_node_1_1781709944783.csv"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -235,7 +227,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 586
+        "height": 423
       },
       "selected": false,
       "dragging": false,
@@ -258,20 +250,17 @@
           "dialect_name": "四川话",
           "min_sentence_duration": 0.2
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "cache/dub_task_node_1_1781709944783.json",
-          "pandas": "cache/dub_task_node_1_1781709944783.csv"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 442
+        "height": 302
       },
       "selected": false,
       "dragging": false,
@@ -294,23 +283,17 @@
           "gap_threshold": "0.5",
           "fast_limit": "1.5"
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "audio": "output/dub_node_1_1781810867151.wav",
-          "dub_srt": "output/dub_node_1_1781810867151.srt",
-          "dub_bilingual_srt": "output/dub_bilingual_node_1_1781810867151.srt",
-          "配音任务单": "cache\\dub_task_node_1_1781709944783.csv",
-          "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\input_video.mkv"
-        },
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 845
+        "height": 569
       },
       "selected": false,
       "dragging": false,
@@ -335,19 +318,17 @@
           "preset_id": "单语-白-半透底",
           "mute_original": true
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "video": "output/video_with_dub_node_1_1781939413425.mp4"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 655
+        "height": 516
       },
       "selected": false,
       "dragging": false,
@@ -368,14 +349,11 @@
           "format": "wav",
           "model": "mdx"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "audio": "output/vocals_node_2_1781973904798.wav",
-          "background": "output/background_node_2_1781973904798.wav"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -391,7 +369,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 469
+        "height": 316
       },
       "selected": false,
       "dragging": false,
@@ -425,7 +403,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 403
+        "height": 183
       },
       "selected": false,
       "dragging": false,
@@ -449,14 +427,11 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "result": "output/LLM_node_1_1782422054967.json",
-          "text": "{\n  \"tittle\": \"NX点创建详解\",\n  \"hook\": \"掌握点创建技巧，提升建模效率\",\n  \"summary\": \"本视频教程由Santosh讲解在NX软件中创建3D点的多种方法。内容涵盖推断点、光标位置、现有点、端点、曲线上点、面上点和两点之间点等常用选项，重点介绍了推断点的智能性，能自动结合多种创建方式，是工作中最常用的技巧。视频强调点在曲面建模中的重要性，有助于构建复杂几何形状，提升零件建模精度。通过实例演示操作步骤，并鼓励观众实践这些方法以增强建模技能。教程结尾提醒，点的创建是CAD建模的基础，熟练掌握能大幅提高工作效率。如有疑问，欢迎在评论区交流。\"\n}"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -472,7 +447,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 603
+        "height": 439
       },
       "selected": false,
       "dragging": false,
@@ -499,20 +474,17 @@
           "ai_prompt": "你是一位专业的短视频封面设计师和文生图提示词专家。请根据以下视频内容信息，设计一张吸引人的短视频封面画面，并输出详细的文生图提示词。\n\n要求：\n1. 画面风格：适合短视频平台的视觉风格，色彩鲜明、对比强烈，具有视觉冲击力\n2. 标题字体：主标题使用粗体的毛笔手写体，笔触飘逸，添加少量的粒子消散效果。副标题可以使用更正式的机器字体，字体风格与内容主题匹配。\n3. 标题颜色：根据画面整体色调选择高对比度的颜色，确保可读性。\n4. 标题位置：主标题居中，可横版也可竖版，副标题在主标题下方或者侧面，不遮挡画面主体\n5. 背景融合：标题文字与图片元素自然融合，标题文字可使用阴影、描边增强可读性，\n6. 画面构图：简洁大气，留出标题空间，主体突出\n\n请直接输出文生图提示词（中文），不需要额外解释。提示词应包含画面描述、风格、色调、构图、文字排版等完整信息。提示词使用##包裹。",
           "custom_prompt": "A visually striking short video cover image, cinematic style, vibrant colors, bold composition. Main title \"{title}\" displayed prominently in large bold white text with dark shadow, centered upper area. Subtitle \"{subtitle}\" in smaller elegant font below the main title. Dynamic background with rich textures and depth of field, professional digital art quality, 4K resolution."
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "prompt": "output/cover_prompt_node_1_1782501714759.txt",
-          "text": "A professional YouTube thumbnail for a CAD tutorial, featuring a 3D mechanical part with highlighted points in a NX software interface, high contrast between a dark blue background and bright yellow and white points, main title 'NX点创建详解' in large bold white font centered at the top, subtitle '掌握点创建技巧，提升建模效率' in smaller white font below the main title, studio lighting to emphasize the 3D model, sharp focus, clean and modern digital art style."
-        },
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 470
+        "height": 321
       },
       "selected": false,
       "dragging": false,
@@ -541,14 +513,11 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_3x4"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "images": "['output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png']",
-          "text": "output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png"
-        },
+        "outputs": {},
         "error": "",
         "note": "竖图封面",
         "workbench_url": "",
@@ -565,7 +534,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 725
+        "height": 520
       },
       "selected": false,
       "dragging": false,
@@ -584,19 +553,17 @@
         "config": {
           "fit": "contain"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "skipped": true
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 436
+        "height": 247
       },
       "selected": false,
       "dragging": false,
@@ -619,7 +586,7 @@
           "avoid_subtitles": true
         },
         "status": "completed",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -630,7 +597,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 399
+        "height": 359
       },
       "selected": false,
       "dragging": false,
@@ -657,20 +624,17 @@
           "ai_prompt": "你是一位专业的短视频封面设计师和文生图提示词专家。请根据以下视频内容信息，设计一张吸引人的短视频封面画面，并输出详细的文生图提示词。\n\n要求：\n1. 画面风格：适合短视频平台的视觉风格，色彩鲜明、对比强烈，具有视觉冲击力\n2. 标题字体：主标题使用粗体大字，醒目突出，字体风格与内容主题匹配\n3. 标题颜色：根据画面整体色调选择高对比度的颜色，确保可读性\n4. 标题位置：主标题居中或偏上，副标题在主标题下方，不遮挡画面主体\n5. 背景融合：标题与背景自然融合，可使用阴影、描边或半透明底色增强可读性\n6. 画面构图：简洁大气，留出标题空间，主体突出\n\n请直接输出文生图提示词（英文），不需要额外解释。提示词应包含画面描述、风格、色调、构图、文字排版等完整信息。",
           "custom_prompt": "任务：\n1：首先，去除画面上的文字水印，保持画面纯净无文字元素；\n2：为画面加上标题和副标题，制作为电影海报；\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“{title}” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“{subtitle}” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "prompt": "output/cover_prompt_node_2_1782640528572.txt",
-          "text": "任务：\n1：首先，去除画面上的文字水印，保持画面纯净无文字元素；\n2：为画面加上标题和副标题，制作为电影海报；\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“NX点创建详解” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“掌握点创建技巧，提升建模效率” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 498
+        "height": 348
       },
       "selected": false,
       "dragging": false,
@@ -699,14 +663,11 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_byfram"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "images": "['output/cover_gen_byfram_1_gen_image_node_3_1782641542678.jpg']",
-          "text": "output/cover_gen_byfram_1_gen_image_node_3_1782641542678.jpg"
-        },
+        "outputs": {},
         "error": "",
         "note": "横图封面",
         "workbench_url": "",
@@ -723,7 +684,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 725
+        "height": 520
       },
       "selected": false,
       "dragging": false,
@@ -752,7 +713,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 411
+        "height": 227
       },
       "selected": false,
       "dragging": false,
@@ -786,14 +747,11 @@
           ],
           "is_original": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "{\n  \"publish_params\": {\n    \"title\": \"NX点创建全攻略：智能推断点，效率倍增\",\n    \"description\": \"本视频由Santosh详解NX软件中3D点创建的多种方法，涵盖推断点、光标位置、现有点等7种技巧。推断点能智能结合多种创建方式，是提升建模效率的关键。通过实例演示操作步骤，帮助你掌握基础技能，增强建模精度和零件复杂度构建能力。\",\n    \"tags\": [\n      \"NX教程\",\n      \"3D建模\",\n      \"点创建\",\n      \"CAD基础\",\n      \"效率提升\"\n    ],\n    \"publish_mode\": \"local_draft\",\n    \"schedule_time\": null,\n    \"is_original\": true,\n    \"video_orientation\": \"landscape\",\n    \"video_path\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\f0b40d97ecfe4355af45c220833bfbae\\\\output/video_with_dub_node_1_1781939413425.mp4\",\n    \"cover_landscape\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\f0b40d97ecfe4355af45c220833bfbae\\\\output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png\",\n    \"cover_portrait\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\f0b40d97ecfe4355af45c220833bfbae\\\\output/cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg\",\n    \"title_affix\": \"\",\n    \"title_affix_mode\": \"suffix\",\n    \"desc_affix\": \"\",\n    \"desc_affix_mode\": \"suffix\",\n    \"platform_type\": 3,\n    \"platform_key\": \"douyin\",\n    \"account_ids\": [\n      \"2\",\n      \"3\",\n      \"4\",\n      \"5\"\n    ]\n  },\n  \"platform_type\": 3,\n  \"total_accounts\": 4,\n  \"success\": 1,\n  \"failed\": 0,\n  \"results\": [\n    {\n      \"status\": \"success\",\n      \"result\": {\n        \"code\": 200,\n        \"data\": {\n          \"id\": 72,\n          \"title\": \"NX点创建全攻略：智能推断点，效率倍增\"\n        }\n      }\n    }\n  ],\n  \"errors\": null\n}",
-          "result_file": "output/publish_result_node_1_1782672877872.json"
-        },
+        "outputs": {},
         "error": "",
         "note": "发布平台",
         "workbench_url": "",
@@ -810,7 +768,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 880
+        "height": 658
       },
       "selected": false,
       "dragging": false,
@@ -834,14 +792,11 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "result": "output/LLM_node_1_1782725550457.json",
-          "text": "{\n  \"title\": \"NX点创建全攻略：智能推断点，效率倍增\",\n  \"description\": \"本视频由Santosh详解NX软件中3D点创建的多种方法，涵盖推断点、光标位置、现有点等7种技巧。推断点能智能结合多种创建方式，是提升建模效率的关键。通过实例演示操作步骤，帮助你掌握基础技能，增强建模精度和零件复杂度构建能力。\",\n  \"tags\": [\n    \"NX教程\",\n    \"3D建模\",\n    \"点创建\",\n    \"CAD基础\",\n    \"效率提升\"\n  ]\n}"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -857,7 +812,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 603
+        "height": 439
       },
       "selected": false,
       "dragging": false,
@@ -882,14 +837,14 @@
         "message": "Completed",
         "outputs": {
           "text": "cache/task_name.txt",
-          "translated": "(03)-UG-NX-初学者创建点_NX-2306教程"
+          "translated": "03-Unigraphics-NX-初学者创建点-NX-2306-教程"
         },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 302
+        "height": 274
       },
       "selected": false,
       "dragging": false,
@@ -908,19 +863,17 @@
         "config": {
           "relative_path": "cache\\task_name.txt"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "output": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\task_name.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 309
+        "height": 206
       },
       "selected": false,
       "dragging": false,
@@ -941,19 +894,17 @@
           "value_source": "auto",
           "custom_value": ""
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "json": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\output/LLM_node_1_1782725550457.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 437
+        "height": 318
       },
       "selected": false,
       "dragging": false,
@@ -988,7 +939,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 439
+        "height": 387
       },
       "selected": false,
       "dragging": false,
@@ -1023,7 +974,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 439
+        "height": 387
       },
       "selected": false,
       "dragging": false,
@@ -1040,19 +991,17 @@
         "nodeType": "asr_result_validate",
         "label": "ASR结果校验",
         "config": {},
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "json": "cache/asr_result_node_2_1788054290141.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 231
+        "height": 137
       },
       "selected": false,
       "dragging": false,
@@ -1076,19 +1025,17 @@
           "output_format": "wav",
           "custom_command": ""
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "audio": "output/denoised_audio_node_9_1788017295074.wav"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 490
+        "height": 364
       },
       "selected": false,
       "dragging": false,
@@ -1119,13 +1066,11 @@
           "post_alignment": false,
           "post_diarization": false
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/asr_result_node_2_1788054290141.json"
-        },
+        "outputs": {},
         "error": "",
         "logLines": [
           "[ASR PostProcess] diarization_enabled=False, diarization_engine=pyannote",
@@ -1141,7 +1086,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 570
+        "height": 437
       },
       "selected": false,
       "dragging": false,
@@ -1176,7 +1121,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 399
+        "height": 359
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1196,19 +1141,17 @@
           "mode": "key",
           "key_expr": "text"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\output\\json2text_node_1_1788530708958.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 374
+        "height": 261
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1239,13 +1182,11 @@
           "post_alignment": true,
           "post_diarization": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/asr_result_node_2_1788530964170.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -1261,7 +1202,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 570
+        "height": 437
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1291,20 +1232,17 @@
           "merge_gap_enabled": false,
           "pause_split_enabled": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/sentences_node_3_1788531005833.json",
-          "text": "cache/sentences_text_node_3_1788531005833.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 671
+        "height": 503
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1336,7 +1274,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 408
+        "height": 372
       },
       "dragHandle": ".wf-node-drag-handle",
       "selected": false,
@@ -1359,19 +1297,17 @@
           "punctuation_replace_mode": "space",
           "processing_language": "from_target"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "original": "output/dub_asr_subtitles_node_6_1788533469576.srt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 464
+        "height": 340
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1388,19 +1324,19 @@
         "nodeType": "asr_result_validate",
         "label": "ASR结果校验",
         "config": {},
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "json": "cache/sentences_node_3_1788531005833.json"
-        },
+        "outputs": {},
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 231
-      }
+        "height": 137
+      },
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_3_1788584414700",
@@ -1432,21 +1368,119 @@
           "audio_format": "wav",
           "audio_bitrate": "192"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "audio": "cache\\track_mix_node_3_1788584414700.wav"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 711
+        "height": 562
       },
       "selected": false,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_1_1789405925581",
+      "type": "workflow",
+      "position": {
+        "x": 3255,
+        "y": 255
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_concat",
+        "label": "视频拼接",
+        "config": {
+          "segment_order": [
+            "segment1",
+            "main",
+            "segment2",
+            "segment3"
+          ],
+          "scale_mode": "stretch",
+          "cover_position": "start",
+          "cover_duration": 3,
+          "output_format": "mp4"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 468
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_2_1789406039919",
+      "type": "workflow",
+      "position": {
+        "x": 1875,
+        "y": 240
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_asset_library",
+        "label": "视频素材库",
+        "config": {
+          "source": "08afae097930474d8d1f7232122e28fb",
+          "asset_name": "",
+          "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Cmaterials%5Cvideos%5C40668434df3e4882b820d7ab2b816a2c.mp4"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 413
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1789406114242",
+      "type": "workflow",
+      "position": {
+        "x": 2490,
+        "y": 315
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_asset_library",
+        "label": "视频素材库",
+        "config": {
+          "source": "ff2d902c728d4d4a8bbdbddc7e6766db",
+          "asset_name": "",
+          "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Cmaterials%5Cvideos%5C01f72cbdabdf493faf1ded64c9327122.mp4"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 413
+      },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
     }
@@ -1477,13 +1511,14 @@
       "target": "node_3_1781212794939",
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1780590163157out-video-node_3_1781212794939in-video",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
       "animated": false,
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#6366f1",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1522,21 +1557,6 @@
     },
     {
       "type": "smoothstep",
-      "animated": false,
-      "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781939413425",
-      "sourceHandle": "out-video",
-      "target": "node_2_1781987851660",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1781939413425out-video-node_2_1781987851660in-video",
-      "selected": false
-    },
-    {
-      "type": "smoothstep",
       "style": {
         "stroke": "#8b5cf6",
         "strokeWidth": 2,
@@ -1547,7 +1567,8 @@
       "target": "node_1_1782507205161",
       "targetHandle": "in-text",
       "id": "xy-edge__node_1_1782501714759out-prompt-node_1_1782507205161in-text",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1561,7 +1582,8 @@
       "target": "node_1_1782509281196",
       "targetHandle": "in-image",
       "id": "xy-edge__node_1_1782507205161out-text-node_1_1782509281196in-image",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1575,7 +1597,8 @@
       "target": "node_2_1782640528572",
       "targetHandle": "in-json",
       "id": "xy-edge__node_1_1782422054967out-result-node_2_1782640528572in-json",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1619,7 +1642,8 @@
       "target": "node_5_1782654274362",
       "targetHandle": "in-image",
       "id": "xy-edge__node_3_1782641542678out-text-node_5_1782654274362in-image",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1637,19 +1661,6 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781939413425",
-      "sourceHandle": "out-video",
-      "target": "node_1_1782672877872",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1781939413425out-video-node_1_1782672877872in-video"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
         "stroke": "#6366f1",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -1659,7 +1670,8 @@
       "target": "node_1_1782725550457",
       "targetHandle": "in-json",
       "id": "xy-edge__node_1_1782422054967out-result-node_1_1782725550457in-json",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1673,21 +1685,8 @@
       "target": "node_1_1782501714759",
       "targetHandle": "in-json",
       "id": "xy-edge__node_1_1782422054967out-result-node_1_1782501714759in-json",
-      "selected": false
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_3_1782641542678",
-      "sourceHandle": "out-text",
-      "target": "node_1_1782672877872",
-      "targetHandle": "in-cover_landscape",
-      "id": "xy-edge__node_3_1782641542678out-text-node_1_1782672877872in-cover_landscape",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1716,7 +1715,8 @@
       "target": "node_2_1783321957415",
       "targetHandle": "in-input",
       "id": "xy-edge__node_1_1782725550457out-result-node_2_1783321957415in-input",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1730,7 +1730,8 @@
       "target": "node_8_1783325677193",
       "targetHandle": "in-text",
       "id": "xy-edge__node_2_1783321957415out-output-node_8_1783325677193in-text",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1744,7 +1745,8 @@
       "target": "node_8_1783325677193",
       "targetHandle": "in-json",
       "id": "xy-edge__node_1_1782725550457out-result-node_8_1783325677193in-json",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1758,7 +1760,8 @@
       "target": "node_1_1782672877872",
       "targetHandle": "in-json",
       "id": "xy-edge__node_8_1783325677193out-json-node_1_1782672877872in-json",
-      "selected": false
+      "selected": false,
+      "animated": false
     },
     {
       "type": "smoothstep",
@@ -1898,19 +1901,20 @@
       "target": "node_1_1788461823056",
       "targetHandle": "in-video",
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_1_1780590163157out-video-node_1_1788461823056in-video"
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1788461823056",
       "sourceHandle": "out-image",
@@ -1925,19 +1929,19 @@
       "target": "node_1_1788530708958",
       "targetHandle": "in-json",
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_2_1788054290141out-subtitle-node_1_1788530708958in-json"
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1788530708958",
       "sourceHandle": "out-text",
@@ -1947,10 +1951,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_8_1788016850229",
       "sourceHandle": "out-json",
@@ -1960,10 +1964,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780948332813",
       "sourceHandle": "out-subtitle",
@@ -1977,10 +1981,10 @@
       "target": "node_2_1788530964170",
       "targetHandle": "in-asr_audio",
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_1_1781810867151out-audio-node_2_1788530964170in-asr_audio"
     },
@@ -1990,19 +1994,19 @@
       "target": "node_3_1788531005833",
       "targetHandle": "in-subtitle",
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_2_1788530964170out-subtitle-node_3_1788531005833in-subtitle"
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780590163157",
       "sourceHandle": "out-video",
@@ -2012,10 +2016,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_5_1788532246682",
       "sourceHandle": "out-text",
@@ -2025,10 +2029,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#f59e0b",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_6_1788533469576",
       "sourceHandle": "out-original",
@@ -2038,10 +2042,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1788530708958",
       "sourceHandle": "out-text",
@@ -2056,19 +2061,19 @@
       "target": "node_8_1788537377757",
       "targetHandle": "in-json",
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_3_1788531005833out-subtitle-node_8_1788537377757in-json"
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_8_1788537377757",
       "sourceHandle": "out-json",
@@ -2078,10 +2083,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-audio",
@@ -2091,10 +2096,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_9_1788017295074",
       "sourceHandle": "out-audio",
@@ -2105,20 +2111,141 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_3_1788584414700",
       "sourceHandle": "out-audio",
       "target": "node_1_1781939413425",
       "targetHandle": "in-dub",
       "id": "xy-edge__node_3_1788584414700out-audio-node_1_1781939413425in-dub"
+    },
+    {
+      "source": "node_1_1781939413425",
+      "sourceHandle": "out-video",
+      "target": "node_1_1789405925581",
+      "targetHandle": "in-main",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1781939413425out-video-node_1_1789405925581in-main"
+    },
+    {
+      "source": "node_3_1782641542678",
+      "sourceHandle": "out-text",
+      "target": "node_2_1789406039919",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1782641542678out-text-node_2_1789406039919in-any",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "source": "node_2_1789406039919",
+      "sourceHandle": "out-video",
+      "target": "node_3_1789406114242",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1789406039919out-video-node_3_1789406114242in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_2_1789406039919",
+      "sourceHandle": "out-video",
+      "target": "node_1_1789405925581",
+      "targetHandle": "in-segment1",
+      "id": "xy-edge__node_2_1789406039919out-video-node_1_1789405925581in-segment1"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1789406114242",
+      "sourceHandle": "out-video",
+      "target": "node_1_1789405925581",
+      "targetHandle": "in-segment2",
+      "id": "xy-edge__node_3_1789406114242out-video-node_1_1789405925581in-segment2"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1782641542678",
+      "sourceHandle": "out-text",
+      "target": "node_1_1789405925581",
+      "targetHandle": "in-cover",
+      "id": "xy-edge__node_3_1782641542678out-text-node_1_1789405925581in-cover",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789405925581",
+      "sourceHandle": "out-video",
+      "target": "node_2_1781987851660",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1789405925581out-video-node_2_1781987851660in-video"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789405925581",
+      "sourceHandle": "out-video",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1789405925581out-video-node_1_1782672877872in-video"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1782641542678",
+      "sourceHandle": "out-text",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-cover_landscape",
+      "id": "xy-edge__node_3_1782641542678out-text-node_1_1782672877872in-cover_landscape"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-12T13:00:32",
-  "revision": 42
+  "updatedAt": "2026-09-15T02:16:44",
+  "revision": 46
 }

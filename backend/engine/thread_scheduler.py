@@ -52,6 +52,7 @@ BUILTIN_STEP_REGISTRY = {
     "audio_transcode": ("backend.steps.s18_audio_transcode", "StepAudioTranscode"),
     "audio_denoise": ("backend.steps.s_audio_denoise", "StepAudioDenoise"),
     "vocal_separation": ("backend.steps.s16_vocal_separation", "StepVocalSeparation"),
+    "audio_enhance": ("backend.steps.s19_audio_enhance", "S19AudioEnhance"),
     "subtitle_align": ("backend.steps.s07_subtitle_align", "S07SubtitleAlign"),
     "llm_request": ("backend.steps.s_llm_request", "S_LLMRequest"),
     "http_request": ("backend.steps.s_http_request", "S_HttpRequest"),
@@ -91,7 +92,7 @@ FRONTEND_ONLY_NODE_TYPES = {"video_preview", "image_preview"}
 # 这些步骤会加载大模型并做长时间推理（whisperx 对齐、pyannote 说话人识别、
 # funasr VAD、demucs 分离等），在同一进程内会长时间占用 GIL，
 # 饿死单进程 uvicorn 的事件循环线程，导致前端无法与后端通信。
-PROCESS_ISOLATED_NODE_TYPES = {"asr", "vocal_separation", "track_separation", "http_request"}
+PROCESS_ISOLATED_NODE_TYPES = {"asr", "vocal_separation", "track_separation", "audio_enhance", "http_request"}
 BUILTIN_NODE_OUTPUT_IDS = {
     node["id"]: [output.get("id") for output in node.get("outputs", []) if output.get("id")]
     for node in get_builtin_node_types()

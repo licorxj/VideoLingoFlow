@@ -284,9 +284,16 @@ async def read_file(path: str, task_id: Optional[str] = None):
 
 @router.get("/stream")
 async def stream_file(path: str, task_id: Optional[str] = None, request: Request = None):
-    """Stream a file (video, audio, image) for preview with Range support."""
-    from fastapi.responses import StreamingResponse
+    """Stream a file (video, audio, image) for preview with Range support.
+
+    缓存策略：协商缓存（no-cache + ETag/Last-Modified），而非 max-age。
+    文件内容变化（mtime/大小变，如配音重生）时服务端回 200 新字节；
+    未变化时回 304（无 body），既不重复下载也绝不会把旧文件给前端。
+    不依赖前端的 t=<tick> 查询参数是否更新，任何同 URL 内容变更都能正确刷新。
+    """
+    from fastapi.responses import StreamingResponse, Response
     import mimetypes
+    from email.utils import formatdate, parsedate_to_datetime
 
     safe = _stream_path(path, task_id)
     if not os.path.exists(safe):
@@ -299,7 +306,30 @@ async def stream_file(path: str, task_id: Optional[str] = None, request: Request
         mime = "application/octet-stream"
 
     file_size = os.path.getsize(safe)
-    range_header = request.headers.get("range")
+    mtime = os.path.getmtime(safe)
+    etag = f'"{file_size}-{int(mtime)}"'
+    last_modified = formatdate(mtime, usegmt=True)
+
+    # 协商缓存：内容未变则回 304，让浏览器用缓存
+    if request:
+        if request.headers.get("if-none-match") == etag:
+            return Response(status_code=304, headers={"ETag": etag, "Last-Modified": last_modified})
+        ims = request.headers.get("if-modified-since")
+        if ims:
+            try:
+                if parsedate_to_datetime(ims).timestamp() >= int(mtime):
+                    return Response(status_code=304, headers={"ETag": etag, "Last-Modified": last_modified})
+            except (TypeError, ValueError):
+                pass
+
+    cache_headers = {
+        "Cache-Control": "no-cache",
+        "ETag": etag,
+        "Last-Modified": last_modified,
+        "Accept-Ranges": "bytes",
+    }
+
+    range_header = request.headers.get("range") if request else None
 
     if range_header:
         # 解析 Range: bytes=start-end
@@ -328,13 +358,13 @@ async def stream_file(path: str, task_id: Optional[str] = None, request: Request
             status_code=206,
             media_type=mime,
             headers={
+                **cache_headers,
                 "Content-Range": f"bytes {range_start}-{range_end}/{file_size}",
-                "Accept-Ranges": "bytes",
                 "Content-Length": str(content_length),
             },
         )
 
-    return FileResponse(safe, media_type=mime)
+    return FileResponse(safe, media_type=mime, headers=cache_headers)
 
 @router.get("/video-info")
 async def video_info(path: str, task_id: Optional[str] = None):

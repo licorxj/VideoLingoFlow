@@ -521,6 +521,74 @@ class S09TTS(BaseStep):
         """获取音频文件的真实时长（秒）"""
         return probe_audio_duration(audio_path)
 
+    @staticmethod
+    def _collect_incomplete_segments(segments: List[Dict], task_dir: str) -> List[int]:
+        """收集配音不完整的片段索引。
+
+        判定条件（满足其一即视为不完整）：
+          - 音频文件不存在，或大小为空（size <= 0）；
+          - real_duration 未写回或 <= 0（合成/调速后未正确回写真实时长）。
+
+        用于合成结束、调速结束两次完整性校验，避免“部分片段缺失或静音
+        却静默标记节点完成”带入下游合并。
+        """
+        missing = []
+        for i, seg in enumerate(segments):
+            audio_rel = seg.get("audio_file", "")
+            audio_path = audio_rel if os.path.isabs(audio_rel) else os.path.join(task_dir, audio_rel)
+            try:
+                size_ok = os.path.exists(audio_path) and os.path.getsize(audio_path) > 0
+            except OSError:
+                size_ok = False
+            try:
+                dur = float(seg.get("real_duration", 0) or 0)
+            except (TypeError, ValueError):
+                dur = 0.0
+            if not size_ok or dur <= 0:
+                missing.append(i)
+        return missing
+
+    def _regenerate_incomplete_segments(self, segments: List[Dict], task_dir: str,
+                                        tts_config: dict, ref_map: Dict[int, str],
+                                        missing: List[int], callback=None) -> List[int]:
+        """对不完整的配音片段做一轮补充生成。
+
+        逐个删除可能缺失/损坏的旧文件后重新合成（含 1 次重试），成功者回写
+        real_duration。返回最终仍不完整的片段索引，供调用方决定抛错。
+        """
+        if not missing:
+            return []
+        print(f"\n[TTTS] 补充生成 {len(missing)} 个不完整片段...")
+        still_missing = []
+        for i in missing:
+            seg = segments[i]
+            audio_rel = seg.get("audio_file", "")
+            audio_path = audio_rel if os.path.isabs(audio_rel) else os.path.join(task_dir, audio_rel)
+            # 从干净状态重合成：删除缺失/损坏/静音的旧文件
+            if os.path.exists(audio_path):
+                try:
+                    os.remove(audio_path)
+                except OSError:
+                    pass
+            ok = self._try_real_tts(seg, tts_config, audio_path, task_dir, ref_map)
+            if not ok:
+                time.sleep(1)
+                ok = self._try_real_tts(seg, tts_config, audio_path, task_dir, ref_map)
+            if ok and os.path.exists(audio_path) and os.path.getsize(audio_path) > 0:
+                real_dur = self._get_audio_duration(audio_path)
+                if real_dur > 0:
+                    seg["real_duration"] = round(real_dur, 4)
+                    print(f"  [{seg.get('index', i)}] 补充生成完成: {real_dur:.2f}s")
+                else:
+                    still_missing.append(i)
+                    print(f"  [{seg.get('index', i)}] 补充生成后时长探测为 0，仍不完整")
+            else:
+                still_missing.append(i)
+                print(f"  [{seg.get('index', i)}] 补充生成失败")
+        if callback:
+            callback(98, f"补充生成完成: {len(missing) - len(still_missing)}/{len(missing)} 段恢复")
+        return still_missing
+
     def _match_characters(self, segments: List[Dict], tts_config: dict) -> None:
         """前置角色匹配检查：校验角色数量并填充 read_character_id。
         
@@ -830,18 +898,18 @@ class S09TTS(BaseStep):
 
         # ═══════════ 校验：必须每个片段都生成有效音频，否则抛错 ═══════════
         # 避免“部分片段未合成却静默标记节点完成”的问题。
-        missing = [
-            i for i, seg in enumerate(segments)
-            if not (
-                os.path.exists(os.path.join(task_dir, seg.get("audio_file", "")))
-                and os.path.getsize(os.path.join(task_dir, seg.get("audio_file", ""))) > 0
-            )
-        ]
+        # 判定：音频文件存在且非空，且 real_duration 已正确回写（>0）。
+        missing = self._collect_incomplete_segments(segments, task_dir)
         if missing:
-            raise RuntimeError(
-                f"[TTS] 有 {len(missing)} 个配音片段未生成有效音频"
-                f"（段落索引: {missing}），请检查 TTS 引擎配置、参考音频与网络后重试。"
+            # 先对缺失/静音片段做一轮补充生成，失败再抛错
+            missing = self._regenerate_incomplete_segments(
+                segments, task_dir, tts_config, ref_map, missing, callback
             )
+            if missing:
+                raise RuntimeError(
+                    f"[TTS] 有 {len(missing)} 个配音片段未生成有效音频"
+                    f"（段落索引: {missing}），请检查 TTS 引擎配置、参考音频与网络后重试。"
+                )
 
         # 无时间戳模式：参考音频按生成配音的真实时长顺序切割（per_segment 克隆用）
         if untimed and tts_config["mode"] in ["clone", "controllable_clone"] \
@@ -883,6 +951,22 @@ class S09TTS(BaseStep):
                 print(f"[S09] 调速重生成/缩减字幕异常: {e}")
                 import traceback
                 traceback.print_exc()
+
+        # ═══════════ 调速/重配后二次完整性校验 ═══════════
+        # 调速重生成与 AI 缩减重配会先删除旧音频再重新合成，若失败会留下
+        # 缺失/静音文件；此时必须再次校验，避免带着破损片段进入下游合并。
+        # 判定标准与合成后一致：音频存在且非空，且 real_duration > 0。
+        missing = self._collect_incomplete_segments(segments, task_dir)
+        if missing:
+            # 先对不完整片段做一轮补充生成，失败再抛错
+            missing = self._regenerate_incomplete_segments(
+                segments, task_dir, tts_config, ref_map, missing, callback
+            )
+            if missing:
+                raise RuntimeError(
+                    f"[TTS] 调速/字幕缩减后有 {len(missing)} 个配音片段不完整"
+                    f"（段落索引: {missing}），请检查 TTS 引擎配置、参考音频与网络后重试。"
+                )
 
         # 无时间戳模式：根据生成配音的真实时长生成顺序时间戳，供下游合并对齐
         if untimed:

@@ -145,7 +145,7 @@ export interface ConfigField {
 export interface NodeTypeDef {
   id: string;
   name: string;
-  category: "io" | "preview" | "audio" | "video" | "cutia" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "agent" | "utility" | "file" | "group_node" | "input" | "process" | "ai" | "output" | "publish";
+  category: "io" | "preview" | "audio" | "asset" | "video" | "cutia" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "agent" | "utility" | "file" | "group_node" | "input" | "process" | "ai" | "output" | "publish";
   description: string;
   icon: string;
   color: string;

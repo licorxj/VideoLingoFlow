@@ -28,11 +28,12 @@ import {
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
   Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
-  Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces,
+  Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces, ListMusic,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
 import SubtitleEditorDialog from "./SubtitleEditorDialog";
+import DubCheckDialog from "./DubCheckDialog";
 import { LcwrNodeControls, LcwrRegionSummary, LcwrWatermarkEditor } from "./LcwrWatermarkEditor";
 import { SubtitleFindEditor } from "./SubtitleFindEditor";
 import { ImageMaskEditor } from "./ImageMaskEditor";
@@ -47,7 +48,7 @@ const ICON_MAP: Record<string, any> = {
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
   Eraser, Type, Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
-  Search, PencilLine, PackagePlus, Database, Braces,
+  Search, PencilLine, PackagePlus, Database, Braces, ListMusic,
 };
 
 /** 节点头部顶栏：只有在该元素上按下鼠标才允许拖动节点，避免正文内框选/拖动误触移动节点 */
@@ -125,6 +126,9 @@ function parseSubtitleEntries(content: string): { start: number; end: number; te
   }
 }
 
+// 节点连接端口尺寸：同时决定视觉大小与鼠标命中区（12px 时太细小，难以点选/拖拽连线）
+const PORT_SIZE = 18;
+
 const CHIP_COLORS: Record<string, string> = {
   video: "#3b82f6",
   audio: "#10b981",
@@ -164,7 +168,11 @@ function GroupWorkflowNodeCard({
   const handleStyle = (portType: string, idx: number, total: number) => ({
     top: ((idx + 1) / (total + 1)) * 100 + "%",
     background: PORT_COLORS[portType as PortType] || "#6366f1",
-    width: 12, height: 12, border: "2px solid white",
+    width: PORT_SIZE,
+    height: PORT_SIZE,
+    border: "2px solid hsl(var(--background))",
+    borderRadius: 9999,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
   });
 
   const saveName = () => {
@@ -2326,6 +2334,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const [qmMailLoading, setQmMailLoading] = useState(false);
   const [subtitleFindOpen, setSubtitleFindOpen] = useState(false);
   const [creationBrowserOpen, setCreationBrowserOpen] = useState(false);
+  const [dubCheckOpen, setDubCheckOpen] = useState(false);
 
   // 头部顶栏既是唯一的节点拖拽手柄，也承担"点击展开/折叠"，需要区分拖动与点击
   const { headerRef, onClickGuarded: onHeaderClick } = useHeaderDragSafeClick(
@@ -2441,7 +2450,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
   // For preview nodes, get paths from upstream outputs or configs
   const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } =
-    (nodeType.id.startsWith("agi_") || nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "image_compare" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
+    (nodeType.id.startsWith("agi_") || nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "image_compare" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask" || nodeType.id === "dub_visual_check") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
 
   // 当前任务 id（调试任务 activeTaskId 或一般/批量任务 taskModeId），用于相对产物路径解析
   const storeActiveTaskId = useWorkflowStore((s) => s.activeTaskId);
@@ -2604,7 +2613,11 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const handleStyle = (portType: string, idx: number, total: number, portColor?: string) => ({
     top: ((idx + 1) / (total + 1)) * 100 + "%",
     background: portColor || PORT_COLORS[portType as PortType] || "#6b7280",
-    width: 12, height: 12, border: "2px solid white",
+    width: PORT_SIZE,
+    height: PORT_SIZE,
+    border: "2px solid hsl(var(--background))",
+    borderRadius: 9999,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.35)",
   });
 
   const hasConfig = nodeType.configFields && nodeType.configFields.length > 0;
@@ -3373,8 +3386,9 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                   if (nodeType.id === "agi_project") { setCreationBrowserOpen(true); }
           else if (nodeType.id === "text_editor") openTextEditor();
                   else if (nodeType.id === "subtitle_editor") openSubtitleEditor();
+                  else if (nodeType.id === "dub_visual_check") setDubCheckOpen(true);
                   else openJsonEditor();
-                }}
+                  }}
               />
             )}
             {/* 片头/片尾跳过（卡片最底部，不受标签页影响，默认 0） */}
@@ -3424,6 +3438,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
             if (nodeType.id === "agi_project") { setCreationBrowserOpen(true); }
           else if (nodeType.id === "text_editor") openTextEditor();
             else if (nodeType.id === "subtitle_editor") openSubtitleEditor();
+            else if (nodeType.id === "dub_visual_check") setDubCheckOpen(true);
             else openJsonEditor();
           }}
         />
@@ -3435,6 +3450,16 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           open={creationBrowserOpen}
           onClose={() => setCreationBrowserOpen(false)}
           creationId={String((upstreamOutputs as any)?.creation_id || nd?.outputs?.creation_id || config.creation_id || "")}
+        />
+      )}
+
+      {/* 配音可视化检查页面 */}
+      {nodeType.id === "dub_visual_check" && (
+        <DubCheckDialog
+          open={dubCheckOpen}
+          onClose={() => setDubCheckOpen(false)}
+          taskId={String(previewTaskId || "")}
+          dubPath={String(upstreamOutputs.json || nd?.outputs?.json || "")}
         />
       )}
 

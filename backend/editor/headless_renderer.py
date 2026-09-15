@@ -11,12 +11,15 @@ postMessage 协议推送任务项目、触发导出，从而在不打开界面�
 
 from __future__ import annotations
 
+import logging
 import os
 import re
 import threading
 import time
 from pathlib import Path
 from typing import Any, Callable, Optional
+
+logger = logging.getLogger(__name__)
 
 # 桥接协议版本，需与 cutia 侧 TASK_PROJECT_BRIDGE_VERSION 一致
 BRIDGE_VERSION = 1
@@ -55,6 +58,7 @@ _READ_STATE_JS = """
     return null;
   };
   return {
+    count: msgs.length,
     ready: last('videolingo:editor-ready'),
     loaded: last('videolingo:load-task-project-complete'),
     loadFailed: last('videolingo:load-task-project-failed'),
@@ -101,6 +105,32 @@ async () => {
     vp9: await probe(VideoEncoder, vCfg('vp09.00.10.08')),
     vp8: await probe(VideoEncoder, vCfg('vp8')),
   };
+}
+"""
+
+# 卡死时 dump 页面内部状态：桥接消息序列 + 素材 video 就绪情况
+_DEBUG_DUMP_JS = """
+() => {
+  const msgs = window.__vlMessages || [];
+  const tail = msgs.slice(-15).map((m) => ({t: m && m.type, p: m && m.progress}));
+  let videos = [];
+  try {
+    const frame = document.getElementById('cutia-frame');
+    const doc = frame && frame.contentDocument;
+    if (doc) {
+      videos = Array.from(doc.querySelectorAll('video')).slice(0, 8).map((v) => ({
+        src: String(v.currentSrc || v.src || '').slice(-60),
+        readyState: v.readyState,
+        networkState: v.networkState,
+        paused: v.paused,
+        duration: v.duration,
+        currentTime: v.currentTime,
+      }));
+    }
+  } catch (e) {
+    videos = ['err:' + (e && e.message ? e.message : String(e))];
+  }
+  return {msgCount: msgs.length, tail, videos, readyState: document.readyState};
 }
 """
 
@@ -152,6 +182,16 @@ def _skip_codec_probe() -> bool:
     """是否跳过导出前的编码器能力预检（误判时可用环境变量关闭）。"""
     flag = (os.environ.get("VIDEOLINGO_RENDER_SKIP_CODEC_PROBE") or "").strip().lower()
     return flag in {"1", "true", "yes", "on"}
+
+
+def _block_external_requests() -> bool:
+    """是否阻断非同源外部请求。
+
+    默认开启：无外网环境下 CDN / 字体请求会一直挂起，导致 Canvas 绘制等待资源、
+    导出流程永久停滞。需要放行时设置 VIDEOLINGO_RENDER_ALLOW_EXTERNAL=1。
+    """
+    flag = (os.environ.get("VIDEOLINGO_RENDER_ALLOW_EXTERNAL") or "").strip().lower()
+    return flag not in {"1", "true", "yes", "on"}
 
 
 def ensure_chromium_installed(progress: Optional[Callable[[int, str], None]] = None) -> None:
@@ -302,6 +342,8 @@ class CutiaHeadlessRenderer:
                     context.on("close", _mark_crash("无头浏览器上下文已关闭"))
                     browser.on("disconnected", _mark_crash("无头浏览器已断开连接（进程被杀或崩溃）"))
 
+                    self._attach_diagnostics(page, context)
+
                     page.route(
                         re.compile(re.escape(HOST_PATH)),
                         lambda route: route.fulfill(
@@ -381,6 +423,66 @@ class CutiaHeadlessRenderer:
         if not delivered:
             raise HeadlessRenderError("宿主页面未找到剪辑工作台 iframe，无法投递消息。")
 
+    # 允许的本地来源：任意端口的回环地址。素材可能由 cutia 独立服务等其他
+    # 本地端口提供，若只放行后端同源地址会误杀这些请求。
+    _LOCAL_URL_PATTERN = re.compile(
+        r"^(?:https?|wss?)://(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?(?:/|$)",
+        re.IGNORECASE,
+    )
+
+    def _route_external(self, route, request) -> None:
+        """只放行本地/内联资源，其余外部请求直接中断，避免无网环境下挂起。"""
+        url = str(getattr(request, "url", "") or "")
+        if (
+            url.startswith(("data:", "blob:", "about:"))
+            or url.startswith(self.base_url)
+            or self._LOCAL_URL_PATTERN.match(url)
+        ):
+            route.continue_()
+            return
+        logger.info("[cutia-render] 拦截外部请求: %s", url[:160])
+        route.abort()
+
+    def _attach_diagnostics(self, page, context) -> None:
+        """把浏览器侧的报错输出到 worker 日志，并按需拦截外部请求。"""
+        def _on_console(msg):
+            if msg.type not in ("error", "warning"):
+                return
+            text = msg.text or ""
+            if "webpack-hmr" in text:
+                return  # dev 模式 HMR 通道被代理拒绝，与渲染无关
+            try:
+                location = (msg.location or {}).get("url") or ""
+            except Exception:  # noqa: BLE001 - location 缺失不影响日志
+                location = ""
+            suffix = f" <- {location[:180]}" if location else ""
+            logger.warning("[cutia-render][console.%s] %s%s", msg.type, text[:300], suffix)
+
+        def _on_page_error(err):
+            logger.warning("[cutia-render][pageerror] %s", err)
+
+        def _on_request_failed(request):
+            url = str(getattr(request, "url", "") or "")
+            logger.warning("[cutia-render][requestfailed] %s -> %s", url[:180], getattr(request, "failure", None))
+
+        page.on("console", _on_console)
+        page.on("pageerror", _on_page_error)
+        page.on("requestfailed", _on_request_failed)
+        if _block_external_requests():
+            try:
+                context.route("**/*", self._route_external)
+            except Exception as exc:  # noqa: BLE001 - 路由挂载失败不影响主流程
+                logger.warning("[cutia-render] 外部请求拦截挂载失败: %s", exc)
+
+    def _dump_state(self, page, reason: str) -> None:
+        """卡死/异常时把页面内部状态写入日志，便于定位停在哪一步。"""
+        try:
+            info = page.evaluate(_DEBUG_DUMP_JS) or {}
+        except Exception as exc:  # noqa: BLE001 - 页面已崩溃时忽略
+            logger.warning("[cutia-render][诊断] %s：无法读取页面状态 %s", reason, exc)
+            return
+        logger.warning("[cutia-render][诊断] %s：%s", reason, info)
+
     def _raise_if_crashed(self, crash_state: Optional[dict]) -> None:
         """浏览器崩溃/断开时立即失败，不再空等到总超时。"""
         if not crash_state:
@@ -435,6 +537,10 @@ class CutiaHeadlessRenderer:
         fail_key: Optional[str] = None,
         crash_state: Optional[dict] = None,
     ) -> dict:
+        # 加载阶段本应很快完成，长时间收不到任何桥接消息即判定停滞
+        stall = min(self.stall_timeout, 180.0)
+        last_count = -1
+        last_activity = time.time()
         while time.time() < deadline:
             self._raise_if_crashed(crash_state)
             state = self._read_state(page)
@@ -442,6 +548,16 @@ class CutiaHeadlessRenderer:
                 return state
             if fail_key and state.get(fail_key):
                 return state
+            count = state.get("count")
+            if isinstance(count, int) and count != last_count:
+                last_count = count
+                last_activity = time.time()
+            elif time.time() - last_activity > stall:
+                self._dump_state(page, f"{message}停滞")
+                raise HeadlessRenderError(
+                    f"{message}停滞：{int(stall)} 秒内没有收到任何剪辑工作台消息（{key} 未到达）。"
+                    "通常是 Cutia 加载素材/项目时挂起，请检查素材能否正常访问，或改用更短的片段重试。"
+                )
             time.sleep(0.4)
         raise HeadlessRenderError(f"{message}超时（等待 {key}）。请确认剪辑工作台服务可用。")
 
@@ -504,6 +620,7 @@ class CutiaHeadlessRenderer:
             if active:
                 last_activity = time.time()
             elif time.time() - last_activity > stall:
+                self._dump_state(page, "无进度终止")
                 raise HeadlessRenderError(self._stall_message(started, last_percent, stall))
 
             time.sleep(0.5)

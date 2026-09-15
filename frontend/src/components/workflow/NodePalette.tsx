@@ -175,9 +175,9 @@ export default function NodePalette({ onAddNode, collapsed, onToggleCollapse }: 
               <div key={cat}>
                 <button
                   onClick={() => toggleCategory(cat)}
-                  className="w-full flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground py-1.5 px-1 rounded-md hover:bg-secondary/50 transition-colors"
+                  className="w-full flex items-center gap-1.5 text-base font-semibold text-muted-foreground hover:text-foreground py-1.5 px-1 rounded-md hover:bg-secondary/50 transition-colors"
                 >
-                  {expanded[cat] ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                  {expanded[cat] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
                   <span style={{ color: cfg.color }}>{cfg.label}</span>
                 </button>
                 {expanded[cat] && (

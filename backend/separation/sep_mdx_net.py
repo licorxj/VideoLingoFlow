@@ -39,6 +39,17 @@ _MODEL_CACHE = os.environ.get(
 _REGISTRY_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mdx_net_models.json")
 _REGISTRY = None
 
+_CAT_LABEL = {"vocal": "人声分离", "stem": "伴奏/乐器分离", "enhancement": "音频增强(去混响/降噪)"}
+_TGT_LABEL = {
+    "vocals": "人声",
+    "crowd": "观众/合唱人声",
+    "instrument": "伴奏/乐器",
+    "bass": "低音",
+    "drums": "鼓组",
+    "other": "其他声部",
+    "reverb": "混响/噪声",
+}
+
 
 def _load_registry():
     global _REGISTRY
@@ -197,8 +208,8 @@ class Predictor:
         # NOTE: reference passed ``self.demix(mix.T)`` here, which is a bug;
         # demix expects the [2, n] layout produced above.
         sources = self.demix(mix)
-        opt = sources  # [2, n] isolated stem
-        return (mix - opt, opt, rate)
+        opt = sources  # [2, n] isolated stem (model output)
+        return (mix, opt, rate)
 
 
 class MDXNetOnnxSeparation(SeparationBase):
@@ -273,10 +284,35 @@ class MDXNetOnnxSeparation(SeparationBase):
         if callback:
             callback(40, "Separating audio (ConvTDFNet)...")
         predictor = Predictor(sess, net, args)
-        background, vocals, rate = predictor.predict(input_path)
+        mix, opt, rate = predictor.predict(input_path)
 
         comp = float(entry.get("compensate", 1.0))
-        vocals = vocals * comp
+        opt = opt * comp
+
+        category = entry.get("category", "vocal")
+        target = entry.get("target", "vocals")
+        # MDX-NET models are 2-stem: ``opt`` is the stem the model was trained to
+        # isolate. Map it to (vocals, background) per what the model actually does,
+        # so non-vocal models (instrument / reverb / etc.) don't get silently
+        # mislabeled as "vocals".
+        if category == "enhancement":
+            # reverb / denoise: opt is the enhanced (clean) audio; mix-opt is the removed part
+            vocals = opt
+            background = mix - opt
+        elif target in ("vocals", "crowd"):
+            vocals = opt
+            background = mix - opt
+        else:
+            # instrument / bass / drums / other: the desired vocals are the complement
+            vocals = mix - opt
+            background = opt
+
+        if category != "vocal" and callback:
+            callback(
+                25,
+                f"提示：模型 {name} 为「{_CAT_LABEL.get(category, category)}」模型，输出非标准人声/伴奏"
+                f"（提取 {_TGT_LABEL.get(target, target)}）",
+            )
 
         if callback:
             callback(80, "Writing output files...")
