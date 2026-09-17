@@ -23,6 +23,7 @@ import subprocess
 
 from backend.steps.base_step import BaseStep
 from backend.utils.srt_to_json import srt_to_segments
+from backend.utils.video_encoder import build_video_encode_args
 
 
 def _ffprobe_duration(video_path: str) -> float:
@@ -40,12 +41,12 @@ def _ffprobe_duration(video_path: str) -> float:
     return 0.0
 
 
-# 输出格式 -> (文件扩展名, ffmpeg 编码参数)
+# 输出格式 -> (文件扩展名, 视频编码器, 音频编码器, 质量值 CRF/CQ)
 _VIDEO_OUT_FORMATS = {
-    "mp4": ("mp4", ["-c:v", "libx264", "-c:a", "aac"]),
-    "mkv": ("mkv", ["-c:v", "libx264", "-c:a", "aac"]),
-    "mov": ("mov", ["-c:v", "libx264", "-c:a", "aac"]),
-    "webm": ("webm", ["-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "30", "-c:a", "libopus"]),
+    "mp4": ("mp4", "libx264", "aac", 23),
+    "mkv": ("mkv", "libx264", "aac", 23),
+    "mov": ("mov", "libx264", "aac", 23),
+    "webm": ("webm", "libvpx-vp9", "libopus", 30),
 }
 
 
@@ -148,7 +149,11 @@ class StepVideoCutBySubtitle(BaseStep):
     def run(self, task_dir, callback=None, cancel_callback=None):
         node_config = getattr(self, "_node_config", {}) or {}
         output_format = (node_config.get("output_format", "mp4") or "mp4").lower()
-        seg_ext, seg_codec_args = _VIDEO_OUT_FORMATS.get(output_format, ("mp4", ["-c:v", "libx264", "-c:a", "aac"]))
+        seg_ext, seg_vcodec, seg_acodec, seg_crf = _VIDEO_OUT_FORMATS.get(
+            output_format, ("mp4", "libx264", "aac", 23)
+        )
+        # 全局「使用显卡加速 (NVIDIA NVENC)」开启时，H.264/HEVC 自动改用硬编码
+        seg_codec_args = build_video_encode_args(seg_vcodec, crf=seg_crf) + ["-c:a", seg_acodec]
         try:
             expand = float(node_config.get("expand", 0.05))
         except (ValueError, TypeError):

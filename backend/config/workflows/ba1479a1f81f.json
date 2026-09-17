@@ -705,9 +705,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 533
+        "height": 537
       },
-      "selected": true,
+      "selected": false,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -727,14 +727,16 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "skipped": true
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 327
+        "height": 407
       },
       "selected": false,
       "dragging": false,
@@ -753,8 +755,8 @@
         "label": "ASR结果校验",
         "config": {},
         "status": "failed",
-        "progress": 0,
-        "message": "",
+        "progress": -1,
+        "message": "permanent",
         "outputs": {},
         "error": "permanent",
         "workbench_url": "",
@@ -762,7 +764,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 188
+        "height": 208
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -1036,7 +1038,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 252
+        "height": 524
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1045,14 +1047,16 @@
       "id": "node_1_1789467046666",
       "type": "workflow",
       "position": {
-        "x": 2730,
-        "y": -1620
+        "x": 2700,
+        "y": -1635
       },
       "selected": false,
       "data": {
         "nodeType": "dub_visual_check",
         "label": "配音审听及微调",
-        "config": {},
+        "config": {
+          "wait_audition": false
+        },
         "status": "pending",
         "disableExecute": false,
         "progress": 0,
@@ -1063,7 +1067,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 205
+        "height": 229
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1228,11 +1232,12 @@
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": false
+        "disableExecute": false,
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 303
+        "height": 383
       },
       "dragHandle": ".wf-node-drag-handle"
     }
@@ -1464,19 +1469,6 @@
       "target": "node_1_1782640383627",
       "targetHandle": "in-srt",
       "id": "xy-edge__node_1_1781200299298out-original-node_1_1782640383627in-srt"
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1781645240103",
-      "sourceHandle": "out-text",
-      "target": "node_1_1781810867151",
-      "targetHandle": "in-audio_manifest",
-      "id": "xy-edge__node_1_1781645240103out-text-node_1_1781810867151in-audio_manifest"
     },
     {
       "source": "node_2_1780807148463",
@@ -1828,10 +1820,23 @@
       "target": "node_5_1789164547575",
       "targetHandle": "in-text",
       "id": "xy-edge__n_mu2w7745l4hqout-text-node_5_1789164547575in-text"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789467046666",
+      "sourceHandle": "out-json",
+      "target": "node_1_1781810867151",
+      "targetHandle": "in-audio_manifest",
+      "id": "xy-edge__node_1_1789467046666out-json-node_1_1781810867151in-audio_manifest"
     }
   ],
   "type": "user",
   "createdAt": "2026-07-08T01:39:55",
-  "updatedAt": "2026-09-16T01:30:05",
-  "revision": 39
+  "updatedAt": "2026-09-16T21:07:17",
+  "revision": 41
 }

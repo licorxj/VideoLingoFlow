@@ -17,6 +17,7 @@ import os
 
 from backend.steps.base_step import BaseStep
 from backend.utils.video_ops import get_video_duration, run_ffmpeg_with_progress
+from backend.utils.video_encoder import build_video_encode_args
 
 # 高度型预置档 -> 目标高度（等比缩放，宽自动取偶）
 _HEIGHT_PRESETS = {
@@ -106,17 +107,11 @@ class S_VideoScale(BaseStep):
         if output_format not in _FORMAT_CODECS:
             raise ValueError(f"不支持的输出格式：{output_format}")
         vcodec, acodec = _FORMAT_CODECS[output_format]
-        cmd += ["-c:v", vcodec]
-
         quality = str(cfg.get("video_quality") or "medium").strip().lower()
         if quality not in _QUALITY_CRF:
             raise ValueError(f"不支持的编码质量档位：{quality}")
-        if vcodec in _CRF_CODECS:
-            cmd += ["-crf", str(_QUALITY_CRF[quality])]
-            if vcodec == "libvpx-vp9":
-                cmd += ["-b:v", "0"]
-        else:  # mpeg4：无 CRF，按 qscale 映射
-            cmd += ["-q:v", str(_QUALITY_QSCALE[quality])]
+        # 全局「使用显卡加速 (NVIDIA NVENC)」开启时，H.264/HEVC 自动改用硬编码
+        cmd += build_video_encode_args(vcodec, quality=quality)
 
         cmd += ["-c:a", acodec, "-b:a", "192k"]
         cmd.append(output_path)

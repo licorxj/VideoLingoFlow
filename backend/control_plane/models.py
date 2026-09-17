@@ -497,7 +497,7 @@ class Credential(TimestampedVersioned, Base):
     name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
     value: Mapped[str] = mapped_column(Text, nullable=False, default="")
     purpose: Mapped[str] = mapped_column(Text, nullable=False, default="")
-    register_url: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    register_url: Mapped[str] = mapped_column(Text, nullable=False, default="", server_default="")
     # 多 key 轮询：value 为 JSON 数组（兼容历史纯文本单 key）；新建默认开启
     rotate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     current_index: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

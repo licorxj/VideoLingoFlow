@@ -140,7 +140,7 @@
     {
       "id": "s07_subtitle_align",
       "name": "译文断句对齐",
-      "description": "将过长的翻译文本和原文同时分割为对齐的多个部分",
+      "description": "原文切分点已确定，只需把译文切成与原文分片对齐的若干部分",
       "placeholders": [
         {
           "tag": "src_lang",
@@ -155,7 +155,7 @@
         {
           "tag": "num_parts",
           "label": "分割份数",
-          "description": "期望分割成几份"
+          "description": "期望分割成几份（等于源文分片数）"
         },
         {
           "tag": "word_limit",
@@ -164,17 +164,22 @@
         },
         {
           "tag": "source_text",
-          "label": "原文",
-          "description": "需要分割的源语言文本"
+          "label": "原文全文",
+          "description": "待切分的源语言整句文本"
+        },
+        {
+          "tag": "source_parts",
+          "label": "原文分片",
+          "description": "已确定切分点的源文分片列表（编号逐行）"
         },
         {
           "tag": "translation",
           "label": "译文",
-          "description": "需要分割的翻译文本"
+          "description": "需要按原文分片切开的翻译文本"
         }
       ],
-      "system_prompt": "You are a professional Netflix subtitle split-and-align expert. Your task is to split BOTH the translation and the source text into aligned parts.\n\n## ABSOLUTE RULES\n1. ONLY CUT, NEVER MODIFY words.\n2. FORBIDDEN: Placeholders like \"(part of...)\" or \"[continued]\". Every part MUST contain REAL text.\n3. FORBIDDEN: Partial cuts. If you cut translation, you MUST cut source at the same position.\n4. Punctuation stays with preceding text.\n5. Return exactly {{ num_parts }} source parts and {{ num_parts }} target parts.\n6. Each target part <= {{ word_limit }} characters.\n\n## Validation Checklist\n- [ ] source_parts length == {{ num_parts }}\n- [ ] target_parts length == {{ num_parts }}\n- [ ] No empty strings\n- [ ] Source parts concatenate to original source\n- [ ] Target parts concatenate to original translation",
-      "user_prompt": "Split BOTH the {{ tgt_lang }} translation AND the {{ src_lang }} source text into exactly {{ num_parts }} aligned parts.\n\nSource Text:\n{{ source_text }}\n\nFull Translation:\n{{ translation }}\n\nReturn this JSON object exactly:\n{\n    \"analysis\": \"brief split explanation\",\n    \"source_parts\": [\"part1\", \"part2\", ...],\n    \"target_parts\": [\"aligned_part1\", \"aligned_part2\", ...]\n}"
+      "system_prompt": "You are a professional Netflix subtitle alignment expert fluent in both {{ src_lang }} and {{ tgt_lang }}.\n\n## Core Task\nThe {{ src_lang }} source text has ALREADY been split into {{ num_parts }} fixed parts (see the user message).\nYour job is to split ONLY the {{ tgt_lang }} translation into exactly {{ num_parts }} parts that line up with those fixed source parts.\n\n## ABSOLUTE RULES - VIOLATION = FAILURE\n1. ONLY CUT, NEVER MODIFY - you may never change, rewrite, add, remove or reorder a single word of the translation.\n2. DO NOT touch the fixed source parts - they are already decided. Only cut the translation.\n3. Cut the translation at the position that corresponds to each source part boundary, so both languages stay in sync.\n4. Punctuation stays with the PRECEDING part - a part must never start with a comma, period or question mark.\n5. Every part must contain REAL text - no placeholders such as \"(part of...)\", \"[continued]\", \"(combined clause)\".\n6. Never merge, summarise, duplicate or drop content.\n7. Keep the parts reasonably balanced; each part should stay within about {{ word_limit }} characters.\n{% raw %}\n## Output Format in JSON\n{\n    \"analysis\": \"Brief note about where and why the translation was cut\",\n    \"target_parts\": [\"aligned_part1\", \"aligned_part2\"]\n}\n{% endraw %}\nProvide ONLY a valid JSON object, no other redundant explanation.",
+      "user_prompt": "### Already-split {{ src_lang }} source parts (FIXED - do not change them)\n{{ source_parts }}\n\n### Full {{ src_lang }} source text\n{{ source_text }}\n\n### Full {{ tgt_lang }} translation (this is the text you must cut)\n{{ translation }}\n\n### Hard Requirements\n1. Return exactly {{ num_parts }} target parts, in order, none of them empty.\n2. Concatenating the target parts MUST give back the full translation, character for character, in order.\n3. Cut at the position that corresponds to each source part boundary; punctuation stays at the END of the preceding part.\n4. Each target part should be at most about {{ word_limit }} characters.\n5. No placeholders, no duplicated content, no explanations.\n{% raw %}\n### Return this JSON object exactly\n{\n    \"analysis\": \"Where and why you cut the translation (brief)\",\n    \"target_parts\": [\"part1\", \"part2\"]\n}\n{% endraw %}"
     },
     {
       "id": "s08_dub_task",

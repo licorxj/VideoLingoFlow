@@ -429,7 +429,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "platform_download",
     "name": "平台视频下载",
-    "category": "process",
+    "category": "network_request",
     "description": "使用 yt-dlp 下载平台视频",
     "icon": "Download",
     "color": "#06b6d4",
@@ -514,9 +514,119 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     "isBuiltIn": true
   },
   {
+    "id": "batch_download",
+    "name": "批量视频下载",
+    "category": "network_request",
+    "description": "使用 yt-dlp 的专辑/播放列表批量下载能力，一次下载整张专辑；产物统一保存到新建的专辑目录，并输出下载产物清单 JSON",
+    "icon": "Download",
+    "color": "#0891b2",
+    "inputs": [
+      {
+        "id": "url",
+        "label": "专辑/播放列表 URL",
+        "type": "url",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "json",
+        "label": "下载产物清单",
+        "type": "json"
+      },
+      {
+        "id": "folder",
+        "label": "产物目录",
+        "type": "text"
+      },
+      {
+        "id": "video",
+        "label": "首个视频",
+        "type": "video"
+      }
+    ],
+    "defaultConfig": {
+      "download_subs": false,
+      "download_cover": false,
+      "resolution": "best",
+      "cookie_file": "",
+      "playlist_items": "",
+      "max_items": 0,
+      "folder_name": ""
+    },
+    "configFields": [
+      {
+        "key": "download_subs",
+        "label": "下载字幕",
+        "type": "checkbox"
+      },
+      {
+        "key": "download_cover",
+        "label": "下载封面",
+        "type": "checkbox"
+      },
+      {
+        "key": "resolution",
+        "label": "下载分辨率",
+        "type": "select",
+        "options": [
+          {
+            "value": "best",
+            "label": "最佳质量"
+          },
+          {
+            "value": "1080p",
+            "label": "1080P"
+          },
+          {
+            "value": "720p",
+            "label": "720P"
+          }
+        ]
+      },
+      {
+        "key": "playlist_items",
+        "label": "下载范围",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空=全部，如 1-10 / 1,3,5",
+        "description": "yt-dlp --playlist-items 表达式，指定下载专辑中的哪些条目"
+      },
+      {
+        "key": "max_items",
+        "label": "最多下载条数",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "max": 1000,
+        "step": 1,
+        "defaultValue": 0,
+        "description": "0 表示不限；按专辑顺序只下载前 N 条"
+      },
+      {
+        "key": "folder_name",
+        "label": "产物文件夹名",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "留空=自动使用专辑标题",
+        "description": "产物统一保存到 output/batch_download/<名称>_<节点id>/"
+      },
+      {
+        "key": "cookie_file",
+        "label": "Cookie 文件",
+        "type": "file",
+        "placeholder": "选择 cookie.txt 文件（可选）",
+        "fileFilter": [
+          "txt"
+        ]
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
     "id": "extract_audio",
     "name": "音频分离",
-    "category": "process",
+    "category": "audio",
     "description": "从视频中分离提取音频",
     "icon": "Music",
     "color": "#10b981",
@@ -542,7 +652,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "vocal_separation",
     "name": "人声分离",
-    "category": "process",
+    "category": "audio",
     "description": "将音频中的人声和背景音乐分离",
     "icon": "Mic2",
     "color": "#8b5cf6",
@@ -616,7 +726,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "audio_enhance",
     "name": "音频增强",
-    "category": "process",
+    "category": "audio",
     "description": "通过音频增强接口/模型处理音频（去混响、降噪、音质增强），输出增强后的音频",
     "icon": "Sparkles",
     "color": "#0ea5e9",
@@ -700,7 +810,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "track_separation",
     "name": "音轨分离",
-    "category": "process",
+    "category": "audio",
     "description": "将音频分离为6轨：人声/贝斯/鼓/吉他/钢琴/其他",
     "icon": "Music2",
     "color": "#8b5cf6",
@@ -791,7 +901,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "audio_transcode",
     "name": "音频质量转码",
-    "category": "process",
+    "category": "audio",
     "description": "转换音频格式、采样率、位深、声道和码率",
     "icon": "AudioLines",
     "color": "#0ea5e9",
@@ -1760,7 +1870,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "merge_sub_video",
     "name": "字幕烧录",
-    "category": "process",
+    "category": "video",
     "description": "将字幕烧录到视频",
     "icon": "Film",
     "color": "#3b82f6",
@@ -1903,7 +2013,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "merge_audio",
     "name": "音视频配音对齐",
-    "category": "process",
+    "category": "audio",
     "description": "基于原视频重新配音后，将配音片段按时间戳对齐到原视频的配音音视频对齐",
     "icon": "Merge",
     "color": "#10b981",
@@ -2017,7 +2127,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "merge_dub",
     "name": "配音拼接",
-    "category": "process",
+    "category": "audio",
     "description": "适用于无时间戳要求的纯文本配音片段的合并，按顺序拼接各段配音音频并生成配音字幕",
     "icon": "Merge",
     "color": "#14b8a6",
@@ -2086,7 +2196,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "merge_dub_video",
     "name": "配音视频合成",
-    "category": "process",
+    "category": "video",
     "description": "将配音音频合成到视频",
     "icon": "Clapperboard",
     "color": "#3b82f6",
@@ -2398,7 +2508,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "watermark",
     "name": "水印添加",
-    "category": "process",
+    "category": "video",
     "description": "为视频添加水印",
     "icon": "Stamp",
     "color": "#6b7280",
@@ -2527,9 +2637,15 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
     "color": "#8b5cf6",
     "inputs": [
       {
+        "id": "asr",
+        "label": "asr格式json",
+        "type": "json",
+        "required": true
+      },
+      {
         "id": "subtitle",
         "label": "翻译结果JSON",
-        "type": "subtitle",
+        "type": "json",
         "required": true
       }
     ],
@@ -3488,7 +3604,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "video_frame_extract",
     "name": "视频抽帧",
-    "category": "process",
+    "category": "video",
     "description": "从视频指定时间点提取帧图片，支持避开字幕",
     "icon": "Camera",
     "color": "#06b6d4",
@@ -3611,6 +3727,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "label": "附加位置",
         "type": "select",
         "colSpan": "half",
+        "defaultValue": "suffix",
         "options": [{"value": "prefix", "label": "前缀"}, {"value": "suffix", "label": "后缀"}]
       },
       {
@@ -3631,6 +3748,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "label": "附加位置",
         "type": "select",
         "colSpan": "half",
+        "defaultValue": "suffix",
         "options": [{"value": "prefix", "label": "前缀"}, {"value": "suffix", "label": "后缀"}]
       },
       {
@@ -3743,6 +3861,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "label": "附加位置",
         "type": "select",
         "colSpan": "half",
+        "defaultValue": "suffix",
         "options": [{"value": "prefix", "label": "前缀"}, {"value": "suffix", "label": "后缀"}]
       },
       {
@@ -3763,6 +3882,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
         "label": "附加位置",
         "type": "select",
         "colSpan": "half",
+        "defaultValue": "suffix",
         "options": [{"value": "prefix", "label": "前缀"}, {"value": "suffix", "label": "后缀"}]
       },
       {
@@ -3821,7 +3941,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "resolve_path",
     "name": "取文件路径",
-    "category": "process",
+    "category": "file",
     "description": "以相对路径拼接出项目文件夹内的特定文件路径",
     "icon": "FolderOpen",
     "color": "#8b5cf6",
@@ -3847,7 +3967,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "json_to_text",
     "name": "JSON转文本",
-    "category": "process",
+    "category": "utility",
     "description": "将JSON转换为文本文件，支持全量转文本或按key表达式取值",
     "icon": "FileText",
     "color": "#f97316",
@@ -3885,7 +4005,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "json_editor",
     "name": "JSON编辑",
-    "category": "process",
+    "category": "utility",
     "description": "按key表达式修改JSON中指定字段的值，覆盖保存原文件",
     "icon": "Edit3",
     "color": "#f97316",
@@ -4244,7 +4364,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "video_split",
     "name": "视频切割",
-    "category": "process",
+    "category": "video",
     "description": "将视频按数量或时长切割为多段，支持静音点切割",
     "icon": "Scissors",
     "color": "#ef4444",
@@ -4656,7 +4776,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "lcwr_watermark_removal",
     "name": "LCWR 去水印",
-    "category": "process",
+    "category": "video",
     "description": "调用 LCWR 本地 API 去除视频/图片中的水印与字幕。需先安装并启动 LCWR 软件（下载地址：https://qinmuzhifang.feishu.cn/wiki/IkBVwfe72iEVLTkhVQ0cW0mvnBc），右键「启动LCWR-API.bat」以管理员身份运行本地 API（默认 http://localhost:1120）",
     "icon": "Eraser",
     "color": "#0ea5e9",
@@ -4709,7 +4829,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "media_to_url",
     "name": "媒体转链接",
-    "category": "process",
+    "category": "network_request",
     "description": "上传本地视频/图片到腾讯云 VOD，返回 URL 及完整媒体详情（尺寸/时长/码率等）保存为 JSON",
     "icon": "CloudUpload",
     "color": "#06b6d4",
@@ -4735,7 +4855,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "online_watermark_removal",
     "name": "在线去水印去字幕",
-    "category": "process",
+    "category": "video",
     "description": "晴沐智坊提供的在线高质量去除视频中的水印服务，使用前确保注册登录晴沐智坊账号，使用将消耗软件的通用积分，确保积分足够视频消耗，1.3分钱每秒。详情访问晴沐hub：https://www.licorxj.online/capability-hub",
     "icon": "Eraser",
     "color": "#8b5cf6",
@@ -4762,7 +4882,7 @@ export const FALLBACK_NODE_TYPES: NodeTypeDef[] = [
   {
     "id": "qm_virtual_mailbox",
     "name": "QM虚拟邮箱",
-    "category": "process",
+    "category": "network_request",
     "description": "通过晴沐智坊虚拟邮箱发送邮件内容到转发目标。费用2分钱/条（投递计费）。详情访问：https://www.licorxj.online/mail-forwarding",
     "icon": "Mail",
     "color": "#10b981",

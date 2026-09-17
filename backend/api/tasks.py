@@ -122,6 +122,13 @@ class ExecuteTaskRequest(BaseModel):
     from_step: Optional[str] = None
 
 
+class ResetRunningRequest(BaseModel):
+    dry_run: bool = False
+    reason: str = "user_requested_reset"
+    auto_resume: bool = False
+    task_ids: Optional[list] = None
+
+
 @router.get("/meta/types")
 async def task_meta_types():
     """可用节点类型元数据（id/label/分类），必须定义在 /{task_id} 之前。"""
@@ -246,6 +253,39 @@ async def cancel_task(task_id: str, reason: str = "user_requested"):
     if task is not None:
         return _deprecated({"success": True, "task_id": task_id, "status": task.status, "cancel_reason": task.cancel_reason})
     raise HTTPException(404, "Task not found")
+
+
+@router.post("/recovery/reset-running")
+async def reset_running_to_pending(req: Optional[ResetRunningRequest] = None):
+    """把卡在未完成状态的任务/节点复位为「等待运行」（节点 pending + 任务 queued）。
+
+    典型场景：后端/worker 重启后，节点进程实际已消失但状态仍停在 running，
+    导致前端既不能继续也无法重跑。复位后用户在前端点「继续/重跑」即按 resume 语义从断点继续。
+    dry_run=true 时只统计会受影响的 task/节点数量，不落库。
+
+    注意：本接口只复位状态，不终止残留进程（PID 可能被系统复用，避免误杀）。
+    """
+    from fastapi.concurrency import run_in_threadpool
+
+    from backend.control_plane.workflow_runtime import reset_unfinished_tasks
+
+    payload = req or ResetRunningRequest()
+    result = await run_in_threadpool(
+        lambda: reset_unfinished_tasks(
+            reason=payload.reason,
+            dry_run=payload.dry_run,
+            task_ids=payload.task_ids,
+            auto_resume=payload.auto_resume,
+        )
+    )
+    return {
+        "success": True,
+        "dry_run": payload.dry_run,
+        "tasks": result.get("tasks", 0),
+        "nodes": result.get("nodes", 0),
+        "task_ids": result.get("task_ids", []),
+        "resumed": result.get("resumed", []),
+    }
 
 
 @router.post("/{task_id}/pause")

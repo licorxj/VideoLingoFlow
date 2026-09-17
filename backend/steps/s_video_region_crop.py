@@ -23,6 +23,7 @@ import os
 import subprocess
 
 from backend.steps.base_step import BaseStep
+from backend.utils.video_encoder import build_video_encode_args
 
 
 def _to_float(value, default=0.0):
@@ -214,7 +215,8 @@ class S_VideoRegionCrop(BaseStep):
                 "-ss", f"{start:.3f}", "-i", video_path,
                 "-t", f"{duration:.3f}",
                 "-vf", vf,
-                "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
+                # 全局「使用显卡加速 (NVIDIA NVENC)」开启时自动改用 h264_nvenc
+                *build_video_encode_args("libx264", crf=18, preset="veryfast"),
                 "-c:a", "copy", "-avoid_negative_ts", "make_zero",
                 "-movflags", "+faststart",
                 out_path,

@@ -28,7 +28,7 @@ import {
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
   Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
-  Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces, ListMusic,
+  Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
@@ -42,13 +42,14 @@ import { SeedanceVideoNode } from "./SeedanceVideoNode";
 import { AudioAssetLibraryNode } from "./AudioAssetLibraryNode";
 import { MaterialLibraryNodeCard } from "@/components/materials/MaterialLibraryNodeCard";
 import { VoiceCharacterNode } from "./VoiceCharacterNode";
+import WorkflowRunnerMappingField from "./WorkflowRunnerMappingField";
 
 const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
   Eraser, Type, Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
-  Search, PencilLine, PackagePlus, Database, Braces, ListMusic,
+  Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes,
 };
 
 /** 节点头部顶栏：只有在该元素上按下鼠标才允许拖动节点，避免正文内框选/拖动误触移动节点 */
@@ -711,10 +712,10 @@ function VideoPreview({ config, videoPath, subtitlePath, listPaths, taskId, onCo
             <span className="bg-black/60 px-2 py-0.5 rounded" style={{ whiteSpace: "pre-line" }}>{currentSub.text}</span>
           </div>
         )}
-        {/* 全屏按钮 */}
+        {/* 全屏按钮：固定在画面右上角 */}
         <button
           onClick={toggleFullscreen}
-          className="absolute bottom-2 right-2 w-7 h-7 rounded-md flex items-center justify-center bg-black/50 text-white/80 hover:bg-black/70 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+          className="absolute top-2 right-2 w-7 h-7 rounded-md flex items-center justify-center bg-black/50 text-white/80 hover:bg-black/70 hover:text-white transition-all opacity-0 group-hover:opacity-100"
           title="全屏播放"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -764,7 +765,28 @@ function VideoPreview({ config, videoPath, subtitlePath, listPaths, taskId, onCo
 function ImagePreview({ config, imagePath, listPaths, taskId, refreshKey }: { config: Record<string, any>; imagePath?: string; listPaths?: string[]; taskId?: string; refreshKey?: string }) {
   const imageSrc = useStableFileUrl(imagePath, taskId, refreshKey);
   const [broken, setBroken] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => { setBroken(false); }, [imageSrc]);
+
+  // 全屏查看（与视频预览器一致，按钮固定在画面右上角）
+  const toggleFullscreen = () => {
+    if (!containerRef.current) return;
+    if (!document.fullscreenElement) {
+      containerRef.current.requestFullscreen().then(() => setIsFullscreen(true)).catch(() => { });
+    } else {
+      document.exitFullscreen().then(() => setIsFullscreen(false)).catch(() => { });
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
+
   // 列表输入：竖向依次展示多张图片（即便未单独连接图片输入也生效）
   if (listPaths && listPaths.length > 0) {
     return (
@@ -787,17 +809,32 @@ function ImagePreview({ config, imagePath, listPaths, taskId, refreshKey }: { co
 
   return (
     <div className="px-3 pb-3 border-t border-border/50 pt-2">
-      <div className="rounded-lg overflow-hidden bg-black/5">
+      <div
+        ref={containerRef}
+        className={`relative rounded-lg overflow-hidden group ${isFullscreen ? "w-full h-full flex items-center justify-center bg-black" : "bg-black/5"}`}
+      >
         {broken ? (
           <div className="grid h-[120px] place-items-center text-[11px] text-muted-foreground/70">预览文件不存在或已删除</div>
         ) : (
-          <img
-            src={imageSrc}
-            alt="Preview"
-            className="w-full max-h-[200px]"
-            style={{ objectFit: config.fit || "contain" }}
-            onError={() => setBroken(true)}
-          />
+          <>
+            <img
+              src={imageSrc}
+              alt="Preview"
+              className={`w-full ${isFullscreen ? "max-h-full" : "max-h-[200px]"}`}
+              style={{ objectFit: config.fit || "contain" }}
+              onError={() => setBroken(true)}
+            />
+            {/* 全屏按钮：固定在画面右上角 */}
+            <button
+              onClick={toggleFullscreen}
+              className="absolute top-2 right-2 w-7 h-7 rounded-md flex items-center justify-center bg-black/50 text-white/80 hover:bg-black/70 hover:text-white transition-all opacity-0 group-hover:opacity-100"
+              title="全屏查看"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+              </svg>
+            </button>
+          </>
         )}
       </div>
     </div>
@@ -952,6 +989,9 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
           allItems = mapOptionList(resData.presets);
         } else if (Array.isArray(resData.voices)) {
           allItems = mapOptionList(resData.voices);
+        } else if (Array.isArray(resData.workflows)) {
+          // 工作流列表：GET /api/workflows 返回 { workflows: [...], groups, membership }
+          allItems = mapOptionList(resData.workflows);
         } else if (Array.isArray(resData[field.key])) {
           // 单设置项按字段 key 直接取可选项（如 resolution -> resData.resolution）
           allItems = mapOptionList(resData[field.key]);
@@ -1965,11 +2005,28 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           }
 
           if (field.type === "select") {
+            // 配置里没有该键时（旧工作流、后新增的字段），不能直接把空串交给 select——
+            // 浏览器对不存在的 value 会显示第一个 option，导致「界面看到 A、实际生效 B」，
+            // 且再选一次首项不会触发 onChange，改动无法保存。这里按
+            // 配置值 → 字段默认值 → 节点默认值 → 首个选项 的顺序解析出真实生效值。
+            const selectOptions = field.options || [];
+            const resolveSelectValue = () => {
+              const raw = config[field.key];
+              if (raw !== undefined && raw !== null && raw !== "") return String(raw);
+              const candidates = [field.defaultValue, (nodeType as any)?.defaultConfig?.[field.key]];
+              for (const candidate of candidates) {
+                if (candidate === undefined || candidate === null) continue;
+                const text = String(candidate);
+                if (selectOptions.some((opt) => String(opt.value) === text)) return text;
+              }
+              return selectOptions.length ? String(selectOptions[0].value) : "";
+            };
+            const selectValue = resolveSelectValue();
             return (
               <div key={field.key} className={fieldSpanClass(field)}>
                 <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
                 <select
-                  value={value}
+                  value={selectValue}
                   onChange={(e) => onConfigChange(field.key, e.target.value)}
                   onPointerDown={(e) => e.stopPropagation()}
                   onWheel={(e) => e.stopPropagation()}
@@ -2222,6 +2279,10 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
 
           if (field.type === "voice-target-list") {
             return <div key={field.key} className={fieldSpanClass(field)}><VoiceTargetListField field={field} value={value} config={config} onConfigChange={onConfigChange} /></div>;
+          }
+
+          if (field.type === "wf-io-mapping") {
+            return <div key={field.key} className={fieldSpanClass(field)}><WorkflowRunnerMappingField field={field} config={config} onConfigChange={onConfigChange} /></div>;
           }
 
           if (field.type === "audio-selector") {

@@ -1,29 +1,45 @@
-import { useEffect } from "react";
+import { lazy, useEffect, type ComponentType } from "react";
 import { Routes, Route } from "react-router-dom";
 import AlertProvider from "./components/ui/AlertProvider";
 import WelcomeModal from "./components/ui/WelcomeModal";
 import AppLayout from "./components/layout/AppLayout";
+// Workbench 是默认落地页，保持同步加载，避免首屏空窗
 import Workbench from "./pages/Workbench";
-import BatchWorkshop from "./pages/BatchWorkshop";
-import History from "./pages/History";
-import Settings from "./pages/Settings";
-import About from "./pages/About";
-import Logs from "./pages/Logs";
-import SocialPublish from "./pages/SocialPublish";
-import LLMRouter from "./pages/llm-router";
-import EditingWorkbench from "./pages/EditingWorkbench";
-import MaterialLibrary from "./pages/MaterialLibrary";
-import CreationCanvas from "./pages/creation-canvas/CreationCanvas";
-import Collaboration from "./pages/Collaboration";
-import Community from "./pages/Community";
-import Guide from "./pages/Guide";
-import { VoiceForgeAssets, VoiceForgeHome, VoiceForgeSettings, VoiceForgeVoices, VoiceForgeWorkspace } from "./pages/VoiceForge";
-import { VoiceForgeLayout } from "./components/voiceforge/VoiceForgeLayout";
-import { SceneDesignPlaceholder } from "./components/voiceforge/VoiceForgePlaceholders";
-import { VideoDubbingPage } from "./components/voiceforge/videodub/VideoDubbingPage";
 import { ensureControlSession } from "./api/controlPlane";
 import { useControlStore } from "./stores/controlStore";
 import { useSubscriptionStore } from "./stores/subscriptionStore";
+
+// 命名导出模块的懒加载包装（React.lazy 只接受 default 导出）
+const lazyNamed = <T,>(loader: () => Promise<T>, exportName: keyof T) =>
+  lazy(async () => ({ default: (await loader())[exportName] as ComponentType<unknown> }));
+
+// 路由级懒加载：首屏只拉取「布局外壳 + Workbench」，其余模块进入时按需加载。
+// 每个 lazy() 会被打包成独立 chunk，与 vite.config 的依赖分包叠加后，
+// 首屏 JS 体积与解析成本大幅下降（未访问的页面不进入内存）。
+const BatchWorkshop = lazy(() => import("./pages/BatchWorkshop"));
+const History = lazy(() => import("./pages/History"));
+const Settings = lazy(() => import("./pages/Settings"));
+const About = lazy(() => import("./pages/About"));
+const Logs = lazy(() => import("./pages/Logs"));
+const SocialPublish = lazy(() => import("./pages/SocialPublish"));
+const LLMRouter = lazy(() => import("./pages/llm-router"));
+const EditingWorkbench = lazy(() => import("./pages/EditingWorkbench"));
+const MaterialLibrary = lazy(() => import("./pages/MaterialLibrary"));
+const CreationCanvas = lazy(() => import("./pages/creation-canvas/CreationCanvas"));
+const Collaboration = lazy(() => import("./pages/Collaboration"));
+const Community = lazy(() => import("./pages/Community"));
+const Guide = lazy(() => import("./pages/Guide"));
+
+// VoiceForge 的多个导出来自同一模块，复用同一个 loader 保证落在同一 chunk
+const loadVoiceForge = () => import("./pages/VoiceForge");
+const VoiceForgeHome = lazyNamed(loadVoiceForge, "VoiceForgeHome");
+const VoiceForgeWorkspace = lazyNamed(loadVoiceForge, "VoiceForgeWorkspace");
+const VoiceForgeVoices = lazyNamed(loadVoiceForge, "VoiceForgeVoices");
+const VoiceForgeAssets = lazyNamed(loadVoiceForge, "VoiceForgeAssets");
+const VoiceForgeSettings = lazyNamed(loadVoiceForge, "VoiceForgeSettings");
+const VoiceForgeLayout = lazyNamed(() => import("./components/voiceforge/VoiceForgeLayout"), "VoiceForgeLayout");
+const SceneDesignPlaceholder = lazyNamed(() => import("./components/voiceforge/VoiceForgePlaceholders"), "SceneDesignPlaceholder");
+const VideoDubbingPage = lazyNamed(() => import("./components/voiceforge/videodub/VideoDubbingPage"), "VideoDubbingPage");
 
 function applyUISettings() {
   try {

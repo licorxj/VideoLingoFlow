@@ -1,0 +1,1 @@
+function e(e){return(e??``).trim().replace(/\/+$/,``)}var t=e(void 0);function n(e){let n=e.startsWith(`/`)?e:`/${e}`;return t?`${t}${n}`:n}function r(e){let n=e.startsWith(`/`)?e:`/${e}`,r=t||window.location.origin,i=new URL(n,r);return i.protocol=i.protocol===`https:`?`wss:`:`ws:`,i.toString()}export{n,r,t};

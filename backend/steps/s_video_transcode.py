@@ -15,14 +15,18 @@ import os
 
 from backend.steps.base_step import BaseStep
 from backend.utils.video_ops import get_video_duration, run_ffmpeg_with_progress
+from backend.utils.video_encoder import build_video_encode_args, gpu_accel_enabled
 
 
 # 视频/音频编码器下拉值 -> ffmpeg 实际编码器名
+# h264_nvenc / hevc_nvenc 为 NVIDIA 硬编码选项，也可由「未指定 + 全局显卡加速」自动选中
 _VIDEO_CODEC_MAP = {
     "libx264": "libx264",
     "libx265": "libx265",
     "vp9": "libvpx-vp9",
     "mpeg4": "mpeg4",
+    "h264_nvenc": "h264_nvenc",
+    "hevc_nvenc": "hevc_nvenc",
 }
 _AUDIO_CODEC_MAP = {
     "aac": "aac",
@@ -86,29 +90,29 @@ class S_VideoTranscode(BaseStep):
         elif video_mode == "copy":
             cmd += ["-c:v", "copy"]
         else:
-            vcodec = _VIDEO_CODEC_MAP.get(cfg.get("video_codec", "libx264"), "libx264")
-            cmd += ["-c:v", vcodec]
-            crf = cfg.get("crf")
-            if vcodec in _CRF_CODECS and crf not in (None, ""):
-                try:
-                    crf_val = int(crf)
-                    cmd += ["-crf", str(crf_val)]
-                    if vcodec == "libvpx-vp9":
-                        cmd += ["-b:v", "0"]
-                except (TypeError, ValueError):
-                    pass
-            vbitrate = (cfg.get("video_bitrate") or "").strip()
-            if vbitrate:
-                cmd += ["-b:v", vbitrate]
+            requested = str(cfg.get("video_codec") or "").strip()
+            vcodec = _VIDEO_CODEC_MAP.get(requested)
+            if vcodec:
+                # 用户已显式选定编码器：不再自动升级，尊重其选择（含 h264_nvenc/hevc_nvenc）
+                allow_nvenc = False
+            else:
+                # 留空/「自动」：按全局「使用显卡加速 (NVIDIA NVENC)」决定默认编码器
+                vcodec = "h264_nvenc" if gpu_accel_enabled() else "libx264"
+                allow_nvenc = True
+            # crf 对 NVENC 自动换算为 -rc vbr -cq
+            cmd += build_video_encode_args(
+                vcodec,
+                crf=cfg.get("crf"),
+                preset=(cfg.get("preset") or "").strip() or None,
+                bitrate=(cfg.get("video_bitrate") or "").strip() or None,
+                allow_nvenc=allow_nvenc,
+            )
             resolution = (cfg.get("resolution") or "").strip()
             if resolution:
                 cmd += ["-vf", f"scale={resolution}"]
             fps = (cfg.get("fps") or "").strip()
             if fps:
                 cmd += ["-r", str(fps)]
-            preset = (cfg.get("preset") or "").strip()
-            if vcodec in _PRESET_CODECS and preset:
-                cmd += ["-preset", preset]
             pix_fmt = (cfg.get("pix_fmt") or "").strip()
             if pix_fmt:
                 cmd += ["-pix_fmt", pix_fmt]

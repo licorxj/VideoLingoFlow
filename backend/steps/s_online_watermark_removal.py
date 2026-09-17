@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
 from backend.steps.base_step import BaseStep
+from backend.utils.video_encoder import build_video_encode_args
 
 logger = logging.getLogger(__name__)
 
@@ -258,9 +259,8 @@ class S_OnlineWatermarkRemoval(BaseStep):
             "ffmpeg", "-y",
             "-f", "concat", "-safe", "0",
             "-i", list_path,
-            "-c:v", "libx264",
-            "-preset", "veryfast",
-            "-crf", "23",
+            # 全局「使用显卡加速 (NVIDIA NVENC)」开启时自动改用 h264_nvenc
+            *build_video_encode_args("libx264", crf=23, preset="veryfast"),
             "-c:a", "aac",
             "-b:a", "128k",
             "-movflags", "+faststart",

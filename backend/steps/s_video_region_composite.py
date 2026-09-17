@@ -23,6 +23,7 @@ import os
 import subprocess
 
 from backend.steps.base_step import BaseStep
+from backend.utils.video_encoder import build_video_encode_args
 
 
 def _to_float(value, default=0.0):
@@ -175,7 +176,8 @@ class S_VideoRegionComposite(BaseStep):
             "-i", patch_path,
             "-filter_complex", filter_complex,
             "-map", "[v]", "-map", "0:a?",
-            "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
+            # 全局「使用显卡加速 (NVIDIA NVENC)」开启时自动改用 h264_nvenc
+            *build_video_encode_args("libx264", crf=18, preset="veryfast"),
             "-c:a", "copy", "-movflags", "+faststart",
             out_path,
         ]

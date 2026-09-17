@@ -1,0 +1,18 @@
+{
+  "commit_sha": "4533781c5489a4088b8996439fab17151d94f169",
+  "files": {
+    "backend/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "backend/auth/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+    "backend/auth/cloud_auth_client.cpython-312-x86_64-linux-gnu.so": "8cbcace57e0ac46a657ba4c84940d91213711920d342ca25146965a79c78088c",
+    "backend/auth/cloud_auth_service.cpython-312-x86_64-linux-gnu.so": "7ebb3c7152af596442e8f3db84478cdebf243c7b439a6a3168b148df71179b09",
+    "backend/auth/error_codes.json": "83862afc3e67c2f5ac6be3508210c602f610d6edb8282179631cdab8a1a6caba",
+    "backend/auth/subscription_guard.cpython-312-x86_64-linux-gnu.so": "36ff5c27d22a72f3fd6f6c54976841161125b7dd922a0a455e89db919685c17a",
+    "backend/control_plane/__init__.py": "3f0d1f765c1fe0b086d5ef89d8829822699327e824a96877f7b261cadfbe281e",
+    "backend/control_plane/custom_node_runtime.cpython-312-x86_64-linux-gnu.so": "5b538dc82f0648450642a2e838eacf5b32a202aca072bc50fad3f0735416f4d4",
+    "backend/control_plane/runtime.cpython-312-x86_64-linux-gnu.so": "2778918bf7ddea635a30c45d7009a8e5810ad821fcc1e3cf06c79e0784ab9158",
+    "backend/control_plane/workflow_runtime.cpython-312-x86_64-linux-gnu.so": "0e0ca6ac1f7dd2bee69242cf9648fabce05c4303c65b50dd4887f338a715f701"
+  },
+  "python_abi": "cp312",
+  "target": "linux-x86_64",
+  "version": "v1.1.4"
+}

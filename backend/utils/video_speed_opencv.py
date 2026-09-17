@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Tuple, Optional, Callable
 
 from backend.utils.video_speed_manifest import VideoSpeedManifest, VideoSpeedSegmentManifest
+from backend.utils.video_encoder import build_video_encode_args
 
 
 # ───────────────── 光流插针 ─────────────────
@@ -74,7 +75,8 @@ class _FFmpegPipeWriter:
             "-r", f"{fps:.6f}",
             "-i", "pipe:0",
             "-an",
-            "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+            # 编码器由全局设置「视频处理 → 使用显卡加速 (NVIDIA NVENC)」决定
+            *build_video_encode_args("libx264", crf=18, preset="medium"),
             "-pix_fmt", "yuv420p",
             "-movflags", "+faststart",
             output_path,

@@ -30,6 +30,7 @@ NODE_TYPES_DIR = os.path.join(
 
 BUILTIN_STEP_REGISTRY = {
     "platform_download": ("backend.steps.s00_platform_download", "S00PlatformDownload"),
+    "batch_download": ("backend.steps.s00_batch_download", "S00BatchDownload"),
     "asr": ("backend.steps.s02_asr", "S02ASR"),
     "sentence_split": ("backend.steps.s03_sentence_split", "S03SentenceSplit"),
     "sentence_preprocess": ("backend.steps.s_sentence_preprocess", "S_SentencePreprocess"),

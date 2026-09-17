@@ -107,7 +107,7 @@ export interface LoopWorkflowDefinition extends GroupWorkflowDefinition {
 export interface ConfigField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "reorder-list" | "date" | "time" | "button";
+  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "reorder-list" | "date" | "time" | "button" | "wf-io-mapping";
   placeholder?: string;
   options?: { value: string; label: string }[];
   dependsOn?: string;
@@ -145,7 +145,7 @@ export interface ConfigField {
 export interface NodeTypeDef {
   id: string;
   name: string;
-  category: "io" | "preview" | "audio" | "asset" | "video" | "cutia" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "agent" | "utility" | "file" | "group_node" | "input" | "process" | "ai" | "output" | "publish";
+  category: "io" | "preview" | "audio" | "asset" | "video" | "cutia" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "agent" | "utility" | "file" | "group_node" | "hyperframes" | "input" | "ai" | "output" | "publish";
   description: string;
   icon: string;
   color: string;
@@ -232,7 +232,6 @@ export const CATEGORIES = {
   group_node: { label: "组合节点", color: "#64748b", icon: "Boxes" },
   hyperframes: { label: "HyperFrames 节点", color: "#f43f5e", icon: "Clapperboard" },
   input: { label: "输入节点", color: "#3b82f6", icon: "Upload" },
-  process: { label: "处理节点", color: "#0ea5e9", icon: "Cog" },
   ai: { label: "AI 节点", color: "#10b981", icon: "Sparkles" },
   output: { label: "输出节点", color: "#f97316", icon: "Download" },
   publish: { label: "发布节点", color: "#ec4899", icon: "Send" },

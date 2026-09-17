@@ -899,15 +899,41 @@ class S05Translate(BaseStep):
             all_faithful.update(result.get("faithful", {}))
             all_reflect.update(result.get("reflect", {}))
 
-        # Final validation: collect still-missing IDs after all retries
+        # ---- 翻译后校验轮（Validation round）----
+        # 汇总所有批次翻译后仍为空的句子，记录其 ID 并统一重发一次翻译请求，
+        # 随后将重试结果合并回 all_faithful / all_reflect。仅重试一次，不循环。
         all_ids = [s["id"] for s in sentences]
+        sentences_by_id = {s["id"]: s for s in sentences}
         missing_direct = self._collect_missing_ids(all_ids, all_faithful, "direct")
         missing_reflect_ids = self._collect_missing_ids(all_ids, all_reflect, "free") if enable_reflect else []
 
+        if missing_direct or missing_reflect_ids:
+            print(f"[Translate] Validation round: {len(missing_direct)} direct / "
+                  f"{len(missing_reflect_ids)} reflect translations are empty, retrying once.")
+
         if missing_direct:
-            print(f"[Translate] WARNING: {len(missing_direct)} direct translations still empty after all retries: {missing_direct}")
+            # 记录空结果的句子，便于排查上下文不足 / 截断等原因
+            print(f"[Translate] Empty direct sentence IDs: {missing_direct}")
+            all_faithful = self._retry_missing_translations(
+                llm, missing_direct, sentences_by_id,
+                src_lang, tgt_lang, summary, terminology, style_hint,
+                field="direct", phase="faithful", original_map=all_faithful,
+            )
         if missing_reflect_ids:
-            print(f"[Translate] WARNING: {len(missing_reflect_ids)} reflect translations still empty after all retries: {missing_reflect_ids}")
+            print(f"[Translate] Empty reflect sentence IDs: {missing_reflect_ids}")
+            all_reflect = self._retry_missing_translations(
+                llm, missing_reflect_ids, sentences_by_id,
+                src_lang, tgt_lang, summary, terminology, style_hint,
+                field="free", phase="reflect", original_map=all_reflect,
+            )
+
+        # 复检：仍有空结果则告警（已重试一次，不再循环）
+        missing_direct = self._collect_missing_ids(all_ids, all_faithful, "direct")
+        missing_reflect_ids = self._collect_missing_ids(all_ids, all_reflect, "free") if enable_reflect else []
+        if missing_direct:
+            print(f"[Translate] WARNING: {len(missing_direct)} direct translations still empty after validation retry: {missing_direct}")
+        if missing_reflect_ids:
+            print(f"[Translate] WARNING: {len(missing_reflect_ids)} reflect translations still empty after validation retry: {missing_reflect_ids}")
 
         for s in sentences:
             sid = s["id"]

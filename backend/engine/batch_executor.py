@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from backend.config.config_manager import config
 from backend.control_plane.database import session_scope
 from backend.control_plane.models import Task, TaskNode
-from backend.control_plane.workflow_runtime import _node_type, _resource_for, _workspace, _write_legacy_task, queue_for, request_cancel, request_delete, submit_workflow, _clear_workspace_cache
+from backend.control_plane.workflow_runtime import DISPATCH_STALE, _node_type, _resource_for, _workspace, _write_legacy_task, queue_for, request_cancel, request_delete, submit_workflow, _clear_workspace_cache
 
 
 TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted", "archived"}
@@ -200,12 +200,15 @@ class BatchExecutor:
                 if evt.is_set():
                     _trace(f"批次 {batch_id[:8]} 在等待阶段收到停止信号，终止投递")
                     break
-                # 跳过已在队列/运行/成功/已删除的任务
+                # 跳过已在队列/运行/成功/已删除的任务。
+                # 例外：dispatch 哨兵态的 queued 表示「无有效投递」（worker 重启复位后的
+                # 僵尸排队），必须重新投递，否则「全部继续」无法恢复它们。
                 with session_scope() as session:
                     task = session.get(Task, task_id)
-                    if task is None or task.status in {"queued", "running", "succeeded", "deleted"}:
-                        if task is not None:
-                            _trace(f"跳过任务 {task_id[:8]} status={task.status}")
+                    if task is None or task.status in {"running", "succeeded", "deleted"}:
+                        continue
+                    if task.status == "queued" and (task.payload or {}).get("dispatch_token") != DISPATCH_STALE:
+                        _trace(f"跳过任务 {task_id[:8]} status=queued（已有有效投递）")
                         continue
                 try:
                     self._enqueue(task_id, mode)
@@ -293,10 +296,15 @@ class BatchExecutor:
 
     def list_batches(self) -> list:
         with session_scope() as session:
-            tasks = session.scalars(select(Task).options(selectinload(Task.nodes)).where(
+            # 切勿在此 selectinload(Task.nodes)：批次列表只需任务级状态
+            # （_batch_status 仅读 task.status / payload.await_manual_resume，不碰 nodes），
+            # 而 TaskNode.payload 是「节点完整快照 + 运行结果」的大 JSON。跨页全量加载
+            # 所有批次任务的全部节点会耗尽内存（曾表现为 MemoryError）。
+            # 需要节点明细时，由 get_batch_detail 按批次（仅当前页）单独加载。
+            tasks = session.scalars(select(Task).where(
                 Task.legacy_key.like("batch:%"),
                 Task.status.notin_(BATCH_HIDDEN_STATUSES),
-            ).order_by(Task.created_at.desc())).unique().all()
+            ).order_by(Task.created_at.desc())).all()
         grouped = defaultdict(list)
         for task in tasks:
             grouped[_batch_meta(task).get("batch_id", task.legacy_key.split(":", 1)[-1])].append(task)
@@ -436,7 +444,15 @@ class BatchExecutor:
 
     def retry_task(self, batch_id: str, task_id: str) -> dict:
         task = self._ensure_member(batch_id, task_id)
-        if task.status not in {"created", "failed", "cancelled"}:
+        # running/stopping：真的在执行，重复操作视为幂等。
+        if task.status in {"running", "stopping"}:
+            return {"task_id": task_id, "status": task.status, "already_active": True}
+        if task.status == "queued":
+            # queued 仅在「dispatch 哨兵态」（worker 重启复位后无有效投递）时允许从头执行；
+            # 否则会清掉在途任务正在使用的工作区缓存。
+            if (task.payload or {}).get("dispatch_token") != DISPATCH_STALE:
+                return {"task_id": task_id, "status": task.status, "already_active": True}
+        elif task.status not in {"created", "failed", "cancelled"}:
             raise ValueError(f"Task {task_id} is not in a retriable state (status={task.status})")
         # 从头执行：清空 cache 中间产物，全新开始
         _clear_workspace_cache(_workspace(task_id))
@@ -446,7 +462,14 @@ class BatchExecutor:
 
     def resume_single_task(self, batch_id: str, task_id: str) -> dict:
         task = self._ensure_member(batch_id, task_id)
-        if task.status not in {"created", "failed", "cancelled", "paused"}:
+        # running/stopping：真的在执行，重复「继续」是幂等操作。
+        if task.status in {"running", "stopping"}:
+            return {"task_id": task_id, "status": task.status, "already_active": True}
+        # queued 必须允许：批次视图把真实 queued 映射为 created 并渲染「继续」按钮
+        # （见 WORKBENCH_TASK_STATUS），且 worker 重启复位后的任务正是 queued + 哨兵。
+        # 是否真正需要投递交给 submit_workflow 判定：哨兵态会重新投递，
+        # 仍有有效投递（在途）的任务被单飞保护静默拦下，不会重复执行。
+        if task.status not in {"created", "failed", "cancelled", "paused", "queued"}:
             raise ValueError(f"Task {task_id} is not in a resumable state (status={task.status})")
         _trace(f"继续单任务 batch={batch_id[:8]} task={task_id[:8]}")
         self._enqueue(task_id, "resume")

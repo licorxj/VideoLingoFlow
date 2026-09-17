@@ -263,3 +263,7 @@ htmlcov/
 debug-*.md
 **/.debug/
 *.debug
+
+# 首发宣传视频策划与素材（本机资料，不随仓库分发）
+docs/首发宣传视频*
+promo_assets/

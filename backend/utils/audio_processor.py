@@ -11,15 +11,16 @@ import os
 from backend.config.config_manager import config
 from backend.utils.audio_segmenter import get_audio_output_settings
 
-# x264 支持的编码速度预设
-X264_SPEED_PRESETS = ("ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower")
-# NVENC (h264_nvenc) 的速度预设映射
-NVENC_SPEED_PRESETS = {
-    "ultrafast": "p1", "superfast": "p2", "veryfast": "p2", "faster": "p3",
-    "fast": "p4", "medium": "p5", "slow": "p6", "slower": "p7",
-}
-# 质量档位对应的 CRF 值
-QUALITY_CRF = {"high": 18, "medium": 23, "low": 28}
+# 视频编码参数统一由 backend/utils/video_encoder.py 提供（读取全局 video.gpu_accel）。
+# 这里保留旧名称的引用，避免各处 import 失效。
+from backend.utils.video_encoder import (  # noqa: F401
+    X264_SPEED_PRESETS,
+    NVENC_SPEED_PRESETS,
+    QUALITY_CRF,
+    build_video_encode_args,
+    get_encoder_args,
+    gpu_accel_enabled,
+)
 
 
 def get_ffmpeg_timeout(default: float = 600) -> float:
@@ -29,43 +30,6 @@ def get_ffmpeg_timeout(default: float = 600) -> float:
         return val if val > 0 else default
     except Exception:
         return default
-
-
-def get_encoder_args(quality: str, encode_preset: str = None, gpu_accel=None) -> list:
-    """根据质量档位 + 全局配置构建视频编码参数。
-
-    Args:
-        quality: 质量预设 ("copy", "high", "medium", "low")
-        encode_preset: 编码速度预设（None 则读全局配置 video.encode_preset）
-        gpu_accel: 是否显卡加速（None 则读全局配置 video.gpu_accel）
-
-    Returns:
-        ffmpeg 编码参数列表，如 ["-c:v", "libx264", "-preset", "fast", "-crf", "23"]
-    """
-    if quality == "copy":
-        return ["-c:v", "copy"]
-
-    crf = QUALITY_CRF.get(quality, 23)
-
-    if encode_preset is None:
-        encode_preset = config.get("video.encode_preset", "medium")
-    speed = str(encode_preset or "medium").lower()
-    if speed not in X264_SPEED_PRESETS:
-        speed = "medium"
-
-    if gpu_accel is None:
-        gpu_accel = config.get("video.gpu_accel", False)
-    if isinstance(gpu_accel, str):
-        gpu_accel = gpu_accel.lower() in ("true", "1", "yes")
-
-    if gpu_accel:
-        # NVIDIA NVENC 硬编码
-        return [
-            "-c:v", "h264_nvenc",
-            "-preset", NVENC_SPEED_PRESETS.get(speed, "p5"),
-            "-rc", "vbr", "-cq", str(crf), "-b:v", "0",
-        ]
-    return ["-c:v", "libx264", "-preset", speed, "-crf", str(crf)]
 
 
 def get_audio_duration(audio_path: str) -> float:

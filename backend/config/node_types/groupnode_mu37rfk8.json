@@ -1,0 +1,329 @@
+{
+  "id": "groupnode_mu37rfk8",
+  "name": "组合",
+  "version": "1.0.0",
+  "category": "group_node",
+  "description": "组合（组合节点）",
+  "icon": "Boxes",
+  "color": "#6366f1",
+  "inputs": [
+    {
+      "id": "gin_1",
+      "label": "音频分离 / 视频",
+      "type": "video"
+    }
+  ],
+  "outputs": [],
+  "defaultConfig": {},
+  "configFields": [],
+  "isBuiltIn": false,
+  "execType": "",
+  "execCode": "",
+  "execFile": "",
+  "execTimeout": 300,
+  "kind": "group",
+  "groupDefinition": {
+    "version": 1,
+    "internalWorkflow": {
+      "nodes": [
+        {
+          "id": "node_1_1780650299385",
+          "type": "workflow",
+          "position": {
+            "x": 0,
+            "y": 525
+          },
+          "data": {
+            "nodeType": "extract_audio",
+            "label": "音频分离",
+            "config": {},
+            "status": "completed",
+            "progress": 100,
+            "message": "Completed",
+            "outputs": {
+              "audio": "output/extracted_audio_node_1_1780650299385.opus"
+            },
+            "error": "",
+            "workbench_url": "",
+            "disableExecute": false
+          },
+          "measured": {
+            "width": 420,
+            "height": 274
+          },
+          "selected": false,
+          "dragging": false,
+          "dragHandle": ".wf-node-drag-handle"
+        },
+        {
+          "id": "node_2_1781973904798",
+          "type": "workflow",
+          "position": {
+            "x": 1005,
+            "y": 0
+          },
+          "data": {
+            "nodeType": "vocal_separation",
+            "label": "人声分离",
+            "config": {
+              "method": "demucs",
+              "format": "wav",
+              "model": "mdx"
+            },
+            "status": "pending",
+            "disableExecute": false,
+            "progress": 100,
+            "message": "Completed",
+            "outputs": {},
+            "error": "",
+            "workbench_url": "",
+            "logLines": [
+              "[step_worker] start node_type=vocal_separation node_id=node_2_1781973904798 pid=24516",
+              "[step_worker] step instance created: StepVocalSeparation",
+              "[step_worker] step_inputs keys=['audio']",
+              "[step_worker] node_config keys=['method', 'format', 'model']",
+              "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback', 'cancel_callback'])",
+              "[VocalSeparation] Using upstream audio: Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\output/transcoded_audio_node_1_1788016251850.wav",
+              "[step_worker] step.run returned, result keys=['artifacts', 'outputs', 'output_vocals', 'output_background']",
+              "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_2_1781973904798_result.json, exiting 0"
+            ]
+          },
+          "measured": {
+            "width": 420,
+            "height": 138
+          },
+          "selected": false,
+          "dragging": false,
+          "dragHandle": ".wf-node-drag-handle"
+        },
+        {
+          "id": "node_1_1788016251850",
+          "type": "workflow",
+          "position": {
+            "x": 510,
+            "y": 15
+          },
+          "data": {
+            "nodeType": "audio_transcode",
+            "label": "音频质量转码",
+            "config": {
+              "format": "wav",
+              "sample_rate": "44100",
+              "bit_depth": "16",
+              "channels": "1",
+              "bitrate": ""
+            },
+            "status": "completed",
+            "disableExecute": false,
+            "progress": 100,
+            "message": "Completed",
+            "outputs": {
+              "audio": "output/transcoded_audio_node_1_1788016251850.wav"
+            },
+            "error": "",
+            "workbench_url": ""
+          },
+          "measured": {
+            "width": 420,
+            "height": 204
+          },
+          "selected": false,
+          "dragging": false,
+          "dragHandle": ".wf-node-drag-handle"
+        },
+        {
+          "id": "node_2_1788016301322",
+          "type": "workflow",
+          "position": {
+            "x": 510,
+            "y": 555
+          },
+          "data": {
+            "nodeType": "audio_transcode",
+            "label": "音频质量转码",
+            "config": {
+              "format": "wav",
+              "sample_rate": "16000",
+              "bit_depth": "",
+              "channels": "1",
+              "bitrate": "192"
+            },
+            "status": "completed",
+            "disableExecute": false,
+            "progress": 100,
+            "message": "Completed",
+            "outputs": {
+              "audio": "output/transcoded_audio_node_2_1788016301322.wav"
+            },
+            "error": "",
+            "workbench_url": ""
+          },
+          "measured": {
+            "width": 420,
+            "height": 204
+          },
+          "selected": false,
+          "dragging": false,
+          "dragHandle": ".wf-node-drag-handle"
+        },
+        {
+          "id": "node_2_1788054290141",
+          "type": "workflow",
+          "position": {
+            "x": 1035,
+            "y": 615
+          },
+          "data": {
+            "nodeType": "asr",
+            "label": "语音识别 (ASR)",
+            "config": {
+              "engine": "moss",
+              "language": "auto",
+              "model": "",
+              "compute_type": "",
+              "batch_size": "20",
+              "word_timestamps": true,
+              "vad_onset": "0.3",
+              "vad_offset": 0.363,
+              "hotwords_enabled": false,
+              "hotwords": "",
+              "post_vad": false,
+              "post_alignment": false,
+              "post_diarization": false
+            },
+            "status": "pending",
+            "disableExecute": false,
+            "progress": 100,
+            "message": "Completed",
+            "outputs": {},
+            "error": "",
+            "logLines": [
+              "[ASR PostProcess] diarization_enabled=False, diarization_engine=pyannote",
+              "[ASR PostProcess] VAD was executed internally by ASR engine, skipping",
+              "[ASR PostProcess] Alignment was executed internally by ASR engine, skipping",
+              "[ASR PostProcess] Diarization was executed internally by ASR engine, skipping",
+              "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
+              "[ASR PostProcess] No post-processing needed, returning original result",
+              "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+              "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_2_1788054290141_result.json, exiting 0"
+            ],
+            "workbench_url": ""
+          },
+          "measured": {
+            "width": 420,
+            "height": 138
+          },
+          "selected": false,
+          "dragging": false,
+          "dragHandle": ".wf-node-drag-handle"
+        }
+      ],
+      "edges": [
+        {
+          "type": "bezier",
+          "style": {
+            "stroke": "#10b981",
+            "strokeWidth": 2,
+            "strokeDasharray": "6 3"
+          },
+          "source": "node_1_1780650299385",
+          "sourceHandle": "out-audio",
+          "target": "node_1_1788016251850",
+          "targetHandle": "in-audio",
+          "id": "xy-edge__node_1_1780650299385out-audio-node_1_1788016251850in-audio",
+          "selected": false
+        },
+        {
+          "type": "bezier",
+          "style": {
+            "stroke": "#10b981",
+            "strokeWidth": 2,
+            "strokeDasharray": "6 3"
+          },
+          "source": "node_1_1788016251850",
+          "sourceHandle": "out-audio",
+          "target": "node_2_1781973904798",
+          "targetHandle": "in-audio",
+          "id": "xy-edge__node_1_1788016251850out-audio-node_2_1781973904798in-audio",
+          "selected": false
+        },
+        {
+          "type": "bezier",
+          "style": {
+            "stroke": "#10b981",
+            "strokeWidth": 2,
+            "strokeDasharray": "6 3"
+          },
+          "source": "node_1_1780650299385",
+          "sourceHandle": "out-audio",
+          "target": "node_2_1788016301322",
+          "targetHandle": "in-audio",
+          "id": "xy-edge__node_1_1780650299385out-audio-node_2_1788016301322in-audio",
+          "selected": false
+        },
+        {
+          "type": "bezier",
+          "style": {
+            "stroke": "#10b981",
+            "strokeWidth": 2,
+            "strokeDasharray": "6 3"
+          },
+          "source": "node_2_1781973904798",
+          "sourceHandle": "out-audio",
+          "target": "node_2_1788054290141",
+          "targetHandle": "in-vocal_audio",
+          "id": "xy-edge__node_2_1781973904798out-audio-node_2_1788054290141in-vocal_audio",
+          "selected": false
+        },
+        {
+          "type": "bezier",
+          "style": {
+            "stroke": "#10b981",
+            "strokeWidth": 2,
+            "strokeDasharray": "6 3"
+          },
+          "source": "node_2_1788016301322",
+          "sourceHandle": "out-audio",
+          "target": "node_2_1788054290141",
+          "targetHandle": "in-asr_audio",
+          "id": "xy-edge__node_2_1788016301322out-audio-node_2_1788054290141in-asr_audio",
+          "selected": false
+        }
+      ]
+    },
+    "inputMappings": [
+      {
+        "exposedPortId": "gin_1",
+        "exposedLabel": "音频分离 / 视频",
+        "targetNodeId": "node_1_1780650299385",
+        "targetPortId": "video",
+        "type": "video"
+      }
+    ],
+    "outputMappings": [],
+    "layout": {
+      "memberPositionsRelativeToGroup": {
+        "node_1_1780650299385": {
+          "x": 0,
+          "y": 525
+        },
+        "node_2_1781973904798": {
+          "x": 1005,
+          "y": 0
+        },
+        "node_1_1788016251850": {
+          "x": 510,
+          "y": 15
+        },
+        "node_2_1788016301322": {
+          "x": 510,
+          "y": 555
+        },
+        "node_2_1788054290141": {
+          "x": 1035,
+          "y": 615
+        }
+      }
+    }
+  }
+}

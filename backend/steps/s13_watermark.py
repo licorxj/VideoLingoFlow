@@ -4,6 +4,7 @@ import subprocess
 from typing import Callable, Optional
 from backend.steps.base_step import BaseStep, find_artifact
 from backend.config.config_manager import config
+from backend.utils.video_encoder import build_video_encode_args
 
 
 class S13Watermark(BaseStep):
@@ -94,6 +95,8 @@ class S13Watermark(BaseStep):
                     "-i", source_video,
                     "-i", watermark_image,
                     "-filter_complex", f"[1]format=rgba,colorchannelmixer=aa={opacity}[wm];[0][wm]overlay={overlay_pos}",
+                    # 叠加滤镜必须重编码；全局「使用显卡加速 (NVIDIA NVENC)」开启时用 h264_nvenc
+                    *build_video_encode_args("libx264", crf=23, preset="medium"),
                     "-c:a", "copy",
                     output_path
                 ]

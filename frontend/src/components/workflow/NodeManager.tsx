@@ -673,7 +673,7 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                 <div className="grid grid-cols-3 gap-4">
                   <div>
                     <label className={labelCls}>分类</label>
-                    <select value={form.category || "process"} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+                    <select value={form.category || "utility"} onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
                       className={inputCls}>
                       {nodeSchema.categories.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
                     </select>

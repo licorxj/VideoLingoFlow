@@ -20,6 +20,24 @@ def _asr_unloader(_engine):
     """ASR 引擎卸载：归还 torch 显存缓存并触发 GC。"""
     release_gpu_cache()
 
+
+def _enforce_vad_health(result: dict) -> dict:
+    """对"引擎声称内部已完成 VAD"的结果做拼装后健康检查。
+
+    端到端引擎（MOSS / WhisperX / FunASR）会置 ``_vad_internally_executed``，
+    下游据此跳过 VAD 后处理。一旦某个 chunk 退化成单条巨 segment，merge
+    阶段静默通过而没有任何补救机会——必须在这里修干净：能按句末标点二次
+    断句就当场拆；拆不动就撤销该标志，把断句交还给下游 VAD 阶段。
+    """
+    if not isinstance(result, dict) or not result.get("_vad_internally_executed"):
+        return result
+    try:
+        from backend.asr import audio_split as sp
+        return sp.enforce_segmentation_health(result)
+    except Exception as exc:
+        print(f"[ASR] Warning: segmentation health check failed: {exc}", flush=True)
+        return result
+
 def _load_engines():
     global _ENGINES
     if _ENGINES:
@@ -206,6 +224,8 @@ def run_asr(
             engine_name, input_path, output_path, callback,
             model, language, extra_kwargs,
         )
+    result = _enforce_vad_health(result)
+
     # 统一说话人字段格式（speaker_id -> speaker，并下放到词级）
     from backend.asr.asr_base import normalize_speaker_format
     return normalize_speaker_format(result)
@@ -312,6 +332,9 @@ def run_asr_with_post_processing(
             engine_name, input_path, output_path, callback,
             model, language, extra_kwargs,
         )
+
+    # Step 1.5: 内部 VAD 声明的可信度复检（见 _enforce_vad_health 注释）
+    asr_result = _enforce_vad_health(asr_result)
 
     # Step 2: Apply post-processing if requested
     if vad_engine or alignment_engine or diarize_engine:

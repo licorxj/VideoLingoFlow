@@ -1,0 +1,1 @@
+import{t as e}from"./client-CwNRS7IT.js";var t={list:t=>e.get(`/api/history`,{params:{status:t}}),listArchived:()=>e.get(`/api/history/archived`),restore:t=>e.post(`/api/history/restore`,{task_ids:t})};export{t};

@@ -1,11 +1,23 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { Suspense, lazy, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { Loader2 } from "lucide-react";
 import Header from "./Header";
 import Sidebar from "./Sidebar";
 import KeepAliveOutlet from "./KeepAliveOutlet";
-import PiAssistantWindow from "@/components/agent/PiAssistantWindow";
 import { useHeaderInbox } from "@/hooks/useHeaderInbox";
 import { rememberTabLocation } from "@/lib/tabMemory";
+
+// Pi 助手只在用户主动唤起时才需要，单独拆包，不进入首屏
+const PiAssistantWindow = lazy(() => import("@/components/agent/PiAssistantWindow"));
+
+function RouteLoading() {
+  return (
+    <div className="flex h-full items-center justify-center gap-2 text-sm text-muted-foreground">
+      <Loader2 className="h-4 w-4 animate-spin" />
+      <span>加载中…</span>
+    </div>
+  );
+}
 
 function readSidebarCollapsed(): boolean {
   try {
@@ -104,10 +116,18 @@ export default function AppLayout() {
           ref={mainRef}
           className={isEditor ? "flex-1 min-h-0 overflow-hidden" : "flex-1 min-h-0 overflow-auto px-2 py-2"}
         >
-          <KeepAliveOutlet />
+          <Suspense fallback={<RouteLoading />}>
+            <KeepAliveOutlet />
+          </Suspense>
         </main>
       </div>
-      {agentState !== "closed" && <div className={agentState === "booting" || agentState === "minimized" ? "hidden" : undefined}><PiAssistantWindow visible={agentState === "open"} onClose={() => setAgentState("closed")} onMinimize={() => setAgentState("minimized")} onReady={handleAgentReady} /></div>}
+      {agentState !== "closed" && (
+        <div className={agentState === "booting" || agentState === "minimized" ? "hidden" : undefined}>
+          <Suspense fallback={null}>
+            <PiAssistantWindow visible={agentState === "open"} onClose={() => setAgentState("closed")} onMinimize={() => setAgentState("minimized")} onReady={handleAgentReady} />
+          </Suspense>
+        </div>
+      )}
     </div>
   );
 }

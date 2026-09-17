@@ -741,7 +741,18 @@ class S02ASR(BaseStep):
         alignment_internally_executed = result.get("_alignment_internally_executed", False)
         diarization_internally_executed = result.get("_diarization_internally_executed", False)
 
-        apply_vad = vad_enabled and not capabilities.get("vad", False) and not vad_internally_executed
+        # 拼装后若检出"无法二次断句的巨段"，audio_split 会撤销内部 VAD 标志并
+        # 置 `_vad_required`。此时即便接口声明具备 VAD 能力也必须补跑，
+        # 否则这段 SET 会原样流到句子切分/翻译/配音阶段并引发下游错误。
+        vad_required = bool(result.get("_vad_required", False))
+        engine_vad_done = vad_internally_executed or (
+            capabilities.get("vad", False) and not vad_required
+        )
+        if vad_required:
+            print("[ASR PostProcess] VAD explicitly required: ASR result contains "
+                  "unbreakable giant segment(s)")
+
+        apply_vad = vad_enabled and not engine_vad_done
         apply_alignment = alignment_enabled and not capabilities.get("word_timestamps", False) and not alignment_internally_executed
         apply_diarization = diarization_enabled and not capabilities.get("speaker_diarization", False) and not diarization_internally_executed
 

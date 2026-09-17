@@ -425,6 +425,19 @@ async def startup_event():
         initialize_database()
         print("VoiceForge database initialized")
 
+    # 启动时校验 NVIDIA NVENC：不支持 h264_nvenc 时自动关闭「使用显卡加速」开关，
+    # 避免后续视频重编码节点（缩放/拼接/烧录/转码等）因硬编码失败而中断。
+    try:
+        from backend.config.config_manager import config as _config
+        from backend.utils.video_encoder import probe_nvenc_available
+        if _config.get("video.gpu_accel", False) and not probe_nvenc_available():
+            _config.set("video.gpu_accel", False)
+            print("[GPU] 当前环境不支持 h264_nvenc，已自动关闭「使用显卡加速 (NVIDIA NVENC)」")
+        else:
+            print(f"[GPU] 显卡加速设置: {'开' if _config.get('video.gpu_accel', False) else '关'}")
+    except Exception as e:
+        print(f"[GPU] NVENC 可用性检查跳过: {e}")
+
     from backend.tts.tts_interface_manager import get_tts_interface_manager
     mgr = get_tts_interface_manager()
     mgr.reload()
@@ -462,6 +475,18 @@ async def startup_event():
     from backend.auth.subscription_guard import start_limits_refresh
     start_limits_refresh()
     print("Subscription limits refresh scheduled")
+
+    # 可选：API 启动时回收卡死任务（默认关闭，见 CONTROL_PLANE_RECOVERY_ON_API_START）。
+    # 正常情况由 Celery worker 的 worker_ready 钩子回收；只有确认「worker 已不在运行、
+    # 但任务/节点状态仍停在 running」的场景才建议开启本开关，避免误伤正在执行的任务。
+    if os.getenv("CONTROL_PLANE_RECOVERY_ON_API_START", "0").strip().lower() in {"1", "true", "yes", "on"}:
+        try:
+            from backend.control_plane.workflow_runtime import reset_unfinished_tasks
+
+            summary = reset_unfinished_tasks(reason="api_restart_reset")
+            print(f"[Recovery] 启动复位完成: {summary.get('tasks', 0)} 个任务 / {summary.get('nodes', 0)} 个节点已回到等待运行")
+        except Exception as e:
+            print(f"[Recovery] 启动复位失败（忽略）: {e}")
 
 
 @app.on_event("shutdown")

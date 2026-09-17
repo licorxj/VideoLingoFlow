@@ -1,0 +1,1 @@
+import{t as e}from"./client-CwNRS7IT.js";var t={getAll:()=>e.get(`/api/settings`),get:t=>e.get(`/api/settings/${t}`),update:(t,n)=>e.put(`/api/settings`,{key:t,value:n})};export{t};

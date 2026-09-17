@@ -128,7 +128,13 @@ class S_ASRPostProcess(BaseStep):
 
     @staticmethod
     def _already_vad_done(result: Dict[str, Any]) -> bool:
-        """上游引擎已内置 VAD，或 segments 已普遍带有有效时间段（无需再断句）。"""
+        """上游引擎已内置 VAD，或 segments 已普遍带有有效时间段（无需再断句）。
+
+        例外：拼装后若检出无法二次断句的巨段，audio_split 会置 `_vad_required`，
+        此时即使引擎声称内置 VAD 也必须重新断句。
+        """
+        if result.get("_vad_required"):
+            return False
         if result.get("_vad_internally_executed"):
             return True
         segs = result.get("segments", []) or []

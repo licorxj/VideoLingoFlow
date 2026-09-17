@@ -16,6 +16,7 @@ import subprocess
 from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep, find_artifact
+from backend.utils.video_encoder import build_video_encode_args
 
 
 # 支持的输入文件扩展名
@@ -77,9 +78,8 @@ def _normalize_video(video_path: str, output_path: str, callback=None) -> str:
     cmd = [
         "ffmpeg", "-y",
         "-i", video_path,
-        "-c:v", "libx264",
-        "-preset", "medium",
-        "-crf", "23",
+        # 全局「使用显卡加速 (NVIDIA NVENC)」开启时自动改用 h264_nvenc
+        *build_video_encode_args("libx264", crf=23, preset="medium"),
         "-c:a", "aac",
         "-b:a", "128k",
         "-movflags", "+faststart",
@@ -151,9 +151,8 @@ def _split_video_by_duration(video_path: str, segment_seconds: float, output_dir
             "-ss", str(start),
             "-i", video_path,
             "-t", str(end - start),
-            "-c:v", "libx264",
-            "-preset", "veryfast",
-            "-crf", "23",
+            # 全局「使用显卡加速 (NVIDIA NVENC)」开启时自动改用 h264_nvenc
+            *build_video_encode_args("libx264", crf=23, preset="veryfast"),
             "-c:a", "aac",
             "-b:a", "128k",
             "-movflags", "+faststart",

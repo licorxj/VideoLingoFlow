@@ -1,0 +1,156 @@
+{
+  "id": "cb4721cdaba5",
+  "name": "批量下载视频专辑",
+  "description": "批量下载固定专辑，并调用智能体翻译文件名-归档到指定位置",
+  "nodes": [
+    {
+      "id": "node_1_1783324270560",
+      "type": "workflow",
+      "position": {
+        "x": -2160,
+        "y": -2355
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "url"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "https://www.youtube.com/@animatedphysicsofficial/videos",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": false,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false,
+          "filePath": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "url": "https://youtu.be/mEVl0NS0vu8?si=QxMCPjDFMyJRNYu0",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 502
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1789507873282",
+      "type": "workflow",
+      "position": {
+        "x": -1365,
+        "y": -2295
+      },
+      "data": {
+        "nodeType": "batch_download",
+        "label": "批量视频下载",
+        "config": {
+          "download_subs": false,
+          "download_cover": true,
+          "resolution": "best",
+          "cookie_file": "",
+          "playlist_items": "",
+          "max_items": 0,
+          "folder_name": ""
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 456
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1789508536434",
+      "type": "workflow",
+      "position": {
+        "x": -750,
+        "y": -2295
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "pi_agent",
+        "label": "小pi通用智能体",
+        "config": {
+          "inputCount": 1,
+          "outputCount": 1,
+          "skills": [],
+          "mcps": [],
+          "docs_path": "",
+          "external_doc": "",
+          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：帮我把下载好的产物归档到：X:\\PCTMoveData\\Videos\\下载\\物理科普，并翻译好文件名",
+          "output_items": [
+            {
+              "port": "输出1",
+              "type": "json",
+              "desc": "归档完成记录"
+            }
+          ]
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 651
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#06b6d4",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1783324270560",
+      "sourceHandle": "out-url",
+      "target": "node_1_1789507873282",
+      "targetHandle": "in-url",
+      "id": "xy-edge__node_1_1783324270560out-url-node_1_1789507873282in-url"
+    },
+    {
+      "source": "node_1_1789507873282",
+      "sourceHandle": "out-json",
+      "target": "node_1_1789508536434",
+      "targetHandle": "in-input_1",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1789507873282out-json-node_1_1789508536434in-input_1"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-16T05:30:34",
+  "updatedAt": "2026-09-16T05:53:41",
+  "revision": 3
+}

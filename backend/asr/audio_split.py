@@ -238,3 +238,209 @@ def merge_results(results: List[dict]) -> dict:
             output[flag] = True
 
     return output
+
+
+# ---------------------------------------------------------------------------
+# 断句健康检查：多段拼装后的最后一道防线
+#
+# 端到端引擎（MOSS / WhisperX / FunASR）会声明 `_vad_internally_executed`，
+# 下游据此跳过 VAD 后处理。若某个 chunk 退化成 `[t][Sxx]整段文本[t]` 一条
+# 巨 segment，merge 阶段不会报错，但句子切分/翻译/TTS 时间轴全线崩塌，
+# 且因为那个"内部已完成 VAD"的标志，下游不会再补断句。这里统一兜底。
+# ---------------------------------------------------------------------------
+
+# 用于把未断句的巨段二次切开的句末标点
+_SENTENCE_END_CHARS = "。！？!?；;…"
+
+
+def _to_float(value, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def synthesize_words(text: str, start: float, end: float) -> List[Dict]:
+    """在 [start, end] 内按字/词线性插值合成 word 级时间戳。
+
+    只提供段级时间戳的引擎（MOSS 等）用它补齐 words，供下游句子切分与
+    TTS 时间轴使用；中文按字切分，其余按空白边界切分。
+    """
+    text = (text or "").strip()
+    if not text:
+        return []
+
+    tokens: List[str] = []
+    buf = ""
+    for ch in text:
+        if "\u4e00" <= ch <= "\u9fff":
+            if buf:
+                tokens.append(buf)
+                buf = ""
+            tokens.append(ch)
+        elif ch.isspace():
+            if buf:
+                tokens.append(buf)
+                buf = ""
+        else:
+            buf += ch
+    if buf:
+        tokens.append(buf)
+    tokens = [t for t in tokens if t.strip()]
+    if not tokens:
+        return []
+
+    start = _to_float(start)
+    end = _to_float(end)
+    dur = max(0.0, end - start)
+    n = len(tokens)
+    words: List[Dict] = []
+    for i, tok in enumerate(tokens):
+        words.append({
+            "word": tok,
+            "start": round(start + dur * i / n, 4),
+            "end": round(start + dur * (i + 1) / n, 4),
+        })
+    return words
+
+
+def split_text_sentences(text: str, start: float, end: float,
+                         max_chars: int = 40) -> List[Dict]:
+    """按句末标点 / 字数上限把一段文本切成多句，并按字数比例分摊时间窗。"""
+    text = (text or "").strip()
+    if not text:
+        return []
+
+    pieces: List[str] = []
+    buf = ""
+    for ch in text:
+        if ch == "\n":
+            if buf.strip():
+                pieces.append(buf.strip())
+            buf = ""
+            continue
+        buf += ch
+        if ch in _SENTENCE_END_CHARS and len(buf) >= 4:
+            pieces.append(buf.strip())
+            buf = ""
+        elif len(buf) >= max_chars:
+            pieces.append(buf.strip())
+            buf = ""
+    if buf.strip():
+        pieces.append(buf.strip())
+    pieces = [p for p in pieces if p]
+    if not pieces:
+        return []
+
+    _start, _end = _to_float(start), _to_float(end)
+    dur = max(0.0, _end - _start)
+    total = sum(len(p) for p in pieces) or 1
+
+    out: List[Dict] = []
+    cursor = _start
+    for i, piece in enumerate(pieces):
+        piece_end = _end if i == len(pieces) - 1 else cursor + dur * len(piece) / total
+        out.append({
+            "start": round(cursor, 4),
+            "end": round(piece_end, 4),
+            "text": piece,
+        })
+        cursor = piece_end
+    return out
+
+
+def split_long_segment(seg: Dict, max_chars: int = 40) -> List[Dict]:
+    """对单条超长 segment 做二次断句；切不开时原样返回（列表长度恒为 1）。"""
+    start = _to_float(seg.get("start"))
+    end = _to_float(seg.get("end"))
+    pieces = split_text_sentences(seg.get("text") or "", start, end, max_chars=max_chars)
+    if len(pieces) <= 1:
+        return [seg]
+
+    orig_words = seg.get("words") or []
+    out: List[Dict] = []
+    for piece in pieces:
+        new_seg = dict(seg)
+        new_seg.update({
+            "start": piece["start"],
+            "end": piece["end"],
+            "text": piece["text"],
+        })
+        # 父段已有词级时间戳时按新区间裁剪保留，否则按字数插值补齐
+        kept = [
+            w for w in orig_words
+            if _to_float(w.get("start")) < piece["end"]
+            and _to_float(w.get("end")) > piece["start"]
+        ]
+        new_seg["words"] = kept or synthesize_words(
+            piece["text"], piece["start"], piece["end"])
+        out.append(new_seg)
+    return out
+
+
+def enforce_segmentation_health(result: Dict, *, max_chars: int = 80,
+                                max_duration: float = 60.0) -> Dict:
+    """多段拼装后的 VAD 断句健康检查与兜底修正。
+
+    处理策略：
+      1. 超长（字数 >= max_chars）或超久（时长 >= max_duration）的段，
+         按句末标点二次断句，时间窗按字数比例分摊，words 同步裁剪；
+      2. 文本自身没有任何可切分位置、纯文本兜底救不回来时，判定引擎的
+         "内部已完成 VAD"声明失实，撤销 ``_vad_internally_executed``，
+         把断句交还给下游 VAD 后处理阶段（s02_asr / s_asr_stages）。
+    """
+    if not isinstance(result, dict):
+        return result
+    segments = result.get("segments")
+    if not isinstance(segments, list) or not segments:
+        return result
+
+    offender_ids = set()
+    for seg in segments:
+        if not isinstance(seg, dict):
+            continue
+        start = _to_float(seg.get("start"))
+        end = _to_float(seg.get("end"))
+        n_chars = len((seg.get("text") or "").strip())
+        if n_chars >= max_chars or (end - start) >= max_duration:
+            offender_ids.add(id(seg))
+
+    if not offender_ids:
+        return result
+
+    new_segments: List[Dict] = []
+    unresolved = 0
+    for seg in segments:
+        if isinstance(seg, dict) and id(seg) in offender_ids:
+            pieces = split_long_segment(seg, max_chars=max_chars)
+            if len(pieces) > 1:
+                new_segments.extend(pieces)
+                continue
+            unresolved += 1
+        new_segments.append(seg)
+
+    for idx, seg in enumerate(new_segments, start=1):
+        if isinstance(seg, dict):
+            seg["id"] = idx
+    result["segments"] = new_segments
+
+    full_text = " ".join(
+        (seg.get("text") or "").strip()
+        for seg in new_segments if isinstance(seg, dict)
+    )
+    if full_text.strip():
+        result["text"] = full_text.strip()
+
+    if unresolved:
+        # 仅删除内部标志还不够：接口 capabilities.vad=true 同样会一票否决下游
+        # VAD（s02_asr / s_asr_stages 均按"具备该能力即跳过"判定）。这里额外
+        # 置 `_vad_required`，明确要求下游无论如何都要跑一遍 VAD 补断句。
+        result.pop("_vad_internally_executed", None)
+        result["_vad_required"] = True
+        print(
+            f"[ASR] Warning: {unresolved} unbreakable giant segment(s) "
+            f"(>= {max_chars} chars or >= {max_duration}s); internal VAD flag "
+            f"revoked, downstream VAD will be executed",
+            flush=True,
+        )
+    return result

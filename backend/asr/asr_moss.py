@@ -226,44 +226,9 @@ class MossTranscribeDiarizeLocal(ASRBase):
     def _synthesize_words(text: str, start: float, end: float) -> list:
         """MOSS 仅提供段级时间戳，这里按字符/词线性插值合成 word 时间戳，
         以兼容依赖 words 的下游步骤。中文按字切分，其他语言按空白切分。"""
+        from backend.asr.audio_split import synthesize_words
 
-        text = (text or "").strip()
-        if not text:
-            return []
-
-        tokens: list = []
-        buf = ""
-        for ch in text:
-            if "\u4e00" <= ch <= "\u9fff":
-                if buf:
-                    tokens.append(buf)
-                    buf = ""
-                tokens.append(ch)
-            elif ch.isspace():
-                if buf:
-                    tokens.append(buf)
-                    buf = ""
-            else:
-                buf += ch
-        if buf:
-            tokens.append(buf)
-        # 去掉纯空白 token
-        tokens = [t for t in tokens if t.strip()]
-        if not tokens:
-            return []
-
-        dur = max(0.0, float(end) - float(start))
-        n = len(tokens)
-        words = []
-        for i, tok in enumerate(tokens):
-            w_start = float(start) + dur * i / n
-            w_end = float(start) + dur * (i + 1) / n
-            words.append({
-                "word": tok,
-                "start": round(w_start, 4),
-                "end": round(w_end, 4),
-            })
-        return words
+        return synthesize_words(text, start, end)
 
     # ── 退化兜底断句 ─────────────────────────────────────────────────────
     @staticmethod
@@ -276,48 +241,9 @@ class MossTranscribeDiarizeLocal(ASRBase):
         时间轴都会退化。这里按句末标点 + 字数上限切句，并按字数比例把父段
         时间窗分摊到各句，保证至少维持可用的时间粒度。
         """
-        text = (text or "").strip()
-        if not text:
-            return []
+        from backend.asr.audio_split import split_text_sentences
 
-        end_chars = "。！？!?；;…"
-        pieces: list = []
-        buf = ""
-        for ch in text:
-            if ch == "\n":
-                if buf.strip():
-                    pieces.append(buf.strip())
-                buf = ""
-                continue
-            buf += ch
-            if ch in end_chars and len(buf) >= 4:
-                pieces.append(buf.strip())
-                buf = ""
-            elif len(buf) >= max_chars:
-                pieces.append(buf.strip())
-                buf = ""
-        if buf.strip():
-            pieces.append(buf.strip())
-
-        pieces = [p for p in pieces if p]
-        if not pieces:
-            return []
-
-        _start, _end = float(start), float(end)
-        dur = max(0.0, _end - _start)
-        total = sum(len(p) for p in pieces) or 1
-
-        out: list = []
-        cursor = _start
-        for i, piece in enumerate(pieces):
-            piece_end = _end if i == len(pieces) - 1 else cursor + dur * len(piece) / total
-            out.append({
-                "start": round(cursor, 4),
-                "end": round(piece_end, 4),
-                "text": piece,
-            })
-            cursor = piece_end
-        return out
+        return split_text_sentences(text, start, end, max_chars=max_chars)
 
     # ── 音频时长估算（用于按长度放大生成预算，避免长音频被截断）──────────
     @staticmethod

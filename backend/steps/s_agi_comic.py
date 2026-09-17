@@ -24,6 +24,7 @@ import uuid
 import re
 
 from backend.steps.base_step import BaseStep
+from backend.utils.video_encoder import build_video_encode_args
 
 
 # --------------------------------------------------------------------------- #
@@ -150,7 +151,9 @@ def _concat_videos(paths: list, out_path: str):
         inputs += ["-i", p]
     fc = "".join(f"[{i}:v][{i}:a]" for i in range(len(paths))) + \
         f"concat=n={len(paths)}:v=1:a=1[outv][outa]"
-    _run_ffmpeg(inputs + ["-filter_complex", fc, "-map", "[outv]", "-map", "[outa]", out_path])
+    # 编码器由全局设置「视频处理 → 使用显卡加速 (NVIDIA NVENC)」决定
+    _run_ffmpeg(inputs + ["-filter_complex", fc, "-map", "[outv]", "-map", "[outa]"]
+                + build_video_encode_args("libx264", crf=23, preset="veryfast") + [out_path])
 
 
 # --------------------------------------------------------------------------- #

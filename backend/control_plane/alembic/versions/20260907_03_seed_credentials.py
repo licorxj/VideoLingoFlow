@@ -1,6 +1,7 @@
 """seed common credential entries so new users can fill values directly"""
 
 import uuid
+from typing import Any
 
 import sqlalchemy as sa
 from alembic import op
@@ -27,21 +28,63 @@ _SEED = [
 ]
 
 
+# 本迁移显式写入的列（其余列按表结构动态补齐）
+_FIXED_COLUMNS = ("id", "version", "name", "value", "purpose", "rotate", "current_index")
+
+
+def _fixed_values(name: str, purpose: str) -> dict[str, Any]:
+    return {
+        "id": uuid.uuid4().hex,
+        "version": 1,
+        "name": name,
+        "value": "",
+        "purpose": purpose,
+        "rotate": True,
+        "current_index": 0,
+    }
+
+
+def _placeholder_for(column: Any) -> Any:
+    """为「本迁移之后才新增」的 NOT NULL 列补一个安全默认值。
+
+    全新安装时首条迁移会用当前模型 ``create_all`` 建表，表里可能已经带有后面才
+    加入的列（例如 ``register_url``）。此时硬编码列清单会因 NOT NULL 约束失败，
+    因此这里按实际表结构补齐缺失列。可空/已有默认值的列返回 None（交给数据库）。
+    """
+    if column.get("nullable") or column.get("default") or column.get("server_default"):
+        return None
+    python_type = getattr(column["type"], "python_type", str)
+    if python_type is bool:
+        return False
+    if python_type in (int, float):
+        return 0
+    return ""
+
+
 def upgrade() -> None:
     bind = op.get_bind()
     inspector = sa.inspect(bind)
     if not inspector.has_table(_TABLE):
         return
+    extras: dict[str, Any] = {}
+    for column in inspector.get_columns(_TABLE):
+        if column["name"] in _FIXED_COLUMNS:
+            continue
+        value = _placeholder_for(column)
+        if value is not None:
+            extras[column["name"]] = value
+
     existing = {row[0] for row in bind.execute(sa.text(f"SELECT name FROM {_TABLE}"))}
     for name, purpose in _SEED:
         if name in existing:
             continue
+        values = _fixed_values(name, purpose)
+        values.update(extras)
+        columns_sql = ", ".join(values)
+        placeholders = ", ".join(f":{key}" for key in values)
         bind.execute(
-            sa.text(
-                f"INSERT INTO {_TABLE} (id, version, name, value, purpose, rotate, current_index) "
-                "VALUES (:id, 1, :name, '', :purpose, :rotate, 0)"
-            ),
-            {"id": uuid.uuid4().hex, "name": name, "purpose": purpose, "rotate": True},
+            sa.text(f"INSERT INTO {_TABLE} ({columns_sql}) VALUES ({placeholders})"),
+            values,
         )
 
 

@@ -227,6 +227,9 @@ async def retry_task(batch_id: str, task_id: str):
         return be.retry_task(batch_id, task_id)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        # 业务态校验失败（如任务不在可重跑状态）：按 400 返回，避免未捕获异常变成 500
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
 
@@ -239,6 +242,9 @@ async def resume_task(batch_id: str, task_id: str):
         return be.resume_single_task(batch_id, task_id)
     except FileNotFoundError as e:
         raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        # 业务态校验失败（如任务不在可恢复状态）：按 400 返回，避免未捕获异常变成 500
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
 
