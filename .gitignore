@@ -267,3 +267,6 @@ debug-*.md
 # 首发宣传视频策划与素材（本机资料，不随仓库分发）
 docs/首发宣传视频*
 promo_assets/
+
+# QM-LocalRouter 图标资源（本地缓存，不随 git 分发）
+thirdparty/QM-LocalRouter/backend/data/icons/
