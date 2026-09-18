@@ -1,12 +1,12 @@
 {
-  "commit_sha": "24813f17c88fc1f7cd53b84fa986792168414215",
+  "commit_sha": "9713ae3983600f39b4c1f650e0780e3efe952870",
   "files": {
     "backend/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "backend/auth/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "backend/auth/cloud_auth_client.cpython-312-x86_64-linux-gnu.so": "8cbcace57e0ac46a657ba4c84940d91213711920d342ca25146965a79c78088c",
     "backend/auth/cloud_auth_service.cpython-312-x86_64-linux-gnu.so": "9d1f687ddd7c6aa6ec42784c5523be72deffce14af123d8aeef401db7c0faf15",
     "backend/auth/error_codes.json": "83862afc3e67c2f5ac6be3508210c602f610d6edb8282179631cdab8a1a6caba",
-    "backend/auth/secure_config.cpython-312-x86_64-linux-gnu.so": "0ce8f86925d3664064358259b0e2228ea0b3531fcab920cc258c61c24d46304a",
+    "backend/auth/secure_config.cpython-312-x86_64-linux-gnu.so": "c7a5baf72943f1ec473e270a87ab3c47c46928bf64e57c53f9cfc667a943a707",
     "backend/auth/subscription_guard.cpython-312-x86_64-linux-gnu.so": "b7cccebdbdab1f0f616749fef6b41724defe998cefc12549e630ea62a92bf48c",
     "backend/control_plane/__init__.py": "3f0d1f765c1fe0b086d5ef89d8829822699327e824a96877f7b261cadfbe281e",
     "backend/control_plane/custom_node_runtime.cpython-312-x86_64-linux-gnu.so": "5b538dc82f0648450642a2e838eacf5b32a202aca072bc50fad3f0735416f4d4",
@@ -15,5 +15,5 @@
   },
   "python_abi": "cp312",
   "target": "linux-x86_64",
-  "version": "v2.0.7"
+  "version": "v2.0.8"
 }

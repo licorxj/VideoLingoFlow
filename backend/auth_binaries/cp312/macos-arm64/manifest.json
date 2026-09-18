@@ -1,12 +1,12 @@
 {
-  "commit_sha": "24813f17c88fc1f7cd53b84fa986792168414215",
+  "commit_sha": "9713ae3983600f39b4c1f650e0780e3efe952870",
   "files": {
     "backend/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "backend/auth/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "backend/auth/cloud_auth_client.cpython-312-darwin.so": "0aa266ec6ae16956bbe5497626cac663abdfa1cc3ebeaa17d3439cd1ea84f159",
     "backend/auth/cloud_auth_service.cpython-312-darwin.so": "793cf7cc3a888239560c037bf58045ce8b528310382fbe9db163c00aa54e1bcd",
     "backend/auth/error_codes.json": "83862afc3e67c2f5ac6be3508210c602f610d6edb8282179631cdab8a1a6caba",
-    "backend/auth/secure_config.cpython-312-darwin.so": "058c6405d1656c09c9f86cf28a5ba7649b90b5de8479375e0aea7785a52eefa6",
+    "backend/auth/secure_config.cpython-312-darwin.so": "86376e43638795a6f85c1d289a92052dc0b001bb6bac37bc86fb232454956959",
     "backend/auth/subscription_guard.cpython-312-darwin.so": "3299d2e0911e2c90a916fb4036a6f573a0b935504c7e9825fbb0ca25418741eb",
     "backend/control_plane/__init__.py": "3f0d1f765c1fe0b086d5ef89d8829822699327e824a96877f7b261cadfbe281e",
     "backend/control_plane/custom_node_runtime.cpython-312-darwin.so": "79bb2528fa245ac395092e5ba534f692b3c11a72c0e3e03fbc77ace55c594c85",
@@ -15,5 +15,5 @@
   },
   "python_abi": "cp312",
   "target": "macos-arm64",
-  "version": "v2.0.7"
+  "version": "v2.0.8"
 }
