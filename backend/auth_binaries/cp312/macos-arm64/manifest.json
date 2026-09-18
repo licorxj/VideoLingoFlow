@@ -1,18 +1,19 @@
 {
-  "commit_sha": "4533781c5489a4088b8996439fab17151d94f169",
+  "commit_sha": "24813f17c88fc1f7cd53b84fa986792168414215",
   "files": {
     "backend/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "backend/auth/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
     "backend/auth/cloud_auth_client.cpython-312-darwin.so": "0aa266ec6ae16956bbe5497626cac663abdfa1cc3ebeaa17d3439cd1ea84f159",
-    "backend/auth/cloud_auth_service.cpython-312-darwin.so": "c2cf1ad27e05d86e0b5899879d67d09db296fb0cf2f6da30f16d5271445ae935",
+    "backend/auth/cloud_auth_service.cpython-312-darwin.so": "793cf7cc3a888239560c037bf58045ce8b528310382fbe9db163c00aa54e1bcd",
     "backend/auth/error_codes.json": "83862afc3e67c2f5ac6be3508210c602f610d6edb8282179631cdab8a1a6caba",
-    "backend/auth/subscription_guard.cpython-312-darwin.so": "8b55d69f075caafb7da4286aad64ceebd4b291f98ef81e668ed570fc1ab1f792",
+    "backend/auth/secure_config.cpython-312-darwin.so": "058c6405d1656c09c9f86cf28a5ba7649b90b5de8479375e0aea7785a52eefa6",
+    "backend/auth/subscription_guard.cpython-312-darwin.so": "3299d2e0911e2c90a916fb4036a6f573a0b935504c7e9825fbb0ca25418741eb",
     "backend/control_plane/__init__.py": "3f0d1f765c1fe0b086d5ef89d8829822699327e824a96877f7b261cadfbe281e",
     "backend/control_plane/custom_node_runtime.cpython-312-darwin.so": "79bb2528fa245ac395092e5ba534f692b3c11a72c0e3e03fbc77ace55c594c85",
-    "backend/control_plane/runtime.cpython-312-darwin.so": "9e23168095a0ea700e69648df88730518a3e203b2784585b2f22cd066b39f0d5",
-    "backend/control_plane/workflow_runtime.cpython-312-darwin.so": "380807389a99aa13391f1884381c76b26cdecd0649027b19c587ba322b72c627"
+    "backend/control_plane/runtime.cpython-312-darwin.so": "f9189fc2f7b68a41ce2170bf2e6f76e0bde32597711d43352131634dd48f7d4f",
+    "backend/control_plane/workflow_runtime.cpython-312-darwin.so": "ceeef1afc584e5af14b18220b6a60c0849f96e058973d075d172d476741a6836"
   },
   "python_abi": "cp312",
   "target": "macos-arm64",
-  "version": "v1.1.4"
+  "version": "v2.0.7"
 }

@@ -90,6 +90,7 @@ tasks/
 backend/auth/cloud_auth_client.py
 backend/auth/cloud_auth_service.py
 backend/auth/subscription_guard.py
+backend/auth/secure_config.py
 backend/auth/error_codes.json
 backend/control_plane/workflow_runtime.py
 backend/control_plane/runtime.py
