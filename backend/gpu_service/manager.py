@@ -28,6 +28,7 @@ class GpuServiceManager:
         self._lanes: dict[str, dict] = {}  # lane_id -> {"proc": Popen, "spawned_at": float}
         self._vram = {"available": False, "free_gb": 0.0, "total_gb": 0.0, "used_gb": 0.0, "name": ""}
         self._stop = threading.Event()
+        self._serial = config.serial_mode()
         self._max_lanes = config.max_lanes()
         self._idle_timeout = config.lane_idle_timeout()
         self._pressure_idle_timeout = config.pressure_idle_timeout()
@@ -203,6 +204,7 @@ class GpuServiceManager:
             "available": True,
             "vram": self._vram,
             "max_lanes": self._max_lanes,
+            "serial_mode": self._serial,
             "active_lanes": len(lanes),
             "busy_lanes": sum(1 for lane in lanes if lane["status"] == "busy"),
             "queue_depth": depth,
@@ -214,8 +216,8 @@ class GpuServiceManager:
     # ── 主循环 ────────────────────────────────────────────────────
     def run(self) -> None:
         print(f"[GPU-manager] started pid={os.getpid()} max_lanes={self._max_lanes} "
-              f"idle_timeout={self._idle_timeout}s pressure_idle={self._pressure_idle_timeout}s "
-              f"headroom={self._headroom}GB", flush=True)
+              f"serial={self._serial} idle_timeout={self._idle_timeout}s "
+              f"pressure_idle={self._pressure_idle_timeout}s headroom={self._headroom}GB", flush=True)
         threading.Thread(target=self._vram_loop, daemon=True).start()
         try:
             self._rc.delete(config.shutdown_key())  # 清掉历史停机标记

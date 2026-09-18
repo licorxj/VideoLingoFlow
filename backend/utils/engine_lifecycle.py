@@ -1,32 +1,54 @@
 """引擎生命周期管理：空闲超时自动卸载（OCR / ASR 通用）。
 
-引擎在最后一次被任务使用后，若超过 idle_timeout（默认 5 秒）仍无新调用，
+引擎在最后一次被任务使用后，若超过 idle_timeout 仍无新调用，
 后台清扫线程会将其卸载并归还内存/显存；下次调用时按需重建。
 
+空闲超时可用环境变量按引擎覆盖（本机单卡批量建议拉长，避免反复重载）：
+  ENGINE_IDLE_TIMEOUT_ASR=120
+  ENGINE_IDLE_TIMEOUT_OCR=30
+  ENGINE_IDLE_TIMEOUT_DEFAULT=5
+
 用法：
-    registry = IdleEngineRegistry(idle_timeout=5.0, name="OCR")
+    registry = IdleEngineRegistry(idle_timeout=None, name="ASR")  # None=读 env
     engine = registry.acquire("rapidocr", builder, unloader=my_unload)
 
 安全说明：卸载回调（unloader）需设计为在引擎空闲时执行；对于正在运行的
 推理，引擎内部持有的 session/模型引用不会因卸载回调而失效（局部引用仍存活）。
 """
 import gc
+import os
 import threading
 import time
 from typing import Callable, Dict, Optional
 
-DEFAULT_IDLE_TIMEOUT = 5.0    # 空闲多少秒后自动卸载
+DEFAULT_IDLE_TIMEOUT = 5.0    # 默认空闲多少秒后自动卸载
 DEFAULT_SWEEP_INTERVAL = 1.0  # 后台清扫间隔（秒）
+
+
+def resolve_idle_timeout(name: str, default: float = DEFAULT_IDLE_TIMEOUT) -> float:
+    """按引擎名解析空闲超时：ENGINE_IDLE_TIMEOUT_<NAME> > ENGINE_IDLE_TIMEOUT_DEFAULT > default。"""
+    for key in (f"ENGINE_IDLE_TIMEOUT_{str(name).upper()}", "ENGINE_IDLE_TIMEOUT_DEFAULT"):
+        raw = os.getenv(key, "").strip()
+        if not raw:
+            continue
+        try:
+            return max(1.0, float(raw))
+        except (TypeError, ValueError):
+            continue
+    try:
+        return max(1.0, float(default))
+    except (TypeError, ValueError):
+        return DEFAULT_IDLE_TIMEOUT
 
 
 class IdleEngineRegistry:
     """带空闲超时自动卸载的引擎注册表。"""
 
-    def __init__(self, idle_timeout: float = DEFAULT_IDLE_TIMEOUT,
-                 sweep_interval: float = DEFAULT_SWEEP_INTERVAL,
+    def __init__(self, idle_timeout: Optional[float] = None, sweep_interval: float = DEFAULT_SWEEP_INTERVAL,
                  name: str = "engine"):
         self._name = name
-        self._idle_timeout = idle_timeout
+        # None：优先读 ENGINE_IDLE_TIMEOUT_<NAME>，便于本机批量按引擎拉长驻留
+        self._idle_timeout = resolve_idle_timeout(name, DEFAULT_IDLE_TIMEOUT if idle_timeout is None else idle_timeout)
         self._sweep_interval = sweep_interval
         self._entries: Dict[str, dict] = {}
         self._lock = threading.Lock()

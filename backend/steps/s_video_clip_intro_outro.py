@@ -121,7 +121,8 @@ def _clip_video(video_path: str, output_path: str, start: float, end: float) -> 
     """使用 ffmpeg 流拷贝裁剪 [start, end] 区间（快速、不重新编码）。"""
     if end <= start:
         return False
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y",
         "-ss", f"{start:.3f}",
         "-to", f"{end:.3f}",
@@ -129,7 +130,7 @@ def _clip_video(video_path: str, output_path: str, start: float, end: float) -> 
         "-c", "copy",
         "-avoid_negative_ts", "make_zero",
         output_path,
-    ]
+    ], mux_queue=4096)
     try:
         result = subprocess.run(cmd, capture_output=True, timeout=600)
     except Exception:

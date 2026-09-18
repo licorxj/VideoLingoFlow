@@ -389,6 +389,13 @@ async def metrics():
     for resource, capacity in RESOURCE_TOKENS.capacities.items():
         lines.append(f'videolingo_resource_capacity{{resource="{resource}"}} {capacity}')
         lines.append(f'videolingo_queue_depth{{resource="{resource}"}} {_queue_depth(resource)}')
+    try:
+        for resource, info in (RESOURCE_TOKENS.snapshot() or {}).items():
+            in_use = info.get("in_use")
+            if isinstance(in_use, (int, float)) and in_use >= 0:
+                lines.append(f'videolingo_resource_in_use{{resource="{resource}"}} {int(in_use)}')
+    except Exception:
+        pass
     worker_count = 0
     worker_capabilities = {}
     if control_plane_celery is not None:

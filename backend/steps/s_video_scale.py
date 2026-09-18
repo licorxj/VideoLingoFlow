@@ -114,6 +114,9 @@ class S_VideoScale(BaseStep):
         cmd += build_video_encode_args(vcodec, quality=quality)
 
         cmd += ["-c:a", acodec, "-b:a", "192k"]
+        # 限制编解码线程与封装队列，避免重编码吃满 CPU / 内存暴涨
+        from backend.utils.ffmpeg_guard import resource_args
+        cmd += resource_args()
         cmd.append(output_path)
         return cmd
 
@@ -162,8 +165,14 @@ class S_VideoScale(BaseStep):
             except Exception:
                 pass
 
+        # 超时按视频时长自适应（原先未传 timeout，走默认 86400s，异常挂起时形同卡死）
+        from backend.utils.ffmpeg_guard import adaptive_timeout
+
         duration = get_video_duration(input_path)
-        run_ffmpeg_with_progress(cmd, duration, callback, cancel_callback, label="缩放")
+        run_ffmpeg_with_progress(
+            cmd, duration, callback, cancel_callback,
+            timeout=adaptive_timeout(duration), label="缩放",
+        )
 
         if not os.path.exists(output_path):
             raise RuntimeError("缩放完成但未找到输出文件: " + output_path)

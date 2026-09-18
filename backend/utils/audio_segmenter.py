@@ -8,6 +8,10 @@ import os
 import yaml
 import numpy as np
 
+# 参考音频片段长度上下限（秒）：超出范围说明时间戳异常，直接抛出错误
+MIN_SEGMENT_SECONDS = 0.05
+MAX_SEGMENT_SECONDS = 30.0
+
 
 def find_optimal_cut_point(audio_data: np.ndarray, sample_rate: int, window_seconds: float = 1.0) -> int:
     """在指定时间点附近的窗口内找到音频波形能量最低的点作为切割点
@@ -140,8 +144,10 @@ def split_audio_by_timestamps(
         base_end_sample = min(len(audio_data), int((end + extend_time) * sr))
         
         if base_end_sample <= base_start_sample:
-            print(f"[AudioSegmenter] 跳过无效段落: idx={idx}, start={start}, end={end}")
-            continue
+            raise ValueError(
+                f"[AudioSegmenter] 第 {idx} 段切割区间无效（start={start}, end={end}），"
+                f"请检查时间戳是否落在音频时长 {len(audio_data) / float(sr):.3f}s 之内"
+            )
         
         # 在基础切割点附近找到最优静音点（如果启用了波谷切割）
         optimal_start = base_start_sample
@@ -172,9 +178,18 @@ def split_audio_by_timestamps(
         # 截取音频段
         segment_data = audio_data[optimal_start:optimal_end]
         
-        if len(segment_data) == 0:
-            print(f"[AudioSegmenter] 跳过空段落: idx={idx}")
-            continue
+        # 片段长度校验：过短/过长都说明时间戳异常，直接抛错，避免产出无效参考音频
+        seg_seconds = len(segment_data) / float(sr) if sr else 0.0
+        if seg_seconds < MIN_SEGMENT_SECONDS:
+            raise ValueError(
+                f"[AudioSegmenter] 第 {idx} 段切割时长 {seg_seconds:.4f}s 小于下限 "
+                f"{MIN_SEGMENT_SECONDS}s（start={start}, end={end}），请检查时间戳"
+            )
+        if seg_seconds > MAX_SEGMENT_SECONDS:
+            raise ValueError(
+                f"[AudioSegmenter] 第 {idx} 段切割时长 {seg_seconds:.4f}s 超过上限 "
+                f"{MAX_SEGMENT_SECONDS}s（start={start}, end={end}），请检查时间戳"
+            )
         
         # 保存音频
         out_file = os.path.join(output_dir, f"{idx:04d}.wav")

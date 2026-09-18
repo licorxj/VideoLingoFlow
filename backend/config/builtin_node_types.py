@@ -979,8 +979,11 @@ BUILTIN_NODE_TYPES = [
         "outputs": [
             {"id": "json", "label": "ASR结果JSON(透传)", "type": "json", "color": "#10b981"}
         ],
-        "defaultConfig": {},
-        "configFields": []
+        "defaultConfig": {"auto_fix": False},
+        "configFields": [
+            {"key": "auto_fix", "label": "自动修复", "type": "checkbox", "colSpan": "full",
+             "description": "勾选后：校验发现不一致时自动修复并写回输入文件 —— text 与 segments 对不上则以 segments 重拼 text（保留标点）；segments 与 words 对不上则以 words 重拼该段文本并更新起始时间；同时补齐 speaker（段取首个词、词取所属段，都没有则填 S01）"},
+        ]
     },
     {
         "id": "summarize",
@@ -1267,7 +1270,14 @@ BUILTIN_NODE_TYPES = [
             {"id": "dub", "label": "配音音频", "type": "audio"},
         ],
         "outputs": [{"id": "video", "label": "字幕视频", "type": "video"}],
-        "defaultConfig": {"video_quality": "medium", "mute_original": False, "bgm_volume": 0.3, "dub_volume": 0.8, "fade_in": 0.5, "fade_out": 0.5},
+        "defaultConfig": {"video_quality": "medium", "mute_original": False,
+                          "bgm_volume": 0.3, "dub_volume": 0.8,
+                          "fade_in": 0.5, "fade_out": 0.5,
+                          "bgm_fade_in": 0.5, "bgm_fade_out": 0.5,
+                          "dub_fade_in": 0.5, "dub_fade_out": 0.5,
+                          "bgm_loop": True,
+                          "original_volume": 1.0, "original_fade_in": 0.0, "original_fade_out": 0.0,
+                          "encode_preset": "medium", "ffmpeg_threads": 0, "max_duration_minutes": 0},
         "configFields": [
             {"key": "preset_id", "label": "字幕样式预设", "type": "api-select", "apiUrl": "/api/subtitle-presets", "optionLabel": "name", "optionValue": "name", "description": "选择字幕样式预设，留空使用全局配置"},
             {"key": "mute_original", "label": "原视频静音", "type": "checkbox", "colSpan": "half", "description": "烧录字幕时是否将原视频音频静音"},
@@ -1277,12 +1287,43 @@ BUILTIN_NODE_TYPES = [
                 {"label": "中等(CRF23)", "value": "medium"},
                 {"label": "低质量(CRF28)", "value": "low"},
             ], "description": "视频编码质量，copy为原始质量（有字幕时自动回退到中等）"},
+            {"key": "encode_preset", "label": "编码速度", "type": "select", "colSpan": "half", "options": [
+                {"label": "极快（最快，体积大）", "value": "ultrafast"},
+                {"label": "很快", "value": "veryfast"},
+                {"label": "快", "value": "fast"},
+                {"label": "中等（默认）", "value": "medium"},
+                {"label": "慢（体积更小）", "value": "slow"},
+            ], "description": "编码速度越慢画质/体积越好但越耗时；长视频建议选「很快」及以上，可显著缩短烧录时间"},
+            {"key": "ffmpeg_threads", "label": "ffmpeg 线程上限", "type": "number", "min": 0, "max": 64,
+             "colSpan": "half", "placeholder": "0 = 自动",
+             "description": "限制编码与字幕滤镜线程数，避免烧录时吃满 CPU 导致系统卡顿；0 表示由 ffmpeg 自动决定"},
+            {"key": "max_duration_minutes", "label": "最长时长上限(分钟)", "type": "number", "min": 0, "max": 1440,
+             "colSpan": "half", "placeholder": "0 = 不限制",
+             "description": "视频时长超过该上限时直接中止并提示，避免超长视频拖垮机器；0 表示不限制"},
             {"key": "bgm_path", "label": "BGM 路径", "type": "text", "description": "背景音乐文件路径，留空则不混入BGM"},
             {"key": "dub_path", "label": "配音路径", "type": "text", "description": "配音音频文件路径，留空则不混入配音"},
             {"key": "bgm_volume", "label": "BGM 音量", "type": "slider", "colSpan": "half", "min": 0, "max": 1, "step": 0.05, "description": "背景音乐音量 (0~1)"},
             {"key": "dub_volume", "label": "配音响度", "type": "slider", "colSpan": "half", "min": 0, "max": 1, "step": 0.05, "description": "配音音量 (0~1)"},
-            {"key": "fade_in", "label": "淡入(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 10, "step": 0.1, "description": "配音淡入时间"},
-            {"key": "fade_out", "label": "淡出(秒)", "type": "number", "colSpan": "half", "min": 0, "max": 10, "step": 0.1, "description": "配音淡出时间"},
+            {"key": "fade_in", "label": "通用淡入(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.5,
+             "description": "未单独设置某轨淡入时的兜底值（作用于 BGM 与配音）"},
+            {"key": "fade_out", "label": "通用淡出(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.5,
+             "description": "未单独设置某轨淡出时的兜底值（作用于 BGM 与配音）"},
+            {"key": "bgm_loop", "label": "BGM 循环填充", "type": "toggle", "colSpan": "third", "defaultValue": True,
+             "description": "开启：BGM 短于视频时循环铺满；关闭：只播放一遍，其余保持静音"},
+            {"key": "bgm_fade_in", "label": "BGM 淡入(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.5,
+             "description": "BGM 独立淡入，与配音互不影响"},
+            {"key": "bgm_fade_out", "label": "BGM 淡出(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.5,
+             "description": "BGM 独立淡出，与配音互不影响"},
+            {"key": "dub_fade_in", "label": "配音 淡入(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.5,
+             "description": "配音独立淡入，与 BGM 互不影响"},
+            {"key": "dub_fade_out", "label": "配音 淡出(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.5,
+             "description": "配音独立淡出，与 BGM 互不影响"},
+            {"key": "original_volume", "label": "原声 音量", "type": "slider", "colSpan": "third", "min": 0, "max": 2, "step": 0.05, "defaultValue": 1.0,
+             "description": "原视频音轨音量倍数（1.0=原始）；仅在未勾选「原视频静音」时生效"},
+            {"key": "original_fade_in", "label": "原声 淡入(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.0,
+             "description": "原视频音轨淡入；默认 0 表示不处理（与历史行为一致）"},
+            {"key": "original_fade_out", "label": "原声 淡出(秒)", "type": "number", "colSpan": "third", "min": 0, "max": 30, "step": 0.1, "defaultValue": 0.0,
+             "description": "原视频音轨淡出；默认 0 表示不处理（与历史行为一致）"},
         ],
     },
     {
@@ -1398,7 +1439,9 @@ BUILTIN_NODE_TYPES = [
             "track4_fade_out": 0.3,
             "track4_loop": False,
             "audio_format": "wav",
-            "audio_bitrate": "192"
+            "audio_bitrate": "192",
+            "loudnorm_enabled": False,
+            "target_lufs": -16
         },
         "configFields": [
             {"key": "duration_mode", "label": "总时长模式", "type": "select", "colSpan": "full",
@@ -1427,7 +1470,11 @@ BUILTIN_NODE_TYPES = [
                 {"label": "FLAC (无损压缩)", "value": "flac"}
             ], "description": "混音输出格式，默认 WAV"},
             {"key": "audio_bitrate", "label": "MP3码率(kbps)", "type": "text", "colSpan": "half", "placeholder": "默认 192",
-             "description": "仅 MP3 生效，WAV/FLAC 忽略"}
+             "description": "仅 MP3 生效，WAV/FLAC 忽略"},
+            {"key": "loudnorm_enabled", "label": "响度标准化", "type": "toggle", "colSpan": "half", "defaultValue": False,
+             "description": "对混音结果做 EBU R128 两遍响度标准化（与「字幕烧录」同一套实现），开启后各轨响度基准统一"},
+            {"key": "target_lufs", "label": "目标响度(LUFS)", "type": "number", "colSpan": "half", "min": -40, "max": 0, "step": 0.5, "defaultValue": -16,
+             "description": "响度标准化目标值，常用 -16（网页/移动）或 -14（流媒体平台）"}
         ]
     },
     {
@@ -2705,6 +2752,7 @@ BUILTIN_NODE_TYPES = [
             "apply_filter": False, "filter_preset": "color",
             "add_border": False, "border_size": "20",
             "output_format": "mp4", "video_quality": "medium",
+            "encode_preset": "", "ffmpeg_threads": 0, "max_duration_minutes": 0,
         },
         "configFields": [
             {"key": "flip_h", "label": "水平镜像翻转", "type": "checkbox", "colSpan": "half",
@@ -2748,6 +2796,20 @@ BUILTIN_NODE_TYPES = [
                 {"label": "中 (CRF23)", "value": "medium"},
                 {"label": "低 (CRF28)", "value": "low"},
             ], "description": "重新编码质量（CRF 越小质量越高）"},
+            {"key": "encode_preset", "label": "编码速度", "type": "select", "colSpan": "half", "options": [
+                {"label": "默认", "value": ""},
+                {"label": "极快（最快，体积大）", "value": "ultrafast"},
+                {"label": "很快", "value": "veryfast"},
+                {"label": "快", "value": "fast"},
+                {"label": "中等", "value": "medium"},
+                {"label": "慢（体积更小）", "value": "slow"},
+            ], "description": "编码速度越慢画质/体积越好但越耗时；长视频建议选「很快」及以上，可显著缩短处理时间"},
+            {"key": "ffmpeg_threads", "label": "ffmpeg 线程上限", "type": "number", "min": 0, "max": 64,
+             "colSpan": "half", "placeholder": "0 = 自动",
+             "description": "限制编码与滤镜线程数，避免重编码时吃满 CPU 导致系统卡顿；0 表示由 ffmpeg 自动决定"},
+            {"key": "max_duration_minutes", "label": "最长时长上限(分钟)", "type": "number", "min": 0, "max": 1440,
+             "colSpan": "half", "placeholder": "0 = 不限制",
+             "description": "视频时长超过该上限时直接中止并提示，避免超长视频拖垮机器；0 表示不限制"},
         ],
     },
     {

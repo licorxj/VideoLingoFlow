@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ChevronRight, Grid3x3, Loader2, Play, RefreshCw, RotateCw, X } from "lucide-react";
 import client from "@/api/client";
+import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 
 /** 驾驶舱任务（POST /api/creation/run-stage 返回、GET /api/creation/tasks 回查） */
 interface CockpitTask {
@@ -453,7 +454,10 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
 
   // 有任务在跑时轮询；全部结束后刷新矩阵与分镜明细
   const finishedRef = useRef(0);
+  const keepAliveActive = useKeepAliveActive();
   useEffect(() => {
+    // 被 KeepAlive 隐藏时整体挂起：既不 4s 轮询也不触发收尾刷新
+    if (!keepAliveActive) return;
     if (!activeTasks.length) {
       if (finishedRef.current > 0) {
         finishedRef.current = 0;
@@ -466,7 +470,7 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
     finishedRef.current = activeTasks.length;
     const timer = window.setInterval(() => { loadTasks(); }, 4000);
     return () => window.clearInterval(timer);
-  }, [activeTasks.length, load, loadTasks]);
+  }, [activeTasks.length, load, loadTasks, keepAliveActive]);
 
   /** 发起一次「章节 × 阶段」生产 */
   const runStage = (chapterId: string, stepId: string, force: boolean) => {

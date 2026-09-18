@@ -182,8 +182,9 @@ def _adjust_with_ffmpeg(input_path: str, output_path: str, speed_factor: float) 
 
         cmd.append(output_path)
         logger.info("ffmpeg speed backend=%s speed_factor=%.4f", backend, speed_factor)
+        from backend.utils.ffmpeg_guard import apply_resource_args
         result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=120
+            apply_resource_args(cmd), capture_output=True, text=True, timeout=120
         )
         if result.returncode == 0 and os.path.exists(output_path):
             return True

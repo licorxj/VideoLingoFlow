@@ -577,11 +577,12 @@ class S02ASR(BaseStep):
                        callback: Optional[Callable] = None):
         if callback:
             callback(10, "Extracting audio from video...")
-        cmd = [
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd = apply_resource_args([
             "ffmpeg", "-y", "-i", video_path,
             "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
             audio_path,
-        ]
+        ])
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             raise Exception(f"Audio extraction failed: {result.stderr[:200]}")

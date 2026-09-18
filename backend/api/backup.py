@@ -32,6 +32,15 @@ INTERFACE_FILES = [
     "videogen_interfaces.json",
 ]
 
+# 大模型路由器（QM-LocalRouter）数据目录与需备份的设置文件
+ROUTER_DATA_DIR = PROJECT_ROOT / "thirdparty" / "QM-LocalRouter" / "backend" / "data"
+ROUTER_FILES = ["app_settings.json", "backup_config.json"]
+
+# 备份设置持久化位置：用户主目录下的 .lcsoftware
+# （文件/目录缺失或内容损坏时一律按空值处理，不抛错）
+LC_SETTINGS_DIR = Path.home() / ".lcsoftware"
+LC_SETTINGS_FILE = LC_SETTINGS_DIR / "backup_settings.json"
+
 CATEGORIES = {
     "interface": {
         "label": "接口配置",
@@ -52,6 +61,10 @@ CATEGORIES = {
     "customnode": {
         "label": "自定义节点",
         "description": "自定义节点类型与内置节点删除记录（node_types 目录）",
+    },
+    "llmrouter": {
+        "label": "大模型路由器设置",
+        "description": "大模型路由器（QM-LocalRouter）设置与应用配置（app_settings.json / backup_config.json）",
     },
 }
 
@@ -122,6 +135,12 @@ def _category_source_files(category: str):
         g = CONFIG_DIR / "deleted_builtin_node_ids.json"
         if g.exists():
             files.append((g, "data/node_types/deleted_builtin_node_ids.json", "deleted_builtin_node_ids.json"))
+    elif category == "llmrouter":
+        # destRel 相对 ROUTER_DATA_DIR（见 _category_dest_root），故直接用文件名
+        for fn in ROUTER_FILES:
+            p = ROUTER_DATA_DIR / fn
+            if p.exists():
+                files.append((p, f"data/llm_router/{fn}", fn))
     return files
 
 
@@ -170,6 +189,10 @@ class CreateBackupRequest(BaseModel):
     options: list[str] = []
 
 
+class BackupSettingsRequest(BaseModel):
+    backupDir: str = ""
+
+
 class RestoreRequest(BaseModel):
     backupPath: str
     options: list[str] = []
@@ -190,6 +213,43 @@ async def backup_options():
             "currentCount": len(_category_source_files(cid)),
         })
     return {"options": out}
+
+
+@router.get("/settings")
+async def get_backup_settings():
+    """读取备份设置（用户主目录 ~/.lcsoftware/backup_settings.json）。
+
+    文件或目录不存在、内容损坏时一律返回空值，不抛错。
+    """
+    empty = {"backupDir": "", "settingsPath": str(LC_SETTINGS_FILE)}
+    if not LC_SETTINGS_FILE.is_file():
+        return empty
+    try:
+        data = json.loads(LC_SETTINGS_FILE.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return empty
+    if not isinstance(data, dict):
+        return empty
+    return {
+        "backupDir": str(data.get("backupDir") or ""),
+        "settingsPath": str(LC_SETTINGS_FILE),
+    }
+
+
+@router.put("/settings")
+async def save_backup_settings(req: BackupSettingsRequest):
+    """保存备份目录设置到 ~/.lcsoftware（目录不存在时自动创建）。"""
+    backup_dir = (req.backupDir or "").strip()
+    LC_SETTINGS_DIR.mkdir(parents=True, exist_ok=True)
+    LC_SETTINGS_FILE.write_text(
+        json.dumps({"backupDir": backup_dir}, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    return {
+        "success": True,
+        "backupDir": backup_dir,
+        "settingsPath": str(LC_SETTINGS_FILE),
+    }
 
 
 @router.get("/list")
@@ -271,6 +331,16 @@ async def create_backup(req: CreateBackupRequest):
     }
 
 
+def _category_dest_root(category: str) -> Path:
+    """返回某备份项恢复时的目标根目录（manifest 的 destRel 相对该目录）。
+
+    默认落回 backend/config；大模型路由器的设置文件需回到 QM-LocalRouter 数据目录。
+    """
+    if category == "llmrouter":
+        return ROUTER_DATA_DIR
+    return CONFIG_DIR
+
+
 def _pre_delete(cat: str, planned_dests: set, mode: str) -> None:
     """覆盖模式下，先删除目标目录中「未被本次备份覆盖」的用户数据文件。
 
@@ -315,12 +385,13 @@ def _restore_category(cat: str, folder: Path, manifest: dict, mode: str) -> int:
     items = [it for it in manifest.get("items", []) if it.get("category") == cat]
     if not items:
         return 0
+    dest_root = _category_dest_root(cat)
     planned = []
     for it in items:
         src = folder / it["srcRel"]
         if not src.exists():
             continue
-        dest = CONFIG_DIR / it["destRel"]
+        dest = dest_root / it["destRel"]
         planned.append((src, dest))
     planned_dests = {d for _, d in planned}
     _pre_delete(cat, planned_dests, mode)

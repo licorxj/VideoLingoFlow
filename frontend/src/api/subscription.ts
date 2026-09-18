@@ -60,6 +60,12 @@ export interface SubscriptionStatus {
   daily_node_limit?: number | null;
   remaining_nodes_today?: number | null;
   can_execute_node?: boolean;
+  /** 非订阅用户当天是否还能领取免费额度（前端「领取额度」按钮的显示条件） */
+  can_claim_quota?: boolean;
+  /** 预计可领取数量（当日上限 − 当日已领批次累计） */
+  claimable_count?: number;
+  /** 当日云端已发放的额度累计（签名值） */
+  quota_granted_total?: number;
   links: SubscriptionLinks;
 }
 
@@ -123,5 +129,6 @@ export const subscriptionApi = {
   sendResetCode: (email: string) => client.post("/api/subscription/reset-password/send-code", { email }).then((r) => r.data),
   resetPassword: (data: ResetPasswordPayload) => client.post("/api/subscription/reset-password/confirm", data).then((r) => r.data),
   verifyCard: (card_code: string) => client.post("/api/subscription/verify-card", { card_code }).then((r) => r.data as SubscriptionStatus),
+  claimQuota: () => client.post("/api/subscription/claim-quota").then((r) => r.data),
   getLinks: () => client.get("/api/subscription/links").then((r) => r.data as SubscriptionLinks),
 };

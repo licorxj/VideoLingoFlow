@@ -14,6 +14,7 @@ VideoLingoFlow 跨平台安装主程序（Windows / Linux / macOS）
   6. Node.js 检查:  可选（前端构建/部分第三方项目用）；缺失仅告警（dist 已随仓库分发）
   7. 第三方扩展:    调用 thirdparty/install_thirdparty.py（CloakBrowser + 三个项目 + pi）
   8. 配置引导:      补齐 backend/config/config.yaml、.runtime/local_env.bat
+                    （含本机单卡批量：GPU serial/lane、资源令牌、ffmpeg 线程、引擎空闲超时、batch 并发）
   9. 汇总与下一步指引
 
 用法:
@@ -385,38 +386,140 @@ def detect_nvidia_gpu() -> tuple[str, float] | None:
         return None
 
 
-def gpu_service_defaults() -> dict[str, str]:
-    detected = detect_nvidia_gpu()
-    if detected is None:
-        return {
-            "GPU_SERVICE_ENABLED": "0",
-            "GPU_SERVICE_MAX_LANES": "3",
-            "GPU_SERVICE_VRAM_HEADROOM_GB": "3.0",
-            "GPU_SERVICE_LANE_IDLE_TIMEOUT": "600",
-            "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "60",
-            "GPU_SERVICE_JOB_TIMEOUT": "3600",
-        }
-    name, total_gb = detected
-    # 显存余量阈值按 VRAM 自动调整；GPU 任务槽（lane 数）固定初始化为 3
-    if total_gb < 8:
-        headroom = 2.0
-    elif total_gb < 16:
-        headroom = 3.0
-    elif total_gb < 24:
-        headroom = 4.0
-    elif total_gb < 48:
-        headroom = 6.0
-    else:
-        headroom = 8.0
-    ok(f"检测到 NVIDIA GPU: {name}（{total_gb:.1f} GB），GPU 任务槽初始化为 3 条 lane")
-    return {
-        "GPU_SERVICE_ENABLED": "1",
-        "GPU_SERVICE_MAX_LANES": "3",
-        "GPU_SERVICE_VRAM_HEADROOM_GB": f"{headroom:.1f}",
-        "GPU_SERVICE_LANE_IDLE_TIMEOUT": "600",
-        "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "60",
-        "GPU_SERVICE_JOB_TIMEOUT": "3600",
+def _default_ffmpeg_threads() -> str:
+    """ffmpeg 线程默认：CPU 半核，范围 [4, 12]，给 GPU 批量流水线留核。"""
+    try:
+        cores = os.cpu_count() or 4
+    except Exception:
+        cores = 4
+    return str(max(4, min(cores // 2, 12)))
+
+
+def runtime_resource_defaults(total_gb: float | None) -> dict[str, str]:
+    """本机单卡批量推荐的运行时默认值（写入 .runtime/local_env.bat / config.yaml）。
+
+    策略：GPU 串行或低 lane 防 OOM；IO/ffmpeg 限流给 GPU 让路；
+    引擎空闲驻留拉长减少批量重载；令牌 TTL/超时避免崩溃后假死。
+    """
+    ffmpeg_threads = _default_ffmpeg_threads()
+    common = {
+        "RESOURCE_CAPACITY_GPU": "1",
+        "RESOURCE_CAPACITY_TTS": "2",
+        "RESOURCE_CAPACITY_LLM": "4",
+        "RESOURCE_CAPACITY_IO": "3",
+        "RESOURCE_TOKEN_TTL": "7200",
+        "RESOURCE_TOKENS_USE_REDIS": "1",
+        "RESOURCE_ACQUIRE_TIMEOUT": "900",
+        "FFMPEG_MAX_THREADS": ffmpeg_threads,
+        "ENGINE_IDLE_TIMEOUT_ASR": "120",
+        "ENGINE_IDLE_TIMEOUT_OCR": "30",
+        "GPU_SERVICE_SERIAL": "1",
+        "GPU_SERVICE_MAX_LANES": "1",
+        "GPU_SERVICE_VRAM_HEADROOM_GB": "2.0",
+        "GPU_SERVICE_LANE_IDLE_TIMEOUT": "1800",
+        "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "120",
+        "GPU_SERVICE_JOB_TIMEOUT": "7200",
+        "batch.max_concurrent_tasks": "2",
+        "batch.task_start_interval": "8.0",
     }
+
+    if total_gb is None:
+        return {**common, "GPU_SERVICE_ENABLED": "0"}
+
+    if total_gb < 8:
+        profile = {
+            "GPU_SERVICE_ENABLED": "1",
+            "GPU_SERVICE_SERIAL": "1",
+            "GPU_SERVICE_MAX_LANES": "1",
+            "GPU_SERVICE_VRAM_HEADROOM_GB": "2.0",
+            "GPU_SERVICE_LANE_IDLE_TIMEOUT": "1800",
+            "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "120",
+            "RESOURCE_CAPACITY_IO": "3",
+            "ENGINE_IDLE_TIMEOUT_ASR": "180",
+            "FFMPEG_MAX_THREADS": str(max(4, min(int(ffmpeg_threads), 6))),
+            "batch.max_concurrent_tasks": "2",
+            "batch.task_start_interval": "10.0",
+        }
+    elif total_gb < 12:
+        profile = {
+            "GPU_SERVICE_ENABLED": "1",
+            "GPU_SERVICE_SERIAL": "1",
+            "GPU_SERVICE_MAX_LANES": "1",
+            "GPU_SERVICE_VRAM_HEADROOM_GB": "2.0",
+            "GPU_SERVICE_LANE_IDLE_TIMEOUT": "1800",
+            "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "120",
+            "RESOURCE_CAPACITY_IO": "3",
+            "ENGINE_IDLE_TIMEOUT_ASR": "120",
+            "batch.max_concurrent_tasks": "2",
+            "batch.task_start_interval": "8.0",
+        }
+    elif total_gb < 16:
+        profile = {
+            "GPU_SERVICE_ENABLED": "1",
+            "GPU_SERVICE_SERIAL": "0",
+            "GPU_SERVICE_MAX_LANES": "2",
+            "GPU_SERVICE_VRAM_HEADROOM_GB": "2.0",
+            "GPU_SERVICE_LANE_IDLE_TIMEOUT": "1200",
+            "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "90",
+            "RESOURCE_CAPACITY_IO": "4",
+            "ENGINE_IDLE_TIMEOUT_ASR": "90",
+            "batch.max_concurrent_tasks": "2",
+            "batch.task_start_interval": "8.0",
+        }
+    elif total_gb < 24:
+        profile = {
+            "GPU_SERVICE_ENABLED": "1",
+            "GPU_SERVICE_SERIAL": "0",
+            "GPU_SERVICE_MAX_LANES": "2",
+            "GPU_SERVICE_VRAM_HEADROOM_GB": "3.0",
+            "GPU_SERVICE_LANE_IDLE_TIMEOUT": "1200",
+            "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "90",
+            "RESOURCE_CAPACITY_IO": "4",
+            "ENGINE_IDLE_TIMEOUT_ASR": "90",
+            "batch.max_concurrent_tasks": "3",
+            "batch.task_start_interval": "8.0",
+        }
+    else:
+        profile = {
+            "GPU_SERVICE_ENABLED": "1",
+            "GPU_SERVICE_SERIAL": "0",
+            "GPU_SERVICE_MAX_LANES": "2",
+            "GPU_SERVICE_VRAM_HEADROOM_GB": "4.0",
+            "GPU_SERVICE_LANE_IDLE_TIMEOUT": "900",
+            "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT": "60",
+            "RESOURCE_CAPACITY_IO": "6",
+            "ENGINE_IDLE_TIMEOUT_ASR": "60",
+            "FFMPEG_MAX_THREADS": str(max(8, min(int(ffmpeg_threads), 12))),
+            "batch.max_concurrent_tasks": "3",
+            "batch.task_start_interval": "6.0",
+        }
+    return {**common, **profile}
+
+
+def gpu_service_defaults() -> dict[str, str]:
+    """兼容旧接口：仅返回 GPU Service 相关键（由 runtime_resource_defaults 派生）。"""
+    detected = detect_nvidia_gpu()
+    total_gb = detected[1] if detected else None
+    values = runtime_resource_defaults(total_gb)
+    gpu_keys = (
+        "GPU_SERVICE_ENABLED",
+        "GPU_SERVICE_SERIAL",
+        "GPU_SERVICE_MAX_LANES",
+        "GPU_SERVICE_VRAM_HEADROOM_GB",
+        "GPU_SERVICE_LANE_IDLE_TIMEOUT",
+        "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT",
+        "GPU_SERVICE_JOB_TIMEOUT",
+    )
+    result = {k: values[k] for k in gpu_keys if k in values}
+    if detected:
+        name, total = detected
+        ok(
+            f"检测到 NVIDIA GPU: {name}（{total:.1f} GB），"
+            f"GPU 服务初始化为 serial={result.get('GPU_SERVICE_SERIAL')} "
+            f"max_lanes={result.get('GPU_SERVICE_MAX_LANES')} "
+            f"headroom={result.get('GPU_SERVICE_VRAM_HEADROOM_GB')}GB"
+        )
+    return result
 
 
 def write_runtime_value(path: Path, key: str, value: str) -> None:
@@ -437,6 +540,17 @@ def write_runtime_value(path: Path, key: str, value: str) -> None:
     path.write_text("\n".join(output).rstrip() + "\n", encoding="utf-8")
 
 
+def _read_runtime_flag(local_env: Path, key: str, default: str = "") -> str:
+    if not local_env.exists():
+        return default
+    pattern = re.compile(rf'^\s*set\s+"?{re.escape(key)}=(.*?)"?\s*$', re.IGNORECASE)
+    for line in local_env.read_text(encoding="utf-8", errors="replace").splitlines():
+        match = pattern.match(line)
+        if match:
+            return match.group(1).strip()
+    return default
+
+
 def configure_chromium_path(local_env: Path) -> None:
     """确保 .runtime/local_env.bat 写入 CloakBrowser 的 Chromium 调用路径。"""
     write_runtime_value(local_env, "CHROMIUM_EXECUTABLE_PATH", r"thirdparty\cloakbrowser\chrome.exe")
@@ -444,21 +558,123 @@ def configure_chromium_path(local_env: Path) -> None:
     ok("已写入 CloakBrowser 的 Chromium 调用路径")
 
 
-def configure_gpu_service(local_env: Path) -> None:
-    values = {}
-    for line in local_env.read_text(encoding="utf-8", errors="replace").splitlines():
-        match = re.match(r'^\s*set\s+"?GPU_SERVICE_AUTO_CONFIG=(.*?)"?\s*$', line, re.IGNORECASE)
-        if match:
-            values["GPU_SERVICE_AUTO_CONFIG"] = match.group(1).strip()
-    auto_config = values.get("GPU_SERVICE_AUTO_CONFIG", "1").lower() in {"1", "true", "yes", "on"}
-    if not auto_config:
-        log("GPU 服务配置已设为手动模式，保留 .runtime/local_env.bat 中的现有值")
+def configure_batch_config(total_gb: float | None) -> None:
+    """把批量并发/间隔写入 backend/config/config.yaml 的 batch 段。"""
+    config_path = ROOT / "backend" / "config" / "config.yaml"
+    if not config_path.exists():
         return
-    for key, value in gpu_service_defaults().items():
-        write_runtime_value(local_env, key, value)
+    try:
+        text = config_path.read_text(encoding="utf-8")
+    except Exception as exc:
+        warn(f"读取 config.yaml 失败，跳过批量默认值: {exc}")
+        return
+    desired = runtime_resource_defaults(total_gb)
+    max_c = desired.get("batch.max_concurrent_tasks", "2")
+    interval = desired.get("batch.task_start_interval", "8.0")
+    lines = text.splitlines()
+    in_batch = False
+    updated = {"max_concurrent_tasks": False, "task_start_interval": False}
+    output: list[str] = []
+    for line in lines:
+        stripped = line.strip()
+        if stripped.startswith("batch:") and not stripped.startswith("batch."):
+            in_batch = True
+            output.append(line)
+            continue
+        if in_batch:
+            if stripped and not stripped.startswith("#") and not line.startswith((" ", "\t")):
+                if not updated["max_concurrent_tasks"]:
+                    output.append(f"  max_concurrent_tasks: {max_c}")
+                if not updated["task_start_interval"]:
+                    output.append(f"  task_start_interval: {interval}")
+                in_batch = False
+                output.append(line)
+                continue
+            if stripped.startswith("max_concurrent_tasks:"):
+                indent = line[: len(line) - len(line.lstrip())]
+                output.append(f"{indent}max_concurrent_tasks: {max_c}")
+                updated["max_concurrent_tasks"] = True
+                continue
+            if stripped.startswith("task_start_interval:"):
+                indent = line[: len(line) - len(line.lstrip())]
+                output.append(f"{indent}task_start_interval: {interval}")
+                updated["task_start_interval"] = True
+                continue
+        output.append(line)
+    if in_batch:
+        if not updated["max_concurrent_tasks"]:
+            output.append(f"  max_concurrent_tasks: {max_c}")
+        if not updated["task_start_interval"]:
+            output.append(f"  task_start_interval: {interval}")
+    try:
+        config_path.write_text("\n".join(output).rstrip() + "\n", encoding="utf-8")
+        ok(f"已写入 config.yaml 批量默认: max_concurrent_tasks={max_c}, task_start_interval={interval}")
+    except Exception as exc:
+        warn(f"写入 config.yaml 批量默认失败: {exc}")
+
+
+def configure_gpu_service(local_env: Path) -> None:
+    """初始化 GPU Service + 本机单卡批量资源默认值到 .runtime/local_env.bat。
+
+    GPU_SERVICE_AUTO_CONFIG=1 时按检测显存覆盖 GPU_* 键；
+    资源令牌 / ffmpeg / 引擎空闲等保护键始终补齐。
+    """
+    auto_config = _read_runtime_flag(local_env, "GPU_SERVICE_AUTO_CONFIG", "1").lower() in {
+        "1", "true", "yes", "on",
+    }
+    detected = detect_nvidia_gpu()
+    total_gb = detected[1] if detected else None
+    values = runtime_resource_defaults(total_gb)
+
+    always_write = [
+        "RESOURCE_CAPACITY_GPU",
+        "RESOURCE_CAPACITY_TTS",
+        "RESOURCE_CAPACITY_LLM",
+        "RESOURCE_CAPACITY_IO",
+        "RESOURCE_TOKEN_TTL",
+        "RESOURCE_TOKENS_USE_REDIS",
+        "RESOURCE_ACQUIRE_TIMEOUT",
+        "FFMPEG_MAX_THREADS",
+        "ENGINE_IDLE_TIMEOUT_ASR",
+        "ENGINE_IDLE_TIMEOUT_OCR",
+    ]
+    for key in always_write:
+        if key in values:
+            write_runtime_value(local_env, key, values[key])
+
+    if not auto_config:
+        log("GPU 服务配置已设为手动模式，保留 GPU_SERVICE_* 现有值；批量资源保护默认值已补齐")
+        write_runtime_value(local_env, "GPU_SERVICE_AUTO_CONFIG", "0")
+        configure_batch_config(total_gb)
+        return
+
+    gpu_keys = [
+        "GPU_SERVICE_ENABLED",
+        "GPU_SERVICE_SERIAL",
+        "GPU_SERVICE_MAX_LANES",
+        "GPU_SERVICE_VRAM_HEADROOM_GB",
+        "GPU_SERVICE_LANE_IDLE_TIMEOUT",
+        "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT",
+        "GPU_SERVICE_JOB_TIMEOUT",
+    ]
+    for key in gpu_keys:
+        if key in values:
+            write_runtime_value(local_env, key, values[key])
     write_runtime_value(local_env, "GPU_SERVICE_AUTO_CONFIG", "1")
-    if detect_nvidia_gpu() is None:
+    if detected is None:
         log("未检测到可供 GPU 服务使用的 NVIDIA CUDA GPU，已关闭 GPU 服务；macOS MPS 和 CPU 模式仍由 PyTorch 正常使用")
+    else:
+        name, total = detected
+        ok(
+            f"GPU/批量运行时已按 {name}（{total:.1f} GB）初始化："
+            f"serial={values.get('GPU_SERVICE_SERIAL')} "
+            f"lanes={values.get('GPU_SERVICE_MAX_LANES')} "
+            f"headroom={values.get('GPU_SERVICE_VRAM_HEADROOM_GB')}GB "
+            f"ffmpeg_threads={values.get('FFMPEG_MAX_THREADS')} "
+            f"batch={values.get('batch.max_concurrent_tasks')}"
+        )
+    configure_batch_config(total_gb)
+
 
 
 # ---------------------------------------------------------------------------

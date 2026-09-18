@@ -313,14 +313,15 @@ class MiMoASRLocal(ASRBase):
     def _find_silence_points(audio_path: str, target_duration: float) -> List[float]:
         """Find silence points in audio for splitting."""
         try:
+            from backend.utils.ffmpeg_guard import apply_resource_args
             result = subprocess.run(
-                [
+                apply_resource_args([
                     "ffmpeg",
                     "-i", audio_path,
                     "-af", f"silencedetect=noise=-30dB:d=0.5",
                     "-f", "null",
                     "-",
-                ],
+                ], mux_queue=64),
                 capture_output=True,
                 text=True,
                 timeout=300,
@@ -382,8 +383,9 @@ class MiMoASRLocal(ASRBase):
     def _extract_segment(input_path: str, output_path: str, start: float, end: float):
         """Extract a segment from audio file using ffmpeg."""
         duration = end - start
+        from backend.utils.ffmpeg_guard import apply_resource_args
         subprocess.run(
-            [
+            apply_resource_args([
                 "ffmpeg",
                 "-y",
                 "-i", input_path,
@@ -393,7 +395,7 @@ class MiMoASRLocal(ASRBase):
                 "-ac", "1",
                 "-c:a", "pcm_s16le",
                 output_path,
-            ],
+            ]),
             capture_output=True,
             timeout=120,
         )

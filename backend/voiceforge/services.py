@@ -333,7 +333,8 @@ def merge_project_audio(project_id: str, task_id: str, chapter_id: str = None, o
                 raise ValueError("FFmpeg 不可用，无法合并非 WAV 音频")
             manifest = temp_dir / f"{task_id}-concat.txt"
             manifest.write_text("\n".join(f"file '{path.as_posix()}'" for path in inputs), encoding="utf-8")
-            subprocess.run(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(manifest), "-c", "copy", str(output)], check=True, capture_output=True, timeout=300)
+            from backend.utils.ffmpeg_guard import apply_resource_args
+            subprocess.run(apply_resource_args(["ffmpeg", "-y", "-f", "concat", "-safe", "0", "-i", str(manifest), "-c", "copy", str(output)]), check=True, capture_output=True, timeout=300)
             manifest.unlink(missing_ok=True)
         if output_format not in {"wav", "mp3", "flac"}:
             raise ValueError("不支持的导出格式")
@@ -342,7 +343,8 @@ def merge_project_audio(project_id: str, task_id: str, chapter_id: str = None, o
             if not shutil.which("ffmpeg"):
                 raise ValueError("FFmpeg 不可用，无法转码导出")
             converted = temp_dir / f"{task_id}-merged.{output_format}"
-            subprocess.run(["ffmpeg", "-y", "-i", str(output), str(converted)], check=True, capture_output=True, timeout=300)
+            from backend.utils.ffmpeg_guard import apply_resource_args
+            subprocess.run(apply_resource_args(["ffmpeg", "-y", "-i", str(output), str(converted)]), check=True, capture_output=True, timeout=300)
             output.unlink(missing_ok=True)
         output_key = f"projects/{project_id}/exports/{converted.name}"
         with session() as conn:

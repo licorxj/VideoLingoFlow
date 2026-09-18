@@ -134,6 +134,8 @@ class S11MergeDubVideo(BaseStep):
         if filter_parts:
             cmd += ["-filter_complex", ";".join(filter_parts)]
         cmd += amap + ["-c:v", "copy", "-c:a", "aac", "-shortest", output_path]
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd = apply_resource_args(cmd)
 
         if callback:
             callback(40, "合成音视频...")

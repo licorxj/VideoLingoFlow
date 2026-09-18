@@ -165,6 +165,8 @@ class StepExtractAudio(BaseStep):
                 *self.FORMAT_ENCODE_ARGS.get(fmt, ["-acodec", "pcm_s16le"]),
                 output_path,
             ]
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd = apply_resource_args(cmd)
 
         if callback:
             callback(50, "Running ffmpeg...")

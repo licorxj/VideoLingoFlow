@@ -8,6 +8,10 @@
    - 第二级：逐段校验 segment 文本与 words 完全一致。
 3. 校验通过：直接把「输入文件路径」作为本节点输出（不新建文件、不改写内容）；
    校验不通过：抛出 ValueError，并在错误信息中指明偏离位置与上下文。
+4. 可选「自动修复」（节点配置 auto_fix 勾选后启用）：检测到不一致时自动修复并写回输入文件：
+   - text ↔ segments 不一致：以 segments 原文重拼 text（保留标点）；
+   - segments ↔ words 不一致：以 words 重拼该段 text，并用首个 word 的 start 更新该段起始时间；
+   - speaker 补齐：段无 speaker 取首个 word 的，word 无 speaker 取所属段的，两者都无则填 "S01"。
 """
 import os
 import re
@@ -132,6 +136,113 @@ class S_ASRResultValidate(BaseStep):
                 f"（期望 ASR 对象 dict 或句子列表 list，实际为 {type(asr).__name__}）"
             )
 
+    # ------------------------------------------------------------------ #
+    # 自动修复（仅在节点开启「自动修复」时启用）
+    # ------------------------------------------------------------------ #
+    @staticmethod
+    def _has_speaker(value) -> bool:
+        """speaker 是否为有效值（排除 None / 空串 / 字符串形式的 null、none）。"""
+        if value in (None, ""):
+            return False
+        return str(value).strip().lower() not in ("null", "none", "nan")
+
+    @staticmethod
+    def _read_auto_fix(config) -> bool:
+        value = (config or {}).get("auto_fix")
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in ("1", "true", "yes", "on")
+        return False
+
+    def _fix_segments_from_words(self, items) -> int:
+        """规则一：以 words 为准重建每段 text，并更新该段的起始时间。
+
+        以「下属 words 拼接到 segments」为准；words 缺失的段跳过（无从对齐）。
+        起始时间取首个 word 的 start；若该段 end 缺失或早于新 start，
+        则用末个 word 的 end 兜底，避免出现 end < start 的坏区间。
+        """
+        changed = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            words = item.get("words") or []
+            if not words:
+                continue
+            rebuilt = "".join(str(w.get("word") or "") for w in words)
+            # 以「归一化后是否一致」判定是否真的对不上：words 通常不含标点，
+            # 若 segment 原文仅多出标点则应视为一致、不覆盖，优先保留原有标点
+            # （与校验口径统一，避免把「，」「。」等标点抹掉）。
+            if self._norm(rebuilt) != self._norm(item.get("text") or ""):
+                item["text"] = rebuilt
+                changed += 1
+            starts = [w.get("start") for w in words if isinstance(w.get("start"), (int, float))]
+            new_start = round(float(starts[0]), 4) if starts else None
+            if new_start is not None and item.get("start") != new_start:
+                item["start"] = new_start
+                changed += 1
+            ends = [w.get("end") for w in words if isinstance(w.get("end"), (int, float))]
+            cur_end = item.get("end")
+            if ends and (not isinstance(cur_end, (int, float))
+                         or cur_end < float(new_start if new_start is not None else 0)):
+                item["end"] = round(float(ends[-1]), 4)
+                changed += 1
+        return changed
+
+    def _fix_speakers(self, items) -> int:
+        """规则三：补齐 speaker 标签。
+
+        segment 无 speaker → 取该段首个 word 的 speaker；
+        word 无 speaker → 取所属 segment 的 speaker；
+        两者都无 → 填 "S01"。
+        """
+        changed = 0
+        for item in items:
+            if not isinstance(item, dict):
+                continue
+            words = item.get("words") or []
+            speaker = item.get("speaker")
+            if not self._has_speaker(speaker):
+                speaker = ""
+                for w in words:
+                    if isinstance(w, dict) and self._has_speaker(w.get("speaker")):
+                        speaker = w.get("speaker")
+                        break
+            if not self._has_speaker(speaker):
+                speaker = "S01"
+            if item.get("speaker") != speaker:
+                item["speaker"] = speaker
+                changed += 1
+            for w in words:
+                if isinstance(w, dict) and not self._has_speaker(w.get("speaker")):
+                    w["speaker"] = speaker
+                    changed += 1
+        return changed
+
+    def _fix_text_from_segments(self, asr, segments) -> int:
+        """规则二：以 segments 原文重拼全文 text（保留各段自带标点）。"""
+        rebuilt = "".join(str(seg.get("text") or "") for seg in segments)
+        if asr.get("text") != rebuilt:
+            asr["text"] = rebuilt
+            return 1
+        return 0
+
+    def _apply_auto_fix(self, asr, segments, callback=None) -> int:
+        """按「words 为准 → text 跟随 segments → speaker 补齐」顺序统一数据。
+
+        先修正 segments（规则一），再由 segments 重拼 text（规则二），
+        从而保证修复后 text / segments / words 三者一致；最后补齐 speaker（规则三）。
+        """
+        fixed_seg = self._fix_segments_from_words(segments)
+        fixed_text = self._fix_text_from_segments(asr, segments) if isinstance(asr, dict) else 0
+        fixed_speaker = self._fix_speakers(segments)
+        total = fixed_seg + fixed_text + fixed_speaker
+        if total > 0:
+            self._repaired = True
+        if callback:
+            callback(50, f"自动修复：段文本/时间 {fixed_seg} 处、全文 text {fixed_text} 处、speaker {fixed_speaker} 处")
+        return total
+
     def _validate_asr_object(self, asr, callback):
         if not isinstance(asr, dict):
             raise ValueError("ASR 校验未通过：输入不是合法的 JSON 对象（dict）")
@@ -140,6 +251,10 @@ class S_ASRResultValidate(BaseStep):
         text = asr.get("text")
         if not isinstance(segments, list) or not segments:
             raise ValueError("ASR 校验未通过：缺少 segments 或 segments 为空")
+
+        # 自动修复：先统一 segments / words / text / speaker，再走下面的校验做复核
+        if self._auto_fix_enabled:
+            self._apply_auto_fix(asr, segments, callback)
 
         # 第一级：全文 text 必须与「压平后的 segments」完全一致（归一化后）。
         # 之前只校验「segments 是 text 的子序列（方向）」，会漏掉 text 比 segments 多/少内容，
@@ -171,6 +286,9 @@ class S_ASRResultValidate(BaseStep):
         if callback:
             callback(60, "逐段校验 segments 文本与 words ...")
         for sidx, seg in enumerate(segments):
+            if self._auto_fix_enabled and not (seg.get("words") or []):
+                # 自动修复模式：该段无 words 可对齐，保留其文本、不阻断流程
+                continue
             seg_norm = self._norm(seg.get("text") or "")
             word_norm = self._norm(self._flatten_words([seg]))
             if seg_norm != word_norm:
@@ -209,6 +327,15 @@ class S_ASRResultValidate(BaseStep):
 
         if callback:
             callback(30, f"校验句子列表（共 {len(sentences)} 句）...")
+
+        # 自动修复：句子列表复用同一套规则（以 words 重建文本与起始时间 + 补齐 speaker）
+        if self._auto_fix_enabled:
+            fixed_seg = self._fix_segments_from_words(sentences)
+            fixed_speaker = self._fix_speakers(sentences)
+            if fixed_seg or fixed_speaker:
+                self._repaired = True
+                if callback:
+                    callback(40, f"自动修复：句子文本/时间 {fixed_seg} 处、speaker {fixed_speaker} 处")
 
         for idx, s in enumerate(sentences):
             sid = (s.get("id", idx + 1) if isinstance(s, dict) else idx + 1)
@@ -301,8 +428,10 @@ class S_ASRResultValidate(BaseStep):
         src = self._input_path()
         asr_data, src = self._load_asr(task_dir)
         self._repaired = False
+        self._auto_fix_enabled = self._read_auto_fix(getattr(self, "_node_config", {}) or {})
         if callback:
-            callback(10, f"读取 ASR JSON：{os.path.basename(src)}")
+            callback(10, f"读取 ASR JSON：{os.path.basename(src)}"
+                     + ("（自动修复已开启）" if self._auto_fix_enabled else ""))
         self._validate(asr_data, callback)
 
         # 若自动修复了 text/words 不一致，将修复结果写回输入文件，使下游拿到一致数据。
@@ -312,7 +441,7 @@ class S_ASRResultValidate(BaseStep):
                 with open(abs_path, "w", encoding="utf-8") as f:
                     json.dump(asr_data, f, ensure_ascii=False, indent=2)
                 if callback:
-                    callback(95, "已自动修复 text/words 不一致并写回输入文件")
+                    callback(95, "已自动修复不一致并写回输入文件")
             except Exception as e:
                 print(f"[ASR 校验] 写回修复结果失败：{e}")
 

@@ -102,13 +102,14 @@ async def generate_preview(req: PreviewRequest):
             # 使用 ffmpeg 将 ASS 字幕烧录到黑底视频
             # subtitles 滤镜支持标准冒号转义（用于 Windows 驱动器号）
             escaped_ass = ass_path.replace("\\", "/").replace(":", "\\:")
-            cmd = [
+            from backend.utils.ffmpeg_guard import apply_resource_args
+            cmd = apply_resource_args([
                 "ffmpeg", "-y",
                 "-i", bg_video,
                 "-vf", f"subtitles='{escaped_ass}'",
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 output_path,
-            ]
+            ])
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
             if result.returncode != 0:
                 raise HTTPException(status_code=500, detail=f"ffmpeg 执行失败: {result.stderr[:500]}")

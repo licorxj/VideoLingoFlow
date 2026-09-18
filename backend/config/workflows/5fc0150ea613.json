@@ -20,7 +20,7 @@
           "videoPath": "",
           "audioPath": "",
           "subtitlePath": "",
-          "url": "https://www.bilibili.com/video/BV1hZM16zEvo/?share_source=copy_web&vd_source=a2b9aa0b6d751b0161e2814c34c5e399",
+          "url": "https://youtu.be/bvSJm7fHXto?si=Y6yd8RlukzRD81Fk",
           "source_language": "auto",
           "target_language": "zh",
           "copyInputs": false,
@@ -39,24 +39,26 @@
           "languages": {
             "source_language": "auto",
             "target_language": "zh"
-          }
+          },
+          "no_input": ""
         },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 563
+        "height": 498
       },
-      "selected": false,
-      "dragging": false
+      "selected": true,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1786496185089",
       "type": "workflow",
       "position": {
-        "x": -75,
-        "y": -2490
+        "x": -840,
+        "y": -2655
       },
       "data": {
         "nodeType": "video_preview",
@@ -74,41 +76,16 @@
         "message": "Completed",
         "outputs": {},
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 477
+        "height": 444
       },
       "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_2_1786605687528",
-      "type": "workflow",
-      "position": {
-        "x": -60,
-        "y": -1485
-      },
-      "data": {
-        "nodeType": "image_preview",
-        "label": "图片预览器",
-        "config": {
-          "fit": "contain"
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {},
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 429
-      },
-      "selected": true,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1783324281016",
@@ -132,67 +109,37 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "video": "cache\\s00_platform_download_video_开源minimax h3 一键复刻爆款视频 skill 公开了.mp4",
-          "image": "cache\\s00_platform_download_cover_开源minimax h3 一键复刻爆款视频 skill 公开了.jpg"
+          "video": "cache\\开源minimax h3 一键复刻爆款视频 skill 公开了_node_2_1783324281016.mp4",
+          "image": "cache\\开源minimax h3 一键复刻爆款视频 skill 公开了_node_2_1783324281016.jpg",
+          "filename": "开源minimax h3 一键复刻爆款视频 skill 公开了_node_2_1783324281016.mp4"
         },
         "error": "",
         "workbench_url": "",
         "logLines": [
           "[S00] yt-dlp stderr: WARNING: [BiliBili] Subtitles are only available when logged in. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies",
-          "[S00] yt-dlp stdout: VLDL\t开源minimax h3 一键复刻爆款视频 skill 公开了\tY:\\VideoLingoLc\\control_plane_workspaces\\96053a305815448c977c60ba3554d3ec\\cache\\开源minimax h3 一键复刻爆款视频 skill 公开了 [BV1hZM16zEvo].mp4",
+          "[S00] yt-dlp stdout: VLDL\t开源minimax h3 一键复刻爆款视频 skill 公开了\tY:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\开源minimax h3 一键复刻爆款视频 skill 公开了 [BV1hZM16zEvo].mp4",
           "[S00] task_name set to: 开源minimax h3 一键复刻爆款视频 skill 公开了",
-          "[S00] Output: video -> s00_platform_download_video_开源minimax h3 一键复刻爆款视频 skill 公开了.mp4",
-          "[S00] Output: cover -> s00_platform_download_cover_开源minimax h3 一键复刻爆款视频 skill 公开了.jpg",
+          "[S00] Output: video -> 开源minimax h3 一键复刻爆款视频 skill 公开了_node_2_1783324281016.mp4",
+          "[S00] Output: cover -> 开源minimax h3 一键复刻爆款视频 skill 公开了_node_2_1783324281016.jpg",
           "[S00] Done: 2 files produced",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\96053a305815448c977c60ba3554d3ec\\cache\\.step_node_2_1783324281016_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\.step_node_2_1783324281016_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 479
+        "height": 462
       },
       "selected": false,
-      "dragging": false
-    },
-    {
-      "id": "node_1_1786605666798",
-      "type": "workflow",
-      "position": {
-        "x": -1500,
-        "y": -1845
-      },
-      "data": {
-        "nodeType": "video_frame_extract",
-        "label": "视频抽帧",
-        "config": {
-          "video_source": "input_node",
-          "time_point": 1,
-          "time_mode": "positive",
-          "avoid_subtitles": false
-        },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "image": "cache/key_frame_node_1_1786605666798.png"
-        },
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 398
-      },
-      "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787596716961",
       "type": "workflow",
       "position": {
-        "x": -75,
-        "y": -1965
+        "x": -330,
+        "y": -2625
       },
       "data": {
         "nodeType": "image_preview",
@@ -205,21 +152,23 @@
         "message": "Completed",
         "outputs": {},
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 434
+        "height": 407
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1787611118465",
       "type": "workflow",
       "position": {
-        "x": -690,
-        "y": -2115
+        "x": -315,
+        "y": -2100
       },
       "data": {
         "nodeType": "archive_artifacts",
@@ -240,26 +189,108 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "output": "X:\\PCTMoveData\\Videos\\下载\\key_frame_node_1_1786605666798"
+          "output": "X:\\PCTMoveData\\Videos\\下载\\开源minimax h3 一键复刻爆款视频 skill 公开了_node_2_1783324281016"
         },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 506
+        "height": 457
       },
       "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1789760369292",
+      "type": "workflow",
+      "position": {
+        "x": -1530,
+        "y": -1815
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "llm_request",
+        "label": "通用LLM请求",
+        "config": {
+          "model": "vlf-04",
+          "system_prompt": "你是一个视频文件名的翻译助手，将我输入的文件名名称翻译成目标语言，注意屏蔽无实际意义的字母和数字，但是主要保留有意义的序号，直接输出翻译后的文本，不要有不符合文件名称系统的特殊字符",
+          "user_prompt": "翻译目标语言：{target_language}\n待翻译文件名：{input_text}",
+          "temperature": 0.7,
+          "response_json": false,
+          "log_request": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "note": "翻译文件名",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "result": "output/LLM_node_1_1789760369292.txt",
+          "text": "开源minimax h3一键复刻爆款视频技能公开_node_2_1783324281016.mp4"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] step instance created: S_LLMRequest",
+          "[step_worker] step_inputs keys=['text', 'source_language', 'target_language']",
+          "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f, kwargs=['callback'])",
+          "[LLM] direct (step=vlf-04, strategy=vlf-01, stream=False, response_json=False, timeout=300s, prompt_chars=163)",
+          "[LLM] direct ok (step=vlf-04, elapsed=8.7s)",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\.step_node_1_1789760369292_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 537
+      },
+      "dragHandle": ".wf-node-drag-handle",
       "dragging": false
+    },
+    {
+      "id": "node_2_1789760520866",
+      "type": "workflow",
+      "position": {
+        "x": -870,
+        "y": -1785
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "file_rename",
+        "label": "文件改名",
+        "config": {
+          "rename_mode": "from_input",
+          "custom_name": "",
+          "prefix": "",
+          "suffix": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "any": "Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\开源minimax h3一键复刻爆款视频技能公开_node_2_1783324281016.mp4"
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 278
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     }
   ],
   "edges": [
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#06b6d4",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1783324270560",
       "sourceHandle": "out-url",
@@ -270,24 +301,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1786605666798",
-      "sourceHandle": "out-image",
-      "target": "node_2_1786605687528",
-      "targetHandle": "in-image",
-      "id": "xy-edge__group_msvicl14_sk47out-gout_2-node_2_1786605687528in-image",
-      "selected": false
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-video",
@@ -298,23 +316,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1783324281016",
-      "sourceHandle": "out-video",
-      "target": "node_1_1786605666798",
-      "targetHandle": "in-video",
-      "id": "xy-edge__node_2_1783324281016out-video-node_1_1786605666798in-video"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-image",
@@ -324,36 +329,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
-      },
-      "source": "node_1_1786605666798",
-      "sourceHandle": "out-image",
-      "target": "node_2_1787611118465",
-      "targetHandle": "in-any",
-      "id": "xy-edge__node_1_1786605666798out-image-node_2_1787611118465in-any"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
-      },
-      "source": "node_2_1783324281016",
-      "sourceHandle": "out-video",
-      "target": "node_2_1787611118465",
-      "targetHandle": "in-any",
-      "id": "xy-edge__node_2_1783324281016out-video-node_2_1787611118465in-any"
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#f59e0b",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-subtitle",
@@ -363,20 +342,72 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-image",
       "target": "node_2_1787611118465",
       "targetHandle": "in-any",
       "id": "xy-edge__node_2_1783324281016out-image-node_2_1787611118465in-any"
+    },
+    {
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-filename",
+      "target": "node_1_1789760369292",
+      "targetHandle": "in-text",
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1783324281016out-filename-node_1_1789760369292in-text"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789760369292",
+      "sourceHandle": "out-text",
+      "target": "node_2_1789760520866",
+      "targetHandle": "in-name",
+      "id": "xy-edge__node_1_1789760369292out-text-node_2_1789760520866in-name"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_2_1783324281016",
+      "sourceHandle": "out-video",
+      "target": "node_2_1789760520866",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_2_1783324281016out-video-node_2_1789760520866in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_2_1789760520866",
+      "sourceHandle": "out-any",
+      "target": "node_2_1787611118465",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_2_1789760520866out-any-node_2_1787611118465in-any"
     }
   ],
   "type": "user",
   "createdAt": "2026-07-06T15:53:12",
-  "updatedAt": "2026-08-25T06:56:58",
-  "revision": 8
+  "updatedAt": "2026-09-19T03:44:03",
+  "revision": 10
 }

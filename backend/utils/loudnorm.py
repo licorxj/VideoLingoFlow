@@ -13,11 +13,12 @@ from backend.utils.audio_processor import get_ffmpeg_timeout
 
 def _analyze(audio_path: str) -> dict:
     """Run ffmpeg pass 1 to analyze loudness and return measured values."""
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y", "-i", audio_path,
         "-af", "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json",
         "-f", "null", "-"
-    ]
+    ])
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
     stderr = result.stderr
 
@@ -77,6 +78,7 @@ def normalize_loudness(audio_path: str, target_lufs: float = -16.0, output_path:
         "-af", loudnorm_filter,
         "-c:a", "pcm_s16le", output_path
     ]
-    subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    subprocess.run(apply_resource_args(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout())
 
     return output_path

@@ -14,7 +14,7 @@ from backend.ocr.ocr_base import OCRBase
 from backend.ocr.ocr_interface_manager import get_ocr_interface_manager
 from backend.utils.engine_lifecycle import IdleEngineRegistry
 
-_registry = IdleEngineRegistry(idle_timeout=5.0, name="OCR")
+_registry = IdleEngineRegistry(idle_timeout=30.0, name="OCR")
 
 
 def _build_engine(iface_id: str, overrides: Optional[dict] = None) -> OCRBase:

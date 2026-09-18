@@ -291,7 +291,8 @@ class S09TTS(BaseStep):
         """判断是否为「无时间戳」的一般文本配音模式。
 
         只要存在任一段缺少 start/end/duration 时间戳（为 None 或 <=0），
-        即视为无时间轴配音：不存在原始音频切割、调速、字幕缩减的需求。
+        即视为无时间轴配音：跳过调速与字幕缩减，且不做参考音频切割
+        （逐段参考切割依赖原始音频时间戳，必须在配音前完成）。
         """
         for seg in segments:
             start = seg.get("start")
@@ -332,10 +333,13 @@ class S09TTS(BaseStep):
 
     def _extract_reference_audio(self, segments: List[Dict], task_dir: str,
                                  source_audio: str = None) -> Dict[int, str]:
-        """按句子时间段切割原始音频作为参考音频
+        """按句子时间段切割原始音频作为参考音频（要求 segments 必须带时间戳）
+
+        切割发生在配音之前：参考音频取自原始音频的 start/end 时间轴，
+        与配音完成后才产生的 real_duration 无关，因此无时间戳时不做切割。
 
         Args:
-            segments: 配音片段列表（带 start/end 时间戳）
+            segments: 配音片段列表（必须带 start/end 时间戳）
             task_dir: 任务目录
             source_audio: 指定原始音频路径（连线传入的 source_audio），为空则自动查找
 
@@ -353,66 +357,50 @@ class S09TTS(BaseStep):
         print(f"[TTS] 开始切割参考音频，原始音频: {audio_path}")
         print(f"[TTS] 参考音频输出目录: {ref_dir}")
 
-        # 使用统一的音频切割工具，读取全局配置
-        settings = split_audio_by_timestamps(
+        # 索引归一化：index 缺失时按位置回填，避免多段共用默认值 0 写同名文件相互覆盖
+        missing_index = 0
+        for pos, seg in enumerate(segments):
+            if seg.get("index") is None:
+                seg["index"] = pos
+                missing_index += 1
+        if missing_index:
+            print(f"[TTS] 已为 {missing_index} 个缺少 index 的片段回填索引（按位置）")
+
+        # 使用统一的音频切割工具，读取全局配置（内含片段长度校验，越界直接抛错）
+        ref_map = split_audio_by_timestamps(
             audio_path=audio_path,
             segments=segments,
             output_dir=ref_dir,
         )
 
-        return settings
+        # 切割产物数量校验：每个句子都应有对应的参考音频
+        expected_ids = {seg.get("index", 0) for seg in segments}
+        missing_ids = sorted(expected_ids - set(ref_map.keys()))
+        if not missing_ids:
+            print(f"[TTS] 参考音频切割完成，共 {len(ref_map)} 段，数量与句子数一致（{len(expected_ids)} 句）")
+            return ref_map
 
-    def _extract_reference_audio_untimed(self, segments: List[Dict], task_dir: str,
-                                         source_audio: str = None) -> Dict[int, str]:
-        """无时间戳模式下，按「生成配音的真实时长」顺序切割原始音频作为参考音频。
+        print(f"[TTS] 警告: 参考音频切割数量不一致，期望 {len(expected_ids)} 段、实际 {len(ref_map)} 段，"
+              f"缺失索引: {missing_ids}")
 
-        不同于有时间戳的按 start/end 切割，这里从上一段的截止位置开始，
-        依次按每段 real_duration 截取等长音频作为该段的参考。
-        """
-        audio_path = source_audio or self._resolve_source_audio(task_dir)
-        if not audio_path:
-            print("[TTS] 警告: 未找到原始音频文件，无时间戳模式跳过参考音频切割")
-            return {}
+        # 二次补充切割：仅对缺失的句子重切一次
+        retry_segments = [seg for seg in segments if seg.get("index", 0) in set(missing_ids)]
+        if retry_segments:
+            print(f"[TTS] 对 {len(retry_segments)} 个缺失片段执行二次补充切割")
+            retry_map = split_audio_by_timestamps(
+                audio_path=audio_path,
+                segments=retry_segments,
+                output_dir=ref_dir,
+            )
+            ref_map.update(retry_map)
 
-        try:
-            import soundfile as sf
-        except ImportError:
-            print("[TTS] 警告: soundfile 未安装，无法切割参考音频")
-            return {}
+        still_missing = sorted(expected_ids - set(ref_map.keys()))
+        if still_missing:
+            print(f"[TTS] 警告: 二次补充切割后仍有 {len(still_missing)} 段缺失，索引: {still_missing}，"
+                  f"这些片段将使用默认参考音频")
+        else:
+            print(f"[TTS] 二次补充切割完成，参考音频已补全，共 {len(ref_map)} 段")
 
-        try:
-            audio_data, sr = sf.read(audio_path)
-            if len(audio_data.shape) > 1:
-                audio_data = np.mean(audio_data, axis=1)
-        except Exception as e:
-            print(f"[TTS] 读取原始音频失败: {e}")
-            return {}
-
-        ref_dir = os.path.join(task_dir, "cache", "refe")
-        os.makedirs(ref_dir, exist_ok=True)
-
-        ref_map: Dict[int, str] = {}
-        cursor = 0  # 当前切割位置（采样点）
-        total_samples = len(audio_data)
-        for seg in segments:
-            idx = seg.get("index", len(ref_map))
-            real_dur = float(seg.get("real_duration") or 0)
-            if real_dur <= 0:
-                continue
-            n_samples = int(real_dur * sr)
-            end_sample = min(total_samples, cursor + n_samples)
-            if end_sample <= cursor:
-                break
-            seg_data = audio_data[cursor:end_sample]
-            out_file = os.path.join(ref_dir, f"{idx:04d}.wav")
-            try:
-                sf.write(out_file, seg_data, sr)
-                ref_map[idx] = out_file
-            except Exception as e:
-                print(f"[TTS] 保存第 {idx} 段参考音频失败: {e}")
-            cursor = end_sample
-
-        print(f"[TTS] 无时间戳模式参考音频切割完成，共 {len(ref_map)} 段")
         return ref_map
 
     @staticmethod
@@ -779,26 +767,28 @@ class S09TTS(BaseStep):
         # 前置角色匹配检查：校验角色数量并填充 read_character_id
         self._match_characters(segments, tts_config)
 
-        # 无时间戳（一般文本配音）模式判定：跳过原始音频切割/调速/字幕缩减
+        # 无时间戳（一般文本配音）模式判定：跳过调速与字幕缩减
         untimed = self._is_untimed(segments)
         if untimed:
-            print("[TTS] 检测到无时间戳文本配音模式：跳过调速与字幕缩减，参考音频按生成时长顺序切割")
+            print("[TTS] 检测到无时间戳文本配音模式：跳过调速与字幕缩减")
 
         # 解析连线传入的原始音频（用于决定切割哪份原始音频作为参考）
         source_audio = step_inputs.get("source_audio") or ""
         if source_audio and not os.path.isabs(source_audio):
             source_audio = os.path.join(task_dir, source_audio)
 
-        # 如果是原文逐段参考模式，先切割参考音频
+        # 原文逐段参考模式：在配音前切割参考音频
+        # 切割依赖原始音频的 start/end 时间戳（real_duration 要配音后才产生，无法用于切割），
+        # 因此无时间戳模式无法切割，直接跳过并提示。
         ref_map = {}
         if tts_config["mode"] in ["clone", "controllable_clone"] and tts_config["clone_source"] == "per_segment":
-            if callback:
-                callback(10, "切割参考音频...")
-            print("[TTS] 原文逐段参考模式：开始切割参考音频")
             if untimed:
-                # 无时间戳：等到真实时长回填后再按生成时长顺序切割
-                pass
+                print("[TTS] 无时间戳模式：跳过参考音频切割"
+                      "（逐段参考需要原始音频时间戳，必须在配音前完成），逐段参考将退回默认参考音频")
             else:
+                if callback:
+                    callback(10, "切割参考音频...")
+                print("[TTS] 原文逐段参考模式：开始切割参考音频")
                 ref_map = self._extract_reference_audio(segments, task_dir, source_audio=source_audio)
                 if not ref_map:
                     print("[TTS] 警告: 参考音频切割失败，将使用默认参考音频")
@@ -910,16 +900,6 @@ class S09TTS(BaseStep):
                     f"[TTS] 有 {len(missing)} 个配音片段未生成有效音频"
                     f"（段落索引: {missing}），请检查 TTS 引擎配置、参考音频与网络后重试。"
                 )
-
-        # 无时间戳模式：参考音频按生成配音的真实时长顺序切割（per_segment 克隆用）
-        if untimed and tts_config["mode"] in ["clone", "controllable_clone"] \
-                and tts_config["clone_source"] == "per_segment":
-            if callback:
-                callback(90, "按生成时长切割参考音频...")
-            print("[TTS] 无时间戳模式：按生成配音真实时长顺序切割参考音频")
-            ref_map = self._extract_reference_audio_untimed(segments, task_dir, source_audio=source_audio)
-            if not ref_map:
-                print("[TTS] 警告: 无时间戳模式参考音频切割失败，将使用默认参考音频")
 
         # ═══════════ 调速重生成 + AI缩减字幕 ═══════════
         node_cfg = getattr(self, "_node_config", {}) or {}

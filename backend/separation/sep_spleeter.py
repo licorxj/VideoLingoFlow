@@ -87,11 +87,12 @@ class SpleeterSeparation(SeparationBase):
         if src_ext == dst_ext:
             shutil.copy2(src, dst)
         else:
-            cmd = [
+            from backend.utils.ffmpeg_guard import apply_resource_args
+            cmd = apply_resource_args([
                 "ffmpeg", "-y", "-i", src,
                 "-acodec", "pcm_s16le" if dst_ext == "wav" else "libmp3lame",
                 dst,
-            ]
+            ])
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
             if result.returncode != 0:
                 raise Exception(f"Audio conversion failed: {result.stderr[:300]}")

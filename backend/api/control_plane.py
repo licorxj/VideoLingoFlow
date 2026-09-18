@@ -138,6 +138,16 @@ def runtime_status():
                     batch["inflight_tasks"] += 1
 
         control_plane["resources"]["capacity"] = dict(getattr(resource_tokens, "capacities", {}) or {})
+        try:
+            if resource_tokens is not None and hasattr(resource_tokens, "snapshot"):
+                control_plane["resources"]["tokens"] = resource_tokens.snapshot()
+        except Exception:
+            pass
+        try:
+            control_plane["resources"]["gpu_serial_mode"] = bool(gpu_config.serial_mode())
+            control_plane["resources"]["gpu_max_lanes"] = int(gpu_config.max_lanes())
+        except Exception:
+            pass
         control_plane["resources"]["gpu_service_enabled"] = gpu_service_active
         control_plane["resources"]["batch_max_inflight_tasks"] = int(config.get("batch.max_concurrent_tasks", 3))
         control_plane["resources"]["batch_task_start_interval"] = float(config.get("batch.task_start_interval", 0))

@@ -191,10 +191,11 @@ class StepAudioCutBySubtitle(BaseStep):
             rel_audio = os.path.join("cache", seg_folder, f"{seg_id}.{seg_ext}")
             abs_audio = os.path.join(task_dir, rel_audio)
 
-            cmd = [
+            from backend.utils.ffmpeg_guard import apply_resource_args
+            cmd = apply_resource_args([
                 "ffmpeg", "-y", "-ss", f"{start:.3f}", "-i", audio_path,
                 "-t", f"{duration:.3f}", "-c:a", seg_codec, abs_audio,
-            ]
+            ])
             try:
                 r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
                 if r.returncode != 0:

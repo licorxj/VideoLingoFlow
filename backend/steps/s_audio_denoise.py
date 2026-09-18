@@ -219,4 +219,5 @@ class StepAudioDenoise(BaseStep):
             *encode_args,
             output_path,
         ]
-        return cmd
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        return apply_resource_args(cmd)

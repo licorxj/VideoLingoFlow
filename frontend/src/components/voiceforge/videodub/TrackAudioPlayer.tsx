@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useVideoDubStore } from "./store";
 import { TrackKind } from "./types";
+import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 
 /** 由本组件驱动播放的三条音轨（原音走 <video> 自带声音，不在其列）。 */
 const PLAYED_KINDS: TrackKind[] = ["dubbing", "bgm", "sfx"];
@@ -14,6 +15,7 @@ export function TrackAudioPlayer() {
   const playing = useVideoDubStore((state) => state.playing);
   const clips = useVideoDubStore((state) => PLAYED_KINDS.flatMap((kind) => state.clips[kind]));
   const audioMapRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const keepAliveActive = useKeepAliveActive();
 
   // 维护音频元素池：片段增删时同步创建 / 释放
   useEffect(() => {
@@ -41,7 +43,8 @@ export function TrackAudioPlayer() {
   // 播放中逐帧对齐：进入片段范围即起播，漂移超阈值则重同步；变速片段按倍率换算进度
   useEffect(() => {
     const map = audioMapRef.current;
-    if (!playing) {
+    // 暂停或被 KeepAlive 隐藏时：停掉全部音轨与逐帧对齐循环（隐藏页面不该继续出声）
+    if (!playing || !keepAliveActive) {
       map.forEach((audio) => {
         audio.pause();
         if (audio.playbackRate !== 1) audio.playbackRate = 1;
@@ -86,7 +89,7 @@ export function TrackAudioPlayer() {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing]);
+  }, [playing, keepAliveActive]);
 
   return null;
 }

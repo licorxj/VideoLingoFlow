@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 import { Check, Loader2, Play, RefreshCw, Save, Sparkles, Trash2 } from "lucide-react";
 import { VoiceForgeCapability, VoiceForgeEmotionTag, VoiceForgeEmotionTask, VoiceForgeVoice, voiceForgeApi } from "@/api/voiceforge";
 import { getWebSocketUrl } from "@/api/ws";
@@ -82,8 +83,10 @@ export function EmotionDesignDialog({ voice, open, onOpenChange, onSaved }: { vo
       .catch((err: any) => setError(getErrorMessage(err, "情绪设计数据加载失败")));
   }, [open, voice?.id]);
 
+  const keepAliveActive = useKeepAliveActive();
   useEffect(() => {
-    if (!voice || !hasActiveTasks) return;
+    // 被 KeepAlive 隐藏（或任务已完成）时不建立进度连接
+    if (!voice || !hasActiveTasks || !keepAliveActive) return;
     const socket = new WebSocket(getWebSocketUrl(`/ws/voiceforge/voices/${encodeURIComponent(voice.id)}/progress`));
     socket.onmessage = (event) => {
       try {
@@ -97,7 +100,7 @@ export function EmotionDesignDialog({ voice, open, onOpenChange, onSaved }: { vo
       }
     };
     return () => socket.close();
-  }, [voice?.id, hasActiveTasks]);
+  }, [voice?.id, hasActiveTasks, keepAliveActive]);
 
   const toggle = (name: string) => {
     setSelected((current) => {

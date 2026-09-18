@@ -208,25 +208,22 @@ export interface Workflow {
 let runtimeNodeTypes: NodeTypeDef[] = [];
 
 // ==================== Category Config ====================
+// 注意：对象的键顺序即节点面板的分组展示顺序（NodePalette 用 Object.entries 遍历）
+// 约定顺序：输入输出 → 预览 → 流程控制 → 智能体 → 素材库 → 其余 → 漫剧链（置底）
 export const CATEGORIES = {
   io: { label: "输入输出节点", color: "#3b82f6", icon: "Upload" },
   preview: { label: "预览节点", color: "#14b8a6", icon: "Eye" },
+  flow_control: { label: "流程控制节点", color: "#6366f1", icon: "GitBranch" },
+  agent: { label: "智能体", color: "#a855f7", icon: "Bot" },
+  asset: { label: "素材库", color: "#84cc16", icon: "Library" },
   audio: { label: "音频处理节点", color: "#0ea5e9", icon: "Volume2" },
   video: { label: "视频处理节点", color: "#ef4444", icon: "Film" },
   cutia: { label: "剪辑互通", color: "#fb923c", icon: "Clapperboard" },
   ai_gen: { label: "AI生成类节点", color: "#10b981", icon: "Sparkles" },
   music_gen: { label: "AI音乐", color: "#a78bfa", icon: "Music" },
   translation: { label: "翻译相关节点", color: "#8b5cf6", icon: "Languages" },
-  flow_control: { label: "流程控制节点", color: "#6366f1", icon: "GitBranch" },
   network_request: { label: "网络请求类节点", color: "#0f766e", icon: "Globe" },
-  agi_story: { label: "漫剧·剧本链", color: "#db2777", icon: "Rocket" },
-  agi_asset: { label: "漫剧·资产链", color: "#c026d3", icon: "Users" },
-  agi_shot: { label: "漫剧·分镜链", color: "#9333ea", icon: "Clapperboard" },
-  agi_render: { label: "漫剧·成片链", color: "#7c3aed", icon: "FileVideo" },
-  agi_data: { label: "漫剧·数据链", color: "#0891b2", icon: "Database" },
   aigc: { label: "AIGC流程链", color: "#22c55e", icon: "Boxes" },
-  asset: { label: "素材库", color: "#84cc16", icon: "Library" },
-  agent: { label: "智能体", color: "#a855f7", icon: "Bot" },
   utility: { label: "工具类节点", color: "#f59e0b", icon: "Wrench" },
   file: { label: "文件操作类节点", color: "#f97316", icon: "FolderOpen" },
   group_node: { label: "组合节点", color: "#64748b", icon: "Boxes" },
@@ -235,6 +232,11 @@ export const CATEGORIES = {
   ai: { label: "AI 节点", color: "#10b981", icon: "Sparkles" },
   output: { label: "输出节点", color: "#f97316", icon: "Download" },
   publish: { label: "发布节点", color: "#ec4899", icon: "Send" },
+  agi_story: { label: "漫剧·剧本链", color: "#db2777", icon: "Rocket" },
+  agi_asset: { label: "漫剧·资产链", color: "#c026d3", icon: "Users" },
+  agi_shot: { label: "漫剧·分镜链", color: "#9333ea", icon: "Clapperboard" },
+  agi_render: { label: "漫剧·成片链", color: "#7c3aed", icon: "FileVideo" },
+  agi_data: { label: "漫剧·数据链", color: "#0891b2", icon: "Database" },
 } as const;
 
 // ==================== Helper Functions ====================

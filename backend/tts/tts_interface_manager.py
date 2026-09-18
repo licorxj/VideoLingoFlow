@@ -89,11 +89,12 @@ def _speed_ref_audio(ref_audio: str, speed: float) -> str:
         factors.append(remaining)
 
     filter_str = ",".join(f"atempo={f:.4f}" for f in factors)
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y", "-i", ref_audio,
         "-filter:a", filter_str,
         "-vn", out_path,
-    ]
+    ])
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if result.returncode != 0:

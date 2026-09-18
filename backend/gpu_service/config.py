@@ -12,7 +12,30 @@ def redis_url() -> str:
 
 def max_lanes() -> int:
     """lane 工作进程上限（显存充足时的最大并发路数）。"""
-    return _int_env("GPU_SERVICE_MAX_LANES", 3)
+    configured = _int_env("GPU_SERVICE_MAX_LANES", 3)
+    if serial_mode():
+        return max(1, min(configured, 1))
+    return configured
+
+
+def serial_mode() -> bool:
+    """单卡串行：GPU_SERVICE_SERIAL=1 时强制单 lane，避免大模型双开 OOM。
+
+    本机单卡批量推荐开启；多卡/大显存可设 0 并调高 MAX_LANES。
+    """
+    raw = os.getenv("GPU_SERVICE_SERIAL", "").strip().lower()
+    if raw in {"1", "true", "yes", "on"}:
+        return True
+    if raw in {"0", "false", "no", "off"}:
+        return False
+    # 未显式设置时：显存 ≤12GB 默认串行（本机单卡安全默认）
+    try:
+        from backend.gpu_service.monitor import gpu_info
+        info = gpu_info()
+        total = float(info.get("total_gb") or 0)
+        return info.get("available") and total <= 12.0
+    except Exception:
+        return False
 
 
 def lane_idle_timeout() -> int:

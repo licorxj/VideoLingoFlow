@@ -13,7 +13,8 @@ from backend.asr.asr_whisperx import WhisperXLocal
 from backend.utils.engine_lifecycle import IdleEngineRegistry, release_gpu_cache
 
 _ENGINES = {}
-_REGISTRY = IdleEngineRegistry(idle_timeout=5.0, name="ASR")
+# 本机单卡批量：空闲默认 120s，可用 ENGINE_IDLE_TIMEOUT_ASR 覆盖，减少模型反复重载
+_REGISTRY = IdleEngineRegistry(idle_timeout=120.0, name="ASR")
 
 
 def _asr_unloader(_engine):

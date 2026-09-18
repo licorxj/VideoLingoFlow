@@ -15,10 +15,27 @@
 输出写入 ``output/video_dedup_{node_id}.{ext}``，沿用 video_scale 的进度/取消机制。
 """
 import os
+import shutil
 
 from backend.steps.base_step import BaseStep
 from backend.utils.video_ops import get_video_duration, run_ffmpeg_with_progress
 from backend.utils.video_encoder import build_video_encode_args
+
+
+def _ensure_disk_space(target_dir: str, needed_bytes: float, margin: float = 1.3) -> None:
+    """产物落地前检查磁盘余量，不足时快速失败并给出可执行提示。"""
+    if needed_bytes <= 0:
+        return
+    try:
+        free = shutil.disk_usage(target_dir).free
+    except OSError:
+        return
+    if free < needed_bytes * margin:
+        raise RuntimeError(
+            f"磁盘可用空间不足：本次处理预计需要约 {needed_bytes * margin / 1048576:.0f} MB，"
+            f"当前仅剩 {free / 1048576:.0f} MB，已中止以免写坏输出。"
+            f"请清理磁盘后重试，或降低视频质量 / 分辨率。"
+        )
 
 
 # 输出格式 -> (视频编码器, 音频编码器)
@@ -150,6 +167,27 @@ class S_VideoDedupe(BaseStep):
             raise ValueError(f"不支持的输出格式：{output_format}")
         ext = _FORMAT_EXT.get(output_format, "mp4")
 
+        # 资源保护配置：线程上限（0=自动）、最长时长上限（0=不限制）、编码速度
+        ffmpeg_threads = max(0, min(_as_int(node_config.get("ffmpeg_threads"), 0), 64))
+        max_duration_minutes = max(0, _as_int(node_config.get("max_duration_minutes"), 0))
+        encode_preset = str(node_config.get("encode_preset") or "").strip()
+
+        # 前置预检：时长上限 + 磁盘余量（快速失败，避免处理到一半把机器拖垮）
+        try:
+            duration = float(get_video_duration(input_path) or 0)
+        except Exception:
+            duration = 0.0
+        if max_duration_minutes > 0 and duration > max_duration_minutes * 60:
+            raise RuntimeError(
+                f"视频时长约 {duration / 60:.1f} 分钟，超过节点配置的上限 {max_duration_minutes} 分钟。"
+                f"如确需处理长视频，请在节点「最长时长上限」中调大或设为 0（不限制）。"
+            )
+        try:
+            input_bytes = os.path.getsize(input_path)
+        except OSError:
+            input_bytes = 0
+        _ensure_disk_space(task_dir, input_bytes * 1.2)
+
         node_suffix = f"_{getattr(self, '_node_id', '')}" if getattr(self, "_node_id", "") else ""
         output_dir = os.path.join(task_dir, "output")
         os.makedirs(output_dir, exist_ok=True)
@@ -174,19 +212,34 @@ class S_VideoDedupe(BaseStep):
         if quality not in _QUALITY_CRF:
             quality = "medium"
         # 全局「使用显卡加速 (NVIDIA NVENC)」开启时，H.264/HEVC 自动改用硬编码
-        cmd += build_video_encode_args(vcodec, quality=quality)
+        cmd += build_video_encode_args(vcodec, quality=quality, preset=encode_preset or None)
 
-        cmd += ["-c:a", acodec, "-b:a", "192k"]
+        cmd += ["-c:a", acodec, "-b:a", "192k",
+                # 限制封装队列，避免队列无界增长导致内存暴涨
+                "-max_muxing_queue_size", "4096"]
+        if ffmpeg_threads > 0:
+            # 限制编码与滤镜线程，避免重编码时吃满全部 CPU 导致系统卡顿
+            cmd += ["-threads", str(ffmpeg_threads), "-filter_threads", str(ffmpeg_threads)]
+        else:
+            # 未在节点配置线程上限时，走全局 FFMPEG_MAX_THREADS / CPU 半核默认
+            from backend.utils.ffmpeg_guard import resource_args
+            cmd += [a for a in resource_args() if a not in ("-max_muxing_queue_size", "4096")]
         cmd.append(output_path)
 
         if callback:
             try:
-                callback(5, f"开始去重变换 -> .{ext}")
+                callback(5, f"开始去重变换 -> .{ext}"
+                           + (f"（线程上限 {ffmpeg_threads}）" if ffmpeg_threads else "（线程跟随全局限制）"))
             except Exception:
                 pass
 
-        duration = get_video_duration(input_path)
-        run_ffmpeg_with_progress(cmd, duration, callback, cancel_callback, label="去重变换")
+        # 超时按视频时长自适应：默认 86400s（24h）在 ffmpeg 异常挂起时形同卡死，
+        # 这里改用「时长 × 10 + 300s，下限 600s」，超时即终止并抛出可读错误。
+        effective_timeout = max(600.0, duration * 10 + 300) if duration > 0 else 1800.0
+        run_ffmpeg_with_progress(
+            cmd, duration, callback, cancel_callback,
+            timeout=effective_timeout, label="去重变换",
+        )
 
         if not os.path.exists(output_path):
             raise RuntimeError("去重变换完成但未找到输出文件: " + output_path)

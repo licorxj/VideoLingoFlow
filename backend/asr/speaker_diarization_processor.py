@@ -352,7 +352,8 @@ class DiarizeLibProcessor(SpeakerDiarizationProcessor):
                 f"Audio format not readable by soundfile and ffmpeg not found: {audio_path}")
 
         tmp_path = os.path.join(tempfile.mkdtemp(prefix="diarize_lib_"), "audio.wav")
-        cmd = [ffmpeg, "-y", "-i", audio_path, "-vn", "-ac", "1", "-ar", "16000", tmp_path]
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd = apply_resource_args([ffmpeg, "-y", "-i", audio_path, "-vn", "-ac", "1", "-ar", "16000", tmp_path])
         proc = subprocess.run(cmd, capture_output=True, text=True)
         if proc.returncode != 0:
             raise RuntimeError(f"ffmpeg conversion failed: {proc.stderr[-500:]}")

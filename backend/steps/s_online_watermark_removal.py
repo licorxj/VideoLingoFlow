@@ -237,13 +237,14 @@ class S_OnlineWatermarkRemoval(BaseStep):
                 f.write(f"file '{normalized}'\n")
 
         # 方案 1：直接流复制拼接（各段编码一致时最快）
-        cmd_copy = [
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd_copy = apply_resource_args([
             "ffmpeg", "-y",
             "-f", "concat", "-safe", "0",
             "-i", list_path,
             "-c", "copy",
             output_path,
-        ]
+        ])
         try:
             result = subprocess.run(cmd_copy, capture_output=True, text=True, timeout=1800)
         except FileNotFoundError:
@@ -255,6 +256,7 @@ class S_OnlineWatermarkRemoval(BaseStep):
             return
 
         # 方案 2：重编码拼接（兼容编码不一致的分段）
+        from backend.utils.ffmpeg_guard import resource_args
         cmd_reencode = [
             "ffmpeg", "-y",
             "-f", "concat", "-safe", "0",
@@ -264,6 +266,8 @@ class S_OnlineWatermarkRemoval(BaseStep):
             "-c:a", "aac",
             "-b:a", "128k",
             "-movflags", "+faststart",
+            # 回退重编码拼接：限制线程 / 封装队列
+            *resource_args(),
             output_path,
         ]
         try:

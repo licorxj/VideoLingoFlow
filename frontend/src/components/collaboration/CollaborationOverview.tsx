@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useAlert } from "@/components/ui/AlertProvider";
 import { useControlStore } from "@/stores/controlStore";
 import { loginControlSession } from "@/api/controlPlane";
+import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 import {
   applyJoin, approveApplication, assignControlUserRole, changeOwnCredentials, getApplyStatus,
   listApplications, listControlUsers, rejectApplication, setUserActive,
@@ -84,11 +85,14 @@ function groupByRole(presence: PresenceMember[]) {
 
 function TeamMemberCards() {
   const { user, presence, refreshPresence } = useControlStore();
+  const keepAliveActive = useKeepAliveActive();
   useEffect(() => {
+    // 被 KeepAlive 隐藏时不在后台刷新在线状态（每次都会拉全量成员）
+    if (!keepAliveActive) return;
     refreshPresence();
     const timer = window.setInterval(() => refreshPresence(), 15000);
     return () => window.clearInterval(timer);
-  }, [refreshPresence]);
+  }, [refreshPresence, keepAliveActive]);
 
   const grouped = groupByRole(presence);
   const onlineCount = presence.filter((m) => m.online).length;

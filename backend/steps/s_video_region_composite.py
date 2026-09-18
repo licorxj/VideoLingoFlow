@@ -170,6 +170,9 @@ class S_VideoRegionComposite(BaseStep):
         out_path = os.path.join(cache_dir, out_name)
         rel_video = os.path.join("cache", out_name)
 
+        from backend.utils.ffmpeg_guard import adaptive_timeout, resource_args
+        from backend.utils.video_ops import get_video_duration, run_ffmpeg_with_progress
+
         cmd = [
             "ffmpeg", "-y",
             "-i", main_path,
@@ -179,7 +182,8 @@ class S_VideoRegionComposite(BaseStep):
             # 全局「使用显卡加速 (NVIDIA NVENC)」开启时自动改用 h264_nvenc
             *build_video_encode_args("libx264", crf=18, preset="veryfast"),
             "-c:a", "copy", "-movflags", "+faststart",
-            out_path,
+            # 双路输入 overlay 属全片重编码：限制线程 / 封装队列
+            *resource_args(),
         ]
 
         if cancel_callback and cancel_callback():
@@ -192,12 +196,16 @@ class S_VideoRegionComposite(BaseStep):
             except Exception:
                 pass
 
+        # 流式执行：进度可上报、支持协作取消；超时按时长自适应（替代固定 1800s）
         try:
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
-        except FileNotFoundError:
-            raise RuntimeError("未找到 ffmpeg，请先安装 ffmpeg 并加入 PATH。")
-        if r.returncode != 0:
-            raise RuntimeError(f"ffmpeg 视频区域贴片失败: {r.stderr[-800:]}")
+            duration = float(get_video_duration(main_path) or 0)
+        except Exception:
+            duration = 0.0
+        cmd += ["-progress", "pipe:1", "-nostats", out_path]
+        run_ffmpeg_with_progress(
+            cmd, duration, callback, cancel_callback,
+            timeout=adaptive_timeout(duration), label="区域贴片",
+        )
 
         if callback:
             try:

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { backupApi, BackupOption, BackupInfo, RestoreMode } from "@/api/backup";
 import {
   Database,
@@ -46,6 +46,41 @@ export default function DataBackupSettings() {
   useEffect(() => {
     refreshOptions();
   }, [refreshOptions]);
+
+  // 备份目录设置持久化在用户主目录 ~/.lcsoftware/backup_settings.json：
+  // 进入页面同步读取；文件不存在时后端返回空值，不报错
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await backupApi.getSettings();
+        if (alive) setBackupDir(res.data.backupDir || "");
+      } catch {
+        /* 读取失败按空值处理 */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 输入即保存（防抖 600ms）；~/.lcsoftware 不存在时由后端自动初始化
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const persistDir = (value: string) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(async () => {
+      try {
+        await backupApi.saveSettings(value.trim());
+      } catch {
+        /* 保存失败静默，避免打断输入 */
+      }
+    }, 600);
+  };
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
+  }, []);
 
   const selectedIds = Object.keys(selected).filter((k) => selected[k]);
   const restoreIds = Object.keys(restoreSelected).filter((k) => restoreSelected[k]);
@@ -144,14 +179,17 @@ export default function DataBackupSettings() {
       <Section
         icon={FolderOpen}
         title="备份存放目录"
-        desc="建议设置在项目目录之外（如 D:/videolingo_backups），防止项目更新时被覆盖。"
+        desc="建议设置在项目目录之外（如 D:/videolingo_backups），防止项目更新时被覆盖。该路径会自动保存到用户目录 ~/.lcsoftware 下，下次打开自动读取。"
       >
         <div className="flex gap-2">
           <input
             type="text"
             value={backupDir}
             placeholder="例如：D:/videolingo_backups 或 /opt/videolingo_backups"
-            onChange={(e) => setBackupDir(e.target.value)}
+            onChange={(e) => {
+              setBackupDir(e.target.value);
+              persistDir(e.target.value);
+            }}
             className="w-full px-3.5 py-2.5 border border-border/60 rounded-xl bg-background/50 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10 outline-none"
           />
           <button

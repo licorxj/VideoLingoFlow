@@ -27,7 +27,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\417c01d130f1473ca457fdc8c84fef08\\cache\\input_video.mp4",
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\input_video.mp4",
           "languages": {
             "source_language": "en",
             "target_language": "zh"
@@ -96,7 +96,7 @@
         "nodeType": "translate",
         "label": "逐句翻译",
         "config": {
-          "translation_style": "软件教程",
+          "translation_style": "科学科普",
           "reflect_translate": "yes",
           "processing_language": "from_input",
           "target_language": "from_input"
@@ -153,7 +153,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 444
+        "height": 394
       },
       "selected": false,
       "dragging": false,
@@ -194,14 +194,14 @@
         "error": "",
         "workbench_url": "",
         "logLines": [
+          "    [526] 重配完成: 2.09s",
           "[S09] 分析变速倍数",
-          "  - 需要变速: 91 段",
-          "  - 超出最大变速(1.35x): 4 段",
+          "  - 需要变速: 505 段（加速/溢出 4 段，减速填充 66 段）",
           "[S09] 最终溢出段数: 4",
-          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\dub_task_node_1_1781709944783.json",
-          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\dub_task_node_1_1781709944783.csv",
+          "[TTS] 已更新任务文件: Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\dub_task_node_1_1781709944783.json",
+          "[TTS] 已更新CSV: Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\dub_task_node_1_1781709944783.csv",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_1_1781645240103_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -274,7 +274,7 @@
           "dub_srt": "output/dub_node_1_1781810867151.srt",
           "dub_bilingual_srt": "output/dub_bilingual_node_1_1781810867151.srt",
           "配音任务单": "cache\\dub_task_node_1_1781709944783.csv",
-          "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\417c01d130f1473ca457fdc8c84fef08\\cache\\input_video.mp4"
+          "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\input_video.mp4"
         },
         "error": "",
         "disableExecute": false,
@@ -307,17 +307,19 @@
           "preset_id": "单语-白-半透底",
           "mute_original": true
         },
-        "status": "running",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
-        "message": "",
-        "outputs": {},
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_with_dub_node_1_1781939413425.mp4"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 511
+        "height": 870
       },
       "selected": false,
       "dragging": false,
@@ -381,19 +383,19 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1782422054967.json",
-          "text": "{\n  \"tittle\": \"布朗运动：原子之证\",\n  \"hook\": \"测速八十年徒劳，位移一朝破局\",\n  \"summary\": \"视频梳理了利用布朗运动证明原子存在的百年科学史。故事始于罗伯特·布朗观察到微粒永不停歇的无规则运动，但其成因困扰学界近八十年：如果水分子从四面八方的撞击相互抵消，微粒为何运动？关键转折在于爱因斯坦1905年的洞察：不应测量难以捉摸的瞬时速度，而应测量微粒在一段时间内的**均方位移**。理论指出，该位移与时间的平方根成正比，其公式中隐含了阿伏伽德罗常数（一摩尔物质所含的粒子数）。随后，法国物理学家佩兰通过一系列精巧实验（如观测树脂颗粒在重力场中的分布、追踪其随机位移和旋转）验证了爱因斯坦的理论，并首次准确测定了该常数，为原子的真实性提供了无可辩驳的证据。视频进一步阐述了这一理论的深远影响：它不仅终结了关于原子是否存在的争论（如奥斯特瓦尔德的转变），其“平方根定律”还解释了从微观蛋白质扩散到宏观生物循环系统（如血液循环）的诸多现象。最后，视频提及了现代技术对布朗运动更深层次（如流体记忆效应、短暂违反热力学第二定律）的观测，展现了这一发现持续至今的科学价值。\"\n}"
+          "text": "{\n  \"title\": \"量子隧穿揭秘\",\n  \"hook\": \"粒子穿越能量墙的秘密\",\n  \"summary\": \"视频深入解析量子隧穿现象：微观粒子如电子能够穿越经典物理中不可逾越的能量势垒。核心原理是量子力学将粒子描述为概率波（波函数），当遇到势垒时，波函数指数衰减但仍有非零概率出现在势垒另一侧。通过薛定谔方程计算穿透概率，取决于势垒宽度、高度和粒子能量。隧穿解释了太阳发光（氢核聚变）、放射性α衰变、扫描隧道显微镜的原子级成像以及超导电路中的宏观量子效应。视频澄清了常见误解，如粒子借能量或走秘密通道，强调隧穿是连续波函数演化的结果，探测时记录完整粒子。量子隧穿展示了微观世界的非直观特性，是量子力学的重要应用。\"\n}"
         },
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "2：字数限制：主标题不多于8个字，副标题不多于12字，总结不多于500字。",
-          "3：严格按照json格式输出，输出json中包含key：tittle、hook、summary",
-          "    [user] 输出语言：zh",
-          "输入的视频文案：",
-          "##",
-          "Hello guys, this is Santosh and welcome to Tech Design. So, in this video, I am going to show you all the different ways of creating the points. So, if you have already worked in any of the CAD tool, I think you are already aware of creating the points and data points are very im",
+          "[step_worker] step instance created: S_LLMRequest",
+          "[step_worker] step_inputs keys=['text', 'source_language', 'target_language']",
+          "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
+          "[LLM] direct (step=s_llm_request, strategy=vlf-01, stream=False, response_json=True, timeout=300s, prompt_chars=33293)",
+          "[LLM] direct ok (step=s_llm_request, elapsed=53.3s)",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782422054967_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_1_1782422054967_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -439,14 +441,14 @@
         "note": "竖图封面",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782507205161_result.json, exiting 0",
-          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=55772",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
+          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=36320",
           "[step_worker] step instance created: S_ImageGen",
-          "[step_worker] step_inputs keys=['text', 'image']",
+          "[step_worker] step_inputs keys=['text']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782507205161_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_1_1782507205161_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -555,14 +557,14 @@
         "note": "横图封面",
         "workbench_url": "",
         "logLines": [
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_3_1782641542678_result.json, exiting 0",
-          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=50880",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
+          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=39016",
           "[step_worker] step instance created: S_ImageGen",
           "[step_worker] step_inputs keys=['image', 'text']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae, kwargs=['callback'])",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_3_1782641542678_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_3_1782641542678_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -631,7 +633,8 @@
           "is_original": true,
           "title_affix": "【物理视界】",
           "title_affix_mode": "prefix",
-          "desc_affix_mode": "prefix"
+          "desc_affix_mode": "prefix",
+          "declaration": "ai_generated"
         },
         "status": "pending",
         "disableExecute": false,
@@ -642,14 +645,14 @@
         "note": "发布平台",
         "workbench_url": "",
         "logLines": [
-          "[Publish] Upload OK: id=2eaca35f-61f4-47fd-8391-9442c6f6f7ea, stored_path=materials/2026/09/05/2eaca35f-61f4-47fd-8391-9442c6f6f7ea.png",
-          "[Publish] cover_landscape material obj: id=2eaca35f-61f4-47fd-8391-9442c6f6f7ea, stored_path=materials/2026/09/05/2eaca35f-61f4-47fd-8391-9442c6f6f7ea.png",
-          "[Publish] Uploading material: cover_gen_3x4_1_gen_image_node_1_1782507205161.jpg (0.9 MB)",
-          "[Publish] Upload OK: id=5c13728a-7c27-4fe9-829a-e4d9aa428226, stored_path=materials/2026/09/05/5c13728a-7c27-4fe9-829a-e4d9aa428226.jpg",
-          "[Publish] cover_portrait material obj: id=5c13728a-7c27-4fe9-829a-e4d9aa428226, stored_path=materials/2026/09/05/5c13728a-7c27-4fe9-829a-e4d9aa428226.jpg",
-          "[Publish] Creating draft: title='NX点创建全攻略：智能推断点，效率倍增', accounts=[2, 3, 4, 5], video=OK, cover_l=OK, cover_p=OK",
+          "[Publish] Upload OK: id=39cd00cd-5999-4d10-b943-2b0a1bcf1e43, stored_path=materials/2026/09/16/39cd00cd-5999-4d10-b943-2b0a1bcf1e43.png",
+          "[Publish] cover_landscape material obj: id=39cd00cd-5999-4d10-b943-2b0a1bcf1e43, stored_path=materials/2026/09/16/39cd00cd-5999-4d10-b943-2b0a1bcf1e43.png",
+          "[Publish] Uploading material: cover_gen_3x4_1_gen_image_node_1_1782507205161.png (2.5 MB)",
+          "[Publish] Upload OK: id=f57bef89-8c2c-4ea7-ae52-fa551300b581, stored_path=materials/2026/09/16/f57bef89-8c2c-4ea7-ae52-fa551300b581.png",
+          "[Publish] cover_portrait material obj: id=f57bef89-8c2c-4ea7-ae52-fa551300b581, stored_path=materials/2026/09/16/f57bef89-8c2c-4ea7-ae52-fa551300b581.png",
+          "[Publish] Creating draft: title='太阳为何燃烧？量子隧穿揭秘真相【物理视界】', accounts=[2, 3, 4, 5], video=OK, cover_l=OK, cover_p=OK",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782672877872_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_1_1782672877872_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -672,7 +675,7 @@
         "label": "通用LLM请求",
         "config": {
           "model": "",
-          "system_prompt": "你是一个小红书平台视频标题和描述撰写大师，根据我输入的需要发布的视频的信息，帮我撰写专业而有极具心引力的视频标题、视频介绍、关联标签：\n##要求：\n1：标题能抛出视频的闪光点或者矛盾点，能直观表述视频所展现的核心，也能为观众抛出极具诱惑的钩子；\n2：视频描述表达视频的核心卖点和简练的观点；\n3：关联标签为视频所属类型的剪短标签，总结3~6个即可；\n4：字数限制：标题不多于25个字，描述不多于150字，单个标签不多于5字。\n3：严格按照json格式输出，输出json中包含key：tittle、description、tags",
+          "system_prompt": "你是一个小红书平台视频标题和描述撰写大师，根据我输入的需要发布的视频的信息，帮我撰写专业而有极具心引力的视频标题、视频介绍、关联标签：\n##要求：\n1：标题能抛出视频的闪光点或者矛盾点，能直观表述视频所展现的核心，也能为观众抛出极具诱惑的钩子；\n2：视频描述表达视频的核心卖点和简练的观点；\n3：关联标签为视频所属类型的剪短标签，总结3~4个即可；\n4：字数限制：标题不多于25个字，描述不多于60字，单个标签不多于5字。\n3：严格按照json格式输出，输出json中包含key：tittle、description、tags",
           "user_prompt": "输出语言：{target_language}\n视频信息：\n##\n{input_json}\n##",
           "temperature": 0.7,
           "response_json": true,
@@ -684,19 +687,19 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1782725550457.json",
-          "text": "{\n  \"tittle\": \"布朗运动：测速失败，位移突破证原子\",\n  \"description\": \"视频揭秘布朗运动如何终结原子存在百年争论。从罗伯特·布朗的发现，到爱因斯坦提出均方位移理论，佩兰实验验证，首次测定阿伏伽德罗常数。这一突破不仅解决科学难题，其'平方根定律'更解释从微观扩散到宏观生物现象，至今仍有现代研究价值。\",\n  \"tags\": [\n    \"科学史\",\n    \"物理学\",\n    \"布朗运动\",\n    \"原子证明\",\n    \"爱因斯坦\",\n    \"实验验证\"\n  ]\n}"
+          "text": "{\n  \"tittle\": \"微观世界的‘穿墙术’：量子隧穿揭秘\",\n  \"description\": \"微观粒子如何穿越能量墙？视频解析量子隧穿的原理，展示其在太阳发光、扫描隧道显微镜等领域的神奇应用。\",\n  \"tags\": [\n    \"量子力学\",\n    \"微观世界\",\n    \"科学揭秘\",\n    \"物理原理\"\n  ]\n}"
         },
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "视频信息：",
-          "##",
-          "{",
-          "  \"tittle\": \"NX点创建详解\",",
-          "  \"hook\": \"掌握点创建技巧，提升建模效率\",",
-          "  \"summary\": \"本视频教程由Santosh讲解在NX软件中创建3D点的多种方法。内容涵盖推断点、光标位置、现有点、端点、曲线上点、面上点和两点之间点等常用选项，重点介绍了推断点的智能性，能自动结合多种创建方式，是工作中最常用的技巧。视频强调点在曲面建模中的重要性，有助于构建复杂几何形状，提升零件建模精度。通过实例演示操作步骤，并鼓励观众实践这些方法以增强建模技能。教程结尾提醒，点的创建是CAD建模的基础，熟练掌握能大幅提高工作效率。如有疑问，欢",
+          "[step_worker] step instance created: S_LLMRequest",
+          "[step_worker] step_inputs keys=['json', 'source_language', 'target_language']",
+          "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
+          "[LLM] direct (step=s_llm_request, strategy=vlf-01, stream=False, response_json=True, timeout=300s, prompt_chars=599)",
+          "[LLM] direct ok (step=s_llm_request, elapsed=13.2s)",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1782725550457_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_1_1782725550457_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -726,7 +729,7 @@
         "message": "Completed",
         "outputs": {
           "text": "cache/task_name.txt",
-          "translated": "002-布朗运动的80年之谜_证明原子存在"
+          "translated": "006_量子隧穿时到底发生了什么"
         },
         "error": "",
         "workbench_url": ""
@@ -762,7 +765,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 208
+        "height": 245
       },
       "selected": false,
       "dragging": false,
@@ -808,8 +811,8 @@
       "id": "node_1_1788530708958",
       "type": "workflow",
       "position": {
-        "x": -405,
-        "y": -1335
+        "x": -420,
+        "y": -1170
       },
       "selected": false,
       "data": {
@@ -824,7 +827,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\417c01d130f1473ca457fdc8c84fef08\\output\\json2text_node_1_1788530708958.txt"
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\output\\json2text_node_1_1788530708958.txt"
         },
         "error": "",
         "workbench_url": ""
@@ -879,7 +882,7 @@
           "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
           "[ASR PostProcess] No post-processing needed, returning original result",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_2_1788530964170_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_2_1788530964170_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -952,7 +955,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\417c01d130f1473ca457fdc8c84fef08\\cache\\path_to_title.txt"
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\path_to_title.txt"
         },
         "error": "",
         "workbench_url": ""
@@ -1041,7 +1044,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 632
+        "height": 688
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -1060,19 +1063,19 @@
         "label": "视频拼接",
         "config": {
           "segment_order": [
-            "main",
             "segment1",
+            "main",
             "segment2",
             "segment3"
           ],
           "scale_mode": "stretch",
           "cover_position": "start",
-          "cover_duration": 3,
+          "cover_duration": 1,
           "output_format": "mp4"
         },
-        "status": "pending",
+        "status": "running",
         "disableExecute": false,
-        "progress": 0,
+        "progress": 61,
         "message": "",
         "outputs": {},
         "error": "",
@@ -1080,7 +1083,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 471
+        "height": 597
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1097,50 +1100,60 @@
         "nodeType": "video_asset_library",
         "label": "视频素材库",
         "config": {
-          "source": "ff2d902c728d4d4a8bbdbddc7e6766db",
+          "source": "e66dbf385efb4e9e9d23e6ffd8800645",
           "asset_name": "",
-          "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Cmaterials%5Cvideos%5C01f72cbdabdf493faf1ded64c9327122.mp4"
+          "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Clibraries%5Cvideos%5C84841194_VLF%E7%89%87%E5%A4%B4%E5%AE%A3%E4%BC%A0%E7%89%873%E7%A7%92.mp4"
         },
         "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\417c01d130f1473ca457fdc8c84fef08\\asset.mp4",
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\asset_1.mp4",
           "info": {
-            "source": "ff2d902c728d4d4a8bbdbddc7e6766db",
+            "source": "e66dbf385efb4e9e9d23e6ffd8800645",
             "source_type": "local",
             "kind": "video",
             "asset": {
-              "path": "data/materials/videos/01f72cbdabdf493faf1ded64c9327122.mp4",
+              "path": "data/libraries/videos/84841194_VLF片头宣传片3秒.mp4",
               "width": 1920,
               "height": 1080,
-              "duration_seconds": 7.000998,
+              "duration_seconds": 3.827604,
               "group_tags": [
                 "VLF"
               ],
               "custom_tags": [
-                "出场动画"
+                "宣传片头"
               ],
-              "description": "VLF软件宣传素材-出场",
+              "description": "VLF软件宣传片头加上3秒",
               "deleted_at": null,
-              "id": "ff2d902c728d4d4a8bbdbddc7e6766db",
+              "id": "e66dbf385efb4e9e9d23e6ffd8800645",
               "version": 1,
-              "created_at": "2026-09-11T23:06:32",
-              "updated_at": "2026-09-11T23:06:32",
-              "absolute_path": "Y:\\VideoLingoLc\\data\\materials\\videos\\01f72cbdabdf493faf1ded64c9327122.mp4"
+              "created_at": "2026-09-18T06:24:17",
+              "updated_at": "2026-09-18T06:24:17",
+              "absolute_path": "Y:\\VideoLingoLc\\data\\libraries\\videos\\84841194_VLF片头宣传片3秒.mp4"
             },
             "file": {
-              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\417c01d130f1473ca457fdc8c84fef08\\asset.mp4",
-              "name": "asset.mp4",
-              "size_bytes": 2130886,
+              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\asset_1.mp4",
+              "name": "asset_1.mp4",
+              "size_bytes": 1238277,
               "copied": true,
-              "from": "Y:\\VideoLingoLc\\data\\materials\\videos\\01f72cbdabdf493faf1ded64c9327122.mp4"
+              "from": "Y:\\VideoLingoLc\\data\\libraries\\videos\\84841194_VLF片头宣传片3秒.mp4"
             }
           }
         },
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] start node_type=video_asset_library node_id=node_3_1789406114242 pid=44932",
+          "[step_worker] step instance created: S_VideoAssetLibrary",
+          "[step_worker] step_inputs keys=['any']",
+          "[step_worker] node_config keys=['source', 'asset_name', 'preview']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_3_1789406114242_result.json, exiting 0"
+        ]
       },
       "measured": {
         "width": 420,
@@ -1559,7 +1572,7 @@
         "label": "通用LLM请求",
         "config": {
           "model": "vlf-create",
-          "system_prompt": "任务：\n1：用户已经有了封面图片，为封面图设计标题样式，并输出为AI图生图的提示词文本，不要有多余说明\n2：为封面图设计上标题和副标题，制作为电影海报，标题使用中文文字。\n3：输出图生图提示词，在提示词中，输入图片的以‘输入图片’代指.不要考虑图片的元素设计，专注标题的设计。\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“{title}” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“{subtitle}” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。",
+          "system_prompt": "任务：\n1：用户已经有了封面图片，为封面图设计标题样式，并输出为AI图生图的提示词文本，不要有多余说明\n2：为封面图设计上标题和副标题，制作为电影海报，标题使用中文文字。\n3：输出图生图提示词，在提示词中，输入图片的以‘输入图片’代指.不要考虑图片的元素设计，专注标题的设计。\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“{title}” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“{subtitle}” ，使用稍小一号的字体，字体颜色和大小和主标题有所不同，凸显出层级感，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。",
           "user_prompt": "视频信息：\n{input_json}",
           "temperature": 0.7,
           "response_json": false,
@@ -1571,7 +1584,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_n_mu386aanb14p.txt",
-          "text": "基于输入图片，制作高级电影感海报式构图，超写实风格，增加主体与背景对比度以突出主次层次。主标题“布朗运动：原子之证”使用加粗毛笔草书手写体，笔触漂移绵长，白色字体，添加细微黑色描边和阴影增强立体感，字号根据词块和语义设计不同大小（如“布朗运动”较大，“原子之证”稍小）。副标题“测速八十年徒劳，位移一朝破局”使用稍小一号隶书体，低饱和墨绿色粗体，黑色描边和阴影。标题布置在画面上方或侧面区域，避免遮挡主体，形成景深交互穿模效果，与背景和谐融合。"
+          "text": "电影海报图生图提示词：以“输入图片”为底图，添加中文字体标题设计。主标题“量子隧穿揭秘”采用加粗毛笔草书手写体，白色字体，笔触飘移绵长，字号按词块“量子”“隧穿”“揭秘”形成错落大小变化，加细黑色描边与立体阴影，营造跃出画面的景深感。副标题“粒子穿越能量墙的秘密”置于主标题下方，字体稍小，采用科技感现代衬线体，灰蓝白渐变色，带投影，与主标题形成视觉层级。标题整体以穿模交互方式嵌入背景，部分笔画破开势垒视效光带，强化量子隧穿意味。排版根据输入图片构图自动适配，避开主要视觉主体，保持电影海报式的高级对比度与光影层次。"
         },
         "error": "",
         "note": "发布平台资料准备",
@@ -1580,11 +1593,11 @@
           "[step_worker] step instance created: S_LLMRequest",
           "[step_worker] step_inputs keys=['json', 'source_language', 'target_language']",
           "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0, kwargs=['callback'])",
-          "[LLM] direct (step=vlf-create, strategy=vlf-create, stream=False, response_json=False, timeout=300s, prompt_chars=788)",
-          "[LLM] direct ok (step=vlf-create, elapsed=27.1s)",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
+          "[LLM] direct (step=vlf-create, strategy=vlf-create, stream=False, response_json=False, timeout=300s, prompt_chars=794)",
+          "[LLM] direct ok (step=vlf-create, elapsed=8.3s)",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\cache\\.step_n_mu2w7745l4hq_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_n_mu386aanb14p_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -1642,7 +1655,7 @@
         "label": "通用LLM请求",
         "config": {
           "model": "vlf-create",
-          "system_prompt": "任务：\n阅读理解视频的内容，然后为视频设计一个专业精致的视频封面和标题的生图提示词\n要求：\n1：图片提示词应该包含封面的生图内容+标题+副标题的设计提示词。\n2：封面内容需要契合视频表达的主题，突出主体。\n3：标题和副标题需要布置在封面上，字体和颜色都要足够醒目，可以使用不同的颜色来达到个性化，字体与背景形成景深上的交错，以达到高级的设计效果。\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“{title}” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“{subtitle}” ，使用稍小一号的隶书体，低饱和的墨绿色粗体字体，黑色描边，标题设置阴影增加立体感。\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。",
+          "system_prompt": "任务：\n阅读理解视频的内容，然后为视频设计一个专业精致的视频封面和标题的生图提示词\n要求：\n1：图片提示词应该包含封面的生图内容+标题+副标题的设计提示词。\n2：封面内容需要契合视频表达的主题，突出主体。\n3：标题和副标题需要布置在封面上，字体和颜色都要足够醒目，可以使用不同的颜色来达到个性化，字体与背景形成景深上的交错，以达到高级的设计效果。\n\n画面风格：\n高级电影感，电影海报式构图，超写实风格，标题和背景形成景深交互 穿模效果。\n\n色调与光影：\n增加主体和背景的对比度，让画面有明显的主次层次感\n\n文字排版：\n- **主标题**：“{title}” ，使用加粗的毛笔草书手写体，笔触漂移绵长，字体颜色为白色，标题内的字号按照词块和语义不同作不同大小的设计，字体添加细微的黑色描边，标题设置阴影增加立体感。\n-**副标题**：“{subtitle}” ，使用稍小一号的字体，颜色可以有所不同，与主标题形成层级感\n\n-**排版和位置**请你根据画面比例和主体位置来确认标题的版式和位置，布置原则为：适应画面比例（横版、竖版）、尽量不要遮挡画面主体、标题布置得和谐且具有设计感。",
           "user_prompt": "视频信息：\n{input_json}",
           "temperature": 0.7,
           "response_json": false,
@@ -1654,7 +1667,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_n_mu43x5dw5ixf.txt",
-          "text": "好的，这是一个为视频《布朗运动：原子之证》设计的、具有电影海报感的专业封面生图提示词。\n\n---\n\n### **视频封面生成提示词**\n\n**画面风格与构图：**\n电影海报式构图，高级感，超写实风格。画面采用深邃的青色与金色作为主色调，通过强烈的侧逆光营造出神秘而宏大的科学探索氛围。主体与背景形成鲜明对比，突出层次。\n\n**主体内容设计：**\n画面中心偏右位置，是一个巨大的圆形玻璃容器（如老式培养皿或烧杯）的特写。容器内，无数细小的、发光的金色微粒正在进行永不停歇的、无规则的布朗运动，轨迹在光线中清晰可见，充满动感。这些微粒中，一颗体积稍大、表面有复杂纹理的树脂颗粒（象征被观测的主体）格外醒目，它是所有运动的焦点。\n\n容器外，背景是模糊的、堆叠的复古科学元素：散落的羊皮纸手稿（上面绘有公式与运动轨迹图）、一台模糊的黄铜显微镜轮廓、以及远处透进的一束丁达尔效应的光柱，光柱中尘埃飞舞。整体画面具有强烈的景深感，微粒仿佛要从画面中冲出。\n\n**文字排版与位置（横版16:9）：**\n- **主标题**：“布朗运动 ： 原子之证” 布置在画面左上至中上区域，采用加粗的毛笔草书手写体，笔触飘逸而有力量感。字体为纯白色，带有精细的黑色描边和轻微投影，增强立体感和可读性。字号进行语义化处理：“布朗运动”四字较大、墨色浓重，“原子之证”四字稍小，形成视觉节奏，如同笔锋一转，点明终极结论。标题部分笔画与背景的光柱、运动轨迹形成巧妙的穿插与景深交错效果。\n- **副标题**：“测速八十年徒劳，位移一朝破局” 以稍小一号的隶书体，紧接在主标题下方左侧排列。使用低饱和的墨绿色粗体字，同样配有黑色描边和阴影，风格沉稳，与白色主标题形成色彩与材质的对比，清晰传达核心冲突与突破。\n\n**光影与色调：**\n画面整体色调为深青色、暗金色与羊皮纸暖黄色的混合。对主体容器和内部微粒施加强烈的侧光或顶光，使其明亮突出；背景与边缘则沉入暗部，强化主次关系。高对比度确保标题文字从复杂背景中清晰跳脱。\n\n---\n### **提示词整合版**\n\n**A ultra-realistic, cinematic movie poster for a science documentary, 16:9 aspect ratio.** The central focus is a **giant, vintage glass petri dish or beaker** filled with a luminous liquid, where **countless tiny, glowing golden particles exhibit chaotic, perpetual Brownian motion**, their tracks illuminated by a strong side light. A **single, larger, textured resin particle** is prominently lit within this swarm, serving as the main subject. The background is a shallow depth-of-field collage of **antique scientific elements: scattered parchment papers with formulas and trajectory diagrams, the blurred silhouette of a brass microscope, and a dramatic shaft of light piercing through the space, with motes dancing within it.** The overall composition creates a sense of profound discovery and microscopic wonder. **The title \"布朗运动 ： 原子之证\" is arranged in the upper left quadrant, written in a bold, expressive white calligraphic brush script with a fine black outline and drop shadow, with \"布朗运动\" larger than \"原子之证\" for semantic emphasis. The title strokes cleverly interweave with the background light beams for a depth-crossing effect. The subtitle \"测速八十年徒劳，位移一朝破局\" is placed below in a smaller, low-saturation dark green official script (隶书), also with black outline and shadow, providing a color contrast.** The color palette is dominated by **deep teals, antique gold, and parchment yellows**, with high contrast lighting to separate the luminous subject from the shadowy background. Masterful lighting, volumetric rays, photorealistic detail."
+          "text": "一张气势磅礴的电影海报，中央悬浮一颗半透明的发光原子核，周围环绕着以概率云形态呈现的电子波函数；一道耀眼白光从左下斜向右上贯穿画面，正穿越一道裂纹状的暗能量壁障。背景是深邃的量子虚空，波动着紫蓝细线，如概率振幅的涟漪。\n\n主标题“量子隧穿揭秘”以加粗的毛笔草书手写体大字横排于画面中上部，笔触漂移绵长，字组大小错落，“量子”略小，“隧穿”最大，“揭秘”中等，纯白字体带有极细的黑色描边和深色投影，字形穿透前景能量壁，与背景的光线形成穿模景深。副标题“粒子穿越能量墙的秘密”用稍小的有衬线字体排列于主标题下方右侧，采用冷青色调，与白光相呼应，形成清晰的信息层级。"
         },
         "error": "",
         "note": "发布平台资料准备",
@@ -1663,11 +1676,11 @@
           "[step_worker] step instance created: S_LLMRequest",
           "[step_worker] step_inputs keys=['json', 'source_language', 'target_language']",
           "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0, kwargs=['callback'])",
-          "[LLM] direct (step=vlf-create, strategy=vlf-create, stream=False, response_json=False, timeout=300s, prompt_chars=788)",
-          "[LLM] direct ok (step=vlf-create, elapsed=27.1s)",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
+          "[LLM] direct (step=vlf-create, strategy=vlf-create, stream=False, response_json=False, timeout=300s, prompt_chars=812)",
+          "[LLM] direct ok (step=vlf-create, elapsed=8.8s)",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\71526ba675cb4a1aabb6fde8210cb0b0\\cache\\.step_n_mu2w7745l4hq_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_n_mu43x5dw5ixf_result.json, exiting 0"
         ]
       },
       "measured": {
@@ -1726,15 +1739,15 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-video_adjusted",
       "target": "node_1_1781939413425",
       "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1781810867151out-video_adjusted-node_1_1781939413425in-video",
-      "animated": true
+      "id": "xy-edge__node_1_1781810867151out-video_adjusted-node_1_1781939413425in-video"
     },
     {
       "type": "smoothstep",
@@ -1905,15 +1918,15 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#f59e0b",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_6_1788533469576",
       "sourceHandle": "out-original",
       "target": "node_1_1781939413425",
       "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_6_1788533469576out-original-node_1_1781939413425in-subtitle",
-      "animated": true
+      "id": "xy-edge__node_6_1788533469576out-original-node_1_1781939413425in-subtitle"
     },
     {
       "type": "bezier",
@@ -1946,15 +1959,15 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_3_1788584414700",
       "sourceHandle": "out-audio",
       "target": "node_1_1781939413425",
       "targetHandle": "in-dub",
-      "id": "xy-edge__node_3_1788584414700out-audio-node_1_1781939413425in-dub",
-      "animated": true
+      "id": "xy-edge__node_3_1788584414700out-audio-node_1_1781939413425in-dub"
     },
     {
       "source": "node_1_1781939413425",
@@ -1972,9 +1985,8 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_3_1782641542678",
       "sourceHandle": "out-text",
@@ -1982,33 +1994,33 @@
       "targetHandle": "in-cover",
       "id": "xy-edge__node_3_1782641542678out-text-node_1_1789405925581in-cover",
       "selected": false,
-      "animated": false
+      "animated": true
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_1_1789405925581",
       "sourceHandle": "out-video",
       "target": "node_2_1781987851660",
       "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1789405925581out-video-node_2_1781987851660in-video"
+      "id": "xy-edge__node_1_1789405925581out-video-node_2_1781987851660in-video",
+      "animated": true
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_1_1789405925581",
       "sourceHandle": "out-video",
       "target": "node_1_1782672877872",
       "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1789405925581out-video-node_1_1782672877872in-video"
+      "id": "xy-edge__node_1_1789405925581out-video-node_1_1782672877872in-video",
+      "animated": true
     },
     {
       "type": "bezier",
@@ -2127,15 +2139,15 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_3_1789406114242",
       "sourceHandle": "out-video",
       "target": "node_1_1789405925581",
       "targetHandle": "in-segment1",
-      "id": "xy-edge__node_3_1789406114242out-video-node_1_1789405925581in-segment1"
+      "id": "xy-edge__node_3_1789406114242out-video-node_1_1789405925581in-segment1",
+      "animated": true
     },
     {
       "type": "bezier",
@@ -2279,10 +2291,23 @@
       "target": "node_1_1782507205161",
       "targetHandle": "in-text",
       "id": "xy-edge__n_mu43x5dw5ixfout-text-node_1_1782507205161in-text"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1782641542678",
+      "sourceHandle": "out-text",
+      "target": "node_3_1789406114242",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_3_1782641542678out-text-node_3_1789406114242in-any"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-18T00:32:52",
-  "revision": 56
+  "updatedAt": "2026-09-19T03:37:41",
+  "revision": 68
 }

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Film, Pause, Play, RotateCcw, Video as VideoIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useVideoDubStore, activePairAt } from "./store";
+import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 import { formatTimecode } from "./media";
 import { VideoInfo, uid } from "./types";
 
@@ -60,8 +61,10 @@ export function VideoPreview() {
   }, [mutedOriginal, src]);
 
   // 播放中用 rAF 逐帧推进时间指针，比 timeupdate（约 4Hz）更顺滑
+  const keepAliveActive = useKeepAliveActive();
   useEffect(() => {
-    if (!playing) return;
+    // 被 KeepAlive 隐藏时停止逐帧推进：隐藏页面继续跑 rAF 会持续写全局 store
+    if (!playing || !keepAliveActive) return;
     let frame = 0;
     const tick = () => {
       const element = videoRef.current;
@@ -70,7 +73,18 @@ export function VideoPreview() {
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, seek]);
+  }, [playing, seek, keepAliveActive]);
+
+  // 被 KeepAlive 隐藏时暂停解码/出声，回到页面按 playing 状态恢复
+  useEffect(() => {
+    const element = videoRef.current;
+    if (!element) return;
+    if (keepAliveActive) {
+      if (playing && element.paused) void element.play().catch(() => setPlaying(false));
+    } else if (!element.paused) {
+      element.pause();
+    }
+  }, [keepAliveActive, playing, setPlaying]);
 
   // 外部定位（拖时间指针 / 点字幕行 / 点轨道片段）同步到 video
   useEffect(() => {

@@ -8,6 +8,121 @@ from typing import Any, Dict, Generator, List, Optional
 import requests
 
 
+# ═══════════════════════════════════════════
+# 内容声明映射
+# ═══════════════════════════════════════════
+# VideoLingo 发布节点的 declaration 值域：
+#   "" / ai_generated / repost / fictional / marketing / personal_opinion
+# 需映射为 social-auto-upload-web-ui 各平台自己的声明字段名与文案，依据：
+#   - 前端 frontend/src/config/platforms.js 的 settingsFields
+#   - 后端 backend/services/draft_merge.py 的 DECLARATION_PLATFORMS（草稿校验字段名）
+#   - 后端 app.py /postVideo 读取的顶层字段（aiContent / creationDeclaration / ...）
+# 未列出的平台（weibo/alipay/toutiao 等）本节点暂不投射声明。
+_DECLARATION_NONE_KS = "内容无需添加声明"  # 快手约定的「无需声明」值（不可用空串）
+
+# social 平台 key → (目标字段名, {VideoLingo 值: 平台文案})
+_DECLARATION_TEXT_FIELDS = {
+    "xiaohongshu": ("aiContent", {
+        "ai_generated": "笔记含AI合成内容",
+        "fictional": "虚构演绎，仅供娱乐",
+        "marketing": "内容包含营销广告",
+        "repost": "内容来源声明",
+    }),
+    "channels": ("channelsMarkTag", {
+        "ai_generated": "含AI生成内容",
+        "fictional": "内容为虚构剧情，仅供娱乐",
+        "personal_opinion": "个人观点，仅供参考",
+        "marketing": "内容包含营销广告",
+        "repost": "内容为转载",
+    }),
+    "douyin": ("aiContent", {
+        "ai_generated": "内容由AI生成",
+        "personal_opinion": "内容为个人观点或见解",
+        "repost": "内容为转载信息",
+        "marketing": "内容含营销推广信息",
+        "fictional": "虚构演绎，仅供娱乐",
+    }),
+    "kuaishou": ("aiContent", {
+        "ai_generated": "内容为AI生成",
+        "fictional": "演绎情节，仅供娱乐",
+        "personal_opinion": "个人观点，仅供参考",
+        "repost": "素材来源于网络",
+        # 快手无「营销」选项，退回无需声明
+        "marketing": _DECLARATION_NONE_KS,
+    }),
+    "bilibili": ("creationDeclaration", {
+        "ai_generated": "含AI生成内容",
+        "fictional": "含虚构演绎内容",
+        "marketing": "内容含营销信息",
+        "personal_opinion": "个人观点，仅供参考",
+        "repost": "内容为转载",
+    }),
+    "baijiahao": ("creationDeclaration", {
+        "ai_generated": "含AI生成内容",
+        "repost": "内容为转载",
+        "fictional": "含虚构演绎内容",
+        "marketing": "内容含营销信息",
+        "personal_opinion": "个人观点，仅供参考",
+    }),
+    "tencent_video": ("creationDeclaration", {
+        # 腾讯视频为多选，值需为数组
+        "ai_generated": ["内容由AI生成"],
+        "fictional": ["剧情演绎，仅供娱乐"],
+        "personal_opinion": ["个人观点，仅供参考"],
+        "repost": ["取材网络，谨慎甄别"],
+    }),
+    "iqiyi": ("creationDeclaration", {
+        "ai_generated": "含AI生成内容",
+        "fictional": "含虚构演绎内容",
+        "marketing": "内容含营销信息",
+        "repost": "内容为转载",
+        "personal_opinion": "个人观点，仅供参考",
+    }),
+}
+
+# 布尔型声明字段：ai_generated / fictional 视为「含合成或加工内容」
+_DECLARATION_BOOL_FIELDS = {
+    "tiktok": "aiContent",
+    "youtube": "alteredContent",
+}
+
+# VideoLingo platform_config.py 的内部 key 与 social key 的差异
+_PLATFORM_KEY_ALIASES = {"shipinhao": "channels", "tengxun": "tencent_video"}
+
+# 声明为空时仍需写入「无需声明」下拉的平台（其余平台留空交给前端默认值）
+_DECLARATION_REQUIRED_NONE = {"kuaishou": ("aiContent", _DECLARATION_NONE_KS)}
+
+
+def build_declaration_fields(platform_key: str, declaration: str) -> dict:
+    """把 VideoLingo 的 declaration 映射为 social 平台的声明字段。
+
+    Args:
+        platform_key: social 侧平台 key（channels/douyin/...），兼容 shipinhao/tengxun 别名。
+        declaration: "" / ai_generated / repost / fictional / marketing / personal_opinion。
+
+    Returns:
+        {字段名: 值}；无法映射时返回空 dict（不覆盖平台原有默认值）。
+    """
+    key = (platform_key or "").strip().lower()
+    key = _PLATFORM_KEY_ALIASES.get(key, key)
+    value_key = (declaration or "").strip()
+
+    if not value_key:
+        required = _DECLARATION_REQUIRED_NONE.get(key)
+        return {required[0]: required[1]} if required else {}
+
+    bool_field = _DECLARATION_BOOL_FIELDS.get(key)
+    if bool_field:
+        return {bool_field: value_key in ("ai_generated", "fictional")}
+
+    entry = _DECLARATION_TEXT_FIELDS.get(key)
+    if not entry:
+        return {}
+    field_name, mapping = entry
+    value = mapping.get(value_key)
+    return {field_name: value} if value is not None else {}
+
+
 class PublishClient:
     """HTTP client for the social-auto-upload backend service."""
 
@@ -164,6 +279,15 @@ class PublishClient:
     # Video Publishing
     # ═══════════════════════════════════════════
 
+    @staticmethod
+    def _platform_key_of(platform_type: int) -> str:
+        """平台 type 数字 → 平台 key（1→xiaohongshu …）。"""
+        try:
+            from backend.publish.platform_config import PLATFORMS
+            return (PLATFORMS.get(platform_type) or {}).get("key", "")
+        except Exception:
+            return ""
+
     def publish_video(
         self,
         type: int,
@@ -222,8 +346,8 @@ class PublishClient:
             payload["scheduleTime"] = schedule_time
         if is_original:
             payload["isOriginal"] = True
-        if declaration:
-            payload["declaration"] = declaration
+        # 内容声明：映射为 social 平台认识的字段名（aiContent / creationDeclaration / ...）
+        payload.update(build_declaration_fields(self._platform_key_of(type), declaration))
         payload.update(kwargs)
         print(f"[Publish] /postVideo: type={type}, title='{title}', "
               f"accounts={account_list}, isDraft={is_draft}, videoFormat={video_format}", flush=True)
@@ -352,6 +476,12 @@ class PublishClient:
         Uploads files to materials system first, then constructs draft_data
         matching PublishCenter.vue's expected structure.
         """
+        # VideoLingo 内部 key（shipinhao/tengxun）需归一为 social 的键（channels/tencent_video），
+        # 否则草稿的平台勾选（platformChecked）与展开状态会因键名不匹配而丢失
+        platform_key = _PLATFORM_KEY_ALIASES.get(
+            (platform_key or "").strip().lower(), (platform_key or "").strip().lower()
+        )
+
         def _to_material_obj(file_path: str, label: str = "file") -> Optional[dict]:
             if not file_path or not os.path.exists(file_path):
                 print(f"[Publish] Skip {label}: path empty or not found ({file_path})", flush=True)
@@ -401,8 +531,6 @@ class PublishClient:
             platform_config["scheduleTime"] = schedule_time
         if is_original:
             platform_config["isOriginal"] = True
-        if declaration:
-            platform_config["declaration"] = declaration
         # videoFormat: 'portrait' or 'landscape' — required by draft_merge for publish
         if video_orientation:
             platform_config["videoFormat"] = video_orientation
@@ -412,7 +540,13 @@ class PublishClient:
             "baijiahao", "tiktok", "youtube", "iqiyi", "tencent_video",
             "weibo", "alipay", "toutiao",
         ]
-        platform_configs = {k: dict(platform_config) for k in all_platform_keys}
+        # 每平台叠加各自的内容声明字段（xiaohongshu→aiContent、bilibili→creationDeclaration、
+        # youtube→alteredContent 等），字段名与 social 前端 platforms.js 保持一致
+        platform_configs = {}
+        for k in all_platform_keys:
+            cfg = dict(platform_config)
+            cfg.update(build_declaration_fields(k, declaration))
+            platform_configs[k] = cfg
 
         platform_checked = {k: False for k in all_platform_keys}
         account_checked: Dict[str, bool] = {}

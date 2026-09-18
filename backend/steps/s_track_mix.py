@@ -9,8 +9,10 @@
 """
 import os
 import math
+import shutil
 
 from backend.steps.base_step import BaseStep
+from backend.utils.loudnorm import normalize_loudness
 
 try:
     from pydub import AudioSegment
@@ -218,11 +220,48 @@ class S_TrackMix(BaseStep):
 
         if callback:
             callback(85, f"导出混音音频（{audio_format.upper()}）...")
-        if audio_format == "mp3":
-            bitrate = self._cfg(node_config, "audio_bitrate", "192") or "192"
-            result.export(out_path, format="mp3", bitrate=f"{bitrate}k")
+
+        bitrate = self._cfg(node_config, "audio_bitrate", "192") or "192"
+
+        def _export_plain(target: str) -> None:
+            if audio_format == "mp3":
+                result.export(target, format="mp3", bitrate=f"{bitrate}k")
+            else:
+                result.export(target, format=audio_format)
+
+        # 与「字幕烧录」节点互补对齐：可选 EBU R128 两遍响度标准化（复用其 loudnorm 实现）
+        if bool(self._cfg(node_config, "loudnorm_enabled", False)):
+            try:
+                target_lufs = float(self._cfg(node_config, "target_lufs", -16) or -16)
+                tag = node_id or "default"
+                pre_wav = os.path.join(cache_dir, f"_track_mix_{tag}_pre.wav")
+                norm_wav = os.path.join(cache_dir, f"_track_mix_{tag}_norm.wav")
+                try:
+                    result.export(pre_wav, format="wav")
+                    normalize_loudness(pre_wav, target_lufs, norm_wav)
+                    if not os.path.exists(norm_wav):
+                        raise RuntimeError("响度标准化未产出结果文件")
+                    if audio_format == "wav":
+                        shutil.move(norm_wav, out_path)
+                    else:
+                        norm_seg = AudioSegment.from_file(norm_wav)
+                        if audio_format == "mp3":
+                            norm_seg.export(out_path, format="mp3", bitrate=f"{bitrate}k")
+                        else:
+                            norm_seg.export(out_path, format=audio_format)
+                finally:
+                    for tmp in (pre_wav, norm_wav):
+                        if os.path.exists(tmp):
+                            try:
+                                os.remove(tmp)
+                            except OSError:
+                                pass
+                print(f"[TrackMix] 已应用响度标准化（目标 {target_lufs} LUFS）")
+            except Exception as e:
+                print(f"[TrackMix] 响度标准化失败，回退为未标准化输出: {e}")
+                _export_plain(out_path)
         else:
-            result.export(out_path, format=audio_format)
+            _export_plain(out_path)
 
         self.artifacts = [os.path.join("cache", out_name)]
         if callback:

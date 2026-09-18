@@ -64,7 +64,20 @@ async def login(req: LoginRequest):
     _raise_if_failed(service.login(req.username, req.password))
     guard = get_subscription_guard()
     guard.recover_usage()
+    # 登录（含前端「自动登录」）后，非订阅用户自动领取当天免费额度：
+    # 这样节点执行期无需再联网领额度（r3 §5），也消除"今日剩余 0 却显示可执行"的矛盾。
+    guard.claim_quota()
     return guard.get_subscription_state(force_refresh=False)
+
+
+@router.post("/claim-quota")
+async def claim_quota():
+    """领取当天免费额度（前端「领取额度」按钮的兜底入口）。
+
+    订阅用户无需领取；离线或云端拒绝时返回 ok=False 与原因，不作为错误抛出。
+    """
+    guard = get_subscription_guard()
+    return guard.claim_quota()
 
 
 @router.post("/logout")

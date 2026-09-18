@@ -71,7 +71,8 @@ def ensure_preview_resources(project_root: str) -> str:
     # 生成左右拼色预览背景视频（左浅灰、右深灰），避免纯黑背景看不清字幕
     bg_video = os.path.join(temp_dir, "preview_bg_5s.mp4")
     if not os.path.isfile(bg_video):
-        cmd = [
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd = apply_resource_args([
             "ffmpeg", "-y",
             "-f", "lavfi", "-i", "color=c=0xD3D3D3:s=960x1080:d=5",
             "-f", "lavfi", "-i", "color=c=0x404040:s=960x1080:d=5",
@@ -79,7 +80,7 @@ def ensure_preview_resources(project_root: str) -> str:
             "-map", "[bg]",
             "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
             bg_video,
-        ]
+        ])
         subprocess.run(cmd, capture_output=True, timeout=60)
 
     # 兼容旧版纯黑背景文件：如果存在则删除，避免后续复用

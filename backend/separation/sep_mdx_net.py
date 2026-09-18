@@ -379,8 +379,9 @@ class MDXNetOnnxSeparation(SeparationBase):
     def _ffmpeg_convert(self, src, dst):
         ext = os.path.splitext(dst)[1].lower().lstrip(".")
         acodec = "pcm_s16le" if ext == "wav" else "libmp3lame"
+        from backend.utils.ffmpeg_guard import apply_resource_args
         subprocess.run(
-            ["ffmpeg", "-y", "-i", src, "-acodec", acodec, dst],
+            apply_resource_args(["ffmpeg", "-y", "-i", src, "-acodec", acodec, dst]),
             capture_output=True,
             text=True,
             timeout=300,
@@ -390,16 +391,17 @@ class MDXNetOnnxSeparation(SeparationBase):
     def _run_ffmpeg_fallback(self, audio_path, output_dir, fmt, callback=None):
         vocals_dst = os.path.join(output_dir, f"vocals.{fmt}")
         bg_dst = os.path.join(output_dir, f"background.{fmt}")
+        from backend.utils.ffmpeg_guard import apply_resource_args
         try:
             subprocess.run(
-                ["ffmpeg", "-y", "-i", audio_path, "-af", "pan=mono|c0=0.5*c0+0.5*c1", vocals_dst],
+                apply_resource_args(["ffmpeg", "-y", "-i", audio_path, "-af", "pan=mono|c0=0.5*c0+0.5*c1", vocals_dst]),
                 capture_output=True,
                 text=True,
                 timeout=300,
                 check=True,
             )
             subprocess.run(
-                ["ffmpeg", "-y", "-i", audio_path, "-af", "pan=stereo|c0=c0-c1|c1=c1-c0", bg_dst],
+                apply_resource_args(["ffmpeg", "-y", "-i", audio_path, "-af", "pan=stereo|c0=c0-c1|c1=c1-c0", bg_dst]),
                 capture_output=True,
                 text=True,
                 timeout=300,

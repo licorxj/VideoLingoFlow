@@ -198,6 +198,10 @@ class S_VideoRegionCrop(BaseStep):
         out_path = os.path.join(cache_dir, out_name)
         rel_video = os.path.join("cache", out_name)
 
+        # 资源保护：重编码分支需线程 / 封装队列限制；执行统一走流式封装
+        from backend.utils.ffmpeg_guard import adaptive_timeout, resource_args
+        from backend.utils.video_ops import run_ffmpeg_with_progress
+
         # 整帧（未真正裁剪）→ 流拷贝，保留原始编码与流数据
         full_frame = (cw >= sw and ch >= sh)
         if full_frame:
@@ -206,6 +210,7 @@ class S_VideoRegionCrop(BaseStep):
                 "-ss", f"{start:.3f}", "-i", video_path,
                 "-t", f"{duration:.3f}",
                 "-c", "copy", "-avoid_negative_ts", "make_zero",
+                "-progress", "pipe:1", "-nostats",
                 out_path,
             ]
         else:
@@ -219,6 +224,9 @@ class S_VideoRegionCrop(BaseStep):
                 *build_video_encode_args("libx264", crf=18, preset="veryfast"),
                 "-c:a", "copy", "-avoid_negative_ts", "make_zero",
                 "-movflags", "+faststart",
+                # 裁剪重编码：限制线程 / 封装队列
+                *resource_args(),
+                "-progress", "pipe:1", "-nostats",
                 out_path,
             ]
 
@@ -232,12 +240,11 @@ class S_VideoRegionCrop(BaseStep):
             except Exception:
                 pass
 
-        try:
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
-        except FileNotFoundError:
-            raise RuntimeError("未找到 ffmpeg，请先安装 ffmpeg 并加入 PATH。")
-        if r.returncode != 0:
-            raise RuntimeError(f"ffmpeg 截取区域失败: {r.stderr[-800:]}")
+        # 流式执行：进度可上报、支持协作取消；超时按时长自适应（替代固定 1800s）
+        run_ffmpeg_with_progress(
+            cmd, duration, callback, cancel_callback,
+            timeout=adaptive_timeout(duration), label="区域截取",
+        )
 
         # --- 6. 写出坐标 JSON（供「视频区域贴合」节点使用）---
         info = {

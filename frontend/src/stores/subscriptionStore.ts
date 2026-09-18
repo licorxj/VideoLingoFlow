@@ -16,6 +16,7 @@ interface SubscriptionState {
   sendResetCode: (email: string) => Promise<any>;
   resetPassword: (payload: ResetPasswordPayload) => Promise<any>;
   verifyCard: (cardCode: string) => Promise<SubscriptionStatus>;
+  claimQuota: () => Promise<{ ok: boolean; message?: string; state?: SubscriptionStatus }>;
 }
 
 export const useSubscriptionStore = create<SubscriptionState>((set) => ({
@@ -154,6 +155,19 @@ export const useSubscriptionStore = create<SubscriptionState>((set) => ({
       const status = await subscriptionApi.verifyCard(cardCode);
       set({ status, loading: false });
       return status;
+    } catch (error: any) {
+      const message = getSubscriptionError(error);
+      set({ error: message, loading: false });
+      throw error;
+    }
+  },
+  claimQuota: async () => {
+    set({ loading: true, error: "" });
+    try {
+      const result = await subscriptionApi.claimQuota();
+      if (result?.state) set({ status: result.state, loading: false });
+      else set({ loading: false });
+      return result;
     } catch (error: any) {
       const message = getSubscriptionError(error);
       set({ error: message, loading: false });

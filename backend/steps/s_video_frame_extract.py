@@ -286,14 +286,15 @@ class S_VideoFrameExtract(BaseStep):
         if callback:
             callback(60, f"Extracting frame at {time_point:.2f}s...")
 
-        cmd = [
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd = apply_resource_args([
             "ffmpeg", "-y",
             "-ss", f"{time_point:.3f}",
             "-i", video_path,
             "-frames:v", "1",
             "-q:v", "2",
             output_path,
-        ]
+        ])
 
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)

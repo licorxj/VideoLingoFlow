@@ -134,9 +134,38 @@ def _finalize(out_dir: str, node_id: str, prefix: str, paths: list) -> list:
     return final
 
 
-def _run_ffmpeg(args: list):
+# 漫剧链 ffmpeg 兜底超时（秒）：原先完全不传 timeout，进程异常挂起时会**永久阻塞**。
+# 默认 2 小时（重编码 20 分钟 1080p 通常十几分钟完成），可用环境变量覆盖。
+_AGI_FFMPEG_TIMEOUT = float(os.getenv("AGI_COMIC_FFMPEG_TIMEOUT", "7200") or 7200)
+# 编解码线程上限（0 = 交给 ffmpeg 自动决定，保持原有性能特征）
+_AGI_FFMPEG_THREADS = max(0, int(os.getenv("AGI_COMIC_FFMPEG_THREADS", "0") or 0))
+
+
+def _run_ffmpeg(args: list, duration: float = 0.0, timeout: float = 0.0):
+    """执行 ffmpeg（带资源保护）。
+
+    - 限制封装队列（``-max_muxing_queue_size``），避免多路重编码（concat / xfade）
+      时队列无界增长导致内存暴涨；线程上限可由 ``AGI_COMIC_FFMPEG_THREADS`` 调整；
+    - **必带超时**：传 duration 时按时长自适应，否则用 ``_AGI_FFMPEG_TIMEOUT`` 兜底；
+    - ``-nostats`` + 不捕获 stdout，避免长任务日志整段攒进内存。
+    """
+    from backend.utils.ffmpeg_guard import adaptive_timeout, resource_args
+
     exe = shutil.which("ffmpeg") or "ffmpeg"
-    proc = subprocess.run([exe, "-y"] + args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    call_args = list(args)
+    if call_args:
+        # 资源参数属于输出选项，必须插在输出文件（通常是最后一个参数）之前
+        call_args = call_args[:-1] + resource_args(_AGI_FFMPEG_THREADS) + [call_args[-1]]
+    else:
+        call_args = resource_args(_AGI_FFMPEG_THREADS)
+    cmd = [exe, "-y", "-nostats"] + call_args
+    effective = adaptive_timeout(duration, configured=timeout) if duration else (timeout or _AGI_FFMPEG_TIMEOUT)
+    try:
+        proc = subprocess.run(
+            cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, timeout=effective,
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"ffmpeg 超时（{effective:.0f}s），已终止")
     if proc.returncode != 0:
         raise RuntimeError("ffmpeg 失败: " + proc.stderr.decode("utf-8", "ignore")[-600:])
     return True

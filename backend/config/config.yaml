@@ -135,9 +135,10 @@ advanced:
   model_dir: "./_model_cache"
 
 # ============ Batch ============
+# 本机单卡批量：并发 2 + 间隔，让 GPU 节点与 IO/TTS 错峰；大显存可调到 3
 batch:
   max_concurrent_tasks: 2
-  task_start_interval: 10.0
+  task_start_interval: 8.0
 audio:
   cut_extend_time: 0.05
   denoise_enabled: false

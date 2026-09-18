@@ -1,4 +1,4 @@
-﻿"""Video operation utilities using ffmpeg."""
+"""Video operation utilities using ffmpeg."""
 import subprocess
 import os
 from typing import Optional
@@ -18,11 +18,12 @@ def get_video_duration(path: str) -> float:
 
 def extract_audio(video_path: str, audio_path: str):
     """Extract audio from video."""
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y", "-i", video_path,
         "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
         audio_path
-    ]
+    ])
     subprocess.run(cmd, capture_output=True, timeout=120)
 
 
@@ -37,14 +38,15 @@ def extract_last_frame(video_path: str, output_path: str) -> str:
     duration = get_video_duration(video_path)
     # 取倒数第 2 帧附近，避免恰好落点超出时长导致抽不到帧
     seek = max(0.0, duration - 0.04) if duration > 0 else 0.0
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y",
         "-ss", f"{seek:.3f}",
         "-i", video_path,
         "-frames:v", "1",
         "-q:v", "2",
         output_path,
-    ]
+    ])
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
     except FileNotFoundError:
@@ -59,12 +61,13 @@ def extract_last_frame(video_path: str, output_path: str) -> str:
 
 def merge_audio_video(video_path: str, audio_path: str, output_path: str):
     """Merge audio track with video."""
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y", "-i", video_path, "-i", audio_path,
         "-c:v", "copy", "-c:a", "aac",
         "-map", "0:v:0", "-map", "1:a:0",
         output_path
-    ]
+    ])
     subprocess.run(cmd, capture_output=True, timeout=get_ffmpeg_timeout())
 
 

@@ -129,6 +129,9 @@ class S_VideoTranscode(BaseStep):
             if abitrate:
                 cmd += ["-b:a", abitrate]
 
+        # 限制编解码线程与封装队列，避免重编码吃满 CPU / 内存暴涨
+        from backend.utils.ffmpeg_guard import resource_args
+        cmd += resource_args()
         cmd.append(output_path)
         return cmd
 
@@ -185,8 +188,12 @@ class S_VideoTranscode(BaseStep):
             except Exception:
                 pass
 
+        # 超时按视频时长自适应（原先走 _run_ffmpeg 默认 86400s，异常挂起时形同卡死）
+        from backend.utils.ffmpeg_guard import adaptive_timeout
+
         duration = _probe_duration(input_path)
-        self._run_ffmpeg(cmd, duration, callback, cancel_callback)
+        self._run_ffmpeg(cmd, duration, callback, cancel_callback,
+                         timeout=adaptive_timeout(duration))
 
         if not os.path.exists(output_path):
             raise RuntimeError("转码完成但未找到输出文件: " + output_path)

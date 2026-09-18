@@ -181,6 +181,11 @@ class StepVideoCutBySubtitle(BaseStep):
         info = {"segments": []}
         seg_rel_paths = []
 
+        # 资源保护 + 流式执行（逐段切割：进度可上报、支持协作取消）
+        from backend.utils.ffmpeg_guard import adaptive_timeout, resource_args
+        from backend.utils.video_ops import run_ffmpeg_with_progress
+
+        total_segments = max(len(segments), 1)
         for i, seg in enumerate(segments):
             if cancel_callback and cancel_callback():
                 from backend.control_plane.runtime import TaskCancelledError
@@ -198,11 +203,28 @@ class StepVideoCutBySubtitle(BaseStep):
             cmd = [
                 "ffmpeg", "-y", "-ss", f"{start:.3f}", "-i", video_path,
                 "-t", f"{duration:.3f}",
-            ] + list(seg_codec_args) + [abs_video]
+            ] + list(seg_codec_args) + list(resource_args()) + [
+                # 限制线程 / 封装队列；流式输出供进度解析
+                "-progress", "pipe:1", "-nostats", abs_video,
+            ]
+
+            def _seg_progress(pct, _msg=None, _idx=i, _total=total_segments):
+                """把段内进度映射到整体 10%~90%，避免每段进度都从 0 重来。"""
+                if not callback:
+                    return
+                span = 80.0 / _total
+                try:
+                    callback(int(10 + span * _idx + span * pct / 100.0),
+                             f"切割第 {_idx + 1}/{_total} 段")
+                except Exception:
+                    pass
+
             try:
-                r = subprocess.run(cmd, capture_output=True, text=True, timeout=1200)
-                if r.returncode != 0:
-                    raise RuntimeError(f"ffmpeg 切割失败(段 {seg_id}): {r.stderr[-500:]}")
+                run_ffmpeg_with_progress(
+                    cmd, duration, _seg_progress, cancel_callback,
+                    timeout=adaptive_timeout(duration, minimum=300),
+                    label=f"切割段 {seg_id}",
+                )
             except FileNotFoundError:
                 raise RuntimeError("未找到 ffmpeg，请先安装 ffmpeg")
             seg_rel_paths.append(rel_video)

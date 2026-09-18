@@ -29,7 +29,8 @@ class S13Watermark(BaseStep):
         ]
         return any(p and os.path.exists(p) for p in video_paths)
 
-    def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
+    def run(self, task_dir: str, callback: Optional[Callable] = None,
+            cancel_callback: Optional[Callable] = None) -> dict:
         if callback:
             callback(10, "Checking watermark settings...")
         step_inputs = getattr(self, "_step_inputs", {}) or {}
@@ -90,6 +91,10 @@ class S13Watermark(BaseStep):
             
             if os.path.exists(watermark_image):
                 # Add watermark using ffmpeg
+                from backend.control_plane.runtime import TaskCancelledError
+                from backend.utils.ffmpeg_guard import adaptive_timeout, resource_args
+                from backend.utils.video_ops import get_video_duration, run_ffmpeg_with_progress
+
                 cmd = [
                     "ffmpeg", "-y",
                     "-i", source_video,
@@ -98,24 +103,32 @@ class S13Watermark(BaseStep):
                     # 叠加滤镜必须重编码；全局「使用显卡加速 (NVIDIA NVENC)」开启时用 h264_nvenc
                     *build_video_encode_args("libx264", crf=23, preset="medium"),
                     "-c:a", "copy",
+                    # 全片重编码：限制线程 / 封装队列
+                    *resource_args(),
+                    "-progress", "pipe:1", "-nostats",
                     output_path
                 ]
-                
+
                 try:
-                    result = subprocess.run(
-                        cmd,
-                        capture_output=True,
-                        text=True,
-                        timeout=3600
+                    try:
+                        duration = float(get_video_duration(source_video) or 0)
+                    except Exception:
+                        duration = 0.0
+                    run_ffmpeg_with_progress(
+                        cmd, duration, callback, cancel_callback,
+                        timeout=adaptive_timeout(duration), label="叠加水印",
                     )
-                    
-                    if result.returncode != 0:
-                        # Fallback: copy without watermark
-                        import shutil
-                        shutil.copy2(source_video, output_path)
-                        
+                except TaskCancelledError:
+                    raise
                 except Exception as e:
-                    print(f"Watermark failed: {e}")
+                    # 降级为「不加 watermark」但**明确告警**：输出仍产出（不阻断链路），
+                    # 但日志与进度都标注未加水印成功，避免此前静默拷贝冒充成功。
+                    print(f"[Watermark] 加水印失败，已降级为无水印输出：{e}")
+                    if callback:
+                        try:
+                            callback(90, f"警告：加水印失败，已输出无水印视频（{str(e)[:60]}）")
+                        except Exception:
+                            pass
                     import shutil
                     shutil.copy2(source_video, output_path)
             else:

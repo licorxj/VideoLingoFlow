@@ -45,13 +45,14 @@ def _detect_silence(audio_path: str, start: float, end: float,
     输出侧写法报 `20 / 50.15`）。调用方按绝对秒使用这些值的结果是：
     窗口判定必然失败，算法静默退化成按 max_duration 硬切，把句子从中间劈开。
     """
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-hide_banner",
         "-ss", str(start), "-to", str(end),
         "-i", audio_path,
         "-af", f"silencedetect=n={threshold_db}dB:d={min_duration}",
         "-f", "null", "-",
-    ]
+    ], mux_queue=64)
     try:
         proc = subprocess.run(cmd, capture_output=True, text=True, timeout=120, encoding="utf-8")
         stderr = proc.stderr
@@ -141,21 +142,22 @@ def split_audio_at_silence(audio_path: str, max_duration: float,
 def cut_audio_segment(audio_path: str, start: float, end: float,
                       output_path: str) -> str:
     """Extract a segment from audio file using ffmpeg (copy, fallback re-encode)."""
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y", "-i", audio_path,
         "-ss", str(start), "-to", str(end),
         "-c", "copy",
         output_path,
-    ]
+    ])
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
     if result.returncode != 0:
         # Fallback: re-encode if copy fails
-        cmd = [
+        cmd = apply_resource_args([
             "ffmpeg", "-y", "-i", audio_path,
             "-ss", str(start), "-to", str(end),
             "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
             output_path,
-        ]
+        ])
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             raise RuntimeError(f"Failed to split audio: {result.stderr[:300]}")

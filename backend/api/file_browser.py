@@ -463,7 +463,8 @@ async def trim_audio(body: dict):
     out_path = os.path.join(cache_dir, out_name)
 
     def _run_ffmpeg():
-        cmd = ["ffmpeg", "-y", "-i", safe, "-ss", str(start), "-to", str(end), "-c", "copy", out_path]
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd = apply_resource_args(["ffmpeg", "-y", "-i", safe, "-ss", str(start), "-to", str(end), "-c", "copy", out_path])
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"FFmpeg error: {result.stderr[:500]}")

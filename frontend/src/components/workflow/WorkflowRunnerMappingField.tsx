@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import client from "@/api/client";
+import { getNodeTypeDef } from "@/lib/workflowTypes";
 import { Plus, Trash2 } from "lucide-react";
 
 /** 「工作流执行器」节点的输入输出映射编辑器。
@@ -26,6 +27,12 @@ interface Props {
 const INPUT_PORTS = ["in_1", "in_2", "in_3", "in_4"];
 const OUTPUT_PORTS = ["out_1", "out_2", "out_3", "out_4"];
 const INPUT_NODE_PORTS = ["video", "audio", "subtitle", "url"];
+
+/** 端口候选项：id 写入映射，label 用于下拉展示 */
+interface PortOption {
+  id: string;
+  label: string;
+}
 
 function stripPrefix(handle: unknown, prefix: string): string {
   const raw = String(handle || "");
@@ -55,8 +62,14 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
       .get(`/api/workflows/${wfId}`)
       .then((res) => {
         if (!alive) return;
-        const data = res.data || {};
+        // GET /api/workflows/{id} 返回 { workflow: {...}, removed_edges: [...] }，需取内层 workflow
+        const payload = res.data || {};
+        const data = payload.workflow || payload;
         setWf(data);
+        if (!(data.nodes || []).length) {
+          setError("该工作流没有任何节点，无法建立映射");
+          return;
+        }
         setError("");
         if (refMode === "snapshot") {
           const snap = { nodes: data.nodes || [], edges: data.edges || [] };
@@ -90,32 +103,54 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
         const d = n.data || {};
         const type = String(d.nodeType || "");
         const label = String(d.label || type || n.id);
-        return { id: String(n.id), label: `${label} · ${n.id}`, nodeType: type };
+        const id = String(n.id);
+        // 节点 id 形如 node_1_1780590163157，完整展示会撑爆下拉；保留尾部 6 位以便区分同类节点
+        const short = id.length > 10 ? `…${id.slice(-6)}` : id;
+        return { id, label: `${label} · ${short}`, nodeType: type };
       }),
     [nodes]
   );
 
-  /** 从 edges 反推每个内部节点实际使用的输入 / 输出端口 */
+  /** 汇总每个内部节点可用的输入 / 输出端口，供下拉选择：
+   *  1) 节点类型定义里的全部端口（label 友好，且覆盖未被连线暴露的端口）
+   *  2) edges 反推到的端口（补上类型定义里没有的历史端口）
+   *  3) input 节点的隐含输出端口
+   */
   const portsByNode = useMemo(() => {
-    const map: Record<string, { inputs: string[]; outputs: string[] }> = {};
-    for (const n of nodes) map[String(n.id)] = { inputs: [], outputs: [] };
+    const map: Record<string, { inputs: PortOption[]; outputs: PortOption[] }> = {};
+    const push = (list: PortOption[], id: string, label?: string) => {
+      if (!id) return;
+      const exist = list.find((p) => p.id === id);
+      if (exist) {
+        if (label && exist.label === exist.id) exist.label = label;
+        return;
+      }
+      list.push({ id, label: label || id });
+    };
+
+    for (const n of nodes) {
+      const key = String(n.id);
+      map[key] = { inputs: [], outputs: [] };
+      const def = getNodeTypeDef(String((n.data || {}).nodeType || ""));
+      for (const p of (def?.inputs || []) as any[]) push(map[key].inputs, String(p?.id || ""), p?.label);
+      for (const p of (def?.outputs || []) as any[]) {
+        const pid = String(p?.id || "");
+        if (pid === "no_input") continue; // 「不需要输入」不是数据端口，不作为映射目标
+        push(map[key].outputs, pid, p?.label);
+      }
+    }
+
     for (const e of wf?.edges || []) {
       const s = String(e.source || "");
       const t = String(e.target || "");
-      if (map[t] && e.targetHandle) {
-        const p = stripPrefix(e.targetHandle, "in-");
-        if (p && !map[t].inputs.includes(p)) map[t].inputs.push(p);
-      }
-      if (map[s] && e.sourceHandle) {
-        const p = stripPrefix(e.sourceHandle, "out-");
-        if (p && !map[s].outputs.includes(p)) map[s].outputs.push(p);
-      }
+      if (map[t] && e.targetHandle) push(map[t].inputs, stripPrefix(e.targetHandle, "in-"));
+      if (map[s] && e.sourceHandle) push(map[s].outputs, stripPrefix(e.sourceHandle, "out-"));
     }
+
     for (const n of nodes) {
-      const d = n.data || {};
-      if (String(d.nodeType || "") === "input") {
-        const list = map[String(n.id)].outputs;
-        for (const p of INPUT_NODE_PORTS) if (!list.includes(p)) list.push(p);
+      const key = String(n.id);
+      if (String((n.data || {}).nodeType || "") === "input") {
+        for (const p of INPUT_NODE_PORTS) push(map[key].outputs, p);
       }
     }
     return map;
@@ -123,6 +158,21 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
 
   const setInputMappings = (rows: MappingRow[]) => onConfigChange("inputMappings", rows);
   const setOutputMappings = (rows: MappingRow[]) => onConfigChange("outputMappings", rows);
+
+  /** 输入映射的目标只能是子工作流的「输入」节点 */
+  const inputNodeOptions = useMemo(
+    () => nodeOptions.filter((o) => o.nodeType === "input"),
+    [nodeOptions]
+  );
+
+  // 智能默认：子工作流只有一个输入节点时，自动补全已有映射行的目标节点
+  useEffect(() => {
+    if (inputNodeOptions.length !== 1 || inputMappings.length === 0) return;
+    if (inputMappings.every((row) => row.targetNodeId)) return;
+    const only = inputNodeOptions[0].id;
+    setInputMappings(inputMappings.map((row) => (row.targetNodeId ? row : { ...row, targetNodeId: only })));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputNodeOptions, inputMappings]);
 
   const updateInput = (index: number, patch: MappingRow) => {
     const next = inputMappings.map((row, i) => (i === index ? { ...row, ...patch } : row));
@@ -147,27 +197,33 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
     </select>
   );
 
-  const renderPortInput = (
+  const renderPortSelect = (
     value: string,
-    candidates: string[],
-    listId: string,
+    candidates: PortOption[],
+    emptyHint: string,
     onChange: (v: string) => void
-  ) => (
-    <>
-      <input
-        className={cellClass}
-        list={listId}
-        value={value || ""}
-        placeholder="端口 id"
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <datalist id={listId}>
-        {candidates.map((p) => (
-          <option key={p} value={p} />
+  ) => {
+    if (!candidates.length) {
+      return (
+        <select className={cellClass} value="" disabled title={emptyHint}>
+          <option value="">{emptyHint}</option>
+        </select>
+      );
+    }
+    // 历史配置里的端口若不在候选中，保留为「当前值」项，避免静默丢失
+    const known = candidates.some((c) => c.id === value);
+    return (
+      <select className={cellClass} value={value || ""} onChange={(e) => onChange(e.target.value)}>
+        <option value="">选择端口</option>
+        {!known && value ? <option value={value}>{value}（当前值）</option> : null}
+        {candidates.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.label === c.id ? c.id : `${c.label} · ${c.id}`}
+          </option>
         ))}
-      </datalist>
-    </>
-  );
+      </select>
+    );
+  };
 
   const renderSection = (
     title: string,
@@ -200,11 +256,10 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
             const nodeId = String(
               (direction === "in" ? row.targetNodeId : row.internalNodeId) || ""
             );
-            const candidates = portsByNode[nodeId]
-              ? direction === "in"
-                ? portsByNode[nodeId].inputs
-                : portsByNode[nodeId].outputs
-              : [];
+            // 两种映射取的都是该节点的 outputs：
+            // 输入映射注入的是 input 节点的产出端口（video/audio/subtitle/url…），
+            // 输出映射取的是内部节点的产出端口
+            const candidates = portsByNode[nodeId]?.outputs ?? [];
             const portValue = String(
               (direction === "in" ? row.targetPortId : row.internalPortId) || ""
             );
@@ -228,10 +283,10 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
                     (direction === "in" ? { targetNodeId: v } : { internalNodeId: v }) as MappingRow
                   )
                 )}
-                {renderPortInput(
+                {renderPortSelect(
                   portValue,
                   candidates,
-                  `wf-port-${direction}-${index}`,
+                  nodeId ? "该节点无可用端口" : "请先选择节点",
                   (v) =>
                     onUpdate(
                       index,
@@ -271,7 +326,7 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
       </div>
       {renderSection(
         "输入映射（本节点 → 子工作流）",
-        "把本节点的 in_1~in_4 端口值，注入到子工作流某个节点的输入端口",
+        "把本节点的 in_1~in_4 端口值，注入到子工作流「输入」节点对应的输入项（目标只能是输入节点）",
         inputMappings,
         INPUT_PORTS,
         "in",

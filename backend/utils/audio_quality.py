@@ -69,7 +69,8 @@ def reencode_audio(src: str, dst: str, quality: dict, timeout: int = 600,
                    callback: Optional[Callable] = None) -> None:
     """按质量参数用 ffmpeg 将 src 转码输出到 dst（目录由调用方保证存在）。"""
     os.makedirs(os.path.dirname(dst) or ".", exist_ok=True)
-    cmd = ["ffmpeg", "-y", "-i", src, *ffmpeg_encode_args(quality), dst]
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args(["ffmpeg", "-y", "-i", src, *ffmpeg_encode_args(quality), dst])
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
     except subprocess.TimeoutExpired:

@@ -5,6 +5,7 @@ import { getWebSocketUrl } from "@/api/ws";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 
 type BatchItem = { emotion: string; text: string; instruct: string; taskId?: string; status?: string; progress?: number; error?: string; storageKey?: string };
 type VoiceState = { items: BatchItem[]; status: "idle" | "generating" | "done" | "error"; error?: string };
@@ -118,8 +119,10 @@ export function BatchEmotionDesignDialog({ voices, open, onOpenChange, onSaved }
     setBusy(null); if (saved) { onSaved(); onOpenChange(false); } else setError(saveError || "没有可保存的成功片段");
   };
 
+  const keepAliveActive = useKeepAliveActive();
   useEffect(() => {
-    if (!open) return;
+    // 未打开或被 KeepAlive 隐藏时不为每个音色建立进度连接
+    if (!open || !keepAliveActive) return;
     const sockets = voices.map((voice) => {
       if (!statesRef.current[voice.id]?.items.some((item) => item.taskId && activeStatuses.has(item.status || ""))) return null;
       const socket = new WebSocket(getWebSocketUrl(`/ws/voiceforge/voices/${encodeURIComponent(voice.id)}/progress`));
@@ -127,7 +130,7 @@ export function BatchEmotionDesignDialog({ voices, open, onOpenChange, onSaved }
       return socket;
     }).filter(Boolean) as WebSocket[];
     return () => sockets.forEach((socket) => socket.close());
-  }, [open, voices, taskSignature]);
+  }, [open, voices, taskSignature, keepAliveActive]);
 
   return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent className="max-h-[92vh] max-w-5xl overflow-y-auto"><DialogHeader><DialogTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" />批量生成情绪片段（{voices.length} 个音色）</DialogTitle><DialogDescription>统一设置情绪和角色背景，为多个音色批量生成可控克隆情绪试听片段。</DialogDescription></DialogHeader><div className="space-y-5">
     <section className="grid gap-3 border-b border-border/60 pb-4 md:grid-cols-[1fr_260px]"><div><h3 className="text-sm font-semibold">情绪生成引擎</h3><p className="mt-1 text-xs text-muted-foreground">仅显示已启用且支持可控克隆的接口。</p></div><select value={interfaceId} onChange={(event) => setInterfaceId(event.target.value)} className="voice-input"><option value="">请选择 TTS 引擎</option>{cloneCapabilities.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></section>

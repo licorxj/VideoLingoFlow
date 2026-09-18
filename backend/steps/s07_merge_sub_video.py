@@ -10,6 +10,7 @@ Flow:
 """
 import json
 import os
+import shutil
 from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep
@@ -17,6 +18,22 @@ from backend.config.config_manager import config
 from backend.utils import audio_processor
 from backend.utils.loudnorm import normalize_loudness
 from backend.utils.subtitle_style_service import package_subtitles_to_ass
+
+
+def _ensure_disk_space(target_dir: str, needed_bytes: float, margin: float = 1.3) -> None:
+    """产物落地前检查磁盘余量，不足时快速失败并给出可执行提示。"""
+    if needed_bytes <= 0:
+        return
+    try:
+        free = shutil.disk_usage(target_dir).free
+    except OSError:
+        return
+    if free < needed_bytes * margin:
+        raise RuntimeError(
+            f"磁盘可用空间不足：本次处理预计需要约 {needed_bytes * margin / 1048576:.0f} MB，"
+            f"当前仅剩 {free / 1048576:.0f} MB，已中止以免写坏输出。"
+            f"请清理磁盘后重试，或降低视频质量 / 分辨率。"
+        )
 
 
 class S07MergeSubVideo(BaseStep):
@@ -65,7 +82,8 @@ class S07MergeSubVideo(BaseStep):
 
     # ── Main execution ──
 
-    def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
+    def run(self, task_dir: str, callback: Optional[Callable] = None,
+            cancel_callback: Optional[Callable] = None) -> dict:
         step_inputs = getattr(self, "_step_inputs", {}) or {}
         # 1. Read config
         preset_id = self._get_config("preset_id") or config.get("subtitle.default_preset", "")
@@ -79,6 +97,17 @@ class S07MergeSubVideo(BaseStep):
         if isinstance(gpu_accel, str):
             gpu_accel = gpu_accel.lower() in ("true", "1", "yes")
         ffmpeg_timeout = float(self._get_config("ffmpeg_timeout", 600) or 600)
+        # 资源保护：编解码/滤镜线程上限（0=自动）、最长时长上限（0=不限制）
+        try:
+            ffmpeg_threads = int(self._get_config("ffmpeg_threads", 0) or 0)
+        except (TypeError, ValueError):
+            ffmpeg_threads = 0
+        ffmpeg_threads = max(0, min(ffmpeg_threads, 64))
+        try:
+            max_duration_minutes = int(self._get_config("max_duration_minutes", 0) or 0)
+        except (TypeError, ValueError):
+            max_duration_minutes = 0
+        max_duration_minutes = max(0, max_duration_minutes)
         bgm_path = step_inputs.get("audio") or self._get_config("bgm_path", "")
         dub_path = step_inputs.get("dub") or self._get_config("dub_path", "")
         bgm_path = self._resolve_input_path(task_dir, bgm_path)
@@ -87,13 +116,36 @@ class S07MergeSubVideo(BaseStep):
         bgm_volume = float(self._get_config("bgm_volume", 0.3))
         fade_in = float(self._get_config("fade_in", 0.5))
         fade_out = float(self._get_config("fade_out", 0.5))
+
+        # ── 与「音轨混响」节点互补对齐：音量/淡变按轨独立，BGM 循环可关 ──
+        def _opt_float(key: str):
+            """读取可选浮点配置；未配置返回 None，表示回退到 fade_in/fade_out。"""
+            raw = self._get_config(key, None)
+            if raw is None or raw == "":
+                return None
+            try:
+                return float(raw)
+            except (TypeError, ValueError):
+                return None
+
+        bgm_fade_in = _opt_float("bgm_fade_in")
+        bgm_fade_out = _opt_float("bgm_fade_out")
+        dub_fade_in = _opt_float("dub_fade_in")
+        dub_fade_out = _opt_float("dub_fade_out")
+        original_volume = float(self._get_config("original_volume", 1.0) or 1.0)
+        original_fade_in = float(self._get_config("original_fade_in", 0.0) or 0.0)
+        original_fade_out = float(self._get_config("original_fade_out", 0.0) or 0.0)
+        bgm_loop = self._get_config("bgm_loop", True)
+        if isinstance(bgm_loop, str):
+            bgm_loop = bgm_loop.lower() in ("true", "1", "yes")
         target_lufs = float(self._get_config("target_lufs", -16))
         mute_original = self._get_config("mute_original", False)
         if isinstance(mute_original, str):
             mute_original = mute_original.lower() in ("true", "1", "yes")
 
         if callback:
-            callback(5, f"配置: 质量={video_quality}, 编码速度={encode_preset}, 显卡加速={'开' if gpu_accel else '关'}, 超时={ffmpeg_timeout:.0f}s")
+            callback(5, f"配置: 质量={video_quality}, 编码速度={encode_preset}, 显卡加速={'开' if gpu_accel else '关'}, "
+                       f"线程上限={'自动' if ffmpeg_threads == 0 else ffmpeg_threads}, 超时={ffmpeg_timeout:.0f}s")
 
         # 2. Find video and subtitles
         video_path = self._resolve_input_path(
@@ -106,6 +158,23 @@ class S07MergeSubVideo(BaseStep):
             raise FileNotFoundError("未找到输入视频文件")
 
         cache_dir = os.path.join(task_dir, "cache")
+
+        # 资源保护预检：时长上限 + 磁盘余量（快速失败，避免烧录到一半把机器拖垮）
+        try:
+            video_dur = audio_processor.get_video_duration(video_path)
+        except Exception:
+            video_dur = 0.0
+        if max_duration_minutes > 0 and video_dur > max_duration_minutes * 60:
+            raise RuntimeError(
+                f"视频时长约 {video_dur / 60:.1f} 分钟，超过节点配置的上限 {max_duration_minutes} 分钟。"
+                f"如确需处理长视频，请在节点「最长时长上限」中调大或设为 0（不限制）。"
+            )
+        try:
+            input_bytes = os.path.getsize(video_path)
+        except OSError:
+            input_bytes = 0
+        _ensure_disk_space(task_dir, input_bytes * 1.2)
+
         subtitle_input = step_inputs.get("subtitle")
         if subtitle_input:
             # 连线注入的路径可能是相对路径（相对 task_dir），需拼接到任务目录再判断
@@ -152,7 +221,12 @@ class S07MergeSubVideo(BaseStep):
             video_path, ass_path, video_quality, temp_video,
             encode_preset=encode_preset,
             gpu_accel=gpu_accel,
-            timeout=ffmpeg_timeout,
+            # 长视频自动放宽超时：烧录是重编码，耗时随分辨率/时长增长；
+            # 取「配置值」与「按时长估算值」的较大者，避免长视频必然超时。
+            timeout=max(ffmpeg_timeout, video_dur * 10 + 300) if video_dur > 0 else ffmpeg_timeout,
+            callback=(lambda pct, msg: callback(int(40 + pct * 0.2), msg)) if callback else None,
+            cancel_callback=cancel_callback,
+            threads=ffmpeg_threads,
         )
 
         # 5. Audio mixing (if BGM or dubbing provided, or mute_original is enabled)
@@ -171,7 +245,7 @@ class S07MergeSubVideo(BaseStep):
                     callback(70, "准备 BGM...")
                 video_dur = audio_processor.get_video_duration(temp_video)
                 bgm_prepared = os.path.join(cache_dir, "bgm_prepared.wav")
-                audio_processor.prepare_bgm(bgm_path, video_dur, bgm_prepared)
+                audio_processor.prepare_bgm(bgm_path, video_dur, bgm_prepared, loop=bool(bgm_loop))
                 processed_bgm = os.path.join(cache_dir, "bgm_normalized.wav")
                 normalize_loudness(bgm_prepared, target_lufs, processed_bgm)
                 if not os.path.exists(processed_bgm):
@@ -208,6 +282,13 @@ class S07MergeSubVideo(BaseStep):
                 fade_out=fade_out,
                 output_path=final_output,
                 mute_original=mute_original,
+                bgm_fade_in=bgm_fade_in,
+                bgm_fade_out=bgm_fade_out,
+                dub_fade_in=dub_fade_in,
+                dub_fade_out=dub_fade_out,
+                original_vol=original_volume,
+                original_fade_in=original_fade_in,
+                original_fade_out=original_fade_out,
             )
 
             # Clean up temp files

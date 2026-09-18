@@ -63,6 +63,8 @@ class _FFmpegPipeWriter:
     """
 
     def __init__(self, output_path: str, fps: float, width: int, height: int):
+        from backend.utils.ffmpeg_guard import resource_args
+
         self._proc: Optional[subprocess.Popen] = None
         ffmpeg = shutil.which("ffmpeg")
         if not ffmpeg:
@@ -79,6 +81,8 @@ class _FFmpegPipeWriter:
             *build_video_encode_args("libx264", crf=18, preset="medium"),
             "-pix_fmt", "yuv420p",
             "-movflags", "+faststart",
+            # 逐帧管道编码：限制线程 / 封装队列，避免吃满 CPU 与队列无界增长爆内存
+            *resource_args(),
             output_path,
         ]
         try:
@@ -234,6 +238,10 @@ def _process_and_write_segment(
                 if need >= window_end:
                     break
                 ready += 1
+            if cancel_callback is not None and cancel_callback():
+                from backend.control_plane.runtime import TaskCancelledError
+                raise TaskCancelledError("用户取消视频变速处理")
+
             if ready == 0:
                 continue
 
@@ -304,6 +312,7 @@ def adjust_video_speed_segments(
     batch_size: int = 64,
     num_workers: int = 0,
     return_manifest: bool = False,
+    cancel_callback: Optional[Callable[[], bool]] = None,
 ) -> Optional[str]:
     """OpenCV 读取 + 局部变速，ffmpeg(libx264) 编码输出（无 ffmpeg 时回退 OpenCV mp4v）。
 
@@ -317,6 +326,7 @@ def adjust_video_speed_segments(
         progress_callback: 可选的进度回调 callback(percent, message)
         batch_size: 帧读取批次大小
         num_workers: 处理线程数，0=CPU核心数的一半
+        cancel_callback: 协作取消回调，返回 True 时中止处理（每批检查一次）
 
     Returns:
         输出视频路径，失败返回 None

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { BadgeCheck, CalendarDays, Clock3, Coins, Crown, ExternalLink, KeyRound, Loader2, LogIn, LogOut, Mail, MonitorSmartphone, RefreshCw, ShieldCheck, Sparkles, Unplug, UserPlus, Zap } from "lucide-react";
+import { BadgeCheck, CalendarDays, Clock3, Coins, Crown, Download, ExternalLink, KeyRound, Loader2, LogIn, LogOut, Mail, MonitorSmartphone, RefreshCw, ShieldCheck, Sparkles, Unplug, UserPlus, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -176,7 +176,7 @@ function PreferenceToggle({
 
 export default function UserSubscription({ embedded = false }: { embedded?: boolean }) {
   const { alert: showAlert } = useAlert();
-  const { status, loading, error, fetchStatus, refresh, login, logout, unbindDevice, register, sendCode, sendResetCode, resetPassword, verifyCard } = useSubscriptionStore();
+  const { status, loading, error, fetchStatus, refresh, login, logout, unbindDevice, register, sendCode, sendResetCode, resetPassword, verifyCard, claimQuota } = useSubscriptionStore();
   const [loginForm, setLoginForm] = useState({ username: "", password: "" });
   const [rememberUsername, setRememberUsername] = useState(false);
   const [rememberPassword, setRememberPassword] = useState(false);
@@ -238,6 +238,8 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
   const dailyLimit = status?.daily_node_limit ?? status?.daily_limit;
   const remainingToday = status?.remaining_nodes_today ?? status?.remaining_today ?? 0;
   const canExecuteNode = status?.can_execute_node ?? status?.can_create_task;
+  const canClaimQuota = !!status?.can_claim_quota;
+  const claimableCount = status?.claimable_count ?? 0;
   const usageText = dailyLimit == null
     ? "无限畅饮"
     : `${dailyUsage}/${dailyLimit}，今日剩余 ${remainingToday}`;
@@ -361,6 +363,15 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
   const handleRefresh = async () => {
     const latest = await refresh();
     showAlert(latest ? "订阅数据已刷新" : "刷新失败，请稍后重试", latest ? "success" : "error");
+  };
+
+  const handleClaimQuota = async () => {
+    try {
+      const result = await claimQuota();
+      showAlert(result?.message || (result?.ok ? "已领取今日免费额度" : "领取失败，请稍后重试"), result?.ok ? "success" : "warning");
+    } catch (e) {
+      showAlert(getSubscriptionError(e), "error");
+    }
   };
 
   const handleRememberUsernameChange = (checked: boolean) => {
@@ -487,6 +498,19 @@ export default function UserSubscription({ embedded = false }: { embedded?: bool
             <StatTile icon={<Zap className="h-3.5 w-3.5" />} label="节点额度信息" value={usageText} />
             <StatTile icon={<CalendarDays className="h-3.5 w-3.5" />} label="剩余时间" value={formatRemainingTime(getEntitlementTime(summaryEntitlement))} />
             <StatTile icon={<Coins className="h-3.5 w-3.5" />} label="剩余积分点" value={getEntitlementPoints(summaryEntitlement)} />
+            {canClaimQuota && (
+              <Button
+                onClick={handleClaimQuota}
+                disabled={loading}
+                variant="outline"
+                size="sm"
+                className="col-span-2"
+                title="领取今日免费额度；领取后当天执行节点无需联网"
+              >
+                {loading ? <Loader2 className="animate-spin" /> : <Download />}
+                领取今日额度{claimableCount > 0 ? `（可领 ${claimableCount}）` : ""}
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>

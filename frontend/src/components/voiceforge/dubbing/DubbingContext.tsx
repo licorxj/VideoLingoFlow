@@ -21,6 +21,7 @@ import {
   VoiceForgeProgressMessage,
 } from "@/api/voiceforge";
 import { getWebSocketUrl } from "@/api/ws";
+import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 
 /* ── Types ─────────────────────────────────────────────────────────── */
 
@@ -264,8 +265,11 @@ export function DubbingProvider({ children }: { children: React.ReactNode }) {
   }, [projectId, dispatch]);
 
   /* Initial load + WebSocket for live updates */
+  const keepAliveActive = useKeepAliveActive();
   useEffect(() => {
     mountedRef.current = true;
+    // 被 KeepAlive 隐藏时既不加载也不建立 WebSocket：隐藏页面收进度消息只会持续触发 reducer
+    if (!keepAliveActive) return;
     void load();
 
     const socket = new WebSocket(getWebSocketUrl(`/ws/voiceforge/projects/${encodeURIComponent(projectId)}/progress`));
@@ -304,7 +308,7 @@ export function DubbingProvider({ children }: { children: React.ReactNode }) {
       pendingRef.current.forEach(({ timer }) => clearTimeout(timer));
       pendingRef.current.clear();
     };
-  }, [projectId, load]);
+  }, [projectId, load, keepAliveActive]);
 
   /* ── Debounced sentence update ──────────────────────────────────── */
   const queueSentenceUpdate = useCallback(

@@ -179,9 +179,12 @@ class S17TrackSeparation(BaseStep):
 
         fmt = os.path.splitext(output_path)[1].lstrip(".")
         codec = "pcm_s16le" if fmt == "wav" else "libmp3lame"
+        from backend.utils.ffmpeg_guard import apply_resource_args
         subprocess.run(
-            ["ffmpeg", "-y", "-f", "lavfi", "-i", f"anullsrc=r=44100:cl=stereo",
-             "-t", str(duration), "-acodec", codec, output_path],
+            apply_resource_args(
+                ["ffmpeg", "-y", "-f", "lavfi", "-i", f"anullsrc=r=44100:cl=stereo",
+                 "-t", str(duration), "-acodec", codec, output_path]
+            ),
             capture_output=True, text=True, timeout=60
         )
 

@@ -4,19 +4,34 @@ rem Default behavior binds the API and Manager to 127.0.0.1 only.
 rem Set VIDEOLINGO_LAN_MODE=1 only on a trusted LAN. This mode has no authentication or TLS.
 set "VIDEOLINGO_LAN_MODE=0"
 
-rem GPU service values are automatically configured from NVIDIA VRAM during installation. Set 0 to keep manual values.
+rem GPU service + single-GPU batch defaults are written by installer/install.py
+rem (auto-scaled from detected NVIDIA VRAM). Set AUTO_CONFIG=0 to keep manual values.
 set "GPU_SERVICE_AUTO_CONFIG=1"
 rem Valid enabled values: 1, true, yes, on. Auto configuration enables only detected NVIDIA CUDA GPUs.
 set "GPU_SERVICE_ENABLED=0"
+rem Single-GPU batch: 1 forces one lane (recommended for VRAM <= 12GB).
+set "GPU_SERVICE_SERIAL=1"
 rem Automatic values scale with VRAM. In manual mode this must be an integer >= 1.
-set "GPU_SERVICE_MAX_LANES=3"
+set "GPU_SERVICE_MAX_LANES=1"
 rem Free VRAM protection threshold in GB. In manual mode this must be >= 0.
-set "GPU_SERVICE_VRAM_HEADROOM_GB=1.0"
+set "GPU_SERVICE_VRAM_HEADROOM_GB=2.0"
 rem Idle lane timeout and per-task timeout in seconds.
-set "GPU_SERVICE_LANE_IDLE_TIMEOUT=600"
+set "GPU_SERVICE_LANE_IDLE_TIMEOUT=1800"
 rem Shortened idle timeout (seconds) applied automatically when free VRAM < 2x headroom.
-set "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT=60"
-set "GPU_SERVICE_JOB_TIMEOUT=3600"
+set "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT=120"
+set "GPU_SERVICE_JOB_TIMEOUT=7200"
+
+rem Resource tokens / ffmpeg / engine residency (installer always fills these)
+set "RESOURCE_CAPACITY_GPU=1"
+set "RESOURCE_CAPACITY_TTS=2"
+set "RESOURCE_CAPACITY_LLM=4"
+set "RESOURCE_CAPACITY_IO=3"
+set "RESOURCE_TOKEN_TTL=7200"
+set "RESOURCE_TOKENS_USE_REDIS=1"
+set "RESOURCE_ACQUIRE_TIMEOUT=900"
+set "FFMPEG_MAX_THREADS=8"
+set "ENGINE_IDLE_TIMEOUT_ASR=120"
+set "ENGINE_IDLE_TIMEOUT_OCR=30"
 
 rem Chromium 调用路径：指向随仓库分发的 CloakBrowser 隐匿 Chromium（chrome.exe）。
 rem 浏览器启动（Playwright 等）据此使用指定的 Chromium 可执行文件。

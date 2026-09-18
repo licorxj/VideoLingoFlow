@@ -1037,16 +1037,28 @@ def _extract_draft_title(draft_data):
 
 
 def _extract_draft_cover(draft_data):
-    """从草稿数据中提取封面路径或URL"""
+    """从草稿数据中提取封面路径。
+
+    优先取相对存储路径（stored_path），避免把 ``/api/materials/file/...`` 这类
+    接口 URL 写进 cover_path —— 前端展示时会对相对路径再拼一次接口前缀，
+    存接口 URL 会拼成双重前缀导致封面 404。
+    """
     draft_data = _active_draft_view(draft_data)
     cc = draft_data.get('commonConfig', {})
     for key in ['coverPortrait', 'coverLandscape']:
         cover = cc.get(key)
         if cover:
-            if cover.get('path'):
-                return cover['path']
-            if cover.get('url'):
-                return cover['url']
+            for field in ('stored_path', 'storedPath', 'path'):
+                value = cover.get(field)
+                if value:
+                    return value
+            url = cover.get('url')
+            if url:
+                # 绝对 URL 去掉 host 只保留 path；相对路径原样返回
+                if '://' in url:
+                    from urllib.parse import urlparse
+                    return urlparse(url).path
+                return url
     return ''
 
 

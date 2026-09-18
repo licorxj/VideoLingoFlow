@@ -14,7 +14,8 @@ def gpu_info() -> dict:
 def _nvidia_smi() -> dict:
     try:
         cmd = ["nvidia-smi", "--query-gpu=memory.total,memory.used,memory.free,utilization.gpu,name", "--format=csv,noheader,nounits"]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, shell=(os.name == "nt"))
+        # Windows 下优先 PATH 中的 nvidia-smi；避免 shell=True（路径注入与兼容问题）
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         if result.returncode != 0:
             return {"available": False}
         line = result.stdout.strip().splitlines()[0]

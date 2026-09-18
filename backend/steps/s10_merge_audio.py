@@ -64,7 +64,8 @@ class S10MergeAudio(BaseStep):
 
     # ───────────────────────── 主流程 ─────────────────────────
 
-    def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
+    def run(self, task_dir: str, callback: Optional[Callable] = None,
+            cancel_callback: Optional[Callable] = None) -> dict:
         if callback:
             callback(5, "加载配音任务表...")
 
@@ -171,6 +172,8 @@ class S10MergeAudio(BaseStep):
                 [(start, end, ratio, idx) for start, end, ratio, idx in video_speed_segments],
                 progress_callback=lambda pct, msg: print(f"    [{pct}%] {msg}"),
                 return_manifest=True,
+                # 下传协作取消：逐批检查，用户取消可中断 OpenCV 变速
+                cancel_callback=cancel_callback,
             )
             adjusted_video_path = video_manifest.get("output_path") if isinstance(video_manifest, dict) else adjusted_video
 

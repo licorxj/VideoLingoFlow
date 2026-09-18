@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { UNSAFE_LocationContext, useLocation, useOutlet } from "react-router-dom";
+import { KeepAliveActiveContext } from "./keepAliveActive";
 
 /**
  * 需要「保活」的路由前缀。
@@ -105,14 +106,17 @@ function KeepAliveBranch({
 
   return (
     <UNSAFE_LocationContext.Provider value={locationValue}>
-      <div
-        ref={ref}
-        className="animate-fade-in-up h-full"
-        style={active ? undefined : { display: "none" }}
-        aria-hidden={active ? undefined : true}
-      >
-        {children}
-      </div>
+      {/* 隐藏分支沿用冻结的 location，同时把 active=false 下发，让子树停掉轮询/播放等后台任务 */}
+      <KeepAliveActiveContext.Provider value={active}>
+        <div
+          ref={ref}
+          className="animate-fade-in-up h-full"
+          style={active ? undefined : { display: "none" }}
+          aria-hidden={active ? undefined : true}
+        >
+          {children}
+        </div>
+      </KeepAliveActiveContext.Provider>
     </UNSAFE_LocationContext.Provider>
   );
 }

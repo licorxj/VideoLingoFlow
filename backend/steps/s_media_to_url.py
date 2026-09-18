@@ -75,6 +75,8 @@ def _normalize_video(video_path: str, output_path: str, callback=None) -> str:
         if callback:
             callback(20, "标准化视频: 无法探测分辨率，仅重编码")
 
+    from backend.utils.ffmpeg_guard import adaptive_timeout, resource_args
+
     cmd = [
         "ffmpeg", "-y",
         "-i", video_path,
@@ -83,20 +85,28 @@ def _normalize_video(video_path: str, output_path: str, callback=None) -> str:
         "-c:a", "aac",
         "-b:a", "128k",
         "-movflags", "+faststart",
+        # 全片重编码：限制线程 / 封装队列，避免吃满 CPU 与内存暴涨
+        *resource_args(),
     ]
     if scale_filter:
         cmd.extend(["-vf", scale_filter])
     cmd.append(output_path)
 
+    # 超时按时长自适应：原先固定 600s，长高清视频必然超时失败
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        duration = float(_probe_video_duration(video_path) or 0)
+    except Exception:
+        duration = 0.0
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True,
+                                timeout=adaptive_timeout(duration))
         if result.returncode != 0:
             error_msg = result.stderr[-500:] if result.stderr else "Unknown error"
             raise RuntimeError(f"ffmpeg 标准化视频失败: {error_msg}")
     except FileNotFoundError:
         raise RuntimeError("未找到 ffmpeg，请确保已安装并添加到 PATH")
     except subprocess.TimeoutExpired:
-        raise RuntimeError("ffmpeg 标准化视频超时（600 秒）")
+        raise RuntimeError("ffmpeg 标准化视频超时，已终止")
 
     return output_path
 
@@ -158,6 +168,8 @@ def _split_video_by_duration(video_path: str, segment_seconds: float, output_dir
             "-movflags", "+faststart",
             out_path,
         ]
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        cmd = apply_resource_args(cmd)
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             if result.returncode != 0:

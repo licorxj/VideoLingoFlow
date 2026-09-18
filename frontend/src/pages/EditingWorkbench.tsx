@@ -7,6 +7,7 @@ import { type EditorSnapshot, editorApi } from "@/api/editor";
 import client from "@/api/client";
 import { toast } from "@/pages/llm-router/toast";
 import { PageBackground } from "@/components/shared/PageBackground";
+import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 
 const CUTIA_EDITOR_URL = "/cutia/zh/editor";
 const TASK_PROJECT_BRIDGE_VERSION = 1;
@@ -30,6 +31,8 @@ export default function EditingWorkbench() {
   const [pendingTasks, setPendingTasks] = useState<{ id: string; task_name: string; pushed_at: string | null }[]>([]);
   const frameRef = useRef<HTMLIFrameElement>(null);
 
+  const keepAliveActive = useKeepAliveActive();
+
   useEffect(() => {
     if (workspaceId) return;
     let cancelled = false;
@@ -38,10 +41,12 @@ export default function EditingWorkbench() {
         .then((r) => { if (!cancelled) setPendingTasks(r.data?.tasks || []); })
         .catch(() => {});
     };
+    // 被 KeepAlive 隐藏时停止轮询，回到页面再恢复（隐藏页面刷新列表没有意义且持续占后端资源）
+    if (!keepAliveActive) return;
     load();
     const timer = window.setInterval(load, 5000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [workspaceId]);
+  }, [workspaceId, keepAliveActive]);
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent<unknown>) => {

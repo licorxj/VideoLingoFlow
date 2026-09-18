@@ -40,11 +40,12 @@ def _get_duration(file_path: str) -> float:
 
 def _extract_audio(video_path: str, output_path: str) -> str:
     """Extract audio from video as WAV for analysis."""
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y", "-i", video_path,
         "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
         output_path,
-    ]
+    ])
     subprocess.run(cmd, capture_output=True, timeout=300)
     return output_path
 
@@ -89,7 +90,8 @@ def _find_silence_point(rms_values: list, target_sec: float, window_ms: int = 10
 
 def _cut_video(video_path: str, output_path: str, start: float, duration: float) -> bool:
     """Cut a segment from video using ffmpeg stream copy (fast, no re-encode)."""
-    cmd = [
+    from backend.utils.ffmpeg_guard import apply_resource_args
+    cmd = apply_resource_args([
         "ffmpeg", "-y",
         "-ss", f"{start:.3f}",
         "-i", video_path,
@@ -97,7 +99,7 @@ def _cut_video(video_path: str, output_path: str, start: float, duration: float)
         "-c", "copy",
         "-avoid_negative_ts", "make_zero",
         output_path,
-    ]
+    ])
     result = subprocess.run(cmd, capture_output=True, timeout=600)
     return result.returncode == 0
 
