@@ -51,19 +51,39 @@ SOURCE_FILES = (
 )
 
 
-def source_fingerprint() -> str:
-    """按顺序累加各源码文件的内容哈希（文件名与分隔符也参与，防止换名重排）。"""
+def source_fingerprint(newline: str = "lf") -> str:
+    """按顺序累加各源码文件的内容哈希（文件名与分隔符也参与，防止换名重排）。
+
+    `newline` 控制换行规范化方式，默认 `"lf"`：
+
+      - `"lf"` / `"crlf"`：先把换行统一后再参与哈希；
+      - `"raw"`：按文件原样（不做规范化）。
+
+    **为什么必须规范化**：同一份源码在 Windows runner（`core.autocrlf=true`）
+    上 checkout 出 CRLF、在 Linux/macOS 上出 LF，若按原样哈希，会导致
+    v2.0.10 起各平台 `source_sha` 互不相同、且与本机（常见为混合换行）
+    都对不上，同源校验将永久误报。规范化 LF 后各平台指纹一致。
+    """
     digest = hashlib.sha256()
     for rel in SOURCE_FILES:
         path = ROOT / rel
+        body = path.read_bytes() if path.is_file() else b""
+        if newline == "lf":
+            body = body.replace(b"\r\n", b"\n")
+        elif newline == "crlf":
+            body = body.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
         digest.update(rel.encode("utf-8"))
         digest.update(b"\0")
-        digest.update(path.read_bytes() if path.is_file() else b"")
+        digest.update(body)
     return digest.hexdigest()
 
 
-def check_target(target: str, expected: str) -> tuple[bool | None, str]:
-    """返回 (True 同源 / False 不同源 / None 无法判定, 说明文本)。"""
+def check_target(target: str, expected: str, expected_crlf: str) -> tuple[bool | None, str]:
+    """返回 (True 同源 / False 不同源 / None 无法判定, 说明文本)。
+
+    `expected_crlf` 用于兼容由**旧算法**（未做换行规范化）在 Windows runner 上
+    编译出的产物（v2.0.11 之前）：其指纹等于 CRLF 变体，属换行差异而非源码漂移。
+    """
     manifest_path = BINARIES / target / "manifest.json"
     if not manifest_path.is_file():
         return False, f"{target}: 未找到 manifest.json（产物缺失）"
@@ -79,14 +99,19 @@ def check_target(target: str, expected: str) -> tuple[bool | None, str]:
             f"{target}: manifest 缺少 source_sha（产物 version={version} 由旧版工作流生成），"
             f"需用含指纹的新工作流重新编译一次才能启用同源校验"
         )
-    if recorded != expected:
-        return False, (
-            f"{target}: **源码与产物不同源**（产物 version={version}）\n"
-            f"        当前源码指纹: {expected}\n"
-            f"        产物记录指纹: {recorded}\n"
-            f"        → 源码改过但未重新编译，请按《收费代码编译流程》重新编译并部署产物"
+    if recorded == expected:
+        return True, f"{target}: 同源（产物 version={version}）"
+    if recorded == expected_crlf:
+        return True, (
+            f"{target}: 同源（产物 version={version}；指纹为 CRLF 变体，由 v2.0.11 之前的"
+            f"旧算法在 Windows runner 上生成，属换行差异）"
         )
-    return True, f"{target}: 同源（产物 version={version}）"
+    return False, (
+        f"{target}: **源码与产物不同源**（产物 version={version}）\n"
+        f"        当前源码指纹: {expected}\n"
+        f"        产物记录指纹: {recorded}\n"
+        f"        → 源码改过但未重新编译，请按《收费代码编译流程》重新编译并部署产物"
+    )
 
 
 def main() -> int:
@@ -94,8 +119,9 @@ def main() -> int:
     parser.add_argument("--target", choices=TARGETS, help="只校验指定平台（默认全部）")
     args = parser.parse_args()
 
-    expected = source_fingerprint()
-    print(f"当前源码指纹（{len(SOURCE_FILES)} 个文件）: {expected}")
+    expected = source_fingerprint("lf")
+    expected_crlf = source_fingerprint("crlf")
+    print(f"当前源码指纹（{len(SOURCE_FILES)} 个文件，换行规范化为 LF）: {expected}")
     print()
 
     targets = (args.target,) if args.target else TARGETS
@@ -107,7 +133,7 @@ def main() -> int:
         if not (BINARIES / target).is_dir():
             print(f"  [--]  {target}: 未部署（跳过）")
             continue
-        ok, message = check_target(target, expected)
+        ok, message = check_target(target, expected, expected_crlf)
         checked += 1
         if ok is True:
             print(f"  [OK]  {message}")

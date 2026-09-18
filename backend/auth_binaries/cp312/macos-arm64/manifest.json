@@ -1,9 +1,9 @@
 {
-  "commit_sha": "46a85ec77f34ac593e69b59626cc532812cbf918",
+  "commit_sha": "338ec5ff170e27c8c19fb9b08fe3f834dd258421",
   "files": {
     "backend/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "backend/auth/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
-    "backend/auth/cloud_auth_client.cpython-312-darwin.so": "153db025530686cb6c398f0ab423792e4e2355655e5444c202c31d8dc46a6bd9",
+    "backend/auth/cloud_auth_client.cpython-312-darwin.so": "f8a4180f0c63a4ef01ad2916b3b4a626607b71a7716adb0e22ea14fae7aba0e5",
     "backend/auth/cloud_auth_service.cpython-312-darwin.so": "53351a974f65c600cf100b8fdc917b09798c3863d844679b3850aecfb048ffbe",
     "backend/auth/error_codes.json": "83862afc3e67c2f5ac6be3508210c602f610d6edb8282179631cdab8a1a6caba",
     "backend/auth/secure_config.cpython-312-darwin.so": "c7d7ec7d86f4a3a221552e60fe185d87f7a5dbabdaccb4d55f7ca7208510d86d",
@@ -14,6 +14,17 @@
     "backend/control_plane/workflow_runtime.cpython-312-darwin.so": "ceeef1afc584e5af14b18220b6a60c0849f96e058973d075d172d476741a6836"
   },
   "python_abi": "cp312",
+  "source_files": [
+    "backend/auth/cloud_auth_client.py",
+    "backend/auth/cloud_auth_service.py",
+    "backend/auth/subscription_guard.py",
+    "backend/auth/secure_config.py",
+    "backend/auth/error_codes.json",
+    "backend/control_plane/workflow_runtime.py",
+    "backend/control_plane/runtime.py",
+    "backend/control_plane/custom_node_runtime.py"
+  ],
+  "source_sha": "99108461b4cd2739d936c493599e2173daf2bcab16b7ce8b1eff8bcbc221116a",
   "target": "macos-arm64",
-  "version": "v2.0.9"
+  "version": "v2.0.10"
 }

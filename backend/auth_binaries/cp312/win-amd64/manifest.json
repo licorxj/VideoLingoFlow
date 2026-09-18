@@ -1,19 +1,30 @@
 {
-  "commit_sha": "46a85ec77f34ac593e69b59626cc532812cbf918",
+  "commit_sha": "338ec5ff170e27c8c19fb9b08fe3f834dd258421",
   "files": {
     "backend/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "backend/auth/__init__.py": "7eb70257593da06f682a3ddda54a9d260d4fc514f645237f5ca74b08f8da61a6",
-    "backend/auth/cloud_auth_client.cp312-win_amd64.pyd": "8a5362293090e94d7256a07ea62cad91c47ec641364f5bbbadc8c2f48d6e887b",
-    "backend/auth/cloud_auth_service.cp312-win_amd64.pyd": "318130782fc3c1fd05d8470c7b4aeb488ff05b2a647f863e303a1e6cae6fd4bc",
+    "backend/auth/cloud_auth_client.cp312-win_amd64.pyd": "2a03573990f8633658c6ebcbf6a12bf4907093b3c3a1b616aaf7018e56785092",
+    "backend/auth/cloud_auth_service.cp312-win_amd64.pyd": "c7fbd8a97598c6cf639ba3b0731a63297c0f7c321d6d216fa1eacde8f7e07adc",
     "backend/auth/error_codes.json": "1c43d0f4f2ae27af426f02366318c2d2537b0337f0a2abb4f6c314a1041c1a43",
-    "backend/auth/secure_config.cp312-win_amd64.pyd": "83e68070e9dec6683a4ca4d034b35eeffd3dc6f230d12c7e077125697763d21e",
-    "backend/auth/subscription_guard.cp312-win_amd64.pyd": "8cf13e08fb958f06241621cf0265f64c3f35d16bc17b1883ea89f52f11084750",
+    "backend/auth/secure_config.cp312-win_amd64.pyd": "a1d937dd49343c79ff7b819509e1d2f7f044f4e9fa4e0378294ca55ab0f008ff",
+    "backend/auth/subscription_guard.cp312-win_amd64.pyd": "4f075cd887041b798aada88ff871796cda491722f7502026900b8b76339454c6",
     "backend/control_plane/__init__.py": "3c1401e5caa1169698292831c982670e4faaac3a55e78a65f4574b8cb51fd05c",
-    "backend/control_plane/custom_node_runtime.cp312-win_amd64.pyd": "44b0616e0f772fe1c36a01012b760a1aee4cd7de5c99d1131b0767bc7c2c1176",
-    "backend/control_plane/runtime.cp312-win_amd64.pyd": "1addd8d3278c49d00dcc2f0a94c2442b5d6377e978bcc39bd414e1f2a0209574",
-    "backend/control_plane/workflow_runtime.cp312-win_amd64.pyd": "9de75114a2b9e815f0e11d551cec2852930ac006eb158290c938896fe205d3ba"
+    "backend/control_plane/custom_node_runtime.cp312-win_amd64.pyd": "8e22a84a5f16664b3e0ac6c899bf9d511fea166c3c831b0b023e08133df9493e",
+    "backend/control_plane/runtime.cp312-win_amd64.pyd": "5cffc39580c4b59c8d81f9324a6b4c00b620e01ded6149e248ae1589bfd18cf2",
+    "backend/control_plane/workflow_runtime.cp312-win_amd64.pyd": "afd3caa3bdd32e6f40c364522d9df90d87412171f8f976a81e70ba38e5357bb6"
   },
   "python_abi": "cp312",
+  "source_files": [
+    "backend/auth/cloud_auth_client.py",
+    "backend/auth/cloud_auth_service.py",
+    "backend/auth/subscription_guard.py",
+    "backend/auth/secure_config.py",
+    "backend/auth/error_codes.json",
+    "backend/control_plane/workflow_runtime.py",
+    "backend/control_plane/runtime.py",
+    "backend/control_plane/custom_node_runtime.py"
+  ],
+  "source_sha": "5f4930a1c2be512d9f7b372eea3ff68be1a490a67d8c0f2463426b1d6e505c08",
   "target": "win-amd64",
-  "version": "v2.0.9"
+  "version": "v2.0.10"
 }
