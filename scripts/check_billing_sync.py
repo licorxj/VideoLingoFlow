@@ -183,15 +183,22 @@ def main() -> int:
             print(f"  [--]  {target}: 未部署（跳过）")
             continue
         ok, message = check_target(target, expected, expected_crlf)
+        # 逐文件校验：source_sha 只证明「源码没变」，文件本体必须单独核对
+        files_ok, problems = verify_binary_files(target)
         checked += 1
-        if ok is True:
-            print(f"  [OK]  {message}")
-        elif ok is None:
+        if ok is True and files_ok:
+            print(f"  [OK]  {message}  [逐文件 SHA256 已核对]")
+        elif ok is None and files_ok:
             unverifiable.append(target)
             print(f"  [??]  {message}")
         else:
             mismatched.append(target)
-            print(f"  [!!]  {message}")
+            if ok is not True:
+                print(f"  [!!]  {message}")
+            else:
+                print(f"  [!!]  {target}: source_sha 同源，但产物文件与 manifest 不一致")
+            for problem in problems:
+                print(f"        - {problem}")
 
     print()
     if mismatched:
