@@ -17,6 +17,10 @@ __pycache__/
 *$py.class
 *.so
 *.pyd
+# 二进制替换的临时残留：Windows 下 .pyd/.so 被运行中的进程占用时，
+# 采用「改名旧文件再写入新文件」的方式替换会留下 .old，进程释放后可手动删除。
+*.pyd.old
+*.so.old
 .Python
 build/
 develop-eggs/

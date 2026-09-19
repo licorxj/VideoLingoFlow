@@ -1,5 +1,5 @@
 {
-  "commit_sha": "89b29a2989bbc099b163abacc70b02dcc5335067",
+  "commit_sha": "f69c6641da9dcf1d9721982a6d10e6329b5206d0",
   "files": {
     "backend/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "backend/auth/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
@@ -11,7 +11,7 @@
     "backend/control_plane/__init__.py": "3f0d1f765c1fe0b086d5ef89d8829822699327e824a96877f7b261cadfbe281e",
     "backend/control_plane/custom_node_runtime.cpython-312-x86_64-linux-gnu.so": "5b538dc82f0648450642a2e838eacf5b32a202aca072bc50fad3f0735416f4d4",
     "backend/control_plane/runtime.cpython-312-x86_64-linux-gnu.so": "4601e3db3bfa34cd57d988d5d1a280017cff6f625e5944dd0caf0e5a8e555473",
-    "backend/control_plane/workflow_runtime.cpython-312-x86_64-linux-gnu.so": "0309e109379a2bdd7fdc04cb07a255dae3f6e1bdbfa5b40d55a4f4c045939cd1"
+    "backend/control_plane/workflow_runtime.cpython-312-x86_64-linux-gnu.so": "39758eb07d57c3bf1761dbb89fe09de42afe2c17af72118b5d5e5cec0068375e"
   },
   "python_abi": "cp312",
   "source_files": [
@@ -24,7 +24,7 @@
     "backend/control_plane/runtime.py",
     "backend/control_plane/custom_node_runtime.py"
   ],
-  "source_sha": "ba3cc732f98b17d16f8a818e365a4d7834583c10b507ab0cadd96ffd9e70836b",
+  "source_sha": "db56fab235cdc7ba2ecd61513d961a5b1360c076d73a023e9648ec3980930f21",
   "target": "linux-x86_64",
-  "version": "v2.0.11"
+  "version": "v2.0.12"
 }
