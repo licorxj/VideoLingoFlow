@@ -408,16 +408,20 @@ class ASRBase(ABC):
             
             merged = []
             word_idx = 0
+            n_words = len(all_words)
             for i, vad_seg in enumerate(vad_segments):
                 seg_words = []
                 # Find words that fall into this VAD segment
                 # We use a small buffer (0.1s) to include words that might start slightly before VAD
-                while word_idx < len(all_words):
+                while word_idx < n_words:
                     w = all_words[word_idx]
                     w_start = w.get("start", 0)
                     
                     if w_start < vad_seg.start - 0.1:
-                        # Word is before this VAD segment, skip it
+                        # 该词落在上一个语音段与本段之间的空隙里（或直接在本段之前）。
+                        # 必须并入本段而不丢弃——否则插值合成的词线（等距铺满整段，
+                        # 含静音区）会在 VAD 重排时被大面积吞掉，造成文本丢失。
+                        seg_words.append(w)
                         word_idx += 1
                         continue
                     if w_start < vad_seg.end:
@@ -457,7 +461,29 @@ class ASRBase(ABC):
                         "words": seg_words,
                         **({"speaker": max(_spk_counter, key=_spk_counter.get)} if _spk_counter else {}),
                     })
-            
+
+            # 尾部剩余的词（最后一个语音段之后的字）同样不能丢：并入最后一段，
+            # 没有最后一段时按自身时间戳单独成段。
+            if word_idx < n_words:
+                tail_words = all_words[word_idx:]
+                if merged:
+                    last = merged[-1]
+                    last["words"] = (last.get("words") or []) + tail_words
+                    tail_text = self._restore_punctuation(
+                        tail_words, asr_segments,
+                        " ".join(w.get("word", "") for w in tail_words))
+                    last["text"] = (last.get("text", "") + " " + tail_text).strip()
+                    last["end"] = round(max(
+                        last["end"], tail_words[-1].get("end", last["end"])), 3)
+                else:
+                    merged.append({
+                        "id": 1,
+                        "start": round(tail_words[0].get("start", 0.0), 3),
+                        "end": round(tail_words[-1].get("end", 0.0), 3),
+                        "text": " ".join(w.get("word", "") for w in tail_words).strip(),
+                        "words": tail_words,
+                    })
+
             # If we managed to produce merged segments, return them
             if merged:
                 print(f"[VAD] Word-aware merge produced {len(merged)} segments", flush=True)

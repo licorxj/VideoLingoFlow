@@ -473,7 +473,7 @@
         "hotwords": "",
         "num_speakers": 0,
         "use_itn": true,
-        "max_duration": 300,
+        "max_duration": 120,
         "model_options": [
           "openmoss/MOSS-Transcribe-Diarize"
         ],

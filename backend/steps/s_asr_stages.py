@@ -261,6 +261,11 @@ class S_ASRPostProcess(BaseStep):
         run_diarization = self._flag(cfg, "run_diarization", False)
         # 标点恢复：前端 checkbox 取消勾选时不传该字段，默认 False 避免误执行
         run_punctuation = self._flag(cfg, "run_punctuation", False)
+        # 上游拼装/健康检查置了 `_vad_required` 时强制跑 VAD：这是巨段的最后补救，
+        # 不受节点复选框（默认勾选但可被取消）与 force_rerun 之外的条件约束。
+        if asr_result.get("_vad_required"):
+            print("[ASR-PP] [3/6] _vad_required detected, forcing VAD stage", flush=True)
+            run_vad = True
         print(f"[ASR-PP] [3/6] cfg flags: run_vad={run_vad} run_alignment={run_alignment} run_diarization={run_diarization} run_punctuation={run_punctuation} force_rerun={self._flag(cfg, 'force_rerun', False)}", flush=True)
 
         # 3.5) 防重复执行：上游 ASR 接口可能已一次性执行了识别+后处理，

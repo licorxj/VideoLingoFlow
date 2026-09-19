@@ -111,6 +111,12 @@ class MossTranscribeDiarizeLocal(ASRBase):
     # 进程内缓存：(model, processor, dtype, device, model_path)
     _cached: Optional[tuple] = None
 
+    # 退化巨段的兜底断句阈值：超过任一阈值即认为丢失了 [t][Sxx] 断句信息，
+    # 需要按句末标点重新切分（正常 MOSS 输出是句级段落，不会触碰这两个阈值）
+    _FALLBACK_MIN_CHARS = 160
+    _FALLBACK_MIN_DURATION = 25.0
+    _FALLBACK_MAX_CHARS = 120
+
     def __init__(self):
         self.model_id = MODELSCOPE_MODEL_ID
         self._model_cache = _MODEL_CACHE
@@ -360,34 +366,48 @@ class MossTranscribeDiarizeLocal(ASRBase):
                 "words": words,
             })
 
-        # 退化防护：模型偶发把整段音频压成一条 segment（无 [t][Sxx] 断句），
-        # 会让下游句子切分/翻译/TTS 对齐全部失效。此处识别"单条长段"并按
-        # 句末标点做兜底断句，至少恢复可用的时间粒度。
-        if (len(segments) == 1
-                and len(segments[0]["text"]) >= 40
-                and segments[0]["end"] - segments[0]["start"] >= 60):
-            parent = segments[0]
+        # 退化防护：模型偶发把整段音频压成一条（或少数几条）超长 segment
+        # （丢失 [t][Sxx] 断句），会让下游句子切分/翻译/TTS 对齐全部失效。
+        # 这里对**每一条**过长 segment 做句末标点兜底断句——不能只判断
+        # "整份结果是否只有一段"，否则当 chunk 退化成 2~3 条巨段时会漏判，
+        # 巨段会原样流到下游。
+        rebuilt: list = []
+        repaired = 0
+        for parent in segments:
+            _dur = parent["end"] - parent["start"]
+            if len(parent["text"]) < self._FALLBACK_MIN_CHARS and _dur < self._FALLBACK_MIN_DURATION:
+                rebuilt.append(parent)
+                continue
             pieces = self._fallback_sentence_split(
-                parent["text"], parent["start"], parent["end"])
+                parent["text"], parent["start"], parent["end"],
+                max_chars=self._FALLBACK_MAX_CHARS)
+            for piece in pieces:
+                piece["speaker_id"] = parent["speaker_id"]
             if len(pieces) > 1:
+                repaired += 1
                 print(
-                    f"[MOSS] Warning: single giant segment "
-                    f"({len(parent['text'])} chars / "
-                    f"{parent['end'] - parent['start']:.0f}s), "
+                    f"[MOSS] Warning: giant segment #{parent['id']} "
+                    f"({len(parent['text'])} chars / {_dur:.0f}s), "
                     f"fallback split into {len(pieces)} sentences",
                     flush=True,
                 )
-                segments = []
-                for j, piece in enumerate(pieces, start=1):
-                    segments.append({
-                        "id": j,
-                        "start": piece["start"],
-                        "end": piece["end"],
-                        "text": piece["text"],
-                        "speaker_id": parent["speaker_id"],
-                        "words": self._synthesize_words(
-                            piece["text"], piece["start"], piece["end"]),
-                    })
+                rebuilt.extend(pieces)
+            else:
+                rebuilt.append(parent)
+
+        if repaired:
+            segments = [
+                {
+                    "id": j,
+                    "start": piece["start"],
+                    "end": piece["end"],
+                    "text": piece["text"],
+                    "speaker_id": piece["speaker_id"],
+                    "words": self._synthesize_words(
+                        piece["text"], piece["start"], piece["end"]),
+                }
+                for j, piece in enumerate(rebuilt, start=1)
+            ]
 
         full_text = " ".join(s["text"] for s in segments if s["text"]).strip()
 

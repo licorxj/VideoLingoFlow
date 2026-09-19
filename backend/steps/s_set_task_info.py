@@ -28,6 +28,32 @@ _FIELD_MAP = (
     ("var2", "var2", "变量2"),
 )
 
+# 视为「文档」的文本类扩展名（含无扩展名文本）；命中且文件存在时取其内容
+_TEXT_DOC_EXTS = {
+    "", ".txt", ".text", ".md", ".markdown", ".json", ".jsonl", ".srt", ".vtt",
+    ".ass", ".csv", ".tsv", ".yaml", ".yml", ".log", ".html", ".htm", ".xml",
+}
+
+
+def _read_document_text(value: str, task_dir: str) -> str:
+    """值为「已存在的文本文件路径」时返回其内容，否则原样返回。
+
+    上游可能接「文件加载」等只输出路径的节点；对任务名称 / 语言 / 变量这类
+    元信息字段来说路径本身没有意义，文件内容才是要写入的值。
+    """
+    if not value:
+        return value
+    candidate = value if os.path.isabs(value) else os.path.join(task_dir, value)
+    try:
+        if not os.path.isfile(candidate):
+            return value
+        if os.path.splitext(candidate)[1].lower() not in _TEXT_DOC_EXTS:
+            return value
+        with open(candidate, "r", encoding="utf-8", errors="replace") as f:
+            return f.read().strip()
+    except OSError:
+        return value
+
 
 class S_SetTaskInfo(BaseStep):
     step_id = "set_task_info"
@@ -59,6 +85,8 @@ class S_SetTaskInfo(BaseStep):
         task_json_path = os.path.join(task_dir, "task.json")
 
         values = {port: self._pick(step_inputs, port) for port, _, _ in _FIELD_MAP}
+        # 上游给的是文本文件路径（如「文件加载」节点）时，取文件内容而非路径本身
+        values = {port: _read_document_text(text, task_dir) for port, text in values.items()}
 
         if callback:
             callback(20, "写入任务信息...")
@@ -94,13 +122,6 @@ class S_SetTaskInfo(BaseStep):
 
         task_data["input"] = input_cfg
 
-        try:
-            os.makedirs(task_dir, exist_ok=True)
-            with open(task_json_path, "w", encoding="utf-8") as f:
-                json.dump(task_data, f, ensure_ascii=False, indent=2)
-        except Exception as e:  # noqa: BLE001
-            raise RuntimeError(f"写入任务信息失败: 无法写入 task.json: {e}")
-
         message = (
             f"已更新任务信息: {', '.join(updated)}" if updated
             else "没有可写入的任务信息（所有输入均为空）"
@@ -111,6 +132,17 @@ class S_SetTaskInfo(BaseStep):
 
         if callback:
             callback(100, message)
+
+        # 落盘必须放在最后一次进度回报之后：运行时的进度回报会用任务负载重新推导并回写
+        # task.json（其中 task_name 取自负载里的旧值），若先落盘会被这次回报覆盖掉，
+        # 表现为「刚写入的任务名/语言/变量被抹掉」。放在回报之后，运行时会在节点成功
+        # 回调里把 task.json 同步回任务负载与 DB，新值才能生效。
+        try:
+            os.makedirs(task_dir, exist_ok=True)
+            with open(task_json_path, "w", encoding="utf-8") as f:
+                json.dump(task_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:  # noqa: BLE001
+            raise RuntimeError(f"写入任务信息失败: 无法写入 task.json: {e}")
 
         return {
             "artifacts": [],

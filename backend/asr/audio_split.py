@@ -14,7 +14,7 @@ import json
 import shutil
 import subprocess
 import tempfile
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 
 def get_audio_duration(audio_path: str) -> float:
@@ -251,8 +251,15 @@ def merge_results(results: List[dict]) -> dict:
 # 且因为那个"内部已完成 VAD"的标志，下游不会再补断句。这里统一兜底。
 # ---------------------------------------------------------------------------
 
-# 用于把未断句的巨段二次切开的句末标点
+# 用于把未断句的巨段二次切开的句末标点（含 ASCII 句点，英文主要靠它断句）
 _SENTENCE_END_CHARS = "。！？!?；;…"
+_PERIOD_CHARS = ".．。"
+
+# 常见缩写中的句点不是句子边界（Mr. / Dr. / etc.）
+_ABBREVIATIONS = {
+    "mr", "mrs", "ms", "dr", "st", "jr", "sr", "prof", "vs", "etc",
+    "eg", "ie", "fig", "no", "sec", "min", "approx", "dept",
+}
 
 
 def _to_float(value, default: float = 0.0) -> float:
@@ -260,6 +267,37 @@ def _to_float(value, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+def _is_sentence_break(text: str, idx: int) -> bool:
+    """判断 ``text[idx]`` 是否可以作为句子边界。
+
+    中文/全角标点一律视为边界；ASCII 句点存在歧义（小数、缩写、文件名、
+    邮箱），只在"后面不是字母数字"且不是上述例外时才断句。
+    """
+    ch = text[idx]
+    if ch in _SENTENCE_END_CHARS:
+        return True
+    if ch not in _PERIOD_CHARS:
+        return False
+
+    prev = text[idx - 1] if idx > 0 else ""
+    nxt = text[idx + 1] if idx + 1 < len(text) else ""
+    # 小数点 / 版本号：两侧都是数字或点，不切（3.14、v1.2.3）
+    if prev.isdigit() and nxt.isdigit():
+        return False
+    # 后紧跟字母数字时不切（file.mp3、u.s.a、info@example.com）
+    if nxt and (nxt.isalnum() or nxt == "_"):
+        return False
+    # 缩写词尾的句点不切（Mr. / Dr. / etc.）
+    j = idx - 1
+    tail = []
+    while j >= 0 and text[j].isalpha():
+        tail.append(text[j])
+        j -= 1
+    if tail and "".join(reversed(tail)).lower() in _ABBREVIATIONS:
+        return False
+    return True
 
 
 def synthesize_words(text: str, start: float, end: float) -> List[Dict]:
@@ -308,26 +346,37 @@ def synthesize_words(text: str, start: float, end: float) -> List[Dict]:
 
 def split_text_sentences(text: str, start: float, end: float,
                          max_chars: int = 40) -> List[Dict]:
-    """按句末标点 / 字数上限把一段文本切成多句，并按字数比例分摊时间窗。"""
+    """按句末标点 / 字数上限把一段文本切成多句，并按字数比例分摊时间窗。
+
+    优先在真正的句末标点处下刀（含 ASCII 句点，见 ``_is_sentence_break``）；
+    没有句末标点而被 ``max_chars`` 触发时，尽量回退到最近的空白处切开，
+    避免把英文单词从中间劈成两半。
+    """
     text = (text or "").strip()
     if not text:
         return []
 
     pieces: List[str] = []
     buf = ""
-    for ch in text:
+    for i, ch in enumerate(text):
         if ch == "\n":
             if buf.strip():
                 pieces.append(buf.strip())
             buf = ""
             continue
         buf += ch
-        if ch in _SENTENCE_END_CHARS and len(buf) >= 4:
+        if len(buf) >= 4 and _is_sentence_break(text, i):
             pieces.append(buf.strip())
             buf = ""
         elif len(buf) >= max_chars:
-            pieces.append(buf.strip())
-            buf = ""
+            # 优先在最近的空白处断开（英文避免劈词；中文无空格则硬断）
+            cut = max(buf.rfind(" "), buf.rfind("\u3000"))
+            if cut >= max(1, max_chars // 2):
+                pieces.append(buf[:cut].strip())
+                buf = buf[cut:].lstrip()
+            else:
+                pieces.append(buf.strip())
+                buf = ""
     if buf.strip():
         pieces.append(buf.strip())
     pieces = [p for p in pieces if p]
@@ -411,20 +460,33 @@ def enforce_segmentation_health(result: Dict, *, max_chars: int = 80,
         return result
 
     new_segments: List[Dict] = []
-    unresolved = 0
     for seg in segments:
+        pieces: Optional[List[Dict]] = None
         if isinstance(seg, dict) and id(seg) in offender_ids:
-            pieces = split_long_segment(seg, max_chars=max_chars)
-            if len(pieces) > 1:
-                new_segments.extend(pieces)
-                continue
-            unresolved += 1
-        new_segments.append(seg)
+            candidate = split_long_segment(seg, max_chars=max_chars)
+            if len(candidate) > 1:
+                pieces = candidate
+        if pieces:
+            new_segments.extend(pieces)
+        else:
+            new_segments.append(seg)
 
     for idx, seg in enumerate(new_segments, start=1):
         if isinstance(seg, dict):
             seg["id"] = idx
     result["segments"] = new_segments
+
+    # 复检：仍存在"巨段"才说明纯文本兜底救不回来（交还下游 VAD）。
+    # 阈值放宽一倍字数上限：句末标点晚于硬切断出现时，片段可能略微超过
+    # max_chars（如 80→90 字），这属于正常粒度，不应触发全链路 VAD。
+    unresolved = sum(
+        1 for seg in new_segments
+        if isinstance(seg, dict)
+        and (
+            len((seg.get("text") or "").strip()) >= max_chars * 2
+            or (_to_float(seg.get("end")) - _to_float(seg.get("start"))) >= max_duration
+        )
+    )
 
     full_text = " ".join(
         (seg.get("text") or "").strip()
@@ -441,8 +503,11 @@ def enforce_segmentation_health(result: Dict, *, max_chars: int = 80,
         result["_vad_required"] = True
         print(
             f"[ASR] Warning: {unresolved} unbreakable giant segment(s) "
-            f"(>= {max_chars} chars or >= {max_duration}s); internal VAD flag "
+            f"(>= {max_chars * 2} chars or >= {max_duration}s); internal VAD flag "
             f"revoked, downstream VAD will be executed",
             flush=True,
         )
+    else:
+        # 已经修干净：撤销上一轮可能留下的强制 VAD 标记，避免无谓的全链路补跑
+        result.pop("_vad_required", None)
     return result

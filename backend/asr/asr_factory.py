@@ -39,6 +39,18 @@ def _enforce_vad_health(result: dict) -> dict:
         print(f"[ASR] Warning: segmentation health check failed: {exc}", flush=True)
         return result
 
+def _write_result(output_path: Optional[str], result: dict) -> None:
+    """把最终结果落盘，失败不阻塞调用方。"""
+    if not output_path or not isinstance(result, dict):
+        return
+    try:
+        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+        with open(output_path, "w", encoding="utf-8") as f:
+            json.dump(result, f, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        print(f"[ASR] Warning: failed to write result to {output_path}: {exc}", flush=True)
+
+
 def _load_engines():
     global _ENGINES
     if _ENGINES:
@@ -124,11 +136,19 @@ def _run_asr_single(engine_name, input_path, output_path, callback,
         if not getattr(engine, "CLOUD", False):
             from backend.gpu_service import client as gpu_client
             if gpu_client.gpu_service_enabled():
-                return gpu_client.run_asr(
-                    engine_name, input_path, output_path,
-                    model=model, language=language,
-                    engine_params=extra_kwargs, callback=callback,
-                )
+                # 任务由 GPU lane 子进程执行，本进程只是等待结果；期间必须置 busy，
+                # 否则本进程的空闲清扫线程会在 ENGINE_IDLE_TIMEOUT_ASR（默认 120s）
+                # 后把这个"影子"引擎卸载并打印误导演出的日志（还会对本进程做一次
+                # torch.cuda.empty_cache）。long ASR 任务几乎必触发。
+                engine._busy = True
+                try:
+                    return gpu_client.run_asr(
+                        engine_name, input_path, output_path,
+                        model=model, language=language,
+                        engine_params=extra_kwargs, callback=callback,
+                    )
+                finally:
+                    engine._busy = False
     except Exception as exc:
         from backend.gpu_service.jobs import GpuServiceUnavailableError
         if not isinstance(exc, GpuServiceUnavailableError):
@@ -190,7 +210,10 @@ def _run_asr_chunked(engine_name, input_path, output_path, callback,
             except Exception:
                 pass
 
-        merged = sp.merge_results(all_results)
+        # 拼装后的 VAD 健康检查必须在写盘之前完成：否则落地的会是各 chunk
+        # 的原始巨段（接口测试等读文件的消费方拿到的就是未断句的结果），
+        # 而内存里修正过的 results 与磁盘内容不一致。
+        merged = _enforce_vad_health(sp.merge_results(all_results))
         os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
         with open(output_path, "w", encoding="utf-8") as f:
             json.dump(merged, f, ensure_ascii=False, indent=2)
@@ -229,7 +252,11 @@ def run_asr(
 
     # 统一说话人字段格式（speaker_id -> speaker，并下放到词级）
     from backend.asr.asr_base import normalize_speaker_format
-    return normalize_speaker_format(result)
+    result = normalize_speaker_format(result)
+
+    # 落地最终结果，保证磁盘文件与返回给调用方的内容一致
+    _write_result(output_path, result)
+    return result
 
 
 def run_asr_with_post_processing(

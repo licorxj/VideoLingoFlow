@@ -753,7 +753,9 @@ class S02ASR(BaseStep):
             print("[ASR PostProcess] VAD explicitly required: ASR result contains "
                   "unbreakable giant segment(s)")
 
-        apply_vad = vad_enabled and not engine_vad_done
+        # `_vad_required` 是拼装/健康检查给出的强制信号：即使全局 VAD 开关关闭，
+        # 也必须跑一次 VAD，否则巨段会原样流向下游（上一道漏网时这是唯一补救）。
+        apply_vad = (vad_enabled or vad_required) and not engine_vad_done
         apply_alignment = alignment_enabled and not capabilities.get("word_timestamps", False) and not alignment_internally_executed
         apply_diarization = diarization_enabled and not capabilities.get("speaker_diarization", False) and not diarization_internally_executed
 

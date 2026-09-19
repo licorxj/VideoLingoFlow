@@ -85,18 +85,24 @@ def wait_result(job_id: str, client: redis.Redis, timeout: float, callback=None,
                 raise GpuServiceUnavailableError(f"GPU 服务等待期间失联: {job_id}")
         if callback is not None:
             try:
-                events = client.lrange(pkey, 0, -1)
+                events = client.lrange(pkey, 0, -1) or []
             except Exception:
                 events = []
+            total = len(events)
+            # `push_progress` 用 LPUSH，列表 index 0 是**最新**事件；而 prog_idx
+            # 记的是"已消费数量"，必须从未消费的**尾部**取（旧→新）。
+            # 直接按 events[prog_idx:] 切片会漏掉所有新事件，导致界面永远停在
+            # 第一条进度上并反复重发同一句话。
+            pending = events[: max(0, total - prog_idx)][::-1]
+            prog_idx = total
             forward = False
-            for raw in events[prog_idx:]:
+            for raw in pending:
                 try:
                     ev = json.loads(raw)
+                    pct = ev.get("pct", last_pct)
+                    msg = ev.get("msg", "")
                 except (TypeError, ValueError):
                     continue
-                prog_idx += 1
-                pct = ev.get("pct", last_pct)
-                msg = ev.get("msg", "")
                 if pct != last_pct or msg != last_msg:
                     last_pct, last_msg = pct, msg
                     forward = True

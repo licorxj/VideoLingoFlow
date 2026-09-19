@@ -35,7 +35,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 BINARIES = ROOT / "backend" / "auth_binaries" / "cp312"
+CONTROL_BINARIES = ROOT / "backend" / "control_plane_binaries" / "cp312"
 TARGETS = ("win-amd64", "linux-x86_64", "macos-arm64")
+
+# manifest.files 里的相对路径 → 实际部署根目录
+_BINARY_ROOTS = (
+    ("backend/control_plane/", CONTROL_BINARIES),
+    ("backend/auth/", BINARIES),
+)
+
+# 允许缺失的条目：CI 打包时附带的包标记，本地部署目录不需要（历史产物同样不含）
+_OPTIONAL_MISSING = frozenset({"backend/__init__.py"})
 
 # ⚠️ 必须与子仓库 .github/workflows/build-release.yml 里的 SOURCE_FILES 逐项一致：
 #    文件清单与**顺序**都参与哈希计算，任何一边改动都要同步另一边。
@@ -76,6 +86,45 @@ def source_fingerprint(newline: str = "lf") -> str:
         digest.update(b"\0")
         digest.update(body)
     return digest.hexdigest()
+
+
+def _resolve_binary_path(target: str, rel: str) -> Path | None:
+    """把 manifest.files 里的相对路径映射到实际部署路径。"""
+    for prefix, root in _BINARY_ROOTS:
+        if rel.startswith(prefix):
+            return root / target / rel
+    return None
+
+
+def verify_binary_files(target: str) -> tuple[bool, list[str]]:
+    """逐文件比对 manifest.files 记录的 SHA256（r3 §13.2 #2）。
+
+    **为什么必须做**：`source_sha` 只证明「源码没变」，不能证明「产物真的被替换过」。
+    部署时若主后端仍在运行，`.pyd` / `.so` 会被进程占用导致复制**静默失败**，
+    而 `manifest.json`（未被占用）却复制成功 —— 此时仅比对 `source_sha` 会
+    **误报同源**，直到运行时才发现是旧逻辑。本函数直接校验文件本体。
+
+    返回 (是否全部一致, 问题描述列表)。
+    """
+    try:
+        manifest = json.loads((BINARIES / target / "manifest.json").read_text(encoding="utf-8"))
+    except Exception:
+        return True, []          # manifest 缺失/损坏由 check_target 负责报错
+    files = manifest.get("files")
+    if not isinstance(files, dict) or not files:
+        return True, []          # 旧产物无 files 字段：不阻断
+    problems: list[str] = []
+    for rel, expected in files.items():
+        path = _resolve_binary_path(target, str(rel))
+        if path is None:
+            continue
+        if not path.is_file():
+            if str(rel) not in _OPTIONAL_MISSING:
+                problems.append(f"{rel}（文件缺失，可能部署未完成）")
+            continue
+        if hashlib.sha256(path.read_bytes()).hexdigest() != str(expected):
+            problems.append(f"{rel}（内容与 manifest 不符，可能是被进程占用未替换成功）")
+    return (not problems), problems
 
 
 def check_target(target: str, expected: str, expected_crlf: str) -> tuple[bool | None, str]:
