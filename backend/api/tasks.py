@@ -314,7 +314,17 @@ async def execute_task(task_id: str, req: Optional[ExecuteTaskRequest] = None):
         input_config = payload.get("input") or {}
     from_step = (req.from_step if req else None) or None
     mode = "resume" if from_step else "new"
-    task, _created = submit_workflow(workflow, input_config, mode=mode, resume_from=from_step, task_id=task_id)
+    # force：用户显式点了「执行 / 断点继续执行」。任务若卡在 queued（僵尸排队，消息已丢失），
+    # 单飞保护会静默返回、前端表现为「点了没反应」，这里必须能重新投递。
+    try:
+        task, _created = submit_workflow(
+            workflow, input_config, mode=mode, resume_from=from_step, task_id=task_id, force=True
+        )
+    except TypeError:
+        # 控制平面是未重新编译的旧二进制（无 force 参数）：降级调用，避免点击直接 500
+        task, _created = submit_workflow(
+            workflow, input_config, mode=mode, resume_from=from_step, task_id=task_id
+        )
     return _deprecated({"success": True, "task_id": task_id, "status": task.status})
 
 

@@ -64,6 +64,7 @@ TS_CONFIG_FIELD_TYPES = {
     "file", "hotwords", "language-select", "api-select", "voice-select", "slider",
     "number", "datetime-local", "account-select", "audio-selector",
     "voice-target-list", "reorder-list", "date", "time", "button", "wf-io-mapping",
+    "opencode-models",
 }
 TS_CONFIG_FIELD_KEYS = {
     "key", "label", "type", "placeholder", "options", "dependsOn", "dependsValue",

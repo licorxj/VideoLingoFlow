@@ -68,6 +68,30 @@ def _safe_output_path(task_dir: str, relative: str) -> Path:
     return resolved
 
 
+def resolve_opencode_exe(config: Optional[dict] = None) -> str:
+    """定位 opencode 可执行文件：节点设置 > 环境变量 > PATH > 常见安装位置。
+
+    模块级函数，供节点步骤与 API（模型列表 / 连通性测试）共用。
+    """
+    config = config or {}
+    home = Path.home()
+    candidates = [
+        str(config.get("opencode_exe") or "").strip(),
+        os.environ.get("OPENCODE_EXE", "").strip(),
+        shutil.which("opencode") or "",
+        str(home / ".cherrystudio" / "bin" / "opencode.exe"),
+        str(home / ".cherrystudio" / "install" / "global" / "node_modules"
+            / "opencode-ai" / "bin" / "opencode.exe"),
+    ]
+    for candidate in candidates:
+        if candidate and Path(candidate).is_file():
+            return candidate
+    raise RuntimeError(
+        "未找到 opencode 可执行文件：请在节点设置中填写 opencode 路径，"
+        "或设置环境变量 OPENCODE_EXE"
+    )
+
+
 class S_OpenCodeAgent(BaseStep):
     step_id = "opencode_agent"
     step_name = "OpenCode 智能体"
@@ -119,7 +143,10 @@ class S_OpenCodeAgent(BaseStep):
             for i in range(1, int(config.get("inputCount", 2)) + 1)
         }
         output_items = self._normalize_output_items(config.get("output_items", []))
-        prompt = self._build_prompt(instruction, task_dir_path, work_dir, input_ports, output_items)
+        recommended = self._collect_recommended_tools(config)
+        prompt = self._build_prompt(
+            instruction, task_dir_path, work_dir, input_ports, output_items, recommended,
+        )
 
         # 模型回退链：主模型 + 兜底模型（顺序尝试，仅在模型/传输级失败时回退）
         attempts = self._attempt_models(config)
@@ -387,23 +414,8 @@ class S_OpenCodeAgent(BaseStep):
                 pass
 
     def _resolve_exe(self, config: dict) -> str:
-        """定位 opencode 可执行文件：节点设置 > 环境变量 > PATH > 常见安装位置。"""
-        home = Path.home()
-        candidates = [
-            str(config.get("opencode_exe") or "").strip(),
-            os.environ.get("OPENCODE_EXE", "").strip(),
-            shutil.which("opencode") or "",
-            str(home / ".cherrystudio" / "bin" / "opencode.exe"),
-            str(home / ".cherrystudio" / "install" / "global" / "node_modules"
-                / "opencode-ai" / "bin" / "opencode.exe"),
-        ]
-        for candidate in candidates:
-            if candidate and Path(candidate).is_file():
-                return candidate
-        raise RuntimeError(
-            "未找到 opencode 可执行文件：请在节点设置中填写 opencode 路径，"
-            "或设置环境变量 OPENCODE_EXE"
-        )
+        """定位 opencode 可执行文件（见模块级 resolve_opencode_exe）。"""
+        return resolve_opencode_exe(config)
 
     def _attempt_models(self, config: dict) -> list:
         """构造模型尝试链：主模型（可留空=用 opencode 默认模型）+ 兜底模型（按序）。
@@ -443,8 +455,22 @@ class S_OpenCodeAgent(BaseStep):
             })
         return items
 
+    def _collect_recommended_tools(self, config: dict) -> dict:
+        """收集前端选定的 Skill / MCP（与「小pi通用智能体」同构的配置项）。"""
+        def _as_list(raw) -> list:
+            if isinstance(raw, list):
+                items = raw
+            elif raw in (None, ""):
+                items = []
+            else:
+                items = [raw]
+            return [str(item).strip() for item in items if str(item).strip()]
+
+        return {"skills": _as_list(config.get("skills")), "mcps": _as_list(config.get("mcps"))}
+
     def _build_prompt(self, instruction: str, task_dir: Path, work_dir: Path,
-                      input_ports: dict, output_items: list) -> str:
+                      input_ports: dict, output_items: list,
+                      recommended: Optional[dict] = None) -> str:
         """拼装交给 opencode 的任务指令（opencode 无独立 system prompt 入参，全部并入 message）。"""
         workflow_path = task_dir / "workflow.json"
         task_json_path = task_dir / "task.json"
@@ -459,6 +485,17 @@ class S_OpenCodeAgent(BaseStep):
             "你是当前 VideoLingoFlow 工作流中的一个自动化节点执行器。"
             "请直接在给定工作目录内完成任务，不要反问用户、不要等待确认与交互。",
             f"## 任务背景\n{json.dumps(background, ensure_ascii=False, indent=2)}",
+        ]
+        # opencode 没有「按次指定 Skill/MCP」的命令行参数（它从自身配置中发现可用项），
+        # 因此与「小pi通用智能体」保持一致：把用户勾选的项作为本任务的优先推荐注入提示词。
+        if recommended and (recommended.get("skills") or recommended.get("mcps")):
+            parts.append(
+                "## 推荐使用的 Skill / MCP\n"
+                f"{json.dumps(recommended, ensure_ascii=False, indent=2)}\n"
+                "（以上为本任务建议优先使用的项；opencode 会从自身配置中发现可用的 Skill 与 MCP，"
+                "可按需选用其它工具。）"
+            )
+        parts += [
             f"## 本节点输入端口\n{json.dumps(input_ports, ensure_ascii=False, indent=2)}",
             f"## 本节点要求输出的产物\n{json.dumps(output_items, ensure_ascii=False, indent=2)}",
             (

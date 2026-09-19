@@ -50,6 +50,7 @@ from backend.steps.s_run_wait import S_RunWait
 from backend.steps.s_editor_agent import S_EditorAgent
 from backend.steps.s_llm_request import S_LLMRequest
 from backend.steps.s_http_request import S_HttpRequest
+from backend.steps.s_file_downloader import S_FileDownloader
 from backend.steps.s_pi_agent import S_PiAgent
 from backend.steps.s_opencode_agent import S_OpenCodeAgent
 from backend.steps.s_imagegen import S_ImageGen
@@ -203,6 +204,8 @@ _STEPS = {
     "llm_request": S_LLMRequest(),
     "s_http_request": S_HttpRequest(),
     "http_request": S_HttpRequest(),
+    "s_file_downloader": S_FileDownloader(),
+    "file_downloader": S_FileDownloader(),
     "pi_agent": S_PiAgent(),
     "s_opencode_agent": S_OpenCodeAgent(),
     "opencode_agent": S_OpenCodeAgent(),

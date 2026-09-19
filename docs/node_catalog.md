@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-19 18:34:43  
-> 节点总数：152　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-09-20 05:14:41  
+> 节点总数：153　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -21,7 +21,7 @@
 | AIGC流程链（`aigc`） | 4 |
 | 智能体（`agent`） | 3 |
 | 流程控制节点（`flow_control`） | 6 |
-| 网络请求类节点（`network_request`） | 6 |
+| 网络请求类节点（`network_request`） | 7 |
 | 工具类节点（`utility`） | 11 |
 | 文件操作类节点（`file`） | 3 |
 | 组合节点（`group_node`） | 3 |
@@ -214,6 +214,7 @@
 | 媒体转链接 | `media_to_url` | 上传本地视频/图片到腾讯云 VOD，返回 URL 及完整媒体详情（尺寸/时长/码率等）保存为 JSON | thread | 视频(`video`:video); 图片(`image`:image) | 媒体详情(`json`:json) |
 | 平台视频下载 | `platform_download` | 使用 yt-dlp 下载平台视频 | process | URL(`url`*:url) | 视频(`video`:video); 字幕(`subtitle`:subtitle); 封面(`image`:image); 下载文件名(`filename`:text) |
 | 批量视频下载 | `batch_download` | 使用 yt-dlp 的专辑/播放列表批量下载能力，一次下载整张专辑；产物统一保存到新建的专辑目录，并输出下载产物清单 JSON | process | 专辑/播放列表 URL(`url`*:url) | 下载产物清单(`json`:json); 产物目录(`folder`:text); 首个视频(`video`:video) |
+| 文件下载器 | `file_downloader` | 按「下载地址」下载文件到任务目录的 download/ 文件夹；「文件名称」留空时自动命名（Content-Disposition → URL 末段 → 时间戳），缺扩展名按响应类型补全。输出下载后的文件路径 | process | 下载地址(`url`*:url); 文件名称(`filename`:text) | 文件路径(`file`:filepath); 文件名(`filename`:text) |
 | 网络请求 | `http_request` | 执行可配置的 HTTP 网络请求，支持请求体占位符、重试和响应保存 | process | 输入 1(`input_1`:any); 输入 2(`input_2`:any); 输入 3(`input_3`:any); 请求 Data(`request_data`:json) | 结果文件(`result`:any); JSON 结果(`json`:json); 文本结果(`text`:text); 状态码(`status`:text) |
 
 ### 工具类节点（`utility`）

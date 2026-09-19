@@ -57,6 +57,7 @@ BUILTIN_STEP_REGISTRY = {
     "subtitle_align": ("backend.steps.s07_subtitle_align", "S07SubtitleAlign"),
     "llm_request": ("backend.steps.s_llm_request", "S_LLMRequest"),
     "http_request": ("backend.steps.s_http_request", "S_HttpRequest"),
+    "file_downloader": ("backend.steps.s_file_downloader", "S_FileDownloader"),
     "pi_agent": ("backend.steps.s_pi_agent", "S_PiAgent"),
     "opencode_agent": ("backend.steps.s_opencode_agent", "S_OpenCodeAgent"),
     "image_gen": ("backend.steps.s_imagegen", "S_ImageGen"),

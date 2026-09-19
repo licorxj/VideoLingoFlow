@@ -1491,15 +1491,44 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   const [piMcpOptions, setPiMcpOptions] = useState<{ value: string; label: string }[]>([]);
   const [picker, setPicker] = useState<{ kind: PickerKind; label: string; open: boolean } | null>(null);
 
-  // pi_agent：从小π Agent 设置拉取已授权 Skill/MCP 选项
+  // pi_agent / opencode_agent：从小π Agent 设置拉取已授权 Skill/MCP 选项
   useEffect(() => {
-    if (nodeType.id !== "pi_agent") return;
+    if (nodeType.id !== "pi_agent" && nodeType.id !== "opencode_agent") return;
     client.get("/api/pi/settings").then((res) => {
       const data = (res.data || {}) as { skills?: { name: string }[]; mcps?: { name: string }[] };
       setPiSkillOptions((data.skills || []).map((item) => ({ value: item.name, label: item.name })));
       setPiMcpOptions((data.mcps || []).map((item) => ({ value: item.name, label: item.name })));
     }).catch(() => undefined);
   }, [nodeType.id]);
+
+  // opencode_agent：点「加载模型」执行 opencode models（顺带自检可用性），并把结果回填为下拉选项
+  const [opencodeModelList, setOpencodeModelList] = useState<string[]>([]);
+  const [opencodeModelStatus, setOpencodeModelStatus] = useState<{ kind: "busy" | "ok" | "err"; text: string } | null>(null);
+
+  const loadOpencodeModels = async () => {
+    setOpencodeModelStatus({ kind: "busy", text: "正在执行 opencode models..." });
+    try {
+      const exePath = String(config.opencode_exe || "").trim();
+      const res = await client.get(
+        "/api/opencode/models",
+        exePath ? { params: { exe: exePath } } : undefined,
+      );
+      const data = (res.data || {}) as { ok?: boolean; models?: string[]; elapsed?: number; error?: string; exe?: string };
+      const models = Array.isArray(data.models) ? data.models : [];
+      if (data.ok && models.length) {
+        setOpencodeModelList(models);
+        setOpencodeModelStatus({
+          kind: "ok",
+          text: `连通正常：${models.length} 个模型 · 用时 ${Number(data.elapsed || 0).toFixed(1)}s · ${data.exe || ""}`.trim(),
+        });
+      } else {
+        setOpencodeModelStatus({ kind: "err", text: data.error || "未获取到模型列表" });
+      }
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || err?.message || "请求失败";
+      setOpencodeModelStatus({ kind: "err", text: String(detail) });
+    }
+  };
 
   // chips 动作按钮：调用后端接口（如安装即梦插件）
   const handleChipAction = useCallback(async (field: ConfigField) => {
@@ -1753,6 +1782,69 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           }
 
           const value = config[field.key] ?? "";
+
+          // opencode_agent 模型选择：未加载时为文本框，点「加载模型」后变为下拉选择
+          if (field.type === "opencode-models") {
+            const current = String(value ?? "");
+            const options = current && !opencodeModelList.includes(current)
+              ? [current, ...opencodeModelList]
+              : opencodeModelList;
+            const busy = opencodeModelStatus?.kind === "busy";
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="flex gap-1">
+                  {opencodeModelList.length > 0 ? (
+                    <select
+                      value={current}
+                      onChange={(e) => onConfigChange(field.key, e.target.value)}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onWheel={(e) => e.stopPropagation()}
+                      className="flex-1 min-w-0 text-xs px-2 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
+                    >
+                      <option value="">（留空 = opencode 默认模型）</option>
+                      {options.map((m) => (
+                        <option key={m} value={m}>{m}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={current}
+                      onChange={(e) => onConfigChange(field.key, e.target.value)}
+                      placeholder={field.placeholder}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onWheel={(e) => e.stopPropagation()}
+                      className="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                    />
+                  )}
+                  <button
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); void loadOpencodeModels(); }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    disabled={busy}
+                    title="执行 opencode models：既测试 opencode 是否可用，也加载模型列表供下拉选择"
+                    className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1.5 text-[11px] font-medium rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
+                  >
+                    <RefreshCw className={cn("w-3 h-3", busy && "animate-spin")} />
+                    加载模型
+                  </button>
+                </div>
+                {opencodeModelStatus ? (
+                  <p className={cn(
+                    "mt-1 text-[10px] leading-snug break-all",
+                    opencodeModelStatus.kind === "ok" && "text-emerald-600",
+                    opencodeModelStatus.kind === "err" && "text-red-500",
+                    opencodeModelStatus.kind === "busy" && "text-muted-foreground",
+                  )}>
+                    {opencodeModelStatus.text}
+                  </p>
+                ) : field.description ? (
+                  <p className="mt-1 text-[10px] text-muted-foreground leading-snug">{field.description}</p>
+                ) : null}
+              </div>
+            );
+          }
 
           if (field.type === "language-select") {
             return (
@@ -2047,8 +2139,8 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           if (field.type === "multiselect") {
             const selectedValues: string[] = Array.isArray(value) ? value : (value ? [String(value)] : []);
             const options = field.options || [];
-            // pi_agent 节点的 Skill/MCP：按钮拉起弹窗（左列搜索勾选 + 右列介绍），已选以卡片显示并支持快捷删除
-            if (nodeType.id === "pi_agent" && (field.key === "skills" || field.key === "mcps")) {
+            // pi_agent / opencode_agent 节点的 Skill/MCP：按钮拉起弹窗（左列搜索勾选 + 右列介绍），已选以卡片显示并支持快捷删除
+            if ((nodeType.id === "pi_agent" || nodeType.id === "opencode_agent") && (field.key === "skills" || field.key === "mcps")) {
               const pickerKind: PickerKind = field.key === "skills" ? "skills" : "mcps";
               return (
                 <div key={field.key} className={fieldSpanClass(field)}>

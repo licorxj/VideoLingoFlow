@@ -84,6 +84,22 @@ def _workbench_node_status(status: str) -> str:
     return WORKBENCH_NODE_STATUS.get(status, status)
 
 
+def _has_live_dispatch(task: Task) -> bool:
+    """queued 任务是否真的有在途投递（仍可能被 worker 领走执行）。
+
+    queued 只表示「曾经下发过 Celery 消息」，消息可能已丢失（broker 重启 / 消息被丢弃 /
+    worker 未启动），任务会永久卡在 queued（批量页显示「待执行」）：既不该拦住同步工作流，
+    也不该让「继续 / 重跑」点下去毫无反应。判定为「仍有在途投递」的依据：
+      1. dispatch_token 不是哨兵 __stale__（哨兵 = 已复位，明确没有有效投递）；
+      2. 且任务内存在 queued/running 的节点（说明消息已被 worker 领走并开始跑）。
+    """
+    if task.status != "queued":
+        return False
+    if (task.payload or {}).get("dispatch_token") == DISPATCH_STALE:
+        return False
+    return any(node.status in {"queued", "running"} for node in task.nodes)
+
+
 def _task_payload(task: Task) -> dict:
     payload = task.payload or {}
     meta = _batch_meta(task)
@@ -207,11 +223,10 @@ class BatchExecutor:
                     task = session.get(Task, task_id)
                     if task is None or task.status in {"running", "succeeded", "deleted"}:
                         continue
-                    if task.status == "queued" and (task.payload or {}).get("dispatch_token") != DISPATCH_STALE:
-                        _trace(f"跳过任务 {task_id[:8]} status=queued（已有有效投递）")
-                        continue
                 try:
-                    self._enqueue(task_id, mode)
+                    # force：本轮是用户显式启动/继续，僵尸排队（queued 但消息已丢失）也要重新投递，
+                    # 否则任务会永远卡在「待执行」；重复执行由 dispatch fencing 兜底。
+                    self._enqueue(task_id, mode, force=True)
                 except RuntimeError:
                     _trace(f"任务 {task_id[:8]} 投递失败，停止当前批次投递")
                     break  # Celery 不可用等，停止投递
@@ -355,11 +370,17 @@ class BatchExecutor:
         )
         return {"batch_id": batch_id, **result}
 
-    def _enqueue(self, task_id: str, mode: str = "new") -> None:
+    def _enqueue(self, task_id: str, mode: str = "new", force: bool = False) -> bool:
+        """投递单个任务，返回是否真正下发了执行消息。
+
+        force=False 时，卡在 queued 且带有效 dispatch_token 的任务会被单飞保护静默拦下
+        （返回 False，前端表现为点「继续」没反应）。用户显式触发的继续/重跑/启动一律
+        传 force=True，让僵尸排队能重新投递（重复执行由 fencing token 兜底）。
+        """
         with session_scope() as session:
             task = session.get(Task, task_id)
             if task is None:
-                return
+                return False
             workflow = (task.payload or {}).get("workflow", {})
             input_config = (task.payload or {}).get("input", {})
             batch_meta = _batch_meta(task)
@@ -369,7 +390,20 @@ class BatchExecutor:
             f"投递任务 task={task_id[:8]} name={task_name} batch={batch_id[:8] if batch_id else '-'} "
             f"mode={mode} workflow={workflow.get('id', '') or workflow.get('name', '')}"
         )
-        submit_workflow(workflow, input_config, mode=mode, task_id=task_id, enqueue=True, idempotency_scope=task_id)
+        try:
+            _task, dispatched = submit_workflow(
+                workflow, input_config, mode=mode, task_id=task_id, enqueue=True, idempotency_scope=task_id, force=force
+            )
+        except TypeError:
+            # 控制平面走的是未重新编译的旧二进制（submit_workflow 无 force 参数）：降级调用，
+            # 避免用户点「继续」直接 500。此时僵尸排队仍无法重投（行为与修复前一致）。
+            _trace(f"控制平面不支持 force 投递，降级为普通投递 task={task_id[:8]}")
+            _task, dispatched = submit_workflow(
+                workflow, input_config, mode=mode, task_id=task_id, enqueue=True, idempotency_scope=task_id
+            )
+        if not dispatched:
+            _trace(f"任务 {task_id[:8]} 未投递（状态为在途/不可重投），本次操作无实际效果")
+        return dispatched
 
     def start_batch(self, batch_id: str) -> dict:
         tasks = self._tasks_for_batch(batch_id)
@@ -386,9 +420,18 @@ class BatchExecutor:
 
     def sync_workflow(self, batch_id: str, workflow_id: str = "") -> dict:
         tasks = self._tasks_for_batch(batch_id)
-        active_task_ids = [task.id for task in tasks if task.status in {"queued", "running", "stopping"}]
+        # 只有真的在执行（running/stopping）或仍可能被 worker 领走（queued + 有在途投递）
+        # 才拦截同步。卡在 queued 的僵尸排队（消息已丢失、一直显示「待执行」）不应再拦住用户，
+        # 否则既不能同步、又点不动「继续」，任务永远出不来。
+        active_task_ids = [
+            task.id for task in tasks
+            if task.status in {"running", "stopping"} or _has_live_dispatch(task)
+        ]
         if active_task_ids:
             raise RuntimeError(f"批次存在执行中的任务，无法同步工作流: {', '.join(active_task_ids)}")
+        zombie_task_ids = {task.id for task in tasks if task.status == "queued" and not _has_live_dispatch(task)}
+        if zombie_task_ids:
+            _trace(f"批次 {batch_id[:8]} 存在 {len(zombie_task_ids)} 个僵尸排队任务，同步后重置为待投递")
         workflow_id = workflow_id or _batch_meta(tasks[0]).get("workflow_id", "")
         workflow = _load_workflow(workflow_id)
         with session_scope() as session:
@@ -430,6 +473,9 @@ class BatchExecutor:
                         existing.checkpoint_key = None
                         existing.payload = {**node_snapshot, "result": {}}
                 task.payload = {**task.payload, "workflow": workflow, "batch": {**_batch_meta(task), "workflow_id": workflow_id, "workflow_name": workflow.get("name", workflow_id)}}
+                if task.id in zombie_task_ids:
+                    # 同步后把它标记成「当前没有任何有效投递」，后续点「继续」才不会又被单飞保护吞掉
+                    task.payload = {**task.payload, "dispatch_token": DISPATCH_STALE}
                 workspace = _workspace(task.id)
                 workspace.mkdir(parents=True, exist_ok=True)
                 (workspace / "workflow.json").write_text(json.dumps(workflow, ensure_ascii=False), encoding="utf-8")
@@ -448,17 +494,17 @@ class BatchExecutor:
         if task.status in {"running", "stopping"}:
             return {"task_id": task_id, "status": task.status, "already_active": True}
         if task.status == "queued":
-            # queued 仅在「dispatch 哨兵态」（worker 重启复位后无有效投递）时允许从头执行；
-            # 否则会清掉在途任务正在使用的工作区缓存。
-            if (task.payload or {}).get("dispatch_token") != DISPATCH_STALE:
+            # 僵尸排队（消息已丢失、从未被 worker 领走）允许从头执行；
+            # 仍有在途投递证据时拒绝，避免清掉它正在使用的工作区缓存。
+            if _has_live_dispatch(task):
                 return {"task_id": task_id, "status": task.status, "already_active": True}
         elif task.status not in {"created", "failed", "cancelled"}:
             raise ValueError(f"Task {task_id} is not in a retriable state (status={task.status})")
         # 从头执行：清空 cache 中间产物，全新开始
         _clear_workspace_cache(_workspace(task_id))
         _trace(f"重跑任务 batch={batch_id[:8]} task={task_id[:8]}")
-        self._enqueue(task_id, "retry")
-        return {"task_id": task_id, "status": "queued"}
+        dispatched = self._enqueue(task_id, "retry", force=True)
+        return {"task_id": task_id, "status": "queued", "dispatched": dispatched}
 
     def resume_single_task(self, batch_id: str, task_id: str) -> dict:
         task = self._ensure_member(batch_id, task_id)
@@ -467,13 +513,13 @@ class BatchExecutor:
             return {"task_id": task_id, "status": task.status, "already_active": True}
         # queued 必须允许：批次视图把真实 queued 映射为 created 并渲染「继续」按钮
         # （见 WORKBENCH_TASK_STATUS），且 worker 重启复位后的任务正是 queued + 哨兵。
-        # 是否真正需要投递交给 submit_workflow 判定：哨兵态会重新投递，
-        # 仍有有效投递（在途）的任务被单飞保护静默拦下，不会重复执行。
+        # force=True 让僵尸排队（消息已丢失、一直停在 queued）也能被真正重新投递——
+        # 否则单飞保护会静默返回，前端表现为「点继续没反应」；重复执行由 fencing 兜底。
         if task.status not in {"created", "failed", "cancelled", "paused", "queued"}:
             raise ValueError(f"Task {task_id} is not in a resumable state (status={task.status})")
         _trace(f"继续单任务 batch={batch_id[:8]} task={task_id[:8]}")
-        self._enqueue(task_id, "resume")
-        return {"task_id": task_id, "status": "queued"}
+        dispatched = self._enqueue(task_id, "resume", force=True)
+        return {"task_id": task_id, "status": "queued", "dispatched": dispatched}
 
     def delete_batch(self, batch_id: str) -> dict:
         self._signal_stop(batch_id)
