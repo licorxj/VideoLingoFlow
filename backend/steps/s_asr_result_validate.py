@@ -155,6 +155,19 @@ class S_ASRResultValidate(BaseStep):
             return value.strip().lower() in ("1", "true", "yes", "on")
         return False
 
+    def _auto_fix_hint(self) -> str:
+        """未开启「自动修复」时，在报错尾部提示如何启用。
+
+        节点在自动修复关闭时按契约直接抛错；若不提示，容易被误判为
+        「勾了自动修复却没生效」。已开启时不追加任何内容。
+        """
+        if getattr(self, "_auto_fix_enabled", False):
+            return ""
+        return (
+            "\n  · 提示：本节点「自动修复」未开启（配置项 auto_fix），故未做修复。"
+            "勾选节点上的「自动修复」并保存工作流后重新运行，即可自动修复此类不一致。"
+        )
+
     def _fix_segments_from_words(self, items) -> int:
         """规则一：以 words 为准重建每段 text，并更新该段的起始时间。
 
@@ -277,6 +290,7 @@ class S_ASRResultValidate(BaseStep):
                     f"  · 全文 text 长度 {len(nt)}，segments 压平长度 {len(ns)}。\n"
                     f"  · text(归一化):    …{self._snippet(nt, k if k >= 0 else 0)}…\n"
                     f"  · segments(归一化): …{self._snippet(ns, k if k >= 0 else 0)}…"
+                    + self._auto_fix_hint()
                 )
         elif callback:
             callback(40, "未提供 text，跳过 text/segments 校验，仅校验 segments/words")
@@ -313,6 +327,7 @@ class S_ASRResultValidate(BaseStep):
                     f"  · words 压平(归一化):   …{self._snippet(word_norm, k if k >= 0 else 0)}…\n"
                     f"  · 该段原文: {seg.get('text')!r}\n"
                     f"  · 该段 words: {[w.get('word') for w in (seg.get('words') or [])]!r}"
+                    + self._auto_fix_hint()
                 )
 
     def _validate_sentence_list(self, sentences, callback):
@@ -381,6 +396,7 @@ class S_ASRResultValidate(BaseStep):
                             f"  · words 压平(归一化): …{self._snippet(word_norm, k if k >= 0 else 0)}…\n"
                             f"  · 该句原文: {text!r}\n"
                             f"  · 该句 words: {[w.get('word') for w in words]!r}"
+                            + self._auto_fix_hint()
                         )
 
         if callback:

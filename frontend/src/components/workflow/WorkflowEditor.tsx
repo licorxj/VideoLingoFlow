@@ -254,6 +254,10 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const currentProjectId = useProjectStore((state) => state.currentProjectId);
   const TERMINAL_TASK_STATUSES = ["completed", "succeeded", "failed", "cancelled"];
   const TERMINAL_NODE_STATUSES = ["completed", "failed", "cancelled"];
+  // 本轮执行结束的状态：终态之外还包含局部执行（单节点 / 往后执行）收尾时的「等待继续」。
+  // 这类任务实际只跑了部分节点，任务状态停在 paused/interrupted，若不算本轮结束，
+  // 前端会一直保持「执行中」并持续轮询。
+  const RUN_END_TASK_STATUSES = [...TERMINAL_TASK_STATUSES, "paused", "interrupted"];
   const [nodes, setNodes, onNodesChange] = useNodesState<any>(store.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>(store.edges);
 
@@ -1235,7 +1239,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     if (task) {
       setActiveTaskId(nextTaskId);
       syncTaskStateToNodes(task);
-      if (TERMINAL_TASK_STATUSES.includes(task.status)) {
+      if (RUN_END_TASK_STATUSES.includes(task.status)) {
         setExecuting(false);
         setExecutingNode(null);
         setCancelling(false);
@@ -1349,11 +1353,11 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     const monitor = new TaskMonitor<any>({
       taskId,
       fetchTask: async (id, signal) => (await client.get(`/api/tasks/${id}`, { signal })).data?.task,
-      isTerminal: (task) => TERMINAL_TASK_STATUSES.includes(task.status),
+      isTerminal: (task) => RUN_END_TASK_STATUSES.includes(task.status),
       onTask: (task) => {
         setActiveTaskId(taskId);
         syncTaskStateToNodesRef.current(task);
-        if (TERMINAL_TASK_STATUSES.includes(task.status)) {
+        if (RUN_END_TASK_STATUSES.includes(task.status)) {
           setExecuting(false);
           setExecutingNode(null);
           setCancelling(false);
