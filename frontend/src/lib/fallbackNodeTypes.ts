@@ -3764,7 +3764,7 @@ export const FALLBACK_NODE_TYPES = [
   },
   {
     "id": "merge_audio",
-    "name": "音视频配音对齐",
+    "name": "配音片段合并对齐",
     "category": "audio",
     "description": "基于原视频重新配音后，将配音片段按时间戳对齐到原视频的配音音视频对齐",
     "icon": "Merge",
@@ -8347,6 +8347,52 @@ export const FALLBACK_NODE_TYPES = [
     "isBuiltIn": true
   },
   {
+    "id": "set_task_info",
+    "name": "写入任务信息",
+    "category": "flow_control",
+    "description": "「获取任务信息」的逆向：用上游输入值写回任务元信息（任务名称、输入语言、输出语言、变量1、变量2），供下游节点与「获取任务信息」读取；节点本身不产出文件",
+    "icon": "PencilLine",
+    "color": "#8b5cf6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "task_name",
+        "label": "任务名称",
+        "type": "text"
+      },
+      {
+        "id": "input_language",
+        "label": "输入语言",
+        "type": "text"
+      },
+      {
+        "id": "output_language",
+        "label": "输出语言",
+        "type": "text"
+      },
+      {
+        "id": "var1",
+        "label": "变量1",
+        "type": "text"
+      },
+      {
+        "id": "var2",
+        "label": "变量2",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "label": "执行完成情况",
+        "type": "any"
+      }
+    ],
+    "defaultConfig": {},
+    "configFields": [],
+    "isBuiltIn": true
+  },
+  {
     "id": "aigc_comfyui",
     "name": "ComfyUI 生图",
     "category": "aigc",
@@ -11717,6 +11763,162 @@ export const FALLBACK_NODE_TYPES = [
         "type": "textarea",
         "placeholder": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：",
         "description": "节点内人设会拼接到小 Pi 全局默认人设之后"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "opencode_agent",
+    "name": "OpenCode 智能体",
+    "category": "agent",
+    "description": "把本地 opencode CLI 以工作流节点方式嵌入工作流：注入任务背景与输入输出契约，非交互执行一次 opencode 会话（run --format json），解析事件流并收拢产物到任务 cache 目录。需本机已安装 opencode（或在节点设置中填写可执行文件路径）",
+    "icon": "Terminal",
+    "color": "#0ea5e9",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "input_1",
+        "label": "输入1",
+        "type": "any",
+        "required": false
+      },
+      {
+        "id": "input_2",
+        "label": "输入2",
+        "type": "any",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "id": "output_1",
+        "label": "输出1",
+        "type": "any"
+      },
+      {
+        "id": "output_2",
+        "label": "输出2",
+        "type": "any"
+      }
+    ],
+    "defaultConfig": {
+      "inputCount": 2,
+      "outputCount": 2,
+      "opencode_exe": "",
+      "model": "opencode/mimo-v2.5-free",
+      "fallback_models": "opencode/big-pickle",
+      "agent": "",
+      "variant": "",
+      "auto_approve": true,
+      "thinking": false,
+      "pure": false,
+      "dir_name": "",
+      "timeout": 1800,
+      "instruction": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：",
+      "output_items": [
+        {
+          "port": "输出1",
+          "type": "text",
+          "desc": ""
+        },
+        {
+          "port": "输出2",
+          "type": "json",
+          "desc": ""
+        }
+      ]
+    },
+    "configFields": [
+      {
+        "key": "inputCount",
+        "label": "输入端口数",
+        "type": "number",
+        "min": 1,
+        "max": 8
+      },
+      {
+        "key": "outputCount",
+        "label": "输出端口数",
+        "type": "number",
+        "min": 1,
+        "max": 8
+      },
+      {
+        "key": "opencode_exe",
+        "label": "opencode 路径",
+        "type": "text",
+        "placeholder": "留空自动探测",
+        "description": "opencode 可执行文件绝对路径；留空则依次尝试 PATH、环境变量 OPENCODE_EXE 与常见安装位置"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "text",
+        "placeholder": "provider/model，如 opencode/mimo-v2.5-free；留空用 opencode 默认模型",
+        "description": "对应 opencode run -m，格式为 provider/model。默认 opencode/mimo-v2.5-free（免费模型）；留空则用 opencode 自身默认模型"
+      },
+      {
+        "key": "fallback_models",
+        "label": "兜底模型",
+        "type": "textarea",
+        "placeholder": "一行一个 provider/model",
+        "description": "主模型调用失败（未授权 / 无支付方式 / 全程无输出超时）时按顺序回退尝试。一行一个或逗号分隔；留空则不回退"
+      },
+      {
+        "key": "agent",
+        "label": "主 Agent",
+        "type": "text",
+        "placeholder": "留空用默认主 Agent",
+        "description": "对应 opencode run --agent，需为 primary agent"
+      },
+      {
+        "key": "variant",
+        "label": "模型变体",
+        "type": "text",
+        "placeholder": "如 high / max / minimal；留空不指定",
+        "description": "对应 opencode run --variant（推理强度等）",
+        "colSpan": "half"
+      },
+      {
+        "key": "timeout",
+        "label": "会话超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 28800,
+        "colSpan": "half",
+        "description": "单次 opencode 会话的最长执行时间"
+      },
+      {
+        "key": "dir_name",
+        "label": "工作子目录",
+        "type": "text",
+        "placeholder": "留空则在任务根目录执行",
+        "description": "相对任务目录；填写后在该子目录内执行（自动创建）"
+      },
+      {
+        "key": "auto_approve",
+        "label": "自动放行工具权限",
+        "type": "checkbox",
+        "description": "对应 --auto。非交互模式下未预授权的工具权限会被自动拒绝，关闭后智能体可能无法读写文件、执行命令"
+      },
+      {
+        "key": "thinking",
+        "label": "输出思考过程",
+        "type": "checkbox",
+        "description": "对应 --thinking，将 reasoning 事件一并计入"
+      },
+      {
+        "key": "pure",
+        "label": "纯净模式(不加载插件)",
+        "type": "checkbox",
+        "description": "对应 --pure，运行时不加载外部插件"
+      },
+      {
+        "key": "instruction",
+        "label": "任务指令",
+        "type": "textarea",
+        "placeholder": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：",
+        "description": "节点任务指令，会与任务背景、输入端口数据、输出产物契约一起拼接为 opencode 的输入消息"
       }
     ],
     "isBuiltIn": true

@@ -174,11 +174,13 @@ def _process_and_write_segment(
     speed_ratio: float,
     output_count: int,
     num_workers: int,
+    cancel_callback: Optional[Callable[[], bool]] = None,
 ) -> int:
     """流式处理一个片段并写入 writer，返回写入帧数。
 
     frames_iter: 由 _iter_segment_frames 生成的 (local_start, batch) 迭代器。
     帧以滑动窗口形式持有，内存占用始终限制在少数几个批次内，不缓存整段。
+    cancel_callback: 协作取消回调，返回 True 时中止处理（逐批检查一次）。
     """
     if task_type == "normal":
         # 正常片段：逐批读取、逐帧写入，无需任何缓存
@@ -455,6 +457,7 @@ def adjust_video_speed_segments(
         n_written = _process_and_write_segment(
             writer, frames_iter, task["type"], n_input,
             task["ratio"], task["output_count"], num_workers,
+            cancel_callback=cancel_callback,
         )
         output_start = written_total / fps if fps > 0 else 0.0
         written_total += n_written

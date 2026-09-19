@@ -53,7 +53,7 @@ STEP_NAMES: dict = {
     "s07_merge_sub_vid": "字幕烧录",
     "s08_dub_task": "配音任务生成",
     "s09_tts": "语音合成(TTS)",
-    "s10_merge_audio": "音频合并",
+    "s10_merge_audio": "配音片段合并对齐",
     "s11_merge_dub_vid": "配音视频合成",
     "s12_cover": "封面设计",
     "s13_watermark": "水印添加",

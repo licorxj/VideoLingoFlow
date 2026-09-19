@@ -420,7 +420,7 @@ export function getVisibleOutputs(nodeType: NodeTypeDef, config: Record<string, 
     // "不需要输入" 是常驻占位输出，不受 selectedTypes 影响
     return nodeType.outputs.filter((p) => selectedTypes.includes(p.id) || p.id === "no_input");
   }
-  if (nodeType.id === "pi_agent") {
+  if (nodeType.id === "pi_agent" || nodeType.id === "opencode_agent") {
     return dynamicPorts(nodeType.outputs, config.outputCount, "output");
   }
   if (nodeType.id === "json_get") {
@@ -448,7 +448,7 @@ export function getNodeInputs(nodeType: NodeTypeDef, config: Record<string, any>
       type: item.type,
     }));
   }
-  if (nodeType.id === "pi_agent" || nodeType.id === "output_merge_list") {
+  if (nodeType.id === "pi_agent" || nodeType.id === "opencode_agent" || nodeType.id === "output_merge_list") {
     return dynamicPorts(nodeType.inputs, config.inputCount, "input");
   }
   return nodeType.inputs;

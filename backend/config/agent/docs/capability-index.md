@@ -130,7 +130,7 @@ AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*
 - `audio_denoise`：降噪
 - `audio_transcode`：音频转码
 - `extract_audio`：音频分离
-- `merge_audio`：音视频配音对齐
+- `merge_audio`：配音片段合并对齐
 - `merge_dub`：配音拼接
 - `track_mix`：音轨混流
 - `track_separation`：音轨分离 ·子进程
@@ -214,6 +214,7 @@ AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*
 #### 智能体（`agent`）
 - `editor_agent`：剪辑 AI Agent ·子进程
 - `pi_agent`：小 Pi 通用智能体 ·子进程
+- `opencode_agent`：OpenCode 智能体 ·子进程（驱动本地 opencode CLI 非交互执行一次自动化任务，产物落任务目录）
 
 #### 工具（`utility`）
 - `json_editor`：JSON 编辑

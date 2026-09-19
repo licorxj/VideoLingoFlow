@@ -51,6 +51,7 @@ from backend.steps.s_editor_agent import S_EditorAgent
 from backend.steps.s_llm_request import S_LLMRequest
 from backend.steps.s_http_request import S_HttpRequest
 from backend.steps.s_pi_agent import S_PiAgent
+from backend.steps.s_opencode_agent import S_OpenCodeAgent
 from backend.steps.s_imagegen import S_ImageGen
 from backend.steps.s_video_frame_extract import S_VideoFrameExtract
 from backend.steps.s_video_transcode import S_VideoTranscode
@@ -63,6 +64,7 @@ from backend.steps.s_xiaopai_publish import S_XiaopaiPublish
 from backend.steps.s_resolve_path import S_ResolvePath
 from backend.steps.s_translate_task_name import S_TranslateTaskName
 from backend.steps.s_get_task_info import S_GetTaskInfo
+from backend.steps.s_set_task_info import S_SetTaskInfo
 from backend.steps.s_json_to_text import S_JsonToText
 from backend.steps.s_json_editor import S_JsonEditor
 from backend.steps.s_json_get import S_JsonGet
@@ -202,6 +204,8 @@ _STEPS = {
     "s_http_request": S_HttpRequest(),
     "http_request": S_HttpRequest(),
     "pi_agent": S_PiAgent(),
+    "s_opencode_agent": S_OpenCodeAgent(),
+    "opencode_agent": S_OpenCodeAgent(),
     "s_imagegen": S_ImageGen(),
     "image_gen": S_ImageGen(),
     "aigc_comfyui": S_AIGC_ComfyUI(),
@@ -257,6 +261,8 @@ _STEPS = {
     "translate_task_name": S_TranslateTaskName(),
     # 获取任务信息（流程控制分组，只读 task.json + 输入节点配置，输出文本）
     "get_task_info": S_GetTaskInfo(),
+    # 写入任务信息（「获取任务信息」的逆向：把输入值写回 task.json 的任务信息）
+    "set_task_info": S_SetTaskInfo(),
     "s_json_to_text": S_JsonToText(),
     "json_to_text": S_JsonToText(),
     "s_json_editor": S_JsonEditor(),

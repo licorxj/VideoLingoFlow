@@ -147,7 +147,7 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   s07_subtitle_align: "字幕对齐",
   s08_dub_task: "配音任务",
   s09_tts: "语音合成",
-  s10_merge_audio: "音频合并",
+  s10_merge_audio: "配音片段合并对齐",
   s16_vocal_separation: "人声分离",
   path_to_title: "路径转标题",
   image_gen: "封面生成",

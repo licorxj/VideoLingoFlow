@@ -68,6 +68,8 @@ from backend.control_plane.workflow_runtime import (
     _run_node,
     _write_legacy_task,
     queue_for,
+    reset_legacy_input_override,
+    set_legacy_input_override,
 )
 from backend.steps.step_registry import new_step_instance
 
@@ -244,13 +246,76 @@ def _input_fallback_outputs(node_payload: dict) -> dict:
     return outputs
 
 
+# 子工作流 input 节点的数据类字段：由「输入映射」负责传入，设置项覆盖里忽略这些 key
+_INPUT_DATA_FIELD_KEYS = (
+    "selectedTypes", "videoPath", "audioPath", "subtitlePath", "url", "filePath",
+)
+
+# 输入节点端口 → input 节点 config key：用于把注入值回填进 workspace/task.json 的 input
+_PORT_TO_INPUT_CONFIG_KEY = {
+    "video": "videoPath",
+    "audio": "audioPath",
+    "subtitle": "subtitlePath",
+    "url": "url",
+}
+
+
+def _apply_input_config_overrides(inner_nodes: list, overrides: dict) -> list:
+    """把「工作流执行器」节点上填写的 inputConfigs 合并进子工作流 input 节点的 config。
+
+    子工作流的 input 节点既有数据类字段（videoPath/audioPath/...），也有设置项
+    （source_language / target_language / var1 / var2 / copyInputs ...）。允许在父节点
+    统一覆盖，避免子工作流只能吃自己文件里保存的旧值。
+    留空（None/""）表示沿用子工作流原始配置。
+    """
+    if not isinstance(overrides, dict) or not overrides:
+        return inner_nodes
+    patched: list = []
+    for node in inner_nodes or []:
+        if not isinstance(node, dict) or _node_type(node) != "input":
+            patched.append(node)
+            continue
+        override = overrides.get(str(node.get("id") or ""))
+        if not isinstance(override, dict) or not override:
+            patched.append(node)
+            continue
+        item = dict(node)
+        data = dict(item.get("data") or {})
+        node_config = dict(data.get("config") or {})
+        for key, value in override.items():
+            if key in _INPUT_DATA_FIELD_KEYS:
+                continue  # 数据输入由「输入映射」负责
+            if value is None or value == "":
+                continue
+            node_config[key] = value
+        data["config"] = node_config
+        item["data"] = data
+        patched.append(item)
+    return patched
+
+
+def _inner_input_config(inner_nodes: list) -> dict:
+    """取子工作流 input 节点的 config（已合并父节点覆盖值）。
+
+    该 dict 会作为 ``input_config`` 传给 ``_resolve_inputs_from``，由其向下游节点注入
+    source_language / target_language / var1 / var2 等设置项。
+    """
+    for node in inner_nodes or []:
+        if isinstance(node, dict) and _node_type(node) == "input":
+            return dict(((node.get("data") or {}).get("config")) or {})
+    return {}
+
+
 # --------------------------------------------------------------------------- #
 # 端口映射
 # --------------------------------------------------------------------------- #
-def _build_injections(mappings: list, outer_inputs: dict, prefix: str) -> dict:
+def _build_injections(mappings: list, outer_inputs: dict, prefix: str, nodes_by_id: dict | None = None) -> dict:
     """构造输入注入：{虚拟节点 id: {端口: 值}}。
 
     ``outer_inputs`` 为本节点对外端口（in_1..in_N）实际收到的上游值。
+
+    传入 ``nodes_by_id`` 时会校验目标节点类型：输入桥接只允许注入子工作流的 input 节点。
+    注入其他节点会绕过连线强行改写它的输入，造成上下游依赖错乱，因此直接忽略。
     """
     injections: dict[str, dict] = {}
     for mapping in mappings or []:
@@ -261,8 +326,20 @@ def _build_injections(mappings: list, outer_inputs: dict, prefix: str) -> dict:
         target_port = str(mapping.get("targetPortId") or "")
         if not exposed or not target_node or not target_port:
             continue
+        if nodes_by_id is not None and _node_type(nodes_by_id.get(f"{prefix}{target_node}") or {}) != "input":
+            print(
+                f"[wf_runner] 忽略非法输入映射：目标 {target_node} 不是输入节点"
+                f"（输入桥接只能指向子工作流的 input 节点）",
+                flush=True,
+            )
+            continue
         value = outer_inputs.get(exposed, "")
         if value in (None, "", [], {}):
+            print(
+                f"[wf_runner] 输入映射 {exposed} → {target_node}.{target_port} 无值"
+                f"（上游未连线或上游输出为空），本次跳过",
+                flush=True,
+            )
             continue
         injections.setdefault(f"{prefix}{target_node}", {})[target_port] = value
     return injections
@@ -451,6 +528,10 @@ def run_workflow_runner_node(task_id: str, runner_node_id: str, workspace: Path,
     if not inner_nodes:
         raise ValueError(f"工作流 {wf_id} 中没有可执行的节点")
 
+    # 输入节点设置项覆盖：合并进子工作流 input 节点的 config，
+    # 使语言/变量等设置项、以及未被端口映射覆盖的默认输入都能生效
+    inner_nodes = _apply_input_config_overrides(inner_nodes, config.get("inputConfigs") or {})
+
     # --- 执行目录 ---
     workspace_mode = str(config.get("workspaceMode") or "subdir")
     if workspace_mode == "inherit":
@@ -492,23 +573,42 @@ def run_workflow_runner_node(task_id: str, runner_node_id: str, workspace: Path,
 
     # --- 输入 ---
     outer_inputs = _resolve_step_inputs(task_id, runner_node_id, workspace)
-    injections = _build_injections(config.get("inputMappings") or [], outer_inputs, prefix)
+    injections = _build_injections(config.get("inputMappings") or [], outer_inputs, prefix, nodes_by_id)
+    # 子工作流 input 节点 config：_resolve_inputs_from 据此向下游注入 source_language/target_language/var1/var2
+    inner_input_config = _inner_input_config(inner_nodes)
+
+    # 子流程内依赖 workspace/task.json 的步骤（如「路径转标题」读 input.videoPath）需要看到子图的输入：
+    # 以 input 节点 config 为基础，再把本次实际注入的端口值回填成对应 config key（video → videoPath …）
+    legacy_input = dict(inner_input_config)
+    for vnode_id, port_values in (injections or {}).items():
+        if _node_type(nodes_by_id.get(vnode_id) or {}) != "input":
+            continue
+        for port, value in (port_values or {}).items():
+            config_key = _PORT_TO_INPUT_CONFIG_KEY.get(str(port))
+            if config_key and value not in (None, "", [], {}):
+                legacy_input[config_key] = value
 
     outputs_by_node: dict[str, dict] = {}
     layers = _build_layers(vnode_ids, vedges) or [[node_id] for node_id in vnode_ids]
     total = len(vnode_ids)
 
     def run_one(node_id: str) -> None:
-        if _node_type(nodes_by_id.get(node_id) or {}) == "input":
-            # 子工作流的 input 节点：直接产出，不交给 _run_node（否则会读父任务 input）
-            outs = _input_fallback_outputs(nodes_by_id[node_id])
-            outs.update(injections.get(node_id) or {})
-            _mark_input_node_done(task_id, node_id, outs, child_ws)
-            return
-        step_inputs = _resolve_inputs_from(nodes_by_id, vedges, outputs_by_node, {}, node_id)
-        step_inputs.update(injections.get(node_id) or {})
-        _run_node(task_id, node_id, child_ws, step_factory=new_step_instance, step_inputs=step_inputs)
+        # 层内并行的工作线程不继承主线程上下文，需各自设置 legacy input 替身
+        token = set_legacy_input_override(legacy_input)
+        try:
+            if _node_type(nodes_by_id.get(node_id) or {}) == "input":
+                # 子工作流的 input 节点：直接产出，不交给 _run_node（否则会读父任务 input）
+                outs = _input_fallback_outputs(nodes_by_id[node_id])
+                outs.update(injections.get(node_id) or {})
+                _mark_input_node_done(task_id, node_id, outs, child_ws)
+                return
+            step_inputs = _resolve_inputs_from(nodes_by_id, vedges, outputs_by_node, inner_input_config, node_id)
+            step_inputs.update(injections.get(node_id) or {})
+            _run_node(task_id, node_id, child_ws, step_factory=new_step_instance, step_inputs=step_inputs)
+        finally:
+            reset_legacy_input_override(token)
 
+    main_token = set_legacy_input_override(legacy_input)
     try:
         done = 0
         for layer in layers:
@@ -537,6 +637,8 @@ def run_workflow_runner_node(task_id: str, runner_node_id: str, workspace: Path,
         # 失败时保留虚拟节点，便于在任务详情中定位子工作流内部的失败节点
         print(f"[wf_runner] 子工作流执行失败，保留虚拟节点以便排查: runner={runner_node_id}", flush=True)
         raise
+    finally:
+        reset_legacy_input_override(main_token)
 
     # --- 输出 ---
     mapped = _apply_output_mappings(config.get("outputMappings") or [], prefix, outputs_by_node)

@@ -28,7 +28,7 @@ import {
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
   Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
-  Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes,
+  Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes, Terminal,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
@@ -49,7 +49,7 @@ const ICON_MAP: Record<string, any> = {
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
   Eraser, Type, Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
-  Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes,
+  Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes, Terminal,
 };
 
 /** 节点头部顶栏：只有在该元素上按下鼠标才允许拖动节点，避免正文内框选/拖动误触移动节点 */
@@ -1594,7 +1594,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
 
   const configFields = (() => {
     const base = (dynamicFields.length > 0 ? dynamicFields : nodeType.configFields) || [];
-    if (nodeType.id !== "pi_agent") return base;
+    if (nodeType.id !== "pi_agent" && nodeType.id !== "opencode_agent") return base;
     return base
       .filter((field: ConfigField) => field.key !== "inputCount" && field.key !== "outputCount")
       .map((field: ConfigField) => {
@@ -2528,6 +2528,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const visibleOutputs = getVisibleOutputs(nodeType, config);
   const visibleInputs = getNodeInputs(nodeType, config);
   const isPiAgent = nodeType.id === "pi_agent";
+  const isOpenCodeAgent = nodeType.id === "opencode_agent";
   const isSeedance = (nodeType.id || "").startsWith("seedance_");
   const SEEDANCE_MODE_MAP: Record<string, string> = {
     seedance_txt2video: "txt2video",
@@ -2536,7 +2537,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
     seedance_autovideo: "autovideo",
   };
   const seedanceMode = SEEDANCE_MODE_MAP[nodeType.id || ""] || "txt2video";
-  const isDynamicPorts = isPiAgent || nodeType.id === "output_merge_list" || nodeType.id === "json_get";
+  const isDynamicPorts = isPiAgent || isOpenCodeAgent || nodeType.id === "output_merge_list" || nodeType.id === "json_get";
   const dedupedOutputEntries = (() => {
     const seen = new Set<string>();
     const rawOutputs = nd.outputs;
@@ -2898,7 +2899,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
       <div className="px-3 py-2 space-y-1">
         {isDynamicPorts && (
           <div className="flex items-center gap-2 mb-1">
-            {(isPiAgent || nodeType.id === "output_merge_list") && (
+            {(isPiAgent || isOpenCodeAgent || nodeType.id === "output_merge_list") && (
               <>
                 <span className="text-[10px] font-semibold text-muted-foreground">输入</span>
                 <button
@@ -2918,7 +2919,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                 <span className="text-[10px] text-muted-foreground">{visibleInputs.length}</span>
               </>
             )}
-            {(isPiAgent || nodeType.id === "json_get") && (
+            {(isPiAgent || isOpenCodeAgent || nodeType.id === "json_get") && (
               <>
                 <span className="text-[10px] font-semibold text-muted-foreground ml-3">输出</span>
                 <button
@@ -3568,8 +3569,8 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         />
       )}
 
-      {/* pi_agent: 输出产物设置板块 */}
-      {isPiAgent && expanded && (
+      {/* pi_agent / opencode_agent: 输出产物设置板块 */}
+      {(isPiAgent || isOpenCodeAgent) && expanded && (
         <div className="px-3 pb-3 border-t border-border/50 pt-2 space-y-2">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-semibold text-foreground">输出产物设置</span>

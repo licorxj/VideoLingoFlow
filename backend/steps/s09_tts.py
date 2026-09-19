@@ -741,7 +741,7 @@ class S09TTS(BaseStep):
         # 解析TTS配置
         tts_config = self._parse_tts_config()
 
-        # 保存TTS配置供下游（s10音频合并）使用
+        # 保存TTS配置供下游（s10 配音片段合并对齐）使用
         tts_config_path = os.path.join(task_dir, "cache", "tts_config.json")
         os.makedirs(os.path.dirname(tts_config_path), exist_ok=True)
         with open(tts_config_path, "w", encoding="utf-8") as f:

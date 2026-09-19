@@ -416,7 +416,7 @@
       },
       "data": {
         "nodeType": "merge_audio",
-        "label": "音频合并",
+        "label": "配音片段合并对齐",
         "config": {
           "video_speed_adjust": false,
           "speed_min": "1",

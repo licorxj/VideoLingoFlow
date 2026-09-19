@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import client from "@/api/client";
-import { getNodeTypeDef } from "@/lib/workflowTypes";
+import { getNodeTypeDef, isConfigFieldVisible, type ConfigField } from "@/lib/workflowTypes";
+import { LANGUAGE_OPTIONS } from "@/lib/languages";
 import { Plus, Trash2 } from "lucide-react";
 
 /** 「工作流执行器」节点的输入输出映射编辑器。
@@ -27,6 +28,16 @@ interface Props {
 const INPUT_PORTS = ["in_1", "in_2", "in_3", "in_4"];
 const OUTPUT_PORTS = ["out_1", "out_2", "out_3", "out_4"];
 const INPUT_NODE_PORTS = ["video", "audio", "subtitle", "url"];
+
+/** 子工作流 input 节点的数据类字段：由上方「输入映射」负责传入，不在设置项里重复填写 */
+const INPUT_DATA_FIELD_KEYS = [
+  "selectedTypes",
+  "videoPath",
+  "audioPath",
+  "subtitlePath",
+  "url",
+  "filePath",
+];
 
 /** 端口候选项：id 写入映射，label 用于下拉展示 */
 interface PortOption {
@@ -159,20 +170,36 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
   const setInputMappings = (rows: MappingRow[]) => onConfigChange("inputMappings", rows);
   const setOutputMappings = (rows: MappingRow[]) => onConfigChange("outputMappings", rows);
 
-  /** 输入映射的目标只能是子工作流的「输入」节点 */
-  const inputNodeOptions = useMemo(
-    () => nodeOptions.filter((o) => o.nodeType === "input"),
-    [nodeOptions]
+  /** 子工作流的「输入」节点：既是输入映射的唯一目标，也承载可覆盖的设置项 */
+  const innerInputNodes = useMemo<{ id: string; label: string; config: Record<string, any> }[]>(
+    () =>
+      nodes
+        .filter((n: any) => String((n.data || {}).nodeType || "") === "input")
+        .map((n: any) => {
+          const id = String(n.id);
+          return {
+            id,
+            label: `${String((n.data || {}).label || "输入")} · ${id.length > 10 ? `…${id.slice(-6)}` : id}`,
+            config: ((n.data || {}).config || {}) as Record<string, any>,
+          };
+        }),
+    [nodes]
   );
 
-  // 智能默认：子工作流只有一个输入节点时，自动补全已有映射行的目标节点
+  /** 输入桥接的目标固定为子工作流的输入节点（取第一个），不允许改选其他节点 */
+  const defaultInputNodeId = innerInputNodes.length ? innerInputNodes[0].id : "";
+
+  // 强制收敛：把所有输入映射行的目标统一为输入节点，顺带纠正历史配置里指向其他节点的值
   useEffect(() => {
-    if (inputNodeOptions.length !== 1 || inputMappings.length === 0) return;
-    if (inputMappings.every((row) => row.targetNodeId)) return;
-    const only = inputNodeOptions[0].id;
-    setInputMappings(inputMappings.map((row) => (row.targetNodeId ? row : { ...row, targetNodeId: only })));
+    if (!defaultInputNodeId || inputMappings.length === 0) return;
+    if (inputMappings.every((row) => row.targetNodeId === defaultInputNodeId)) return;
+    setInputMappings(
+      inputMappings.map((row) =>
+        row.targetNodeId === defaultInputNodeId ? row : { ...row, targetNodeId: defaultInputNodeId }
+      )
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inputNodeOptions, inputMappings]);
+  }, [defaultInputNodeId, inputMappings]);
 
   const updateInput = (index: number, patch: MappingRow) => {
     const next = inputMappings.map((row, i) => (i === index ? { ...row, ...patch } : row));
@@ -183,13 +210,112 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
     setOutputMappings(next);
   };
 
+  // ── 输入节点设置项：覆盖子工作流 input 节点的 config（语言 / 变量 / 默认输入等） ──
+  const inputConfigs: Record<string, Record<string, any>> =
+    config.inputConfigs && typeof config.inputConfigs === "object" ? config.inputConfigs : {};
+
+  const setInputConfigValue = (nodeId: string, key: string, value: any) => {
+    onConfigChange("inputConfigs", {
+      ...inputConfigs,
+      [nodeId]: { ...(inputConfigs[nodeId] || {}), [key]: value },
+    });
+  };
+
+  const renderInputFieldControl = (
+    field: ConfigField,
+    value: any,
+    onChange: (v: any) => void
+  ) => {
+    if (field.type === "chips") {
+      const selected: string[] = Array.isArray(value) ? value : [];
+      return (
+        <div className="flex flex-wrap gap-1">
+          {(field.options || []).map((opt) => {
+            const on = selected.includes(opt.value);
+            return (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() =>
+                  onChange(on ? selected.filter((v) => v !== opt.value) : [...selected, opt.value])
+                }
+                className={
+                  "rounded-full border px-2 py-0.5 text-[10px] transition-colors " +
+                  (on
+                    ? "border-primary bg-primary/15 text-foreground"
+                    : "border-border text-muted-foreground hover:text-foreground")
+                }
+              >
+                {opt.label}
+              </button>
+            );
+          })}
+        </div>
+      );
+    }
+    if (field.type === "checkbox" || field.type === "toggle") {
+      return (
+        <input
+          type="checkbox"
+          checked={!!value}
+          onChange={(e) => onChange(e.target.checked)}
+          className="h-3.5 w-3.5 rounded border-border accent-primary"
+        />
+      );
+    }
+    if (field.type === "select" || field.type === "language-select" || field.type === "multiselect") {
+      const options = field.type === "language-select" ? LANGUAGE_OPTIONS : field.options || [];
+      return (
+        <select
+          className={cellClass}
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">沿用子工作流原设置</option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      );
+    }
+    if (field.type === "number" || field.type === "slider") {
+      return (
+        <input
+          type="number"
+          className={cellClass}
+          value={value ?? ""}
+          min={field.min}
+          max={field.max}
+          step={field.step}
+          onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))}
+        />
+      );
+    }
+    return (
+      <input
+        type="text"
+        className={cellClass}
+        value={value ?? ""}
+        placeholder={field.placeholder || ""}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  };
+
   const cellClass =
     "w-full rounded border border-border bg-background px-1.5 py-1 text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
 
-  const renderNodeSelect = (value: string, onChange: (v: string) => void) => (
+  const renderNodeSelect = (
+    value: string,
+    options: { id: string; label: string }[],
+    placeholder: string,
+    onChange: (v: string) => void
+  ) => (
     <select className={cellClass} value={value || ""} onChange={(e) => onChange(e.target.value)}>
-      <option value="">选择节点</option>
-      {nodeOptions.map((opt) => (
+      <option value="">{placeholder}</option>
+      {options.map((opt) => (
         <option key={opt.id} value={opt.id}>
           {opt.label}
         </option>
@@ -253,8 +379,9 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
       ) : (
         <div className="space-y-1">
           {rows.map((row, index) => {
+            // 输入映射的目标固定为输入节点，直接用固定值，不依赖行内数据
             const nodeId = String(
-              (direction === "in" ? row.targetNodeId : row.internalNodeId) || ""
+              (direction === "in" ? defaultInputNodeId : row.internalNodeId) || ""
             );
             // 两种映射取的都是该节点的 outputs：
             // 输入映射注入的是 input 节点的产出端口（video/audio/subtitle/url…），
@@ -277,10 +404,16 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
                     </option>
                   ))}
                 </select>
-                {renderNodeSelect(nodeId, (v) =>
-                  onUpdate(
-                    index,
-                    (direction === "in" ? { targetNodeId: v } : { internalNodeId: v }) as MappingRow
+                {direction === "in" ? (
+                  <div
+                    className="truncate rounded border border-dashed border-border px-1.5 py-1 text-[11px] text-muted-foreground"
+                    title={nodeId}
+                  >
+                    {innerInputNodes[0]?.label || "该工作流无输入节点"}
+                  </div>
+                ) : (
+                  renderNodeSelect(nodeId, nodeOptions, "选择节点", (v) =>
+                    onUpdate(index, { internalNodeId: v } as MappingRow)
                   )
                 )}
                 {renderPortSelect(
@@ -326,11 +459,17 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
       </div>
       {renderSection(
         "输入映射（本节点 → 子工作流）",
-        "把本节点的 in_1~in_4 端口值，注入到子工作流「输入」节点对应的输入项（目标只能是输入节点）",
+        "把本节点的 in_1~in_4 端口值，注入到子工作流「输入」节点对应的输入项（目标固定为输入节点，不可改选）",
         inputMappings,
         INPUT_PORTS,
         "in",
-        () => setInputMappings([...inputMappings, { exposedPortId: "", targetNodeId: "", targetPortId: "" }]),
+        () => {
+          if (!defaultInputNodeId) return;
+          setInputMappings([
+            ...inputMappings,
+            { exposedPortId: "", targetNodeId: defaultInputNodeId, targetPortId: "" },
+          ]);
+        },
         (i) => setInputMappings(inputMappings.filter((_, idx) => idx !== i)),
         updateInput
       )}
@@ -344,6 +483,61 @@ export default function WorkflowRunnerMappingField({ config, onConfigChange }: P
         (i) => setOutputMappings(outputMappings.filter((_, idx) => idx !== i)),
         updateOutput
       )}
+      {innerInputNodes.length > 0
+        ? innerInputNodes.map((node) => {
+            const fields = (getNodeTypeDef("input")?.configFields || []) as ConfigField[];
+            const override = inputConfigs[node.id] || {};
+            const merged = { ...node.config, ...override };
+            return (
+              <div key={node.id} className="space-y-1.5">
+                <div className="text-[11px] font-medium text-foreground">
+                  输入节点设置（{node.label}）
+                </div>
+                <div className="text-[10px] leading-tight text-muted-foreground">
+                  「输入方式 / 各输入文件」由上方「输入映射」负责传入，此处不再重复设置；本区只覆盖输入语言 / 输出语言 / 变量等设置项，留空表示沿用子工作流原设置
+                </div>
+                <div className="grid grid-cols-2 gap-x-2 gap-y-2 rounded-md border border-border bg-background/40 p-2">
+                  {fields
+                    .filter(
+                      (f) =>
+                        !INPUT_DATA_FIELD_KEYS.includes(f.key) && isConfigFieldVisible(f, merged)
+                    )
+                    .map((field) => {
+                      const inline = field.type === "checkbox" || field.type === "toggle";
+                      const raw = override[field.key];
+                      const value =
+                        raw !== undefined
+                          ? raw
+                          : node.config[field.key] ?? field.defaultValue ?? "";
+                      const control = renderInputFieldControl(field, value, (v) =>
+                        setInputConfigValue(node.id, field.key, v)
+                      );
+                      return (
+                        <div
+                          key={field.key}
+                          className={field.colSpan === "full" ? "col-span-2" : ""}
+                        >
+                          {inline ? (
+                            <label className="flex items-center gap-1.5 text-[11px] text-foreground">
+                              {control}
+                              {field.label}
+                            </label>
+                          ) : (
+                            <>
+                              <div className="mb-0.5 text-[10px] text-muted-foreground">
+                                {field.label}
+                              </div>
+                              {control}
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                </div>
+              </div>
+            );
+          })
+        : null}
     </div>
   );
 }

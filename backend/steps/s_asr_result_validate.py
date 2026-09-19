@@ -252,9 +252,12 @@ class S_ASRResultValidate(BaseStep):
         if not isinstance(segments, list) or not segments:
             raise ValueError("ASR 校验未通过：缺少 segments 或 segments 为空")
 
-        # 自动修复：先统一 segments / words / text / speaker，再走下面的校验做复核
+        # 自动修复：先统一 segments / words / text / speaker，再走下面的校验做复核。
+        # 注意：修复规则二会重写 asr["text"]，因此必须重新读取 text；
+        # 否则下面仍拿修复前的旧 text 做比对，会把「已修好」误报为「text ↔ segments 不一致」。
         if self._auto_fix_enabled:
             self._apply_auto_fix(asr, segments, callback)
+            text = asr.get("text")
 
         # 第一级：全文 text 必须与「压平后的 segments」完全一致（归一化后）。
         # 之前只校验「segments 是 text 的子序列（方向）」，会漏掉 text 比 segments 多/少内容，

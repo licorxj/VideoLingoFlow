@@ -46,7 +46,7 @@ except ImportError:
 
 class S10MergeAudio(BaseStep):
     step_id = "s10_merge_audio"
-    step_name = "音频合并"
+    step_name = "配音片段合并对齐"
     dependencies = ["s09_tts"]
 
     def check_artifact(self, task_dir: str) -> bool:
@@ -111,7 +111,7 @@ class S10MergeAudio(BaseStep):
             dub_task_path = os.path.join(task_dir, dub_task_path)
         if not os.path.exists(dub_task_path):
             raise FileNotFoundError(
-                f"音频合并缺少配音任务单 audio_manifest: {dub_task_path}\n"
+                f"配音片段合并对齐缺少配音任务单 audio_manifest: {dub_task_path}\n"
                 "请检查工作流连线：将上游 dub_task/tts 节点的「TTS任务单」输出"
                 "连接到本节点的 audio_manifest 输入，并确保上游已成功执行。"
             )
@@ -123,7 +123,7 @@ class S10MergeAudio(BaseStep):
         if total == 0:
             return {"artifacts": [], "outputs": {}}
 
-        print(f"\n[S10] 音频合并开始，共 {total} 段")
+        print(f"\n[S10] 配音片段合并对齐开始，共 {total} 段")
         print(f"[S10] 配置: 视频变速={video_speed_adjust}")
         print(f"[S10] 速度范围: min={speed_min}, max={speed_max}, gap_threshold={gap_threshold}, fast_limit={fast_limit}")
         if audio_format_override:
@@ -261,9 +261,9 @@ class S10MergeAudio(BaseStep):
             outputs["video_adjusted"] = input_video_path
 
         if callback:
-            callback(100, "音频合并完成")
+            callback(100, "配音片段合并对齐完成")
 
-        print(f"\n[S10] 音频合并完成")
+        print(f"\n[S10] 配音片段合并对齐完成")
         print(f"  - 配音音频: {dub_mp3_path}")
         print(f"  - 配音字幕: {dub_srt_path}")
         print(f"  - 双语字幕: {dub_bilingual_srt_path}")
