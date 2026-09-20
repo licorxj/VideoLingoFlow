@@ -84,6 +84,17 @@ export interface BatchArchiveResult {
   failed: { task_id: string; error: string }[];
 }
 
+export interface BatchDispatchResult {
+  batch_id: string;
+  mode: string;
+  /** 已投递到队列、进入排队等待执行的任务 id */
+  dispatched: string[];
+  /** 未投递的任务及原因（正在执行 / 已完成 / 已在队列排队 / 状态不支持…） */
+  skipped: { task_id: string; reason: string }[];
+  /** 投递后的批量队列概览 */
+  queue: { queued: number; running: number };
+}
+
 export interface BatchCreateRequest {
   workflow_id: string;
   batch_name?: string;
@@ -183,6 +194,11 @@ export const batchApi = {
 
   resumeTask: (batchId: string, taskId: string) =>
     client.post(`/api/batch/${batchId}/${taskId}/resume`).then((r) => r.data),
+
+  /** 批量投递到执行队列排队（投递 ≠ 立即执行，实际并行数由 Worker 并发决定） */
+  dispatchTasks: (batchId: string, taskIds: string[], mode: "resume" | "retry" = "resume") =>
+    client.post(`/api/batch/${batchId}/dispatch-tasks`, { task_ids: taskIds, mode })
+      .then((r) => r.data as BatchDispatchResult),
 
   deleteBatch: (batchId: string) =>
     client.delete(`/api/batch/${batchId}`).then((r) => r.data),

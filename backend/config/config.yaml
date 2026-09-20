@@ -30,6 +30,8 @@ llm:
   api_key: "123"
   max_concurrent: 10
   max_request_chars: 6000
+  # 两次 LLM 请求的最小间隔（秒）：给上游限速留余量，防止批量步骤瞬时打爆 429
+  min_request_interval: 0.5
   timeout: 300
   retry_enabled: true
   retry_count: 1
@@ -178,3 +180,4 @@ videogen:
   default_t2v_model: 'generate-veo3-1-video'
   default_i2v_model: 'bytedance/seedance-2-mini'
   default_v2v_model: 'bytedance/seedance-2-mini'
+  v2v_interface: kieai_video

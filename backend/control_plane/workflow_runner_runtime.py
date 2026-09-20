@@ -240,6 +240,8 @@ def _input_fallback_outputs(node_payload: dict) -> dict:
     outputs: dict[str, Any] = {}
     if config.get("url"):
         outputs["url"] = config["url"]
+    if config.get("text"):
+        outputs["text"] = str(config["text"])
     for config_key, port in (("videoPath", "video"), ("audioPath", "audio"), ("subtitlePath", "subtitle")):
         if config.get(config_key):
             outputs[port] = config[config_key]
@@ -248,7 +250,7 @@ def _input_fallback_outputs(node_payload: dict) -> dict:
 
 # 子工作流 input 节点的数据类字段：由「输入映射」负责传入，设置项覆盖里忽略这些 key
 _INPUT_DATA_FIELD_KEYS = (
-    "selectedTypes", "videoPath", "audioPath", "subtitlePath", "url", "filePath",
+    "selectedTypes", "videoPath", "audioPath", "subtitlePath", "url", "filePath", "text",
 )
 
 # 输入节点端口 → input 节点 config key：用于把注入值回填进 workspace/task.json 的 input
@@ -257,6 +259,7 @@ _PORT_TO_INPUT_CONFIG_KEY = {
     "audio": "audioPath",
     "subtitle": "subtitlePath",
     "url": "url",
+    "text": "text",
 }
 
 

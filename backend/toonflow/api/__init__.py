@@ -44,6 +44,7 @@ class ProjectCreate(BaseModel):
     name: str
     introduce: str = ""
     artStyle: str = ""
+    storyStyle: str = ""
     directorManual: str = ""
     mode: str = ""
     videoRatio: str = "16:9"
@@ -55,6 +56,7 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     introduce: Optional[str] = None
     artStyle: Optional[str] = None
+    storyStyle: Optional[str] = None
     directorManual: Optional[str] = None
     mode: Optional[str] = None
     videoRatio: Optional[str] = None
@@ -72,6 +74,7 @@ def _project_dict(p) -> dict:
         "artStyle": p.artStyle, "directorManual": p.directorManual, "mode": p.mode,
         "videoRatio": p.videoRatio, "imageQuality": p.imageQuality,
         "videoResolution": getattr(p, "videoResolution", "") or "720P",
+        "storyStyle": getattr(p, "storyStyle", "") or "",
         "createTime": p.createTime, "updateTime": p.updateTime,
     }
 
@@ -107,7 +110,8 @@ def create_project(req: ProjectCreate):
         row = TfProject(name=req.name.strip(), introduce=req.introduce, artStyle=req.artStyle,
                         directorManual=req.directorManual, mode=req.mode,
                         videoRatio=req.videoRatio, imageQuality=req.imageQuality,
-                        videoResolution=req.videoResolution or "720P")
+                        videoResolution=req.videoResolution or "720P",
+                        storyStyle=req.storyStyle or "")
         session.add(row)
         session.flush()
         return {"success": True, "project": _project_dict(row)}
@@ -179,6 +183,40 @@ def list_art_styles():
                             break
                     break
             out.append({"value": child.name, "label": child.name, "desc": desc})
+    return {"styles": out}
+
+
+@router.get("/story-styles")
+def list_story_styles():
+    """叙事/导演风格选项：skills/story_skills/<题材>/ 目录名（每套带 driector_skills 导演技法）。"""
+    root = skills_tools.SKILLS_ROOT / "story_skills"
+    out = []
+    if root.is_dir():
+        for child in sorted(root.iterdir()):
+            if not child.is_dir():
+                continue
+            label, desc = child.name, ""
+            readme = child / "README.md"
+            if readme.is_file():
+                try:
+                    for line in readme.read_text(encoding="utf-8").split("\n"):
+                        s = line.strip().lstrip("#").strip()
+                        if s:
+                            label = s[:40]
+                            break
+                except Exception:  # noqa: BLE001
+                    pass
+            for f in ("director_planning_narrative.md", "director_storyboard_table_narrative.md"):
+                p = child / "driector_skills" / f
+                if p.is_file() and not desc:
+                    try:
+                        text = p.read_text(encoding="utf-8")
+                        m = re.search(r"^description:\s*(.+)$", text[:2000], re.M)
+                        if m:
+                            desc = m.group(1).strip()[:120]
+                    except Exception:  # noqa: BLE001
+                        pass
+            out.append({"value": child.name, "label": label, "desc": desc})
     return {"styles": out}
 
 

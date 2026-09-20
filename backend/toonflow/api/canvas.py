@@ -50,7 +50,8 @@ def canvas_snapshot(project_id: int):
                         "artStyle": project.artStyle, "videoRatio": project.videoRatio,
                         "imageQuality": project.imageQuality, "mode": project.mode,
                         "videoResolution": getattr(project, "videoResolution", "") or "720P",
-                        "directorManual": project.directorManual},
+                        "directorManual": project.directorManual,
+                        "storyStyle": getattr(project, "storyStyle", "") or ""},
             "chapters": [], "scripts": [], "assets": [], "storyboards": [],
             "videos": [], "bindings": [],
             # 后台活动：type(文本/图片/视频/语音合成…) → 生成中任务数（前端执行状态条数据源）
@@ -62,7 +63,8 @@ def canvas_snapshot(project_id: int):
                                     "chars": len(n.chapterData or "")})
         for s in session.scalars(select(TfScript).where(TfScript.projectId == project_id)).all():
             out["scripts"].append({"id": s.id, "title": s.title, "extractState": s.extractState,
-                                   "chars": len(s.scriptData or "")})
+                                   "chars": len(s.scriptData or ""),
+                                   "preview": (s.scriptData or "").strip().replace("\n", " ")[:120]})
         for a in session.scalars(select(TfAsset).where(TfAsset.projectId == project_id)).all():
             image_url = ""
             if a.imageId:

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronDown, ChevronRight, Layers, Play, Square, RotateCcw, RefreshCw, Trash2, X, Plus, FolderOpen, Upload, FileText, Trash, Archive } from "lucide-react";
+import { ChevronDown, ChevronRight, Layers, Play, Square, RotateCcw, RefreshCw, Trash2, X, Plus, FolderOpen, Upload, FileText, Trash, Archive, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { batchApi, BatchDetail } from "@/api/batch";
 import { nativeFileDialog } from "@/api/files";
@@ -66,6 +66,9 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
   const resumableSelectedCount = selectedTaskList.filter((t) => resumableStatuses.has(t.status)).length;
   const retryableSelectedCount = selectedTaskList.filter((t) => retryableStatuses.has(t.status)).length;
   const stoppableSelectedCount = selectedTaskList.filter((t) => stoppableStatuses.has(t.status)).length;
+  // 「投递任务」：把选中任务整体投进执行队列排队（保留已完成节点，只跑未完成部分），
+  // 与「选中继续」同一集合——区别只是文案侧重点（入队排队 / 中断后继续）。
+  const dispatchableSelectedCount = resumableSelectedCount;
 
   const completedCount = tasks.filter((t) => t.status === "completed").length;
   const failedCount = tasks.filter((t) => t.status === "failed" || t.status === "cancelled").length;
@@ -104,6 +107,44 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
     }
   };
 
+  /** 批量投递选中任务到执行队列排队（投递 ≠ 立即执行，并行数由 Worker 并发决定）。 */
+  const handleDispatchSelected = async (mode: "resume" | "retry") => {
+    const eligible = (status: string) =>
+      mode === "retry" ? retryableStatuses.has(status) : resumableStatuses.has(status);
+    const ids = selectedTaskList.filter((t) => eligible(t.status)).map((t) => t.task_id);
+    if (ids.length === 0) {
+      showAlert(
+        mode === "retry" ? "选中的任务里没有可从头执行项" : "选中的任务里没有可投递/可继续项",
+        "warning"
+      );
+      return;
+    }
+    setBatchActionLoading(true);
+    try {
+      const res = await batchApi.dispatchTasks(batch.batch_id, ids, mode);
+      const skipped = res?.skipped || [];
+      const queueText = `队列排队 ${res?.queue?.queued ?? 0} 个 · 执行中 ${res?.queue?.running ?? 0} 个`;
+      if (skipped.length === 0) {
+        showAlert(
+          `已把 ${res.dispatched.length} 个任务投递到执行队列排队。\n${queueText}。`,
+          "success"
+        );
+      } else {
+        const reasons = [...new Set(skipped.map((s) => s.reason))].slice(0, 3).join("；");
+        showAlert(
+          `已投递 ${res.dispatched.length} 个，跳过 ${skipped.length} 个（${reasons}）。\n${queueText}。`,
+          "warning"
+        );
+      }
+      setSelectedTasks(new Set());
+      onRefresh();
+    } catch (e: any) {
+      showAlert(e?.response?.data?.detail || e?.message || "投递失败");
+    } finally {
+      setBatchActionLoading(false);
+    }
+  };
+
   const handleSelectedAction = async (actionName: string, action: (taskId: string) => Promise<any>) => {
     if (selectedTasks.size === 0) {
       showAlert("没有选择任务，请选择之后再执行");
@@ -116,7 +157,13 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
       );
       const failed = results.filter((r) => r.status === "rejected");
       if (failed.length > 0) {
-        showAlert(`${actionName}完成，但有 ${failed.length} 个任务操作失败`);
+        const succeeded = results.length - failed.length;
+        // 带出首个失败原因：并发上限、状态不可恢复等提示都在 detail 里，否则用户只知道"失败"却不知道为何
+        const firstReason = (failed[0] as any)?.reason?.response?.data?.detail || (failed[0] as any)?.reason?.message || "";
+        showAlert(
+          `${actionName}：成功 ${succeeded} 个，失败 ${failed.length} 个${firstReason ? `\n${firstReason}` : ""}`,
+          "warning"
+        );
       }
       onRefresh();
     } catch (e: any) {
@@ -255,11 +302,14 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
   };
 
   const handleAddTasks = async () => {
+    // 只处理本弹窗可供给的类型：input 节点的「文本」类型没有逐条填写的条目，
+    // 其值沿用工作流内输入节点自身的配置。
+    const batchTypes = addInputTypes.filter((t) => TYPE_CONFIG[t]);
     const nonEmpty: Record<string, string[]> = {};
-    for (const t of addInputTypes) {
+    for (const t of batchTypes) {
       nonEmpty[t] = (addEntries[t] || []).filter((v) => v.trim());
     }
-    const taskCount = nonEmpty[addInputTypes[0]]?.length || 0;
+    const taskCount = batchTypes.length > 0 ? (nonEmpty[batchTypes[0]]?.length || 0) : 0;
     if (taskCount === 0) {
       setAddError("请至少添加一个输入");
       return;
@@ -267,7 +317,7 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
     const tasks: Record<string, string>[] = [];
     for (let i = 0; i < taskCount; i++) {
       const task: Record<string, string> = {};
-      for (const t of addInputTypes) {
+      for (const t of batchTypes) {
         task[TYPE_CONFIG[t]?.key || t] = nonEmpty[t]?.[i] || "";
       }
       tasks.push(task);
@@ -334,18 +384,26 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
           <div className="flex items-center justify-between px-5 py-2 bg-muted/20">
             <div className="flex items-center gap-2">
               <button
-                onClick={(e) => { e.stopPropagation(); handleSelectedAction("恢复执行", (taskId) => batchApi.resumeTask(batch.batch_id, taskId)); }}
+                onClick={(e) => { e.stopPropagation(); handleDispatchSelected("resume"); }}
+                disabled={batchActionLoading || dispatchableSelectedCount === 0}
+                className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 transition-colors disabled:opacity-50"
+                title={selectedTasks.size === 0 ? "请先勾选当前批次中的任务" : dispatchableSelectedCount === 0 ? "选中的任务里没有可投递项" : `把 ${dispatchableSelectedCount} 个选中任务投递到执行队列排队（不改动已完成节点，并行数由 Worker 并发决定）`}
+              >
+                <Send className="w-3 h-3" />投递任务({dispatchableSelectedCount})
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDispatchSelected("resume"); }}
                 disabled={batchActionLoading || resumableSelectedCount === 0}
                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-primary/10 text-primary hover:bg-primary/20 transition-colors disabled:opacity-50"
-                title={selectedTasks.size === 0 ? "请先勾选当前批次中的任务" : resumableSelectedCount === 0 ? "选中的任务里没有可继续项" : `继续 ${resumableSelectedCount} 个选中任务`}
+                title={selectedTasks.size === 0 ? "请先勾选当前批次中的任务" : resumableSelectedCount === 0 ? "选中的任务里没有可继续项" : `断点继续 ${resumableSelectedCount} 个选中任务（保留已完成节点，入队排队）`}
               >
                 <Play className="w-3 h-3" />选中继续({resumableSelectedCount})
               </button>
               <button
-                onClick={(e) => { e.stopPropagation(); handleSelectedAction("从头执行", (taskId) => batchApi.retryTask(batch.batch_id, taskId)); }}
+                onClick={(e) => { e.stopPropagation(); handleDispatchSelected("retry"); }}
                 disabled={batchActionLoading || retryableSelectedCount === 0}
                 className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-orange-500/10 text-orange-600 hover:bg-orange-500/20 transition-colors disabled:opacity-50"
-                title={selectedTasks.size === 0 ? "请先勾选当前批次中的任务" : retryableSelectedCount === 0 ? "选中的任务里没有可从头执行项" : `重跑 ${retryableSelectedCount} 个选中任务`}
+                title={selectedTasks.size === 0 ? "请先勾选当前批次中的任务" : retryableSelectedCount === 0 ? "选中的任务里没有可从头执行项" : `从头执行 ${retryableSelectedCount} 个选中任务（清空产物重跑，入队排队）`}
               >
                 <RotateCcw className="w-3 h-3" />选中重跑({retryableSelectedCount})
               </button>

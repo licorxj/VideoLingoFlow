@@ -88,15 +88,15 @@ export default function BatchRuntimePanel({ runtime, loading = false }: Props) {
       <div className={cn("grid gap-2.5 md:grid-cols-2 xl:grid-cols-4", !expanded && "hidden")}>
         <StatCard
           icon={Layers3}
-          label="批次在途任务数"
+          label="批次队列任务数"
           value={batch?.inflight_tasks ?? "-"}
-          hint={`运行批次 ${batch?.running_batches ?? "-"} / 等待继续 ${batch?.paused_batches ?? "-"}`}
+          hint={`含执行中+排队中；运行批次 ${batch?.running_batches ?? "-"} / 等待继续 ${batch?.paused_batches ?? "-"}`}
           accent="text-blue-500"
         />
         <StatCard
           icon={Activity}
           label="控制面任务状态"
-          value={`${control?.tasks?.running ?? 0} 运行 / ${control?.tasks?.queued ?? 0} 排队`}
+          value={`${control?.tasks?.running ?? 0} 执行中 / ${control?.tasks?.queued ?? 0} 排队`}
           hint={`暂停 ${control?.tasks?.paused ?? 0} / 停止中 ${control?.tasks?.stopping ?? 0}`}
           accent="text-emerald-500"
         />
@@ -129,7 +129,7 @@ export default function BatchRuntimePanel({ runtime, loading = false }: Props) {
             <span>队列与投递配置</span>
           </div>
           <div className="mt-1 text-xs text-foreground/90">
-            最大同时在途任务数：<span className="font-semibold">{control?.resources?.batch_max_inflight_tasks ?? "-"}</span>
+            最大同时执行任务数（Worker 并发）：<span className="font-semibold">{control?.resources?.batch_max_inflight_tasks ?? "-"}</span>
             {"  "} 启动间隔：<span className="font-semibold">{control?.resources?.batch_task_start_interval ?? "-"}</span>s
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground break-all">

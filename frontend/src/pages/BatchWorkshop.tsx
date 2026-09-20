@@ -130,6 +130,14 @@ export default function BatchWorkshop() {
     try {
       await batchApi.updateConfig(val, taskStartInterval);
       setMaxConcurrent(val);
+      // 真正决定"同时跑几个"的是 Worker 的 --concurrency（同源读这个值），且只在 Worker 启动时生效。
+      // 投递不限流：任务会全部入队排队，这里只影响 Worker 同时取走几个。
+      showAlert(
+        `已保存「最大同时执行任务数」= ${val}。\n` +
+          `投递不受限制（选中任务会全部进入队列排队），该值决定 Worker 同时执行几个，` +
+          `需点「重启进程生效」后才会真正生效。`,
+        "warning"
+      );
     } catch (e: any) {
       showAlert(e?.response?.data?.detail || "更新配置失败");
     } finally {
@@ -268,8 +276,11 @@ export default function BatchWorkshop() {
 
       {/* Toolbar: config (parallel / interval) */}
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border/60 bg-card p-3">
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/40">
-          <span className="text-xs font-semibold text-muted-foreground">最大同时在途任务数</span>
+        <div
+          className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/40"
+          title="Worker 同时执行的任务数上限。投递不受此限制：选中任务会全部进入执行队列排队，由 Worker 按此并发数逐个取走执行，跑完一个自动续下一个。（修改后需点「重启进程生效」）"
+        >
+          <span className="text-xs font-semibold text-muted-foreground">最大同时执行任务数</span>
           <select
             className="text-xs font-semibold bg-transparent border-none outline-none cursor-pointer"
             value={maxConcurrent}

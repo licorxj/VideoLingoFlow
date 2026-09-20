@@ -40,9 +40,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 498
+        "height": 502
       },
-      "selected": true,
+      "selected": false,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -206,7 +206,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 522
+        "height": 519
       },
       "selected": false,
       "dragging": false,
@@ -227,7 +227,7 @@
           "normalize_chinese_read_text": false,
           "ai_dialect_colloquial": false,
           "dialect_name": "四川话",
-          "min_sentence_duration": 0.2,
+          "min_sentence_duration": 0.1,
           "speed_predict_reduce": true
         },
         "status": "completed",
@@ -243,7 +243,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 401
+        "height": 399
       },
       "selected": false,
       "dragging": false,
@@ -261,8 +261,8 @@
         "label": "配音片段合并对齐",
         "config": {
           "video_speed_adjust": false,
-          "speed_min": "0.85",
-          "speed_max": "2.5",
+          "speed_min": "0.8",
+          "speed_max": "3",
           "gap_threshold": "0.5",
           "fast_limit": "1.5"
         },
@@ -282,7 +282,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 753
+        "height": 748
       },
       "selected": false,
       "dragging": false,
@@ -319,7 +319,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 870
+        "height": 865
       },
       "selected": false,
       "dragging": false,
@@ -453,7 +453,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 621
+        "height": 616
       },
       "selected": false,
       "dragging": false,
@@ -482,7 +482,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 327
+        "height": 326
       },
       "selected": false,
       "dragging": false,
@@ -569,7 +569,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 621
+        "height": 616
       },
       "selected": false,
       "dragging": false,
@@ -598,7 +598,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 327
+        "height": 326
       },
       "selected": false,
       "dragging": false,
@@ -711,48 +711,18 @@
       "dragHandle": ".wf-node-drag-handle"
     },
     {
-      "id": "node_1_1783320818226",
-      "type": "workflow",
-      "position": {
-        "x": -1500,
-        "y": -1785
-      },
-      "data": {
-        "nodeType": "translate_task_name",
-        "label": "翻译项目名称",
-        "config": {
-          "replace_task_name": true
-        },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "text": "cache/task_name.txt",
-          "translated": "006_量子隧穿时到底发生了什么"
-        },
-        "error": "",
-        "workbench_url": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 273
-      },
-      "selected": false,
-      "dragging": false,
-      "dragHandle": ".wf-node-drag-handle"
-    },
-    {
       "id": "node_8_1788016850229",
       "type": "workflow",
       "position": {
-        "x": -420,
-        "y": -1500
+        "x": -75,
+        "y": -1620
       },
       "data": {
         "nodeType": "asr_result_validate",
         "label": "ASR结果校验",
-        "config": {},
+        "config": {
+          "auto_fix": true
+        },
         "status": "completed",
         "progress": 100,
         "message": "Completed",
@@ -765,7 +735,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 245
+        "height": 243
       },
       "selected": false,
       "dragging": false,
@@ -811,8 +781,8 @@
       "id": "node_1_1788530708958",
       "type": "workflow",
       "position": {
-        "x": -420,
-        "y": -1170
+        "x": -495,
+        "y": -945
       },
       "selected": false,
       "data": {
@@ -834,7 +804,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 334
+        "height": 332
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -887,7 +857,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 509
+        "height": 506
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -930,7 +900,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 602
+        "height": 598
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -997,7 +967,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 415
+        "height": 412
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1044,7 +1014,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 688
+        "height": 684
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -1083,7 +1053,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 597
+        "height": 592
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1157,7 +1127,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 504
+        "height": 501
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1525,7 +1495,7 @@
       },
       "measured": {
         "width": 440,
-        "height": 583
+        "height": 578
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1556,7 +1526,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 320
+        "height": 318
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -1688,6 +1658,41 @@
         "height": 537
       },
       "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1789860352741",
+      "type": "workflow",
+      "position": {
+        "x": -555,
+        "y": -1620
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "sentence_split",
+        "label": "句子分割",
+        "config": {
+          "processing_language": "from_input",
+          "max_sentence_length": "30",
+          "use_llm_split": true,
+          "split_sentence_ends": true,
+          "split_clause_breaks": false,
+          "merge_min_duration": "0.05",
+          "merge_max_gap": 0.5,
+          "pause_split_threshold": "1.8",
+          "split_on_speaker": true,
+          "merge_short_enabled": true,
+          "merge_gap_enabled": false,
+          "pause_split_enabled": true
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 480
+      },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     }
@@ -1905,19 +1910,6 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#8b5cf6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_5_1788532246682",
-      "sourceHandle": "out-text",
-      "target": "node_1_1783320818226",
-      "targetHandle": "in-input",
-      "id": "xy-edge__node_5_1788532246682out-text-node_1_1783320818226in-input"
-    },
-    {
-      "type": "bezier",
-      "style": {
         "stroke": "#f59e0b",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -2081,21 +2073,6 @@
       "animated": false
     },
     {
-      "type": "bezier",
-      "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "group_mu37qtoy_nanx",
-      "sourceHandle": "out-gout_3",
-      "target": "node_8_1788016850229",
-      "targetHandle": "in-json",
-      "id": "xy-edge__node_2_1788054290141out-subtitle-node_8_1788016850229in-json",
-      "selected": false,
-      "animated": false
-    },
-    {
       "source": "group_mu37qtoy_nanx",
       "sourceHandle": "out-gout_3",
       "target": "node_1_1788530708958",
@@ -2228,19 +2205,6 @@
       "id": "xy-edge__node_3_1788531005833out-subtitle-node_6_1788533469576in-subtitle"
     },
     {
-      "source": "node_1_1783320818226",
-      "sourceHandle": "out-text",
-      "target": "node_1_1789563482048",
-      "targetHandle": "in-input1",
-      "type": "bezier",
-      "style": {
-        "stroke": "#8b5cf6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "id": "xy-edge__node_1_1783320818226out-text-node_1_1789563482048in-input1"
-    },
-    {
       "type": "bezier",
       "style": {
         "stroke": "#8b5cf6",
@@ -2304,10 +2268,49 @@
       "target": "node_3_1789406114242",
       "targetHandle": "in-any",
       "id": "xy-edge__node_3_1782641542678out-text-node_3_1789406114242in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1788532246682",
+      "sourceHandle": "out-text",
+      "target": "node_1_1789563482048",
+      "targetHandle": "in-input1",
+      "id": "xy-edge__node_5_1788532246682out-text-node_1_1789563482048in-input1"
+    },
+    {
+      "source": "group_mu37qtoy_nanx",
+      "sourceHandle": "out-gout_3",
+      "target": "node_1_1789860352741",
+      "targetHandle": "in-subtitle",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__group_mu37qtoy_nanxout-gout_3-node_1_1789860352741in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1789860352741",
+      "sourceHandle": "out-subtitle",
+      "target": "node_8_1788016850229",
+      "targetHandle": "in-json",
+      "id": "xy-edge__node_1_1789860352741out-subtitle-node_8_1788016850229in-json"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-19T05:53:03",
-  "revision": 69
+  "updatedAt": "2026-09-20T07:28:41",
+  "revision": 74
 }

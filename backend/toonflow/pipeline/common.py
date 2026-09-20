@@ -31,6 +31,24 @@ def art_style_prefix(project: TfProject) -> str:
     return ""
 
 
+def story_narrative_body(style: str, filename: str) -> str:
+    """题材叙事/导演技法正文：skills/story_skills/<题材>/driector_skills/<filename>。
+
+    源目录名保留拼写 ``driector_skills``（源项目笔误），此处兼容两种拼写。
+    未配置题材或文件缺失时返回空串（不阻断生成）。
+    """
+    style = (style or "").strip()
+    if not style:
+        return ""
+    for parent in (SKILLS_ROOT / "story_skills" / style / "driector_skills",
+                   SKILLS_ROOT / "story_skills" / style / "director_skills"):
+        p = parent / filename
+        if p.is_file():
+            return re.sub(r"^---\r?\n[\s\S]*?\r?\n---\r?\n?", "",
+                          p.read_text(encoding="utf-8")).strip()
+    return ""
+
+
 def skill_body(filename: str) -> str:
     """读技能正文（剥离 frontmatter），作为 system 指令。"""
     p = SKILLS_ROOT / filename

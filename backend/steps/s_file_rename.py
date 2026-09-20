@@ -194,9 +194,11 @@ class S_FileRename(BaseStep):
                             if changed:
                                 node.payload = {**node.payload, "result": {**result, "outputs": outputs}}
                         session.flush()
-                        # 同步写出兼容 task.json
+                        # 同步写出兼容 task.json。
+                        # absorb_legacy=False：上面刚把「新路径」写进负载，此时磁盘 task.json
+                        # 里还是旧路径，若反向吸收会把新路径盖回旧值（下游拿到已不存在的路径）。
                         try:
-                            _write_legacy_task(task, Path(task_dir))
+                            _write_legacy_task(task, Path(task_dir), absorb_legacy=False)
                         except Exception as e:
                             print(f"[FileRename] Warning: 重写 task.json 失败: {e}")
                         print(f"[FileRename] DB 同步完成: {input_path} -> {new_path}")

@@ -1,6 +1,6 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-20 05:14:41  
+> 自动生成时间：2026-09-20 09:26:47  
 > 节点总数：153　（带 `*` 的接口为必填项）
 
 ## 总览
@@ -39,7 +39,7 @@
 | 产物文件归档 | `archive_artifacts` | 将上游多个产物文件归档到指定目录，支持复制/剪切、新建子文件夹、重命名与自动序号 | thread | 产物输入(`any`:any) | 归档路径(`output`:any) |
 | 文件加载 | `file_load` | 在卡片上选择或输入文件路径，输出该文件的绝对路径（不落盘） | thread | 输入(`any`:any) | 文件路径(`filepath`:any) |
 | 文本输入框 | `text_input` | 提供一个大文本输入框，将其内容作为文本输出给下游（不落盘） | thread | 输入(`any`:any) | 文本(`text`:text) |
-| 输入 | `input` | 导入文件或URL | thread | — | 视频(`video`:video); 音频(`audio`:audio); 字幕(`subtitle`:subtitle); URL(`url`:url); 文件路径(`filepath`:any); 不需要输入(`no_input`:any) |
+| 输入 | `input` | 导入文件或URL | thread | — | 视频(`video`:video); 音频(`audio`:audio); 字幕(`subtitle`:subtitle); URL(`url`:url); 文件路径(`filepath`:any); 文本(`text`:text); 不需要输入(`no_input`:any) |
 | 输出 | `output` | 导出文件 | thread | 输入(`any`:any) | — |
 
 ### 预览节点（`preview`）

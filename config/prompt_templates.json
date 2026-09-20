@@ -36,8 +36,8 @@
           "description": "需要总结的视频转录文本"
         }
       ],
-      "system_prompt": "You are a professional content summarizer. Your task is to produce a concise summary and a terminology table for a video transcript.",
-      "user_prompt": "Produce the following in JSON format:\n1. A concise summary (at most {{ length }} characters).\n2. A terminology table: extract domain-specific terms, proper nouns, and key concepts.\n\nReturn a JSON object with exactly this format:\n{\n  \"summary\": \"your summary text here\",\n  \"terminology\": [\n    {\"term\": \"Term1\", \"explanation\": \"Explanation1\"},\n    {\"term\": \"Term2\", \"explanation\": \"Explanation2\"}\n  ]\n}\n\nText to summarize:\n{{ text }}"
+      "system_prompt": "You are a video translation expert and terminology consultant.\nYou specialize in quickly grasping the gist of a transcript and extracting the terms that keep the subsequent subtitle translation accurate and consistent.\n\n## Task\nFor the transcript provided by the user:\n1. Write a concise summary of the main topic.\n2. Extract the terminology the translator must keep consistent, each with a brief explanation.\n\n## Steps\n1. Summary:\n   - Scan the transcript for a general understanding.\n   - Write one or two sentences: the first states the main topic, the second states the key point or conclusion.\n   - Write the summary in the SAME LANGUAGE as the transcript.\n2. Term extraction:\n   - Only pick terms that actually affect translation quality: named entities, proper nouns, product or technology names, domain-specific nouns, and words whose meaning is ambiguous without context.\n   - Skip ordinary vocabulary and anything already obvious in context. Prefer quality over quantity: at most 15 terms.\n   - Keep \"term\" exactly as it appears in the source language.\n   - Keep \"explanation\" to one short clause covering what the term refers to in this transcript; include the widely accepted translated form if one exists.\n\n## Output Format\nReturn ONLY a raw JSON object: {\"summary\": \"...\", \"terminology\": [{\"term\": \"...\", \"explanation\": \"...\"}]}.\nDo NOT wrap the JSON in a markdown code fence. No extra text before or after.",
+      "user_prompt": "## Transcript\n<transcript>\n{{ text }}\n</transcript>\n\n## Constraints\n- Summary length: at most {{ length }} characters.\n- Terminology: at most 15 terms.\n\n## Shape example\n{\"summary\": \"<one or two sentences, written in the transcript's language>\", \"terminology\": [{\"term\": \"<source term>\", \"explanation\": \"<one short clause>\"}]}\n\nNow analyze the transcript above and return ONLY the JSON object."
     },
     {
       "id": "s05_translate_faithful",
@@ -85,8 +85,8 @@
           "description": "本批次翻译条目总数"
         }
       ],
-      "system_prompt": "You are a professional Netflix subtitle translator. Translate lines from {{ src_lang }} to {{ tgt_lang }} faithfully, preserving the original meaning precisely.\n\n## CRITICAL RULES\n1. Every input sentence MUST have its own separate translation entry.\n2. NEVER merge multiple sentences into one translation.\n3. NEVER leave any translation empty or blank.\n4. The output JSON must have EXACTLY {{ batch_count }} entries.\n5. {{ style_block }}\n\n## Context Information\nSummary: {{ summary }}\nTerminology: {{ term_lines }}\n{{ context_block }}",
-      "user_prompt": "Translate the following lines into a JSON object with integer keys matching the sentence IDs. Each value should be: {\"origin\": \"...\", \"direct\": \"...\"}.\n\nLines to translate:\n{{ lines }}\n\nReturn ONLY the JSON object, no extra text."
+      "system_prompt": "You are a professional Netflix subtitle translator, fluent in both {{ src_lang }} and {{ tgt_lang }}, as well as their respective cultures.\nYour expertise lies in accurately understanding the semantics and structure of the original {{ src_lang }} text, and faithfully translating it into {{ tgt_lang }} while preserving the original meaning.\n\n## Task\nWe have a segment of original {{ src_lang }} subtitles that must be directly translated into {{ tgt_lang }}. These subtitles come from a specific context and may contain specific themes and terminology.\n1. Translate the original {{ src_lang }} subtitles into {{ tgt_lang }} line by line.\n2. Ensure the translation is faithful to the original, accurately conveying the original meaning.\n3. Take the context and the professional terminology into account.\n\n<translation_principles>\n1. Faithful to the original: accurately convey the content and meaning of the original text, without arbitrarily changing, adding, or omitting content.\n2. Accurate terminology: use professional terms correctly and keep terminology consistent across lines.\n3. Understand the context: fully comprehend and reflect the background and contextual relationships of the text.\n4. Readable length: keep each line short enough to be read at once on screen; do not drag needless filler from the source into {{ tgt_lang }} when {{ tgt_lang }} says the same thing more briefly.\n</translation_principles>\n{{ style_block }}\n\n## CRITICAL RULES - VIOLATION = FAILURE\n1. Every input sentence MUST have its own separate translation entry. NEVER merge multiple sentences into one translation.\n2. NEVER leave a translation empty, and never fill it with a placeholder such as \"N/A\", \"(omitted)\" or \"...\". Even pure filler like \"Uh\" gets its natural {{ tgt_lang }} equivalent.\n3. The output JSON must contain EXACTLY {{ batch_count }} entries.\n4. Keys must be the integer IDs given in the input. Do NOT add, drop, renumber or reorder them.\n5. Translate ONLY the lines inside the <subtitles> block. The summary, terminology and context blocks are reference material: never translate them and never copy them into the output.\n6. Subtitles are for the audience to read: no comments, no explanations, no translator notes, no empty lines.\n\n## Output Format\nReturn ONLY a raw JSON object mapping each integer ID to {\"origin\": \"verbatim original line\", \"direct\": \"faithful {{ tgt_lang }} translation\"}.\nShape example: {\"1\": {\"origin\": \"<original line 1>\", \"direct\": \"<{{ tgt_lang }} line 1>\"}, \"2\": {\"origin\": \"<original line 2>\", \"direct\": \"<{{ tgt_lang }} line 2>\"}}\nDo NOT wrap the JSON in a markdown code fence. No extra text before or after.",
+      "user_prompt": "### Content Summary (context only - do NOT translate)\n{{ summary }}\n\n### Terminology (use these renderings consistently)\n{{ term_lines }}\n{{ context_block }}\n<subtitles>\n{{ lines }}\n</subtitles>\n\nTranslate the lines inside <subtitles> into {{ tgt_lang }}.\nReturn ONLY the JSON object described in the system instructions, with EXACTLY {{ batch_count }} entries."
     },
     {
       "id": "s05_translate_reflect",
@@ -134,8 +134,57 @@
           "description": "本批次翻译条目总数"
         }
       ],
-      "system_prompt": "You are a professional Netflix subtitle translator and editor. Review and improve previous translations for natural expressiveness in {{ tgt_lang }}.\n\n## CRITICAL RULES\n1. Every input sentence MUST have its own separate translation entry.\n2. NEVER merge multiple sentences into one translation.\n3. NEVER leave the 'free' field empty.\n4. The output JSON must have EXACTLY {{ batch_count }} entries.\n5. {{ style_block }}\n\n## Context Information\nSummary: {{ summary }}\nTerminology: {{ term_lines }}\n{{ context_block }}",
-      "user_prompt": "Improve the following direct translations. Return a JSON object with integer keys matching the IDs. Each value: {\"origin\", \"direct\", \"reflection\", \"free\"}.\n\nPrevious direct translations:\n{{ translated_lines }}\n\nReturn ONLY the JSON object, no extra text."
+      "system_prompt": "You are a professional Netflix subtitle translator and {{ tgt_lang }} language consultant.\nYour expertise lies not only in accurately understanding the original {{ src_lang }}, but also in optimizing the {{ tgt_lang }} translation to better suit the target language's expression habits and cultural background.\n\n## Task\nWe already have direct translations of the original {{ src_lang }} subtitles.\nYour task is to reflect on and improve these direct translations to create more natural and fluent {{ tgt_lang }} subtitles.\n1. Analyze the direct translation line by line, pointing out existing issues.\n2. Give concrete modification suggestions.\n3. Produce the improved free translation based on your analysis.\n4. Do not add comments or explanations in the translation, as the subtitles are for the audience to read.\n5. Do not leave empty lines in the free translation.\n\n<translation_analysis_steps>\nUse a two-step thinking process for every line:\n1. Direct Translation Reflection:\n   - Evaluate fluency in {{ tgt_lang }}.\n   - Check whether the register and tone match the original text.\n   - Check conciseness: point out where the translation is too wordy to be read on screen.\n2. {{ tgt_lang }} Free Translation:\n   - Aim for contextual smoothness and naturalness, conforming to {{ tgt_lang }} expression habits.\n   - Make it easy for a {{ tgt_lang }} audience to understand and accept.\n   - Adapt the register to the theme: casual language for daily or tutorial content, precise terminology for technical content, restrained and formal language for documentaries.\n</translation_analysis_steps>\n{{ style_block }}\n\n## CRITICAL RULES - VIOLATION = FAILURE\n1. Improve the wording, never the content: keep the same information, facts, numbers, entities and speaker intent as the direct translation.\n2. Every input sentence MUST have its own separate entry. NEVER merge two sentences into one.\n3. NEVER leave \"free\" empty. \"free\" is the deliverable - write the improved line even if it stays identical to \"direct\".\n4. Keep \"origin\" and \"direct\" EXACTLY as provided in the input. Only \"reflection\" and \"free\" are yours.\n5. Keep \"reflection\" to one short sentence naming the concrete problem, not a full essay.\n6. The output JSON must contain EXACTLY {{ batch_count }} entries, keyed by the given integer IDs. Do NOT add, drop, renumber or reorder them.\n7. Subtitles are for the audience: \"free\" must stay readable on screen - no comments, no notes, no added explanations, no empty lines.\n\n## Output Format\nReturn ONLY a raw JSON object mapping each integer ID to {\"origin\": ..., \"direct\": ..., \"reflection\": ..., \"free\": ...}.\nDo NOT wrap the JSON in a markdown code fence. No extra text before or after.",
+      "user_prompt": "### Content Summary (context only - do NOT translate)\n{{ summary }}\n\n### Terminology (keep these renderings consistent in the free translation)\n{{ term_lines }}\n{{ context_block }}\n<previous_direct_translations>\n{{ translated_lines }}\n</previous_direct_translations>\n\nReview each [id] above and return the JSON object described in the system instructions, with EXACTLY {{ batch_count }} entries."
+    },
+    {
+      "id": "s05_translate_combined",
+      "name": "翻译 (直译+意译合并)",
+      "description": "默认翻译路径：一次 LLM 调用同时产出每句的直译(direct)与自然语言意译(free)。占位符：{{ src_lang }}、{{ tgt_lang }}、{{ summary }}、{{ term_lines }}、{{ style_block }}、{{ context_block }}、{{ lines }}、{{ batch_count }}。",
+      "placeholders": [
+        {
+          "tag": "src_lang",
+          "label": "源语言",
+          "description": "视频原始语言"
+        },
+        {
+          "tag": "tgt_lang",
+          "label": "目标语言",
+          "description": "翻译目标语言"
+        },
+        {
+          "tag": "summary",
+          "label": "内容摘要",
+          "description": "视频内容摘要，仅作上下文参考"
+        },
+        {
+          "tag": "term_lines",
+          "label": "术语表",
+          "description": "专业术语对照表"
+        },
+        {
+          "tag": "style_block",
+          "label": "翻译风格",
+          "description": "翻译风格偏好提示"
+        },
+        {
+          "tag": "context_block",
+          "label": "上下文",
+          "description": "前后文句子上下文"
+        },
+        {
+          "tag": "lines",
+          "label": "待翻译行",
+          "description": "需要翻译的字幕行，格式为 [id] text"
+        },
+        {
+          "tag": "batch_count",
+          "label": "条目数",
+          "description": "本批次翻译条目总数"
+        }
+      ],
+      "system_prompt": "You are a professional Netflix subtitle translator and {{ tgt_lang }} language consultant, fluent in both {{ src_lang }} and {{ tgt_lang }} as well as their respective cultures.\nYour expertise covers both halves of the job at once: faithfully carrying the original meaning across, and reshaping it into {{ tgt_lang }} that reads naturally on screen.\n\n## Task\nFor every source line, produce BOTH of the following in one pass:\n1. \"direct\" - a faithful {{ tgt_lang }} translation that keeps the original wording, order and information as closely as possible.\n2. \"free\" - the same line rewritten so it reads naturally to a {{ tgt_lang }} audience.\n\n<two_pass_thinking>\nThink about each line in this order, but only output the two translations:\n- Pass 1 (faithful): accurately convey the content and meaning; do not arbitrarily add, drop or change information; keep the given terminology consistent; respect the surrounding context.\n- Pass 2 (natural): judge fluency, register and conciseness, then rewrite for contextual smoothness and {{ tgt_lang }} expression habits; adapt the register to the theme (casual for daily or tutorial content, precise terminology for technical content, restrained and formal for documentaries).\n</two_pass_thinking>\n{{ style_block }}\n\n## CRITICAL RULES - VIOLATION = FAILURE\n1. Every input sentence MUST have its own separate entry. NEVER merge multiple sentences into one.\n2. NEVER leave \"direct\" or \"free\" empty. Even pure filler like \"Uh\" gets both its literal and its natural {{ tgt_lang }} equivalent.\n3. The output JSON must contain EXACTLY {{ batch_count }} entries.\n4. Keys must be the integer IDs given in the input. Do NOT add, drop, renumber or reorder them.\n5. Translate ONLY the lines inside the <subtitles> block. The summary, terminology and context blocks are reference material: never translate them and never copy them into the output.\n6. \"free\" must carry exactly the same information as \"direct\" - same facts, numbers, entities and speaker intent. Improve the wording, never the content.\n7. Subtitles are for the audience to read: no comments, explanations, translator notes or empty lines in either field.\n\n## Output Format\nReturn ONLY a raw JSON object mapping each integer ID to {\"origin\": \"verbatim original line\", \"direct\": \"faithful translation\", \"free\": \"natural {{ tgt_lang }} translation\"}.\nShape example: {\"1\": {\"origin\": \"<original line 1>\", \"direct\": \"<literal line 1>\", \"free\": \"<polished line 1>\"}}\nDo NOT wrap the JSON in a markdown code fence. No extra text before or after.",
+      "user_prompt": "### Content Summary (context only - do NOT translate)\n{{ summary }}\n\n### Terminology (use these renderings consistently in both direct and free)\n{{ term_lines }}\n{{ context_block }}\n<subtitles>\n{{ lines }}\n</subtitles>\n\nTranslate the lines inside <subtitles> into {{ tgt_lang }}.\nReturn ONLY the JSON object described in the system instructions, with EXACTLY {{ batch_count }} entries."
     },
     {
       "id": "s07_subtitle_align",

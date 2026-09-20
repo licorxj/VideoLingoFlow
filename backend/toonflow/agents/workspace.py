@@ -98,8 +98,15 @@ def project_summary(project_id: int) -> dict:
         script = session.scalars(select(TfScript).where(
             TfScript.projectId == project_id).order_by(TfScript.id.desc())).first()
         return {
-            "projectId": project_id, "name": p.name, "artStyle": p.artStyle or "未设定",
-            "videoRatio": p.videoRatio, "mode": p.mode or "通用多参模式",
+            "projectId": project_id, "name": p.name,
+            "introduce": p.introduce or "",
+            "artStyle": p.artStyle or "未设定",
+            "storyStyle": getattr(p, "storyStyle", "") or "未设定",
+            "directorManual": p.directorManual or "",
+            "videoRatio": p.videoRatio,
+            "videoResolution": getattr(p, "videoResolution", "") or "720P",
+            "imageQuality": p.imageQuality or "1K",
+            "mode": p.mode or "纯文本多参模式",
             "stats": {
                 "scripts": 1 if script else 0,
                 "assets": len(assets),

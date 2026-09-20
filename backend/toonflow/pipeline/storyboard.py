@@ -36,7 +36,19 @@ def _storyboard_table_job(project_id: int, script_id: int) -> None:
         script_text = _script_text(session, script_id)
         system = common.skill_body("production_execution_storyboard_table.md")
 
-    prompt = (f"项目画风：{project.artStyle or '未设定'}\n\n资产清单：\n{assets}\n\n"
+    # 项目级导演约束：题材叙事技法（story_skills/<题材>/driector_skills）+ 导演手册
+    narrative = common.story_narrative_body(getattr(project, "storyStyle", "") or "",
+                                            "director_storyboard_table_narrative.md")
+    director_manual = (getattr(project, "directorManual", "") or "").strip()
+    constraints = ""
+    if narrative:
+        constraints += f"\n\n## 题材叙事技法（导演风格，务必遵循）\n{narrative[:6000]}"
+    if director_manual:
+        constraints += f"\n\n## 导演手册（用户指定要求）\n{director_manual[:4000]}"
+
+    prompt = (f"项目画风：{project.artStyle or '未设定'}"
+              f"｜题材风格：{getattr(project, 'storyStyle', '') or '未设定'}\n\n"
+              f"{constraints}\n\n资产清单：\n{assets}\n\n"
               f"剧本：\n{script_text[:30000]}\n\n"
               '请输出分镜表，直接输出 JSON：{"storyboardTable": [{'
               '"videoDesc": "（画面描述、场景、关联资产名称、时长、景别、运镜、角色动作、情绪、光影氛围、台词、音效、关联资产ID）", '
@@ -207,10 +219,16 @@ def _gen_image_for_board(board_id: int) -> None:
                     refs.append(str(img.filePath))
         prompt = b.prompt or b.videoDesc
         b.state = "生成中"
+        project = session.get(TfProject, project_id)
+        # 分镜图跟随项目设定：图片质量 + 画面比例
+        quality = (getattr(project, "imageQuality", "") or "").strip() or "1K"
+        ratio = (getattr(project, "videoRatio", "") or "").strip() or "16:9"
 
     if not prompt.strip():
         raise ValueError(f"分镜 {board_id} 缺少提示词")
-    out = Ai.image.run({"prompt": prompt, "referenceList": refs}, project_id=project_id)
+    out = Ai.image.run({"prompt": prompt, "referenceList": refs,
+                        "resolution": quality, "aspectRatio": ratio},
+                       project_id=project_id)
 
     with session_scope_ctx() as session:
         b = session.get(TfStoryboard, board_id)

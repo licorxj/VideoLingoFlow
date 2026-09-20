@@ -225,12 +225,15 @@ export default function CreateBatchDialog({ onClose, onCreated }: Props) {
 
   // ── Validation ──
   const validate = () => {
+    // 只校验本弹窗可供给的类型：input 节点的「文本」等类型没有文件/URL 条目可逐条填写，
+    // 其值沿用工作流内输入节点自身的配置，不参与批量校验。
+    const batchTypes = inputTypes.filter((t) => TYPE_CONFIG[t]);
     const nonEmptyPerType: Record<string, string[]> = {};
-    for (const t of inputTypes) {
+    for (const t of batchTypes) {
       nonEmptyPerType[t] = (entries[t] || []).filter((v) => v.trim());
     }
 
-    const emptyTypes = inputTypes.filter((t) => nonEmptyPerType[t].length === 0);
+    const emptyTypes = batchTypes.filter((t) => nonEmptyPerType[t].length === 0);
     if (emptyTypes.length > 0) {
       const labels = emptyTypes.map((t) => TYPE_CONFIG[t]?.label || t).join("、");
       setValidationError(`缺少输入：${labels} 至少需要一个条目`);
@@ -239,11 +242,11 @@ export default function CreateBatchDialog({ onClose, onCreated }: Props) {
     }
 
     // If multiple types, check count matching
-    const counts = inputTypes.map((t) => nonEmptyPerType[t].length);
+    const counts = batchTypes.map((t) => nonEmptyPerType[t].length);
     const allSame = counts.every((c) => c === counts[0]);
-    if (inputTypes.length > 1 && !allSame) {
+    if (batchTypes.length > 1 && !allSame) {
       setValidationError(
-        `输入数量不匹配：${inputTypes.map((t) => `${TYPE_CONFIG[t]?.label}: ${nonEmptyPerType[t].length}个`).join("，")}`
+        `输入数量不匹配：${batchTypes.map((t) => `${TYPE_CONFIG[t]?.label}: ${nonEmptyPerType[t].length}个`).join("，")}`
       );
       setValidationPassed(false);
       return;
@@ -261,12 +264,13 @@ export default function CreateBatchDialog({ onClose, onCreated }: Props) {
     }
     setCreating(true);
     try {
+      const batchTypes = inputTypes.filter((t) => TYPE_CONFIG[t]);
       const nonEmptyPerType: Record<string, string[]> = {};
-      for (const t of inputTypes) {
+      for (const t of batchTypes) {
         nonEmptyPerType[t] = (entries[t] || []).filter((v) => v.trim());
       }
 
-      const taskCount = nonEmptyPerType[inputTypes[0]].length;
+      const taskCount = batchTypes.length > 0 ? nonEmptyPerType[batchTypes[0]].length : 0;
       const tasks: Record<string, string>[] = [];
 
       const status = await useSubscriptionStore.getState().fetchStatus();
@@ -279,7 +283,7 @@ export default function CreateBatchDialog({ onClose, onCreated }: Props) {
 
       for (let i = 0; i < taskCount; i++) {
         const task: Record<string, string> = {};
-        for (const t of inputTypes) {
+        for (const t of batchTypes) {
           task[TYPE_CONFIG[t]?.key || t] = nonEmptyPerType[t][i] || "";
         }
         tasks.push(task);

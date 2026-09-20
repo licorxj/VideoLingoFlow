@@ -48,12 +48,13 @@ import { Input } from "@/components/ui/input";
 import client from "@/api/client";
 import { settingsApi } from "@/api/settings";
 import toonflowApi, { ProjectCreatePayload, TfProject } from "@/api/toonflow";
+import { useCanvasWheelGuard } from "@/lib/canvasWheelGuard";
 
 // ---------------- 快照类型 ----------------
 interface Snapshot {
   project: { id: number; name: string; artStyle: string; videoRatio: string };
   chapters: { id: number; chapter: string; event: string; eventState: number; chars: number }[];
-  scripts: { id: number; title: string; extractState: number; chars: number }[];
+  scripts: { id: number; title: string; extractState: number; chars: number; preview?: string }[];
   assets: { id: number; name: string; type: string; describe: string; prompt: string; imageUrl: string; imageId: number | null }[];
   storyboards: {
     id: number; orderNo: number; videoDesc: string; prompt: string; videoPrompt: string;
@@ -104,7 +105,7 @@ function CanvasNodeCard({ data }: NodeProps) {
   const generating = d.state === "生成中";
 
   return (
-    <div className="w-52 rounded-xl border border-border/60 bg-background shadow-sm overflow-hidden">
+    <div className="w-60 rounded-xl border border-border/60 bg-background shadow-sm overflow-hidden">
       <div className="flex items-center gap-1.5 px-2 py-1.5" style={{ background: `${meta.color}18` }}>
         <Icon className="w-3 h-3" style={{ color: meta.color }} />
         <span className="text-xs font-semibold" style={{ color: meta.color }}>{meta.label}</span>
@@ -153,9 +154,16 @@ function CanvasNodeCard({ data }: NodeProps) {
       ) : d.videoUrl ? (
         <video src={d.videoUrl} controls preload="metadata" className="w-full h-24 bg-black" />
       ) : null}
-      <div className="px-2 py-1.5">
+      <div
+        className="px-2 py-1.5 cursor-pointer hover:bg-muted/40 transition-colors"
+        title="点击查看 / 编辑全文"
+        onClick={(e) => {
+          e.stopPropagation();
+          (window as any).__tfCanvasAction?.("open", d);
+        }}
+      >
         <div className="text-xs font-semibold truncate">{d.title}</div>
-        {d.desc && <div className="text-[11px] text-muted-foreground line-clamp-2 leading-snug mt-0.5">{d.desc}</div>}
+        {d.desc && <div className="text-[11px] text-muted-foreground line-clamp-4 leading-snug mt-0.5 whitespace-pre-wrap">{d.desc}</div>}
       </div>
       <Handle type="source" position={Position.Right} isConnectable={false} className="!opacity-0 pointer-events-none" />
       <Handle type="target" position={Position.Left} isConnectable={false} className="!opacity-0 pointer-events-none" />
@@ -206,15 +214,12 @@ const IMAGE_QUALITIES = [
   { value: "2K", label: "2K" },
   { value: "4K", label: "4K" },
 ];
-/** 导演风格预设 → 写入项目 directorManual（可自由改写） */
-const DIRECTOR_PRESETS = [
-  { label: "不设定", text: "" },
-  { label: "快节奏反转爽剧", text: "节奏：快。每 15 秒内给出一个信息增量或反转；前三镜必须建立冲突，结尾留钩子。镜头偏短、剪辑密集，允许跳切强化推进感。" },
-  { label: "悬疑推进", text: "节奏：中偏慢，重氛围。优先展示线索与环境细节，人物反应后置；多用客观视角与局部特写制造悬念，避免提前揭示动机。" },
-  { label: "情感细腻", text: "节奏：中。以人物情绪弧线为主，多近景/特写捕捉微表情，保留留白与停顿的呼吸感；音效服务情绪不抢戏。" },
-  { label: "史诗叙事", text: "节奏：宏大稳重。多用远景/大全景建立空间与规模，群像调度清晰；重要时刻给足停顿与仪式感，镜头运动克制。" },
-  { label: "幽默轻喜", text: "节奏：轻快。强调反差与节奏点，台词密度略高；可接受夸张表演与俏皮构图，收尾给笑点或反转。" },
+/** 制作模式（源语义：分镜面板的写入方式） */
+const PRODUCTION_MODES = [
+  { value: "纯文本多参模式", label: "纯文本多参模式（不生分镜图，走视频多参）" },
+  { value: "首位帧模式", label: "首位帧模式（生成分镜首/尾帧）" },
 ];
+/** 画风/导演风格选项统一来自后端技能库（skills 目录），此处不再硬编码预设 */
 
 /** 快照 → 泳道布局节点（按阶段横向排布） */
 function snapshotToNodes(snap: Snapshot, projectId: number) {
@@ -244,7 +249,8 @@ function snapshotToNodes(snap: Snapshot, projectId: number) {
   })));
   place("script", snap.scripts.slice(0, 6).map((s) => ({
     nid: `sc-${s.id}`,
-    data: { kind: "script", title: s.title, desc: `共 ${s.chars} 字`,
+    data: { kind: "script", title: s.title,
+            desc: s.preview ? `${s.preview}…\n（共 ${s.chars} 字）` : `共 ${s.chars} 字`,
             badge: s.extractState === 1 ? "已提取" : s.extractState === -1 ? "失败" : s.extractState === 2 ? "提取中" : "待提取",
             projectId, scriptId: s.id } as CanvasData,
   })));
@@ -473,6 +479,7 @@ export default function CreationCanvas() {
       if (!activeId) return;
       if (action === "delete") doDelete(d);
       else if (action === "regenerate") doRegenerate(d);
+      else if (action === "open") setEditor(d);
       else if (action === "menu") setMenu({ x: e?.clientX ?? 200, y: e?.clientY ?? 200, data: d });
     };
     return () => { delete (window as any).__tfCanvasAction; };
@@ -517,6 +524,11 @@ export default function CreationCanvas() {
       .catch(() => undefined)
       .finally(() => setBusy(""));
   };
+
+  // ---------------- 画布滚轮守卫 ----------------
+  // 节点卡片内的自定义下拉/弹层需要自己消费滚轮，否则会被画布缩放抢走
+  const flowWrapperRef = useRef<HTMLDivElement>(null);
+  useCanvasWheelGuard(flowWrapperRef);
 
   // ---------------- Agent 会话（WS 单向推送，Agent 服务端执行） ----------------
   const wsRef = useRef<WebSocket | null>(null);
@@ -696,7 +708,7 @@ export default function CreationCanvas() {
 
       {/* 主区 */}
       <div className="flex flex-1 min-h-0 relative">
-        <div className="flex-1 relative">
+        <div ref={flowWrapperRef} className="flex-1 relative">
           <ReactFlow
             nodes={nodes}
             edges={edges}
@@ -1383,7 +1395,7 @@ function CardEditDialog({ data, snap, onClose, onSaved }: {
               </Field>
               <Field label={data.kind === "asset" ? "资产描述" : data.kind === "storyboard" ? "（分镜描述见上方）" : "正文"}>
                 <textarea value={body} onChange={(e) => setBody(e.target.value)}
-                  rows={isLongText ? 14 : 5} disabled={data.kind === "storyboard"}
+                  rows={isLongText ? 20 : 5} disabled={data.kind === "storyboard"}
                   className="w-full text-sm rounded-md border border-border/50 bg-background p-2 outline-none resize-y disabled:opacity-50" />
               </Field>
               {(data.kind === "asset" || data.kind === "storyboard") && (
@@ -1426,26 +1438,29 @@ function ProjectDialog({ open, initial, onClose, onSave }: {
     videoRatio: "16:9", imageQuality: "1K", videoResolution: "720P",
   });
   const [styles, setStyles] = useState<{ value: string; label: string; desc: string }[]>([]);
+  const [storyStyles, setStoryStyles] = useState<{ value: string; label: string; desc: string }[]>([]);
 
   useEffect(() => {
     if (!open) return;
     setForm(initial ? {
       name: initial.name || "", introduce: initial.introduce || "",
-      artStyle: initial.artStyle || "", directorManual: initial.directorManual || "",
+      artStyle: initial.artStyle || "", storyStyle: initial.storyStyle || "",
+      directorManual: initial.directorManual || "",
       videoRatio: initial.videoRatio || "16:9", imageQuality: initial.imageQuality || "1K",
       videoResolution: initial.videoResolution || "720P",
+      mode: initial.mode || "纯文本多参模式",
     } : {
-      name: "", introduce: "", artStyle: "", directorManual: "",
+      name: "", introduce: "", artStyle: "", storyStyle: "", directorManual: "",
       videoRatio: "16:9", imageQuality: "1K", videoResolution: "720P",
+      mode: "纯文本多参模式",
     });
     toonflowApi.listArtStyles().then(({ data }) => setStyles(data.styles || [])).catch(() => setStyles([]));
+    toonflowApi.listStoryStyles().then(({ data }) => setStoryStyles(data.styles || [])).catch(() => setStoryStyles([]));
   }, [open, initial]);
 
   if (!open) return null;
 
   const patch = (p: Partial<ProjectPayload>) => setForm((f) => ({ ...f, ...p }));
-  // 导演风格：当前手册文本命中预设则回显预设名，否则为自定义
-  const presetIndex = DIRECTOR_PRESETS.findIndex((p) => p.text && p.text === (form.directorManual || ""));
 
   const Sel = ({ value, onChange, options, placeholder }: {
     value: string; onChange: (v: string) => void; options: { value: string; label: string }[];
@@ -1504,11 +1519,17 @@ function ProjectDialog({ open, initial, onClose, onSave }: {
                 options={styles.map((s) => ({ value: s.value, label: s.label }))}
                 onChange={(v) => patch({ artStyle: v })} />
             </Field>
-            <Field label="导演风格" hint="选择预设后可在下方手册里改写">
-              <Sel value={presetIndex > 0 ? String(presetIndex) : "0"} options={DIRECTOR_PRESETS.map((p, i) => ({ value: String(i), label: p.label }))}
-                onChange={(v) => patch({ directorManual: DIRECTOR_PRESETS[Number(v) || 0]?.text || "" })} />
+            <Field label="导演风格（题材叙事技法）"
+              hint={storyStyles.find((s) => s.value === form.storyStyle)?.desc || "对应 skills/story_skills 下的导演技法"}>
+              <Sel value={form.storyStyle || ""} placeholder="不设定（通用叙事）"
+                options={storyStyles.map((s) => ({ value: s.value, label: s.label }))}
+                onChange={(v) => patch({ storyStyle: v })} />
             </Field>
           </div>
+          <Field label="制作模式" hint="决定分镜面板产物形态：多参文本 or 首/尾帧">
+            <Sel value={form.mode || "纯文本多参模式"} options={PRODUCTION_MODES}
+              onChange={(v) => patch({ mode: v })} />
+          </Field>
           <Field label="导演手册（可选）" hint="视觉与叙事要求，会随资产/分镜生成为模型提供约束">
             <textarea value={form.directorManual || ""} onChange={(e) => patch({ directorManual: e.target.value })}
               placeholder="节奏、镜头语言、色调与表演要求等；选了预设风格会自动填入，可自由改写" rows={4}

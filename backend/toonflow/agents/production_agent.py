@@ -31,9 +31,37 @@ EXEC_SKILLS = {
 SUPERVISION_SKILL = "production_agent_supervision.md"
 
 
+def _load_project(project_id: int):
+    """读取项目实体（子 Agent 注入项目设定用），取不到返回 None。"""
+    from backend.control_plane.database import session_scope
+    from backend.toonflow.core.models import TfProject
+
+    with session_scope() as session:
+        return session.get(TfProject, project_id)
+
+
+def _project_settings_block(project) -> str:
+    """项目设定块（注入决策层与各子 Agent）：全部来自项目卡片的用户设置。"""
+    if project is None:
+        return ""
+    lines = [
+        f"- 画面比例：{getattr(project, 'videoRatio', '') or '16:9'}",
+        f"- 视频分辨率：{getattr(project, 'videoResolution', '') or '720P'}",
+        f"- 图片质量：{getattr(project, 'imageQuality', '') or '1K'}",
+        f"- 画风：{getattr(project, 'artStyle', '') or '未设定'}",
+        f"- 题材/导演风格：{getattr(project, 'storyStyle', '') or '未设定'}",
+        f"- 制作模式：{getattr(project, 'mode', '') or '纯文本多参模式'}",
+    ]
+    introduce = (getattr(project, "introduce", "") or "").strip()
+    if introduce:
+        lines.append(f"- 项目简介：{introduce[:300]}")
+    return "## 本项目设定（必须遵循）\n" + "\n".join(lines)
+
+
 def _sub_agent_tool(name: str, skill_file: str, description: str,
                     build_tools: Callable, project_id: int, emit,
-                    result_hook: Callable[[str], None] | None = None) -> "Tool":
+                    result_hook: Callable[[str], None] | None = None,
+                    extra_system: str = "") -> "Tool":
     """执行层子 Agent：一次独立 tool-loop，system 为对应技能文件。
 
     build_tools() 返回该子 Agent 可用的工具字典（各 _make_* 已按需裁剪）。
@@ -47,7 +75,9 @@ def _sub_agent_tool(name: str, skill_file: str, description: str,
         if not instruction:
             return {"error": "instruction 不能为空"}
         sub_tools = build_tools()
-        system = common_skill_body(skill_file)
+        system = (common_skill_body(skill_file)
+                  + "\n\n" + _project_settings_block(_load_project(project_id))
+                  + ("\n\n" + extra_system if extra_system else "")).strip()
         messages = [
             {"role": "system", "content": system},
             {"role": "user", "content": instruction},
@@ -96,6 +126,25 @@ def run_decision_agent(project_id: int, user_text: str, emit=None) -> str:
         return {k: sub[k] for k in ("get_flowData", "generate_storyboard",
                                     "generate_storyboard_images", "get_production_status")}
 
+    def _director_system(filename: str) -> str:
+        """导演类子 Agent 的额外 system：项目设定 + 题材叙事技法（story_skills）+ 项目导演手册。"""
+        from backend.control_plane.database import session_scope
+        from backend.toonflow.core.models import TfProject
+        from backend.toonflow.pipeline import common
+
+        with session_scope() as session:
+            proj = session.get(TfProject, project_id)
+            style = getattr(proj, "storyStyle", "") or ""
+            manual = (getattr(proj, "directorManual", "") or "").strip()
+            settings = _project_settings_block(proj)
+        out = settings
+        narrative = common.story_narrative_body(style, filename)
+        if narrative:
+            out += f"\n\n## 本片叙事/导演技法（题材：{style}）\n{narrative[:8000]}"
+        if manual:
+            out += f"\n\n## 用户导演手册（优先遵循）\n{manual[:4000]}"
+        return out
+
     def _persist_board_result(text: str) -> None:
         """分镜表子 Agent 产出落库：解析 <storyboardTable> 标签并重建分镜行。"""
         from backend.toonflow.pipeline import storyboard as pipe_board
@@ -133,11 +182,13 @@ def run_decision_agent(project_id: int, user_text: str, emit=None) -> str:
     tools["run_sub_agent_director_plan"] = _sub_agent_tool(
         "run_sub_agent_director_plan", EXEC_SKILLS["director_plan"],
         "派发执行层：阅读剧本与事件，产出拍摄计划（保存到工作区 scriptPlan）",
-        _make_plan, project_id, emit)
+        _make_plan, project_id, emit,
+        extra_system=_director_system("director_planning_narrative.md"))
     tools["run_sub_agent_storyboard"] = _sub_agent_tool(
         "run_sub_agent_storyboard", EXEC_SKILLS["storyboard_table"],
         "派发执行层：生成/重建分镜表与分镜面板（含图提示词润色），耗时约1-3分钟",
-        _make_board, project_id, emit, result_hook=_persist_board_result)
+        _make_board, project_id, emit, result_hook=_persist_board_result,
+        extra_system=_director_system("director_storyboard_table_narrative.md"))
     tools["run_sub_agent_storyboard_gen"] = _sub_agent_tool(
         "run_sub_agent_storyboard_gen", EXEC_SKILLS["storyboard_gen"],
         "派发执行层：批量生成分镜图（异步提交，用 get_production_status 轮询进度）",
@@ -145,6 +196,7 @@ def run_decision_agent(project_id: int, user_text: str, emit=None) -> str:
 
     system = (
         common_skill_body(DECISION_SKILL)
+        + "\n\n" + _project_settings_block(_load_project(project_id))
         + "\n\n## 项目上下文（实时）\n" + json.dumps(summary, ensure_ascii=False)
         + "\n\n## 工作区约定\nget_flowData 的 key：script(剧本)/scriptPlan(拍摄计划)/"
           "assets(资产清单)/storyboardTable(分镜表)/storyboard(分镜面板)/novelEvents(小说事件)。"

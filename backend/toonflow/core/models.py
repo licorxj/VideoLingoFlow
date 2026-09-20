@@ -43,6 +43,8 @@ class TfProject(TfBase):
     imageQuality: Mapped[str] = mapped_column(Text, nullable=False, default="1K")
     # 视频分辨率档位：480P / 720P / 1080P（新增列，旧库由 seed._ensure_columns 幂等补齐）
     videoResolution: Mapped[str] = mapped_column(Text, nullable=False, default="720P")
+    # 叙事/导演风格（story_skills 目录名），决定注入哪套 driector_skills 技法
+    storyStyle: Mapped[str] = mapped_column(Text, nullable=False, default="")
     createTime: Mapped[int] = mapped_column(Integer, nullable=False, default=_ms)
     updateTime: Mapped[int] = mapped_column(Integer, nullable=False, default=_ms, onupdate=_ms)
 

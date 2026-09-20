@@ -1,0 +1,1 @@
+import{Ct as e}from"./index-Cl_DZ8IV.js";var t=0,n=e(e=>({toasts:[],addToast:n=>{let r=String(++t),i=n.duration||3e3;e(e=>({toasts:[...e.toasts,{...n,id:r}]})),setTimeout(()=>{e(e=>({toasts:e.toasts.filter(e=>e.id!==r)}))},i)},removeToast:t=>{e(e=>({toasts:e.toasts.filter(e=>e.id!==t)}))}})),r=e=>n.getState().addToast(e);export{n,r as t};

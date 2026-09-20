@@ -13,6 +13,7 @@ export interface TfProject {
   videoRatio: string;
   imageQuality: string;
   videoResolution: string;
+  storyStyle: string;
   createTime: number;
   updateTime: number;
 }
@@ -58,6 +59,7 @@ export interface ProjectCreatePayload {
   videoRatio?: string;
   imageQuality?: string;
   videoResolution?: string;
+  storyStyle?: string;
 }
 
 export interface TfArtStyle {
@@ -90,6 +92,7 @@ export const toonflowApi = {
   updateProject: (id: number, data: Partial<ProjectCreatePayload>) => client.put<{ success: boolean; project: TfProject }>(`/api/tf/projects/${id}`, data),
   deleteProject: (id: number) => client.delete(`/api/tf/projects/${id}`),
   listArtStyles: () => client.get<{ styles: TfArtStyle[] }>("/api/tf/art-styles"),
+  listStoryStyles: () => client.get<{ styles: TfArtStyle[] }>("/api/tf/story-styles"),
   listSkills: () => client.get<{ skills: TfSkill[] }>("/api/tf/skills"),
   listSkillLibraries: () => client.get<{ libraries: TfSkillLibrary[] }>("/api/tf/skills/libraries"),
   listPrompts: () => client.get<{ prompts: TfPrompt[] }>("/api/tf/prompts"),

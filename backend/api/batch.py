@@ -25,6 +25,11 @@ class BatchDeleteTasksRequest(BaseModel):
     task_ids: List[str] = Field(default_factory=list)
 
 
+class BatchDispatchRequest(BaseModel):
+    task_ids: List[str] = Field(default_factory=list)
+    mode: str = Field("resume", description="resume=断点继续入队；retry=从头执行入队")
+
+
 class BatchArchiveRequest(BaseModel):
     target_dir: str = Field(..., description="归档目标文件夹")
     tasks: dict = Field(default_factory=dict, description="task_id -> 勾选的相对文件路径列表；缺省表示该任务全部文件")
@@ -235,6 +240,25 @@ async def retry_task(batch_id: str, task_id: str):
         raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
+
+
+@router.post("/{batch_id}/dispatch-tasks")
+async def dispatch_tasks(batch_id: str, req: BatchDispatchRequest):
+    """把选中任务批量投递到执行队列排队。
+
+    投递 ≠ 立即执行：整批一次入队，由 Worker 按「最大同时执行任务数」逐个取走执行，
+    跑完一个自动续下一个。因此这里不会因为"在途已达上限"而拒投。
+    """
+    try:
+        be = get_batch_executor()
+        return be.dispatch_tasks(batch_id, req.task_ids, req.mode)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError as e:
+        # Celery / Redis 不可用：明确提示
+        raise HTTPException(status_code=503, detail=f"执行服务不可用：{e}")
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
 
 @router.post("/{batch_id}/{task_id}/resume")

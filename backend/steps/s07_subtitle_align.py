@@ -16,7 +16,19 @@
         step5 的 split-then-align 思路：只做一次决策，不修改内容）；
         LLM 失败时用本地标点/权重切分兜底。
      c. 分片时间戳由该句词区间内的词（按分片文本再次精确定位）直接得出。
-  4. 最多迭代 ``MAX_ROUNDS`` 轮，直到所有分片都在长度限制内。
+  4. 最多迭代 ``MAX_ROUNDS`` 轮，直到所有分片都在长度限制内。每轮把「全句超长分片」
+     的切分任务按字符预算打包成批次，**一次 LLM 请求处理多个切分任务**（组装模式，
+     借鉴 subtitle_reduction 的批量思路）。请求量控制（避免瞬时打爆上游限速）：
+
+     - 模型「拒绝切分」（返回整句 + 空片）或单片内容不合格 → 本地确定性切分，
+       **不发任何请求**（同样的问法重试只会得到同样的回复）；
+     - 仅「整批请求不可用」（异常 / 整批无法解析）才逐句重试，且每轮次数受
+       ``DEFAULT_SINGLE_FALLBACK_BUDGET`` 预算限制，超出即本地切分；
+     - 某轮 LLM 零命中即刻熔断，后续轮次全部本地切分；
+     - 所有请求经节流闸（``llm.min_request_interval`` / 节点「请求最小间隔」），
+       给上游限速留出确定性余量。
+
+     节点设置可关闭批量对齐，回到「每句独立请求」的旧行为。
   5. 句内相邻分片间隔小于 ``GAP_FILL_LIMIT`` 时补齐（借鉴 step6 的去缝隙）。
 
 输出：``cache/subtitle_aligned{_node_id}.json``，条目形如
@@ -25,7 +37,9 @@
 import os
 import re
 import json
+import time
 import difflib
+import threading
 from typing import Callable, Optional, List, Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -47,6 +61,54 @@ MAX_ROUNDS = 3              # 每句最多迭代切分轮数（每轮把超长�
 MIN_PART_DURATION = 0.12    # 单个条目最短时长（秒）
 GAP_FILL_LIMIT = 1.0        # 同句内相邻分片间隔小于该值时补齐（秒）
 ALIGN_SIMILARITY_FLOOR = 0.9  # 译文分片拼接与原文的相似度下限
+DEFAULT_MAX_REQUEST_CHARS = 6000  # 批量对齐时单次请求的默认字符预算（回退值）
+DEFAULT_REQUEST_INTERVAL = 0.5    # 两次 LLM 请求的最小间隔（秒）：并发下的硬速率上限
+DEFAULT_SINGLE_FALLBACK_BUDGET = 8  # 每轮「整批不可用 → 逐句重试」的次数预算
+
+
+class _RequestGate:
+    """节流闸：限制在飞请求数 + 两次请求之间的最小间隔。
+
+    组装模式会同时开多条线程发请求，逐句兜底又会叠加在它之上；没有闸门时瞬时
+    QPS 只取决于并发数，很容易直接打爆上游限速（429）。闸门按配置组合在进程内
+    共享，因此同一进程的多个节点实例共用同一个速率上限。
+    """
+
+    def __init__(self, max_in_flight: int, min_interval: float):
+        self._sem = threading.BoundedSemaphore(max(1, int(max_in_flight)))
+        self._interval = max(0.0, float(min_interval))
+        self._lock = threading.Lock()
+        self._next_slot = 0.0
+
+    def __enter__(self):
+        self._sem.acquire()
+        if self._interval > 0:
+            with self._lock:
+                now = time.monotonic()
+                wait = max(0.0, self._next_slot - now)
+                self._next_slot = max(now, self._next_slot) + self._interval
+            if wait > 0:
+                time.sleep(wait)
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self._sem.release()
+        return False
+
+
+_GATES: Dict[Tuple[int, float], "_RequestGate"] = {}
+_GATES_LOCK = threading.Lock()
+
+
+def _gate_for(max_in_flight: int, min_interval: float) -> "_RequestGate":
+    """取（或建）按配置共享的节流闸。"""
+    key = (max(1, int(max_in_flight)), round(max(0.0, float(min_interval)), 3))
+    with _GATES_LOCK:
+        gate = _GATES.get(key)
+        if gate is None:
+            gate = _RequestGate(key[0], key[1])
+            _GATES[key] = gate
+        return gate
 
 # 归一化时剔除的标点/空白（词表与句子文本用同一套规则，保证可比）
 _PUNCT_STRIP_RE = re.compile(
@@ -325,6 +387,173 @@ def _build_retry_prompt(
     return prompt_data
 
 
+def _get_align_batch_system_prompt(num_tasks: int, src_lang: str = "source", tgt_lang: str = "target") -> str:
+    """组装模式系统提示词：一次请求处理多个彼此独立的切分任务。"""
+    return f"""### Role
+You are a professional Netflix subtitle alignment expert fluent in both {src_lang} and {tgt_lang}.
+
+### Core Task
+You receive {num_tasks} INDEPENDENT alignment task(s). For EACH task, the {src_lang} source
+text has ALREADY been split into fixed parts. Split ONLY the {tgt_lang} translation of that
+task into the same number of aligned parts.
+
+### ABSOLUTE RULES - VIOLATION = FAILURE
+1. **ONLY CUT, NEVER MODIFY** - never change, rewrite, add or remove any word of a translation.
+2. **DO NOT touch the source parts** - they are already fixed. Only cut the translation.
+3. **Split at the same semantic positions as the source parts** so the audience reads them in sync.
+4. **Punctuation stays with the preceding text** - a comma/period must never start a part.
+5. **Every part must contain REAL text** - no placeholders like "(part of...)" or "[continued]".
+6. Never merge, summarise, duplicate or drop content.
+7. **Each task is isolated** - never let one task's text leak into another task's parts.
+
+### Output Format in JSON
+{{
+    "results": [
+        {{"index": 0, "target_parts": ["aligned_part1", "aligned_part2"]}},
+        {{"index": 1, "target_parts": ["aligned_part1", "aligned_part2"]}}
+    ]
+}}
+
+### Your Answer: provide ONLY a valid JSON object, no extra explanation.
+"""
+
+
+def _build_align_batch_prompt(payloads: List[Dict], src_lang: str = "source", tgt_lang: str = "target") -> dict:
+    """构造「多任务合并」的对齐提示词。
+
+    优先使用 ``s07_subtitle_align_batch`` 提示词模板（可在提示词管理中自定义），
+    模板缺失时用内置提示词；与单任务的 ``s07_subtitle_align`` 是同一套语义。
+    """
+    payload_json = json.dumps(payloads, ensure_ascii=False, indent=2)
+    example_results = [
+        {
+            "index": index,
+            "target_parts": [f"part{i + 1}" for i in range(int(item.get("num_parts") or 2))],
+        }
+        for index, item in enumerate(payloads)
+    ]
+    try:
+        from backend.prompts.prompt_service import get_prompt_service
+        svc = get_prompt_service()
+        result = svc.assemble_prompt("s07_subtitle_align_batch", {
+            "src_lang": src_lang,
+            "tgt_lang": tgt_lang,
+            "count": len(payloads),
+            "tasks": payload_json,
+            "results_example": json.dumps(example_results, ensure_ascii=False),
+        })
+        if result.get("found") and result.get("user_prompt"):
+            return {
+                "system_prompt": result.get("system_prompt")
+                or _get_align_batch_system_prompt(len(payloads), src_lang, tgt_lang),
+                "user_prompt": result.get("user_prompt"),
+            }
+    except Exception as exc:  # 模板服务不可用时回退内置提示词
+        print(f"[SubtitleAlign] Batch prompt template unavailable, using builtin prompt: {exc}")
+
+    return {
+        "system_prompt": _get_align_batch_system_prompt(len(payloads), src_lang, tgt_lang),
+        "user_prompt": f"""### Task
+For EACH of the {len(payloads)} tasks below, split the {tgt_lang} translation into exactly
+that task's `num_parts` parts, aligned with that task's already-split {src_lang} source parts.
+Each task is independent: never mix content between tasks.
+
+### Tasks (JSON array)
+{payload_json}
+
+### Hard Requirements
+1. Return exactly one result per task, keeping the same `index`, in the same order.
+2. `target_parts` must contain exactly `num_parts` non-empty strings for that task.
+3. The concatenation of a task's `target_parts` MUST equal that task's full `translation`
+   (only the cut positions change, not a single character).
+4. Cut at the position that corresponds to the source part boundary;
+   punctuation stays at the END of the preceding part.
+5. Each part should be at most about that task's `word_limit` characters.
+6. No placeholders, no explanations, no duplicated content.
+
+### Return this JSON object exactly
+{{
+    "results": {json.dumps(example_results, ensure_ascii=False)}
+}}
+""",
+    }
+
+
+def _coerce_align_results(result: Any) -> Optional[Dict[str, List[str]]]:
+    """把批量返回规整为 ``{批次内序号: target_parts}``；无法解析时返回 None。"""
+    if isinstance(result, str):
+        text = result.strip()
+        if text.startswith("```"):
+            text = text.strip("`").strip()
+            if text.lower().startswith("json"):
+                text = text[4:].strip()
+        try:
+            result = json.loads(text)
+        except Exception:
+            return None
+
+    if isinstance(result, dict):
+        items = None
+        for key in ("results", "data", "items"):
+            if isinstance(result.get(key), list):
+                items = result[key]
+                break
+        if items is None:
+            # 兼容模型退化成「单任务」返回形态
+            parts = result.get("target_parts")
+            if isinstance(parts, list):
+                return {"0": [str(p).strip() for p in parts]}
+            return None
+    elif isinstance(result, list):
+        items = result
+    else:
+        return None
+
+    out: Dict[str, List[str]] = {}
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        key = item.get("index")
+        parts = item.get("target_parts") or item.get("parts")
+        if key is None or not isinstance(parts, list):
+            continue
+        # 保留空片位：空片是「模型拒绝切分」的信号，滤掉会被误判成「数量不符」
+        out[str(key)] = [str(p).strip() for p in parts]
+    return out
+
+
+def _pack_align_batches(tasks: List[Dict], max_request_chars: int) -> List[List[Dict]]:
+    """按字符预算把切分任务打包（组装模式下 1 批 = 1 次 LLM 请求）。"""
+    overhead = len(_build_align_batch_prompt([])["user_prompt"]) + len(_get_align_batch_system_prompt(0))
+    budget = max(800, int(max_request_chars) - overhead - 200)
+
+    def _task_chars(task: Dict) -> int:
+        """单个任务在请求体中占用的近似字符数（与 ``_task_payload`` 字段保持一致）。"""
+        return len(json.dumps({
+            "index": 0,
+            "num_parts": len(task.get("src_parts") or []),
+            "word_limit": "0000",
+            "source_parts": list(task.get("src_parts") or []),
+            "source_text": str(task.get("src_text") or ""),
+            "translation": str(task.get("translation") or ""),
+        }, ensure_ascii=False))
+
+    batches: List[List[Dict]] = []
+    current: List[Dict] = []
+    current_chars = 0
+    for task in tasks:
+        size = _task_chars(task)
+        if current and current_chars + size > budget:
+            batches.append(current)
+            current = []
+            current_chars = 0
+        current.append(task)
+        current_chars += size
+    if current:
+        batches.append(current)
+    return batches
+
+
 # ── 校验 ─────────────────────────────────────────────────────────────
 
 
@@ -346,6 +575,22 @@ _PUNCTUATION_ONLY = set("。！？，、；：""''【】《》（）…—,.!?;:
 def _has_placeholder(text: str) -> bool:
     lowered = str(text or "").strip().lower()
     return any(pattern in lowered for pattern in _PLACEHOLDER_PATTERNS)
+
+
+def _looks_like_refusal(raw_parts: Any, translation: str) -> bool:
+    """模型「拒绝切分」的两种形态：分片数够但存在空片，或只有一片且就是整句。
+
+    这不是格式错误——再问一次通常还是同样的回复，所以应直接走本地确定性切分，
+    而不是白白再花 1~2 次请求重试（这是请求量失控的主因之一）。
+    """
+    if not isinstance(raw_parts, list) or not raw_parts:
+        return False
+    stripped = [str(p).strip() for p in raw_parts]
+    if any(not p for p in stripped) and any(stripped):
+        return True
+    if len(stripped) == 1 and stripped[0]:
+        return _normalize_for_matching(stripped[0]) == _normalize_for_matching(translation)
+    return False
 
 
 def _validate_target_parts(
@@ -756,8 +1001,12 @@ class S07SubtitleAlign(BaseStep):
         max_length: float,
         src_lang: str,
         tgt_lang: str,
-    ) -> List[str]:
-        """让 LLM 把译文切成与源文分片对齐的若干份；失败时本地兜底。"""
+    ) -> Tuple[List[str], bool]:
+        """让 LLM 把译文切成与源文分片对齐的若干份；失败时本地兜底。
+
+        返回 ``(译文分片, 是否由 LLM 产出)``。模型明确「拒绝切分」时**不再重试**：
+        同样的问法只会得到同样的回复，重试纯属浪费配额（也正是请求量失控的推手）。
+        """
         num_parts = len(src_parts)
         last_issues: List[str] = []
         last_result: Any = None
@@ -773,12 +1022,7 @@ class S07SubtitleAlign(BaseStep):
                     last_issues, last_result, src_lang, tgt_lang,
                 )
 
-            result = llm.chat(
-                self.step_id,
-                prompt["user_prompt"],
-                system_prompt=prompt["system_prompt"],
-                response_json=True,
-            )
+            result = self._chat(llm, prompt)
             last_result = result
 
             if not isinstance(result, dict):
@@ -786,24 +1030,27 @@ class S07SubtitleAlign(BaseStep):
                 print(f"[SubtitleAlign] id={sid} attempt {attempt + 1}: {last_issues[0]}")
                 continue
 
-            target_parts = [
-                str(p).strip()
-                for p in (result.get("target_parts") or [])
-                if str(p).strip()
-            ]
+            raw_parts = result.get("target_parts")
+            if not isinstance(raw_parts, list):
+                raw_parts = []
+            if _looks_like_refusal(raw_parts, translation):
+                print(f"[SubtitleAlign] id={sid}: LLM 未切分（含空片或原样返回），跳过重试")
+                break
+
+            target_parts = [str(p).strip() for p in raw_parts]
             issues = _validate_target_parts(target_parts, num_parts, translation, max_length)
             if not issues:
-                return target_parts
+                return target_parts, True
 
             last_issues = issues
             print(f"[SubtitleAlign] id={sid} attempt {attempt + 1} failed: {'; '.join(issues)}")
 
         local_parts = _split_text_locally(translation, num_parts)
         if len(local_parts) == num_parts:
-            print(f"[SubtitleAlign] id={sid}: LLM alignment failed, used local punctuation split")
-            return local_parts
-        print(f"[SubtitleAlign] id={sid}: LLM alignment failed, kept translation unsplit")
-        return [translation]
+            print(f"[SubtitleAlign] id={sid}: LLM alignment unavailable, used local punctuation split")
+            return local_parts, False
+        print(f"[SubtitleAlign] id={sid}: LLM alignment unavailable, kept translation unsplit")
+        return [translation], False
 
     # ── 时间戳 ───────────────────────────────────────────────────────
 
@@ -886,6 +1133,406 @@ class S07SubtitleAlign(BaseStep):
             current = end
         return out
 
+    # ── 批量 / 逐句模式解析 ──────────────────────────────────────────
+
+    def _resolve_batch_align(self) -> bool:
+        """是否启用组装模式（多句合并请求）。默认开启，可在节点设置中关闭。"""
+        raw = (getattr(self, "_node_config", {}) or {}).get("batch_align")
+        if raw is None or raw == "":
+            return True
+        if isinstance(raw, bool):
+            return raw
+        return str(raw).strip().lower() in ("1", "true", "yes", "on")
+
+    def _resolve_max_request_chars(self) -> int:
+        """单次批量请求的字符预算：节点设置 > 全局 ``llm.max_request_chars`` > 默认值。"""
+        raw = (getattr(self, "_node_config", {}) or {}).get("max_request_chars")
+        for candidate in (raw, config.get("llm.max_request_chars")):
+            try:
+                value = int(float(candidate))
+            except (TypeError, ValueError):
+                continue
+            if value > 0:
+                return value
+        return DEFAULT_MAX_REQUEST_CHARS
+
+    def _resolve_request_interval(self) -> float:
+        """两次 LLM 请求的最小间隔：节点设置 > 全局 ``llm.min_request_interval`` > 默认值。"""
+        raw = (getattr(self, "_node_config", {}) or {}).get("request_interval")
+        for candidate in (raw, config.get("llm.min_request_interval")):
+            try:
+                value = float(candidate)
+            except (TypeError, ValueError):
+                continue
+            if value >= 0:
+                return value
+        return DEFAULT_REQUEST_INTERVAL
+
+    def _chat(self, llm, prompt: Dict) -> Any:
+        """本节点唯一的 LLM 出口：统一经节流闸，避免瞬时打爆上游限速。
+
+        组装模式会并发发多批请求、逐句兜底又叠加在其上，若不收敛速率，峰值 QPS
+        只由并发数决定（默认 10），很容易触发上游 429。
+        """
+        self._request_count = getattr(self, "_request_count", 0) + 1
+        gate = getattr(self, "_gate", None)
+        if gate is None:
+            gate = _gate_for(
+                int(config.get("llm.max_concurrent") or 10),
+                self._resolve_request_interval(),
+            )
+            self._gate = gate
+        with gate:
+            return llm.chat(
+                self.step_id,
+                prompt.get("user_prompt") or "",
+                system_prompt=prompt.get("system_prompt") or "",
+                response_json=True,
+            )
+
+    @staticmethod
+    def _entry_over_limit(entry: Dict, max_length: float) -> bool:
+        """条目是否仍需切分：超出长度限制，或残留占位符。"""
+        text = str(entry.get("tr", "") or "")
+        return len(text) > max_length or _has_placeholder(text)
+
+    # ── 逐句模式（旧行为）────────────────────────────────────────────
+
+    def _process_sentences_concurrent(
+        self,
+        llm,
+        to_process: List[Dict],
+        max_length: float,
+        src_lang: str,
+        tgt_lang: str,
+        max_workers: int,
+        callback: Optional[Callable],
+    ) -> Dict[int, List[Dict]]:
+        """每句一次独立请求（含其自身的多轮切分），按 ``llm.max_concurrent`` 并发。"""
+        processed_map: Dict[int, List[Dict]] = {}
+        total = len(to_process)
+
+        def _worker(sentence: Dict) -> Tuple[int, List[Dict]]:
+            parts = self._process_sentence(llm, sentence, max_length, src_lang, tgt_lang)
+            return sentence.get("src_index", -1), parts
+
+        with ThreadPoolExecutor(max_workers=max(1, min(int(max_workers), total))) as executor:
+            futures = {executor.submit(_worker, s): s for s in to_process}
+            done_count = 0
+            for future in as_completed(futures):
+                sentence = futures[future]
+                try:
+                    idx, parts = future.result()
+                    processed_map[idx] = parts
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"「{self.step_name}」断句对齐失败（id={sentence.get('id', '')}）：{exc}"
+                    ) from exc
+                done_count += 1
+                if callback:
+                    pct = int(15 + 60 * done_count / total)
+                    callback(min(pct, 75), f"已处理 {done_count}/{total} 句")
+        return processed_map
+
+    # ── 组装模式（批量请求）──────────────────────────────────────────
+
+    @staticmethod
+    def _task_payload(index: int, task: Dict, word_limit: float) -> Dict:
+        """批次内单个切分任务的请求载荷（``index`` 为批次内序号）。"""
+        return {
+            "index": index,
+            "num_parts": len(task.get("src_parts") or []),
+            "word_limit": f"{word_limit:.0f}",
+            "source_parts": list(task.get("src_parts") or []),
+            "source_text": str(task.get("src_text") or ""),
+            "translation": str(task.get("translation") or ""),
+        }
+
+    def _run_align_batch(
+        self,
+        llm,
+        batch: List[Dict],
+        max_length: float,
+        src_lang: str,
+        tgt_lang: str,
+    ) -> Tuple[Dict[str, List[str]], List[Dict], List[Dict], bool]:
+        """执行单个批次：1 次请求处理整批切分任务。
+
+        返回 ``(命中, 需本地切分, 不合格, 整批不可用)``：
+
+        - 命中：LLM 给出且通过校验的译文分片
+        - 需本地切分：模型「拒绝切分」的任务 → 本地标点切分，**不再发请求**
+        - 不合格：数量/占位符/相似度等问题 → 同样本地切分（单任务重试通常是白费）
+        - 整批不可用：请求异常或整批返回无法解析 → 交调用方「有预算地」逐句重试
+        """
+        payloads = [self._task_payload(i, task, max_length) for i, task in enumerate(batch)]
+        prompt = _build_align_batch_prompt(payloads, src_lang, tgt_lang)
+        try:
+            raw = self._chat(llm, prompt)
+        except Exception as exc:  # 批量异常不致命：交回调用方决定
+            print(f"[SubtitleAlign] 批量请求异常：{exc}")
+            return {}, [], [], True
+
+        parsed = _coerce_align_results(raw)
+        if parsed is None:
+            print("[SubtitleAlign] 批量返回无法解析为 results 列表")
+            return {}, [], [], True
+
+        accepted: Dict[str, List[str]] = {}
+        refused: List[Dict] = []
+        invalid: List[Dict] = []
+        for position, task in enumerate(batch):
+            raw_parts = parsed.get(str(position))
+            if raw_parts is None:
+                invalid.append(task)
+                continue
+            if _looks_like_refusal(raw_parts, task.get("translation") or ""):
+                print(
+                    f"[SubtitleAlign] 批量结果 id={task.get('sid', '')} 模型未切分"
+                    f"（{len(raw_parts)} 片且有空片），改用本地切分"
+                )
+                refused.append(task)
+                continue
+            issues = _validate_target_parts(
+                list(raw_parts),
+                len(task.get("src_parts") or []),
+                task.get("translation") or "",
+                max_length,
+            )
+            if issues:
+                print(
+                    f"[SubtitleAlign] 批量结果 id={task.get('sid', '')} 未通过校验，"
+                    f"改用本地切分：{'；'.join(issues)}"
+                )
+                invalid.append(task)
+                continue
+            accepted[task["key"]] = list(raw_parts)
+        return accepted, refused, invalid, False
+
+    @staticmethod
+    def _local_split_task(task: Dict) -> Optional[List[str]]:
+        """本地确定性切分单个任务；切不动时返回 None（调用方保持原片）。"""
+        num_parts = len(task.get("src_parts") or [])
+        parts = _split_text_locally(str(task.get("translation") or ""), num_parts)
+        return parts if len(parts) == num_parts else None
+
+    def _align_tasks_in_batches(
+        self,
+        llm,
+        tasks: List[Dict],
+        max_request_chars: int,
+        max_length: float,
+        src_lang: str,
+        tgt_lang: str,
+        log: Optional[Callable] = None,
+        use_llm: bool = True,
+        single_budget: int = DEFAULT_SINGLE_FALLBACK_BUDGET,
+    ) -> Tuple[Dict[str, List[str]], int]:
+        """批量对齐一轮内的全部切分任务，返回 ``(译文分片表, LLM 命中数)``。
+
+        降级策略的核心是**不放大请求量**：
+
+        - 模型拒绝切分 / 单片内容不合格 → 本地确定性切分（0 次请求）
+        - 仅「整批不可用」才逐句重试，且每轮受 ``single_budget`` 次数限制
+        - ``use_llm=False``（上一轮已判定模型不可用）→ 全部本地切分，一次请求都不发
+        """
+        results: Dict[str, List[str]] = {}
+        hits = 0
+        if not tasks:
+            return results, hits
+
+        if not use_llm:
+            if log:
+                log(f"本轮 {len(tasks)} 个切分任务改用本地切分（不再请求 LLM）")
+            for task in tasks:
+                parts = self._local_split_task(task)
+                if parts is not None:
+                    results[task["key"]] = parts
+            return results, hits
+
+        batches = _pack_align_batches(tasks, max_request_chars)
+        if log:
+            log(f"本轮 {len(tasks)} 个切分任务合并为 {len(batches)} 次批量请求")
+
+        max_workers = int(config.get("llm.max_concurrent") or 10)
+        local_tasks: List[Dict] = []
+        wholesale: List[Dict] = []
+        with ThreadPoolExecutor(max_workers=max(1, min(max_workers, len(batches)))) as executor:
+            futures = {
+                executor.submit(self._run_align_batch, llm, batch, max_length, src_lang, tgt_lang): batch
+                for batch in batches
+            }
+            for future in as_completed(futures):
+                try:
+                    accepted, refused, invalid, is_wholesale = future.result()
+                except Exception as exc:  # 单批异常只影响该批
+                    print(f"[SubtitleAlign] 批量执行异常：{exc}")
+                    wholesale.extend(futures[future])
+                    continue
+                results.update(accepted)
+                hits += len(accepted)
+                local_tasks.extend(refused)
+                local_tasks.extend(invalid)
+                if is_wholesale:
+                    wholesale.extend(futures[future])
+
+        for task in local_tasks:
+            parts = self._local_split_task(task)
+            if parts is not None:
+                results[task["key"]] = parts
+
+        # 整批不可用：整批 1 次请求都没用上才值得按句重试，且受预算约束
+        if wholesale:
+            if single_budget < len(wholesale):
+                print(
+                    f"[SubtitleAlign] {len(wholesale)} 个任务来自不可用批次，"
+                    f"按预算只逐句重试 {max(0, single_budget)} 个（其余本地切分）"
+                )
+            if log:
+                log(f"{len(wholesale)} 个任务来自不可用批次，按预算逐句重试")
+            for task in wholesale:
+                expected = len(task.get("src_parts") or [])
+                if single_budget <= 0:
+                    parts = self._local_split_task(task)
+                    if parts is not None:
+                        results[task["key"]] = parts
+                    continue
+                single_budget -= 1
+                parts, used_llm = self._align_translation(
+                    llm, task.get("sid", ""), task.get("src_text", ""), task.get("translation", ""),
+                    list(task.get("src_parts") or []), max_length, src_lang, tgt_lang,
+                )
+                if used_llm and len(parts) == expected:
+                    hits += 1
+                if len(parts) == expected:
+                    results[task["key"]] = list(parts)
+        return results, hits
+
+    def _process_sentences_batched(
+        self,
+        llm,
+        to_process: List[Dict],
+        max_length: float,
+        src_lang: str,
+        tgt_lang: str,
+        max_request_chars: int,
+        callback: Optional[Callable],
+    ) -> Dict[int, List[Dict]]:
+        """组装模式：跨句按轮次收集切分任务 → 批次请求 → 回填（失败降级逐句）。
+
+        与逐句模式的差异只在「请求怎么发」：切分决策、时间戳映射、兜底策略复用同一套
+        函数，因此两种模式产出的结构完全一致。
+        """
+        entries_map: Dict[int, List[Dict]] = {}
+        windows: Dict[int, Tuple[Optional[float], Optional[float]]] = {}
+        for sentence in to_process:
+            key = sentence.get("src_index", -1)
+            entries_map[key] = [{
+                "id": sentence.get("id", ""),
+                "src": str(sentence.get("src", "") or ""),
+                "tr": str(sentence.get("tr", "") or ""),
+                "words": list(sentence.get("words") or []),
+                "start": sentence.get("start"),
+                "end": sentence.get("end"),
+            }]
+            windows[key] = (sentence.get("start"), sentence.get("end"))
+
+        total = max(1, len(entries_map))
+
+        def report(message: str, done: Optional[int] = None) -> None:
+            if not callback:
+                return
+            finished = done if done is not None else sum(
+                1 for entries in entries_map.values()
+                if not any(self._entry_over_limit(entry, max_length) for entry in entries)
+            )
+            callback(min(75, 15 + int(60 * finished / total)), message)
+
+        use_llm = True  # 熔断开关：某轮 LLM 零命中后就地关闭，后续轮次全走本地切分
+        for round_num in range(MAX_ROUNDS):
+            tasks: List[Dict] = []
+            for key, entries in entries_map.items():
+                for entry_index, entry in enumerate(entries):
+                    if not self._entry_over_limit(entry, max_length):
+                        continue
+                    src_parts = self._split_source(str(entry.get("src", "") or ""), 2)
+                    if len(src_parts) != 2:
+                        print(
+                            f"[SubtitleAlign] id={entry.get('id', '')}: "
+                            f"cannot split source further, keeping part as-is"
+                        )
+                        continue
+                    tasks.append({
+                        "key": f"{key}:{entry_index}",
+                        "sent_key": key,
+                        "entry_index": entry_index,
+                        "sid": entry.get("id", ""),
+                        "src_text": str(entry.get("src", "") or ""),
+                        "translation": str(entry.get("tr", "") or ""),
+                        "src_parts": src_parts,
+                    })
+            if not tasks:
+                break
+
+            report(f"第 {round_num + 1} 轮：{len(tasks)} 个切分任务准备批量请求")
+            aligned, hits = self._align_tasks_in_batches(
+                llm, tasks, max_request_chars, max_length, src_lang, tgt_lang,
+                log=report, use_llm=use_llm,
+            )
+            if use_llm and hits == 0:
+                # 熔断：这一轮一次有效分片都没切出来，再问下一轮大概率也是白花配额
+                print(
+                    f"[SubtitleAlign] 第 {round_num + 1} 轮 LLM 零命中，"
+                    f"后续轮次改用本地切分（不再请求 LLM）"
+                )
+                use_llm = False
+
+            by_sentence: Dict[int, List[Dict]] = {}
+            for task in tasks:
+                by_sentence.setdefault(task["sent_key"], []).append(task)
+
+            for sent_key, sent_tasks in by_sentence.items():
+                entries = entries_map[sent_key]
+                # 逆序回填：同句内多个分片被替换时，小下标不受大下标替换影响
+                for task in sorted(sent_tasks, key=lambda item: item["entry_index"], reverse=True):
+                    parts = aligned.get(task["key"]) or []
+                    entry_index = task["entry_index"]
+                    if len(parts) != 2 or entry_index >= len(entries):
+                        continue
+                    entry = entries[entry_index]
+                    timestamps = self._part_timestamps(
+                        task["src_text"], task["src_parts"], list(entry.get("words") or []),
+                        entry.get("start"), entry.get("end"),
+                    )
+                    split_entries: List[Dict] = []
+                    for i, (src_part, tr_part) in enumerate(zip(task["src_parts"], parts)):
+                        ts = timestamps[i] if i < len(timestamps) else None
+                        split_entries.append({
+                            "id": entry.get("id", ""),
+                            "src": src_part,
+                            "tr": tr_part,
+                            "words": [],
+                            "start": ts[0] if ts else entry.get("start"),
+                            "end": ts[1] if ts else entry.get("end"),
+                        })
+                    # 分片时间戳建不出来时，别再往下切（否则时间轴会退化）
+                    if any(e["start"] is None or e["end"] is None for e in split_entries):
+                        print(
+                            f"[SubtitleAlign] id={entry.get('id', '')}: "
+                            f"no word timestamps for split parts, keeping part as-is"
+                        )
+                        continue
+                    entries[entry_index:entry_index + 1] = split_entries
+
+            report(f"第 {round_num + 1} 轮完成")
+
+        processed_map: Dict[int, List[Dict]] = {}
+        for key, entries in entries_map.items():
+            window = windows.get(key) or (None, None)
+            self._fill_missing_timestamps(entries, window[0], window[1])
+            processed_map[key] = [self._finalize_entry(entry) for entry in entries]
+        return processed_map
+
     # ── 单句处理 ─────────────────────────────────────────────────────
 
     def _process_sentence(
@@ -941,7 +1588,7 @@ class S07SubtitleAlign(BaseStep):
                     print(f"[SubtitleAlign] id={sid}: cannot split source further, keeping part as-is")
                     continue
 
-                tr_parts = self._align_translation(
+                tr_parts, _ = self._align_translation(
                     llm, sid, src_part_text, tr_part_text, src_parts,
                     max_length, src_lang, tgt_lang,
                 )
@@ -1095,36 +1742,36 @@ class S07SubtitleAlign(BaseStep):
         )
 
         to_process = [s for s in sentences if len(s.get("tr", "")) > max_length]
+        batch_align = self._resolve_batch_align()
+        max_request_chars = self._resolve_max_request_chars()
         if callback:
-            callback(15, f"{len(to_process)}/{len(sentences)} 句超过 {max_length:.0f} 字符，开始断句对齐...")
+            mode = "批量" if batch_align else "逐句"
+            callback(
+                15,
+                f"{len(to_process)}/{len(sentences)} 句超过 {max_length:.0f} 字符，"
+                f"开始断句对齐（{mode}模式）...",
+            )
 
         llm = get_llm_client()
-        max_workers = config.get("llm.max_concurrent") or 10
+        max_workers = int(config.get("llm.max_concurrent") or 10)
+        self._request_count = 0
+        self._request_interval = self._resolve_request_interval()
+        # 节流闸：批量并发 + 逐句兜底叠加时，瞬时 QPS 会直接打爆上游限速
+        self._gate = _gate_for(max_workers, self._request_interval)
         processed_map: Dict[int, List[Dict]] = {}
 
         if to_process:
-            total = len(to_process)
-
-            def _worker(sentence: Dict) -> Tuple[int, List[Dict]]:
-                parts = self._process_sentence(llm, sentence, max_length, src_lang, tgt_lang)
-                return sentence.get("src_index", -1), parts
-
-            with ThreadPoolExecutor(max_workers=min(int(max_workers), total)) as executor:
-                futures = {executor.submit(_worker, s): s for s in to_process}
-                done_count = 0
-                for future in as_completed(futures):
-                    sentence = futures[future]
-                    try:
-                        idx, parts = future.result()
-                        processed_map[idx] = parts
-                    except Exception as exc:
-                        raise RuntimeError(
-                            f"「{self.step_name}」断句对齐失败（id={sentence.get('id', '')}）：{exc}"
-                        ) from exc
-                    done_count += 1
-                    if callback:
-                        pct = int(15 + 60 * done_count / total)
-                        callback(min(pct, 75), f"已处理 {done_count}/{total} 句")
+            if batch_align:
+                # 组装模式：跨句收集切分任务 → 按字符预算打包请求（失败自动降级逐句）
+                processed_map = self._process_sentences_batched(
+                    llm, to_process, max_length, src_lang, tgt_lang,
+                    max_request_chars, callback,
+                )
+            else:
+                # 逐句模式：每句独立请求（保留旧行为，便于对比与排障）
+                processed_map = self._process_sentences_concurrent(
+                    llm, to_process, max_length, src_lang, tgt_lang, max_workers, callback,
+                )
 
         if callback:
             callback(80, "汇总对齐结果...")
@@ -1164,6 +1811,11 @@ class S07SubtitleAlign(BaseStep):
                 f"[SubtitleAlign] Warning: {len(still_over)} entries still over limit after "
                 f"{MAX_ROUNDS} rounds, packaged as-is: {', '.join(ids)}"
             )
+
+        print(
+            f"[SubtitleAlign] LLM 请求共 {self._request_count} 次"
+            f"（模式：{'批量' if batch_align else '逐句'}，最小间隔 {self._request_interval}s）"
+        )
 
         if callback:
             callback(95, "保存结果...")

@@ -27,7 +27,7 @@ interface Props {
 
 const INPUT_PORTS = ["in_1", "in_2", "in_3", "in_4"];
 const OUTPUT_PORTS = ["out_1", "out_2", "out_3", "out_4"];
-const INPUT_NODE_PORTS = ["video", "audio", "subtitle", "url"];
+const INPUT_NODE_PORTS = ["video", "audio", "subtitle", "url", "text"];
 
 /** 子工作流 input 节点的数据类字段：由上方「输入映射」负责传入，不在设置项里重复填写 */
 const INPUT_DATA_FIELD_KEYS = [
@@ -37,6 +37,7 @@ const INPUT_DATA_FIELD_KEYS = [
   "subtitlePath",
   "url",
   "filePath",
+  "text",
 ];
 
 /** 端口候选项：id 写入映射，label 用于下拉展示 */

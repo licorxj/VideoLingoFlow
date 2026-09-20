@@ -560,6 +560,36 @@
         "maxTokens": 16384
       },
       {
+        "id": "z-ai/glm-5.3",
+        "name": "GLM-5.3",
+        "api": "openai-completions",
+        "provider": "nvidia",
+        "baseUrl": "https://integrate.api.nvidia.com/v1",
+        "headers": {
+          "NVCF-POLL-SECONDS": "3600"
+        },
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStore": false,
+          "supportsDeveloperRole": false,
+          "supportsReasoningEffort": false,
+          "maxTokensField": "max_tokens",
+          "supportsStrictMode": false,
+          "supportsLongCacheRetention": false
+        },
+        "contextWindow": 1000000,
+        "maxTokens": 131072
+      },
+      {
         "id": "z-ai/glm-5.3-flash",
         "name": "GLM-5.3-Flash",
         "api": "openai-completions",
@@ -591,9 +621,9 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1789509100394,
-    "lastModified": 1789389617000,
-    "etag": "W/\"42c726d9800b69c1266c8d2d8f730c7f\""
+    "checkedAt": 1789854350799,
+    "lastModified": 1789728262000,
+    "etag": "W/\"2c2d304dec9d6611c40db0885c328ea0\""
   },
   "xiaomi": {
     "models": [
@@ -668,7 +698,7 @@
         "maxTokens": 131072
       }
     ],
-    "checkedAt": 1789509100398,
+    "checkedAt": 1789854350802,
     "lastModified": 1787571286000,
     "etag": "W/\"3db76cd3404affdf755b2efc443b74c3\""
   },
@@ -801,6 +831,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -812,10 +851,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.1-flash-lite",
@@ -824,6 +860,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -835,10 +880,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.1-flash-lite-image",
@@ -847,6 +889,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -858,10 +909,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 65536,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.1-flash-lite-preview",
@@ -870,6 +918,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -881,10 +938,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.1-flash-live-preview",
@@ -893,6 +947,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -904,10 +967,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 131072,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.1-pro-preview",
@@ -916,6 +976,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -927,14 +996,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null,
-          "minimal": null,
-          "low": "LOW",
-          "medium": null,
-          "high": "HIGH"
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.1-pro-preview-customtools",
@@ -943,6 +1005,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -954,14 +1025,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null,
-          "minimal": null,
-          "low": "LOW",
-          "medium": null,
-          "high": "HIGH"
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.5-flash",
@@ -970,6 +1034,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -981,10 +1054,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.5-flash-lite",
@@ -993,6 +1063,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -1004,10 +1083,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.6-flash",
@@ -1016,6 +1092,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -1027,10 +1112,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.7-flash",
@@ -1039,6 +1121,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -1050,10 +1141,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-3.8-flash",
@@ -1062,6 +1150,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -1073,10 +1170,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-flash-latest",
@@ -1085,6 +1179,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -1096,10 +1199,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemini-flash-lite-latest",
@@ -1108,6 +1208,15 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "minimal",
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -1119,10 +1228,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536,
-        "thinkingLevelMap": {
-          "off": null
-        }
+        "maxTokens": 65536
       },
       {
         "id": "gemma-4-26b-a4b-it",
@@ -1131,6 +1237,13 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "MINIMAL",
+          "low": null,
+          "medium": null,
+          "high": "HIGH"
+        },
         "input": [
           "text",
           "image"
@@ -1142,14 +1255,7 @@
           "cacheWrite": 0
         },
         "contextWindow": 262144,
-        "maxTokens": 32768,
-        "thinkingLevelMap": {
-          "off": null,
-          "minimal": "MINIMAL",
-          "low": null,
-          "medium": null,
-          "high": "HIGH"
-        }
+        "maxTokens": 32768
       },
       {
         "id": "gemma-4-31b-it",
@@ -1158,6 +1264,13 @@
         "provider": "google",
         "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": "MINIMAL",
+          "low": null,
+          "medium": null,
+          "high": "HIGH"
+        },
         "input": [
           "text",
           "image"
@@ -1169,19 +1282,12 @@
           "cacheWrite": 0
         },
         "contextWindow": 262144,
-        "maxTokens": 32768,
-        "thinkingLevelMap": {
-          "off": null,
-          "minimal": "MINIMAL",
-          "low": null,
-          "medium": null,
-          "high": "HIGH"
-        }
+        "maxTokens": 32768
       }
     ],
-    "checkedAt": 1789509100411,
-    "lastModified": 1788432026000,
-    "etag": "W/\"82d850ac898f9406a8bedcd62f25e6da\""
+    "checkedAt": 1789854350784,
+    "lastModified": 1789728248000,
+    "etag": "W/\"34bc717955016c92642b123f416eca88\""
   },
   "openai": {
     "models": [
@@ -1840,7 +1946,8 @@
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true,
           "supportsAdditionalTools": true,
-          "supportsToolSearch": true
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true
         }
       },
       {
@@ -1875,7 +1982,8 @@
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true,
           "supportsAdditionalTools": true,
-          "supportsToolSearch": true
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true
         }
       },
       {
@@ -1952,7 +2060,8 @@
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true,
           "supportsAdditionalTools": true,
-          "supportsToolSearch": true
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true
         }
       },
       {
@@ -1996,7 +2105,8 @@
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true,
           "supportsAdditionalTools": true,
-          "supportsToolSearch": true
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true
         }
       },
       {
@@ -2083,6 +2193,7 @@
           "supportsOpenAIGrammarTools": true,
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true,
           "supportsExplicitPromptCacheMode": true
         }
       },
@@ -2128,6 +2239,7 @@
           "supportsOpenAIGrammarTools": true,
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true,
           "supportsExplicitPromptCacheMode": true
         }
       },
@@ -2173,6 +2285,7 @@
           "supportsOpenAIGrammarTools": true,
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true,
           "supportsExplicitPromptCacheMode": true
         }
       },
@@ -2218,6 +2331,7 @@
           "supportsOpenAIGrammarTools": true,
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true,
           "supportsExplicitPromptCacheMode": true
         }
       },
@@ -2445,9 +2559,9 @@
         }
       }
     ],
-    "checkedAt": 1789509100398,
-    "lastModified": 1788784749000,
-    "etag": "W/\"1cca1d47130c92b44203cbe8314876b0\""
+    "checkedAt": 1789854350798,
+    "lastModified": 1789728263000,
+    "etag": "W/\"366f64bf5a0393415638d6a50d4cead4\""
   },
   "huggingface": {
     "models": [
@@ -4301,7 +4415,7 @@
         }
       }
     ],
-    "checkedAt": 1789509100389,
+    "checkedAt": 1789854350781,
     "lastModified": 1789122481000,
     "etag": "W/\"28072739aa66bd465a4694f6e8f6f9de\""
   },
@@ -4326,12 +4440,9 @@
         },
         "contextWindow": 1000000,
         "maxTokens": 128000,
-        "thinkingLevelMap": {
-          "off": null,
-          "xhigh": "xhigh",
-          "max": "max"
-        },
         "compat": {
+          "supportsMidConvoSystemMessages": true,
+          "supportsMidConvoToolChanges": true,
           "forceAdaptiveThinking": true,
           "supportsStrictTools": true,
           "allowedFallbackModels": [
@@ -4356,6 +4467,11 @@
               }
             }
           ]
+        },
+        "thinkingLevelMap": {
+          "off": null,
+          "xhigh": "xhigh",
+          "max": "max"
         }
       },
       {
@@ -4379,6 +4495,8 @@
         "maxTokens": 128000,
         "compat": {
           "supportsMidConvoEffort": true,
+          "supportsMidConvoSystemMessages": true,
+          "supportsMidConvoToolChanges": true,
           "forceAdaptiveThinking": true,
           "supportsStrictTools": true
         },
@@ -4555,14 +4673,16 @@
         },
         "contextWindow": 1000000,
         "maxTokens": 128000,
-        "thinkingLevelMap": {
-          "xhigh": "xhigh",
-          "max": "max"
-        },
         "compat": {
+          "supportsMidConvoSystemMessages": true,
+          "supportsMidConvoToolChanges": true,
           "forceAdaptiveThinking": true,
           "supportsTemperature": false,
           "supportsStrictTools": true
+        },
+        "thinkingLevelMap": {
+          "xhigh": "xhigh",
+          "max": "max"
         }
       },
       {
@@ -4586,6 +4706,8 @@
         "maxTokens": 128000,
         "compat": {
           "supportsMidConvoEffort": true,
+          "supportsMidConvoSystemMessages": true,
+          "supportsMidConvoToolChanges": true,
           "forceAdaptiveThinking": true,
           "supportsTemperature": false,
           "supportsStrictTools": true
@@ -4698,8 +4820,8 @@
         }
       }
     ],
-    "checkedAt": 1789509100393,
-    "lastModified": 1788432010000,
-    "etag": "W/\"5fdc170fdb3eb24c0e164a059918e474\""
+    "checkedAt": 1789854350800,
+    "lastModified": 1789728235000,
+    "etag": "W/\"55c75c28bdf0cb4bb15080d80f87acb3\""
   }
 }

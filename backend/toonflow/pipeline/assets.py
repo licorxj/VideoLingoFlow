@@ -6,7 +6,7 @@
 """
 from sqlalchemy import select
 
-from backend.toonflow.core.models import TfAsset, TfImage
+from backend.toonflow.core.models import TfAsset, TfImage, TfProject
 from backend.toonflow.core.paths import copy_into_oss
 from backend.toonflow.pipeline import submit
 
@@ -21,10 +21,13 @@ def _generate_for_asset(asset_id: int) -> None:
         project_id = asset.projectId
         prompt = asset.prompt or asset.describe
         name = asset.name
+        project = session.get(TfProject, project_id)
+        # 项目图片质量（1K/2K/4K）
+        quality = (getattr(project, "imageQuality", "") or "").strip() or "1K"
 
     if not prompt.strip():
         raise ValueError(f"资产 {name} 缺少生图提示词")
-    out = Ai_image_run(prompt, project_id)
+    out = Ai_image_run(prompt, project_id, quality)
 
     with session_scope() as session:
         asset = session.get(TfAsset, asset_id)
@@ -38,10 +41,11 @@ def _generate_for_asset(asset_id: int) -> None:
         print(f"[toonflow:assets] asset={asset_id} image={img.id}")
 
 
-def Ai_image_run(prompt: str, project_id: int):
+def Ai_image_run(prompt: str, project_id: int, resolution: str = ""):
     from backend.toonflow.engines import Ai
 
-    return Ai.image.run({"prompt": prompt}, project_id=project_id)
+    return Ai.image.run({"prompt": prompt, "resolution": resolution or "1K"},
+                        project_id=project_id)
 
 
 def generate_asset_images(asset_ids: list[int]) -> dict:

@@ -29,7 +29,8 @@ def ensure_tables() -> None:
 
 # 增量列：create_all 不会 ALTER 已存在的表，故按 PRAGMA 检查后补列（幂等）
 _INCREMENTAL_COLUMNS = {
-    "tf_projects": {"videoResolution": "TEXT NOT NULL DEFAULT '720P'"},
+    "tf_projects": {"videoResolution": "TEXT NOT NULL DEFAULT '720P'",
+                    "storyStyle": "TEXT NOT NULL DEFAULT ''"},
 }
 
 

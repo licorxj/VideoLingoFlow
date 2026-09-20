@@ -26,6 +26,7 @@ import { restoreLocalControlSession, saveControlWorkflow, type RevisionConflictE
 import { packWorkflow, publishPackage, type PublishResult } from "@/api/community";
 import SharePackDialog, { type SharePackFields } from "@/components/community/SharePackDialog";
 import { captureWorkflowCanvas } from "@/lib/snapshot";
+import { useCanvasWheelGuard } from "@/lib/canvasWheelGuard";
 import { buildGroupNode, createNodeDataFromType, expandGroupNodesForExecution, groupNodeToNodeTypeConfig, ungroupNode, updateGroupOutputMappings } from "@/lib/groupWorkflow";
 import { buildLoopNode, ungroupLoopNode } from "@/lib/loopWorkflow";
 import { useProjectStore } from "@/stores/projectStore";
@@ -290,6 +291,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const taskModeId = store.taskModeId;
   const [saving, setSaving] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  // 画布滚轮守卫：让节点卡片内的自定义下拉/弹层能用滚轮滚动（否则会被画布缩放抢走）
+  useCanvasWheelGuard(reactFlowWrapper);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
   const reactFlowInstanceRef = useRef<ReactFlowInstance<any, any> | null>(null);
   // 右键菜单点选节点后的“粘附光标”放置模式：节点跟随鼠标，再次点击落入画布

@@ -20,7 +20,7 @@
           "videoPath": "",
           "audioPath": "",
           "subtitlePath": "",
-          "url": "https://youtu.be/bvSJm7fHXto?si=Y6yd8RlukzRD81Fk",
+          "url": "https://youtu.be/MTytGfyfTLc?si=8uJilqbCOlS_QgHh",
           "source_language": "auto",
           "target_language": "zh",
           "copyInputs": false,
@@ -47,9 +47,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 502
+        "height": 494
       },
-      "selected": false,
+      "selected": true,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -81,7 +81,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 394
+        "height": 444
       },
       "selected": false,
       "dragging": false,
@@ -116,11 +116,11 @@
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "[S00] yt-dlp stderr: WARNING: [BiliBili] Subtitles are only available when logged in. Use --cookies-from-browser or --cookies for the authentication. See  https://github.com/yt-dlp/yt-dlp/wiki/FAQ#how-do-i-pass-cookies-to-yt-dlp  for how to manually pass cookies",
-          "[S00] yt-dlp stdout: VLDL\t开源minimax h3 一键复刻爆款视频 skill 公开了\tY:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\开源minimax h3 一键复刻爆款视频 skill 公开了 [BV1hZM16zEvo].mp4",
-          "[S00] task_name set to: 开源minimax h3 一键复刻爆款视频 skill 公开了",
-          "[S00] Output: video -> 开源minimax h3 一键复刻爆款视频 skill 公开了_node_2_1783324281016.mp4",
-          "[S00] Output: cover -> 开源minimax h3 一键复刻爆款视频 skill 公开了_node_2_1783324281016.jpg",
+          "[S00] yt-dlp stderr: <empty>",
+          "[S00] yt-dlp stdout: VLDL\tHow Public and Private Key Work In Your Crypto Wallets\tY:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\How Public and Private Key Work In Your Crypto Wallets [bvSJm7fHXto].mp4",
+          "[S00] task_name set to: How Public and Private Key Work In Your Crypto Wallets",
+          "[S00] Output: video -> How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016.mp4",
+          "[S00] Output: cover -> How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016.jpg",
           "[S00] Done: 2 files produced",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\.step_node_2_1783324281016_result.json, exiting 0"
@@ -128,7 +128,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 462
+        "height": 459
       },
       "selected": false,
       "dragging": false,
@@ -150,16 +150,14 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "skipped": true
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 407
+        "height": 406
       },
       "selected": false,
       "dragging": false,
@@ -191,14 +189,14 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "output": "X:\\PCTMoveData\\Videos\\下载\\How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016"
+          "output": "X:\\PCTMoveData\\Videos\\下载\\How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016_2"
         },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 457
+        "height": 455
       },
       "selected": false,
       "dragging": false,
@@ -230,7 +228,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1789760369292.txt",
-          "text": "公钥和私钥在加密钱包中的工作原理_node_2_1783324281016.mp4"
+          "text": "如何在加密钱包中工作_节点2_1783324281016.mp4"
         },
         "error": "",
         "logLines": [
@@ -238,8 +236,8 @@
           "[step_worker] step_inputs keys=['text', 'source_language', 'target_language']",
           "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f, kwargs=['callback'])",
-          "[LLM] direct (step=vlf-04, strategy=vlf-01, stream=False, response_json=False, timeout=300s, prompt_chars=163)",
-          "[LLM] direct ok (step=vlf-04, elapsed=8.7s)",
+          "[LLM] direct (step=vlf-04, strategy=vlf-01, stream=False, response_json=False, timeout=300s, prompt_chars=186)",
+          "[LLM] direct ok (step=vlf-04, elapsed=0.8s)",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\.step_node_1_1789760369292_result.json, exiting 0"
         ],
@@ -247,7 +245,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 537
+        "height": 534
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -274,14 +272,14 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "any": "Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\公钥和私钥在加密钱包中的工作原理_node_2_1783324281016.mp4"
+          "any": "Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\如何在加密钱包中工作_节点2_1783324281016.mp4"
         },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 278
+        "height": 276
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -412,6 +410,6 @@
   ],
   "type": "user",
   "createdAt": "2026-07-06T15:53:12",
-  "updatedAt": "2026-09-19T19:10:33",
-  "revision": 12
+  "updatedAt": "2026-09-20T09:46:57",
+  "revision": 14
 }

@@ -27,6 +27,9 @@ WORKBENCH_TASK_STATUS = {
     "deleted": "cancelled",
     "deleting": "cancelled",
 }
+# 投递宽限期：queued 且刚投递不久的任务视为"仍在队列排队"（避免重复投递/误判僵尸）。
+# 超过该时长既没有节点开跑、也没有新投递，则视为僵尸排队，可被重新投递/放行同步。
+DISPATCH_LIVE_GRACE_SECONDS = float(os.getenv("CONTROL_PLANE_DISPATCH_LIVE_GRACE_SECONDS", "120") or 120)
 WORKBENCH_NODE_STATUS = {
     "succeeded": "completed",
     "queued": "pending",
@@ -91,13 +94,22 @@ def _has_live_dispatch(task: Task) -> bool:
     worker 未启动），任务会永久卡在 queued（批量页显示「待执行」）：既不该拦住同步工作流，
     也不该让「继续 / 重跑」点下去毫无反应。判定为「仍有在途投递」的依据：
       1. dispatch_token 不是哨兵 __stale__（哨兵 = 已复位，明确没有有效投递）；
-      2. 且任务内存在 queued/running 的节点（说明消息已被 worker 领走并开始跑）。
+      2. 且满足其一：任务内已有 queued/running 的节点（worker 已领走并在跑），
+         或投递时间在宽限期内（消息大概率还在队列里排队，避免重复投递）。
     """
     if task.status != "queued":
         return False
-    if (task.payload or {}).get("dispatch_token") == DISPATCH_STALE:
+    payload = task.payload or {}
+    if payload.get("dispatch_token") == DISPATCH_STALE:
         return False
-    return any(node.status in {"queued", "running"} for node in task.nodes)
+    if any(node.status in {"queued", "running"} for node in task.nodes):
+        return True
+    try:
+        age = time.time() - float(payload.get("dispatch_token_at"))
+    except (TypeError, ValueError):
+        # 无投递时间戳（旧数据）：无法证明还有在途投递 → 按可重新投递处理
+        return False
+    return age <= DISPATCH_LIVE_GRACE_SECONDS
 
 
 def _task_payload(task: Task) -> dict:
@@ -189,36 +201,23 @@ class BatchExecutor:
     def _deliver_loop(self, batch_id: str, mode: str) -> None:
         """后台投递循环：按 max_concurrent_tasks 限流 + task_start_interval 间隔，可被停止信号中止。"""
         evt = self._stop_event(batch_id)
-        max_concurrent = max(1, self._get_max_workers())
         interval = max(0.0, float(config.get("batch.task_start_interval", 0)))
+        parallel = max(1, self._get_max_workers())
         # 统计当前批次所有任务的投递顺序（按创建时间）
         with session_scope() as session:
             order = [task.id for task in session.scalars(select(Task).where(Task.legacy_key.like(f"batch:{batch_id}:%")).order_by(Task.created_at)).all()]
         _trace(
             f"开始批次投递 batch={batch_id[:8]} mode={mode} tasks={len(order)} "
-            f"max_inflight={max_concurrent} start_interval={interval:.1f}s"
+            f"parallel={parallel}(实际并行由 Worker 并发控制) start_interval={interval:.1f}s"
         )
         try:
             for task_id in order:
                 if evt.is_set():
                     _trace(f"批次 {batch_id[:8]} 收到停止信号，终止后续投递")
                     break
-                # 并行数量限流：该批次活跃（queued/running/stopping）任务数 >= max_concurrent 时等待
-                waiting_logged = False
-                while not evt.is_set() and self._active_count(batch_id) >= max_concurrent:
-                    if not waiting_logged:
-                        _trace(
-                            f"批次 {batch_id[:8]} 等待在途任务释放 "
-                            f"(active={self._active_count(batch_id)}/{max_concurrent})"
-                        )
-                        waiting_logged = True
-                    time.sleep(0.5)
-                if evt.is_set():
-                    _trace(f"批次 {batch_id[:8]} 在等待阶段收到停止信号，终止投递")
-                    break
-                # 跳过已在队列/运行/成功/已删除的任务。
-                # 例外：dispatch 哨兵态的 queued 表示「无有效投递」（worker 重启复位后的
-                # 僵尸排队），必须重新投递，否则「全部继续」无法恢复它们。
+                # 投递 = 入队排队，不按「并行数」阻塞：整批一次投进队列，由 Worker 按并发数
+                # 逐个取走执行，跑完一个自动续下一个。若这里按在途数阻塞，批量布置时后面的
+                # 任务要等前面跑完才入队，用户会看到"只有前 N 个被接受、其余都失败"的错觉。
                 with session_scope() as session:
                     task = session.get(Task, task_id)
                     if task is None or task.status in {"running", "succeeded", "deleted"}:
@@ -239,10 +238,6 @@ class BatchExecutor:
         finally:
             self._delivery_threads.pop(batch_id, None)
             _trace(f"批次投递线程结束 batch={batch_id[:8]} mode={mode}")
-
-    def _active_count(self, batch_id: str) -> int:
-        with session_scope() as session:
-            return sum(1 for task in session.scalars(select(Task).where(Task.legacy_key.like(f"batch:{batch_id}:%"))).all() if task.status in {"queued", "running", "stopping"})
 
     def _tasks_for_batch(self, batch_id: str) -> list[Task]:
         with session_scope() as session:
@@ -482,6 +477,77 @@ class BatchExecutor:
                 session.flush()
                 _write_legacy_task(task, workspace)
         return {"batch_id": batch_id, "workflow_id": workflow_id, "synced": True}
+
+    def _queue_stats(self) -> dict:
+        """批量任务的队列概览：队列排队中 / 正在执行的数量（用于投递结果提示）。"""
+        with session_scope() as session:
+            tasks = session.scalars(select(Task).where(
+                Task.legacy_key.like("batch:%"),
+                Task.status.in_(("queued", "running", "stopping")),
+            )).all()
+        return {
+            "queued": sum(1 for task in tasks if task.status == "queued"),
+            "running": sum(1 for task in tasks if task.status in {"running", "stopping"}),
+        }
+
+    def dispatch_tasks(self, batch_id: str, task_ids: list, mode: str = "resume") -> dict:
+        """把选中任务批量投递到执行队列排队（投递 ≠ 立即执行）。
+
+        - mode="resume"：断点继续，保留已成功节点，只跑未完成部分（「投递任务 / 选中继续」用）
+        - mode="retry"：从头执行（清 cache、全量重建节点，「选中重跑」用）
+
+        刻意不做「在途已达上限就拒绝」：排队交给队列承担，真正同时执行数由 Worker 并发
+        （=batch.max_concurrent_tasks）决定。否则批量布置时除前 N 个外全部失败，
+        完全达不到"一次投递整批、队列自动续跑"的目的。
+        """
+        tasks = {task.id: task for task in self._tasks_for_batch(batch_id)}
+        dispatched: list = []
+        skipped: list = []
+        for task_id in task_ids:
+            task = tasks.get(task_id)
+            if task is None:
+                skipped.append({"task_id": task_id, "reason": "不在当前批次"})
+                continue
+            if task.status in {"running", "stopping"}:
+                skipped.append({"task_id": task_id, "reason": "正在执行"})
+                continue
+            if task.status == "succeeded":
+                skipped.append({"task_id": task_id, "reason": "已完成"})
+                continue
+            if task.status == "queued" and _has_live_dispatch(task):
+                skipped.append({"task_id": task_id, "reason": "已在队列排队"})
+                continue
+            if mode == "retry":
+                if task.status not in {"created", "failed", "cancelled", "queued"}:
+                    skipped.append({"task_id": task_id, "reason": f"状态不支持从头执行（{task.status}）"})
+                    continue
+                _clear_workspace_cache(_workspace(task_id))
+                submit_mode = "retry"
+            else:
+                if task.status not in {"created", "failed", "cancelled", "paused", "queued"}:
+                    skipped.append({"task_id": task_id, "reason": f"状态不支持继续（{task.status}）"})
+                    continue
+                submit_mode = "resume"
+            try:
+                if self._enqueue(task_id, submit_mode, force=True):
+                    dispatched.append(task_id)
+                else:
+                    skipped.append({"task_id": task_id, "reason": "投递未生效（已有在途投递）"})
+            except RuntimeError as exc:
+                # Celery 不可用：整批都会失败，继续循环没有意义，直接收尾
+                skipped.append({"task_id": task_id, "reason": f"投递失败：{exc}"})
+                break
+        _trace(
+            f"批量投递 batch={batch_id[:8]} mode={mode} 选中={len(task_ids)} "
+            f"已投递={len(dispatched)} 跳过={len(skipped)}"
+        )
+        return {
+            "batch_id": batch_id,
+            "mode": mode,
+            "dispatched": dispatched,
+            "skipped": skipped,
+            "queue": self._queue_stats(),
+        }
 
     def cancel_task(self, batch_id: str, task_id: str) -> dict:
         self._ensure_member(batch_id, task_id)

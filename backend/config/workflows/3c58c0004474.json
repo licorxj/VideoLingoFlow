@@ -1,0 +1,149 @@
+{
+  "id": "3c58c0004474",
+  "name": "素材搜索",
+  "description": "搜索在线免费的素材-可以加入库节点入库素材库",
+  "nodes": [
+    {
+      "id": "node_1_1789854097937",
+      "type": "workflow",
+      "position": {
+        "x": -1260,
+        "y": -2085
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "filepath"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "诡异视频的背景音乐",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 411
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "selected": false
+    },
+    {
+      "id": "node_2_1789854186142",
+      "type": "workflow",
+      "position": {
+        "x": -600,
+        "y": -2070
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "text_concat",
+        "label": "文本拼接",
+        "config": {
+          "custom_text": "搜索素材：",
+          "order_1": "custom",
+          "order_2": "input1",
+          "order_3": "input2",
+          "separator": "space",
+          "custom_separator": ""
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 335
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1789854336635",
+      "type": "workflow",
+      "position": {
+        "x": -30,
+        "y": -2040
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "pi_agent",
+        "label": "小pi通用智能体",
+        "config": {
+          "inputCount": 1,
+          "outputCount": 2,
+          "skills": [
+            "free-material-search"
+          ],
+          "mcps": [],
+          "docs_path": "",
+          "external_doc": "",
+          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：使用skill技能搜索在线素材，并返回结果。输入一即为本次需要搜索到素材",
+          "output_items": [
+            {
+              "port": "输出1",
+              "type": "json",
+              "desc": "全部素材结果json"
+            },
+            {
+              "port": "输出2",
+              "type": "text",
+              "desc": "第一个素材的url"
+            }
+          ]
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 682
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1789854097937",
+      "sourceHandle": "out-filepath",
+      "target": "node_2_1789854186142",
+      "targetHandle": "in-input1",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1789854097937out-filepath-node_2_1789854186142in-input1"
+    },
+    {
+      "source": "node_2_1789854186142",
+      "sourceHandle": "out-text",
+      "target": "node_4_1789854336635",
+      "targetHandle": "in-input_1",
+      "type": "bezier",
+      "animated": false,
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1789854186142out-text-node_4_1789854336635in-input_1",
+      "selected": false
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-20T05:42:32",
+  "updatedAt": "2026-09-20T05:48:34",
+  "revision": 2
+}

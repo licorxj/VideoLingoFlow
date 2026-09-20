@@ -47,6 +47,11 @@ export const FALLBACK_NODE_TYPES = [
         "type": "any"
       },
       {
+        "id": "text",
+        "label": "文本",
+        "type": "text"
+      },
+      {
         "id": "no_input",
         "label": "不需要输入",
         "type": "any"
@@ -61,6 +66,7 @@ export const FALLBACK_NODE_TYPES = [
       "subtitlePath": "",
       "url": "",
       "filePath": "",
+      "text": "",
       "source_language": "auto",
       "target_language": "zh",
       "copyInputs": true,
@@ -94,6 +100,10 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "filepath",
             "label": "文件路径"
+          },
+          {
+            "value": "text",
+            "label": "文本"
           }
         ]
       },
@@ -169,6 +179,16 @@ export const FALLBACK_NODE_TYPES = [
         "dependsOn": "selectedTypes",
         "dependsAnyValues": [
           "filepath"
+        ]
+      },
+      {
+        "key": "text",
+        "label": "文本内容",
+        "type": "textarea",
+        "placeholder": "输入文本内容，作为「文本」端点的输出（不落盘）",
+        "dependsOn": "selectedTypes",
+        "dependsAnyValues": [
+          "text"
         ]
       },
       {
@@ -4824,7 +4844,10 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "max_subtitle_length": 30
+      "max_subtitle_length": 30,
+      "batch_align": true,
+      "max_request_chars": "",
+      "request_interval": ""
     },
     "configFields": [
       {
@@ -4832,6 +4855,26 @@ export const FALLBACK_NODE_TYPES = [
         "label": "译文单行最大字符数",
         "type": "text",
         "placeholder": "默认 20 字符"
+      },
+      {
+        "key": "batch_align",
+        "label": "批量对齐(多句合并请求)",
+        "type": "checkbox",
+        "description": "把同一轮的超长句断句任务按字符预算合并为批量请求（一次请求处理多句）；批内个别任务校验不通过时自动降级为本地切分。关闭则恢复「每句独立请求」的旧行为"
+      },
+      {
+        "key": "max_request_chars",
+        "label": "单次请求字数上限",
+        "type": "text",
+        "placeholder": "留空读取全局 llm.max_request_chars",
+        "description": "批量对齐时单次请求的字符预算，用于控制批次大小；留空则使用全局配置（默认 6000）"
+      },
+      {
+        "key": "request_interval",
+        "label": "请求最小间隔(秒)",
+        "type": "text",
+        "placeholder": "留空读取全局 llm.min_request_interval",
+        "description": "两次 LLM 请求之间的最小间隔，给上游限速留余量，防止瞬时打爆 429；填 0 表示不限制。留空则用全局配置（默认 0.5 秒）"
       }
     ],
     "isBuiltIn": true

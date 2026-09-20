@@ -354,7 +354,7 @@ class ThreadScheduler:
                 cfg = node.setdefault("data", {}).setdefault("config", {})
                 # Sync file paths
                 for key in ("videoPath", "audioPath", "subtitlePath", "url",
-                            "source_language", "target_language"):
+                            "text", "source_language", "target_language"):
                     if ic.get(key):
                         cfg[key] = ic[key]
                 break
@@ -429,7 +429,7 @@ class ThreadScheduler:
                 cfg = node.setdefault("data", {}).setdefault("config", {})
                 # Sync file paths
                 for key in ("videoPath", "audioPath", "subtitlePath", "url",
-                            "source_language", "target_language"):
+                            "text", "source_language", "target_language"):
                     if ic.get(key):
                         cfg[key] = ic[key]
                 break
@@ -1311,7 +1311,7 @@ class ThreadScheduler:
                     # Merge workflow input config into task input field
                     # Only update with non-empty values to preserve task-level input paths
                     for k in ("videoPath", "audioPath", "subtitlePath", "url",
-                              "source_language", "target_language"):
+                              "text", "source_language", "target_language"):
                         wf_val = wf_input_config.get(k, "")
                         if wf_val:
                             task["input"][k] = wf_val
@@ -1392,6 +1392,11 @@ class ThreadScheduler:
         url = ic.get("url", "") or node_config.get("url", "")
         if url:
             outputs["url"] = url
+
+        # 文本输入：直接以文本本身作为输出（不落盘、不参与文件复制）
+        text_value = ic.get("text", "") or node_config.get("text", "")
+        if text_value:
+            outputs["text"] = str(text_value)
 
         # File paths: prefer task-level input_config, fall back to node_config
         for key in ("videoPath", "audioPath", "subtitlePath"):
