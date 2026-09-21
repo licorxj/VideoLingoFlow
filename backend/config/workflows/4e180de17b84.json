@@ -206,7 +206,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 519
+        "height": 522
       },
       "selected": false,
       "dragging": false,
@@ -482,7 +482,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 326
+        "height": 325
       },
       "selected": false,
       "dragging": false,
@@ -598,7 +598,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 326
+        "height": 325
       },
       "selected": false,
       "dragging": false,
@@ -825,7 +825,7 @@
           "language": "auto",
           "model": "openmoss/MOSS-Transcribe-Diarize",
           "compute_type": "",
-          "batch_size": 0,
+          "batch_size": "",
           "word_timestamps": true,
           "vad_onset": "0.32",
           "vad_offset": 0.363,
@@ -857,7 +857,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 506
+        "height": 507
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -875,15 +875,15 @@
         "label": "句子分割",
         "config": {
           "processing_language": "zh",
-          "max_sentence_length": "15",
+          "max_sentence_length": "18",
           "use_llm_split": true,
           "split_sentence_ends": true,
           "split_clause_breaks": true,
           "merge_min_duration": "0.2",
           "merge_max_gap": 0.5,
-          "pause_split_threshold": 1,
+          "pause_split_threshold": "1.5",
           "split_on_speaker": true,
-          "merge_short_enabled": true,
+          "merge_short_enabled": false,
           "merge_gap_enabled": false,
           "pause_split_enabled": true
         },
@@ -900,7 +900,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 598
+        "height": 601
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1014,7 +1014,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 684
+        "height": 688
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -1043,9 +1043,9 @@
           "cover_duration": 1,
           "output_format": "mp4"
         },
-        "status": "running",
+        "status": "pending",
         "disableExecute": false,
-        "progress": 61,
+        "progress": 0,
         "message": "",
         "outputs": {},
         "error": "",
@@ -1053,7 +1053,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 592
+        "height": 579
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1695,6 +1695,29 @@
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1789903593670",
+      "type": "workflow",
+      "position": {
+        "x": 4680,
+        "y": -1905
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr_result_validate",
+        "label": "ASR结果校验",
+        "config": {
+          "auto_fix": true
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 153
+      },
+      "dragHandle": ".wf-node-drag-handle"
     }
   ],
   "edges": [
@@ -1968,17 +1991,18 @@
       "targetHandle": "in-main",
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
-      "id": "xy-edge__node_1_1781939413425out-video-node_1_1789405925581in-main",
-      "animated": true
+      "id": "xy-edge__node_1_1781939413425out-video-node_1_1789405925581in-main"
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_3_1782641542678",
       "sourceHandle": "out-text",
@@ -1986,33 +2010,33 @@
       "targetHandle": "in-cover",
       "id": "xy-edge__node_3_1782641542678out-text-node_1_1789405925581in-cover",
       "selected": false,
-      "animated": true
+      "animated": false
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1789405925581",
       "sourceHandle": "out-video",
       "target": "node_2_1781987851660",
       "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1789405925581out-video-node_2_1781987851660in-video",
-      "animated": true
+      "id": "xy-edge__node_1_1789405925581out-video-node_2_1781987851660in-video"
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1789405925581",
       "sourceHandle": "out-video",
       "target": "node_1_1782672877872",
       "targetHandle": "in-video",
-      "id": "xy-edge__node_1_1789405925581out-video-node_1_1782672877872in-video",
-      "animated": true
+      "id": "xy-edge__node_1_1789405925581out-video-node_1_1782672877872in-video"
     },
     {
       "type": "bezier",
@@ -2116,15 +2140,15 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_3_1789406114242",
       "sourceHandle": "out-video",
       "target": "node_1_1789405925581",
       "targetHandle": "in-segment1",
-      "id": "xy-edge__node_3_1789406114242out-video-node_1_1789405925581in-segment1",
-      "animated": true
+      "id": "xy-edge__node_3_1789406114242out-video-node_1_1789405925581in-segment1"
     },
     {
       "type": "bezier",
@@ -2190,19 +2214,6 @@
       "target": "node_1_1782672877872",
       "targetHandle": "in-json",
       "id": "xy-edge__node_1_1782725550457out-result-node_1_1782672877872in-json"
-    },
-    {
-      "type": "bezier",
-      "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_3_1788531005833",
-      "sourceHandle": "out-subtitle",
-      "target": "node_6_1788533469576",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_3_1788531005833out-subtitle-node_6_1788533469576in-subtitle"
     },
     {
       "type": "bezier",
@@ -2307,10 +2318,36 @@
       "target": "node_8_1788016850229",
       "targetHandle": "in-json",
       "id": "xy-edge__node_1_1789860352741out-subtitle-node_8_1788016850229in-json"
+    },
+    {
+      "source": "node_3_1788531005833",
+      "sourceHandle": "out-subtitle",
+      "target": "node_4_1789903593670",
+      "targetHandle": "in-json",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1788531005833out-subtitle-node_4_1789903593670in-json"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_4_1789903593670",
+      "sourceHandle": "out-json",
+      "target": "node_6_1788533469576",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_4_1789903593670out-json-node_6_1788533469576in-subtitle"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-20T07:28:41",
-  "revision": 74
+  "updatedAt": "2026-09-20T19:26:53",
+  "revision": 77
 }

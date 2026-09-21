@@ -10,6 +10,7 @@
 """
 
 import os
+import re
 import json
 import shutil
 import subprocess
@@ -141,23 +142,35 @@ def split_audio_at_silence(audio_path: str, max_duration: float,
 
 def cut_audio_segment(audio_path: str, start: float, end: float,
                       output_path: str) -> str:
-    """Extract a segment from audio file using ffmpeg (copy, fallback re-encode)."""
+    """按精确时间窗切出音频段（输入侧 seek + 重编码，边界不浮动）。
+
+    关键：**不用** ``-c copy``。copy 模式只能从包/关键帧边界下刀，实际起点会
+    被拉到窗口之前（aac/opus/mp3 尤其明显），相邻两段因此出现重叠音频，
+    重叠区被两个 chunk 各识别一次 → 拼接处出现重复词句。这里统一走
+    "输入侧 -ss（accurate_seek）+ 重编码 PCM"，起点固定在 start、长度固定为
+    end-start，相邻段严格首尾相接；重编码到 16k 单声道也正是 ASR 的输入口径。
+    """
     from backend.utils.ffmpeg_guard import apply_resource_args
+    duration = max(0.0, float(end) - float(start))
     cmd = apply_resource_args([
-        "ffmpeg", "-y", "-i", audio_path,
-        "-ss", str(start), "-to", str(end),
-        "-c", "copy",
+        "ffmpeg", "-y", "-hide_banner",
+        "-ss", f"{float(start):.6f}",
+        "-i", audio_path,
+        "-t", f"{duration:.6f}",
+        "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+        "-avoid_negative_ts", "make_zero",
         output_path,
-    ])
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    ], mux_queue=64)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode != 0:
-        # Fallback: re-encode if copy fails
+        # 极少数容器无法重编码时，退回 copy 快速路径（边界可能有包级抖动）
+        print(f"[ASR] 精确切分失败，回退 copy 模式: {result.stderr[:200]}", flush=True)
         cmd = apply_resource_args([
             "ffmpeg", "-y", "-i", audio_path,
             "-ss", str(start), "-to", str(end),
-            "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
+            "-c", "copy",
             output_path,
-        ])
+        ], mux_queue=64)
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
         if result.returncode != 0:
             raise RuntimeError(f"Failed to split audio: {result.stderr[:300]}")
@@ -183,6 +196,64 @@ def adjust_timestamps(result: dict, time_offset: float) -> dict:
     return result
 
 
+def _strip_overlap_prefix(prev: Dict, nxt: Dict) -> int:
+    """去掉 ``nxt`` 中与 ``prev`` 结尾重复的前缀，返回去掉的词数。"""
+    pt = _tokens_of_text(prev.get("text"))
+    nt = _tokens_of_text(nxt.get("text"))
+    if not pt or not nt:
+        return 0
+    n = 0
+    for k in range(min(len(pt), len(nt), 12), 0, -1):
+        if pt[-k:] == nt[:k]:
+            n = k
+            break
+    if not n:
+        return 0
+
+    if n >= len(nt):
+        # 整段都是上一 chunk 的尾巴：整段丢弃
+        nxt["text"] = ""
+        nxt["words"] = []
+        return n
+
+    words = nxt.get("words") or []
+    if words and len(words) >= n:
+        kept = words[n:]
+        nxt["words"] = kept
+        nxt["start"] = round(
+            _to_float(kept[0].get("start"), _to_float(nxt.get("start"))), 4)
+    else:
+        duration = max(0.0, _to_float(nxt.get("end")) - _to_float(nxt.get("start")))
+        nxt["start"] = round(
+            _to_float(nxt.get("start")) + duration * n / max(len(nt), 1), 4)
+        nxt["words"] = synthesize_words(
+            _join_words(nt[n:]), nxt["start"], nxt["end"])
+    nxt["text"] = _join_words(nt[n:])
+    return n
+
+
+def _dedupe_chunk_boundaries(segments: List[dict], chunk_of: List[int]) -> List[dict]:
+    """仅在"跨 chunk 接缝"处消除重复前缀。
+
+    chunk 内部的相邻段由模型自己的断句给出，不做任何改动，避免误删
+    正常的重复表达（口吃、叠词、强调句）。
+    """
+    out: List[dict] = []
+    for i, seg in enumerate(segments):
+        if out and i > 0 and chunk_of[i] != chunk_of[i - 1] and isinstance(seg, dict):
+            removed = _strip_overlap_prefix(out[-1], seg)
+            if removed:
+                print(
+                    f"[ASR] chunk 接缝去重: 去掉重复前缀 {removed} 词 -> "
+                    f"{seg.get('text', '')[:40]!r}",
+                    flush=True,
+                )
+        if isinstance(seg, dict) and not (seg.get("text") or "").strip():
+            continue
+        out.append(seg)
+    return out
+
+
 def merge_results(results: List[dict]) -> dict:
     """Merge multiple ASR results from sequential audio segments.
 
@@ -194,6 +265,7 @@ def merge_results(results: List[dict]) -> dict:
         return {"segments": [], "language": "auto"}
 
     merged_segments: List[dict] = []
+    chunk_of: List[int] = []
     all_speakers: set = set()
     detected_language = "auto"
 
@@ -203,7 +275,7 @@ def merge_results(results: List[dict]) -> dict:
             detected_language = lang
             break
 
-    for r in results:
+    for chunk_idx, r in enumerate(results):
         # Collect speakers (supports both list and dict forms)
         spk = r.get("speakers")
         if isinstance(spk, dict):
@@ -213,6 +285,11 @@ def merge_results(results: List[dict]) -> dict:
 
         for seg in r.get("segments", []):
             merged_segments.append(seg)
+            chunk_of.append(chunk_idx)
+
+    # 接缝去重：即便切分已经精确到采样点，模型在窗口边缘仍可能把上一个
+    # chunk 的尾句（或尾词）再识别一遍，表现为接缝处重复一两个词/一句。
+    merged_segments = _dedupe_chunk_boundaries(merged_segments, chunk_of)
 
     # Re-number segment IDs
     for idx, seg in enumerate(merged_segments, start=1):
@@ -267,6 +344,18 @@ def _to_float(value, default: float = 0.0) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
+
+_NON_WORD_RE = re.compile(r"[^\w\u4e00-\u9fff]", re.UNICODE)
+
+
+def _norm_text(text: str) -> str:
+    """归一化文本：去掉空白与标点，用于"文本是否与词序列一致"的比较。
+
+    只比字/词，不比标点：对齐器返回的 word token 常常不含标点，若把标点差异
+    也算作不一致，会误触发按文本重合成、白白丢掉真实的词级时间戳。
+    """
+    return _NON_WORD_RE.sub("", text or "")
 
 
 def _is_sentence_break(text: str, idx: int) -> bool:
@@ -400,6 +489,76 @@ def split_text_sentences(text: str, start: float, end: float,
     return out
 
 
+def _tokens_of_text(text: str) -> List[str]:
+    """按空白/中日韩字符边界切词，用于跨段重复检测。"""
+    text = (text or "").strip()
+    if not text:
+        return []
+    tokens: List[str] = []
+    buf = ""
+    for ch in text:
+        if "\u4e00" <= ch <= "\u9fff":
+            if buf:
+                tokens.append(buf)
+                buf = ""
+            tokens.append(ch)
+        elif ch.isspace():
+            if buf:
+                tokens.append(buf)
+                buf = ""
+        else:
+            buf += ch
+    if buf:
+        tokens.append(buf)
+    return [t for t in tokens if t]
+
+
+def _join_words(tokens: List[str]) -> str:
+    """按语言拼接词序列：英文补空格，中日韩直接相连。"""
+    out = ""
+    for tok in tokens:
+        tok = tok or ""
+        if not tok:
+            continue
+        if not out:
+            out = tok
+            continue
+        if out[-1].isascii() and tok[0].isascii():
+            out += " " + tok
+        else:
+            out += tok
+    return out
+
+
+def _slice_words(words: List[Dict], start: float, end: float) -> List[Dict]:
+    """按 [start, end) 半开区间切出词，保证每个词**只归属一个片段**。
+
+    旧实现用 ``w.start < piece.end and w.end > piece.start`` 的双开区间判定：
+    跨界的词（start < 切点 < end）会同时命中左右两片，被**复制进两段**，
+    于是下一段的 words 多出上一段的尾词（text 却没有），下游以 words 为准
+    重写 text 时就会看到"上下段重复词汇"。半开区间按词的 start 归属，
+    既不重复也不丢失。
+    """
+    kept: List[Dict] = []
+    for w in words or []:
+        if not isinstance(w, dict):
+            continue
+        try:
+            ws = float(w.get("start"))
+        except (TypeError, ValueError):
+            # 缺起点的词退化为按终点判定，同样只归属一片
+            try:
+                we = float(w.get("end"))
+            except (TypeError, ValueError):
+                continue
+            if start <= we < end:
+                kept.append(w)
+            continue
+        if start <= ws < end:
+            kept.append(w)
+    return kept
+
+
 def split_long_segment(seg: Dict, max_chars: int = 40) -> List[Dict]:
     """对单条超长 segment 做二次断句；切不开时原样返回（列表长度恒为 1）。"""
     start = _to_float(seg.get("start"))
@@ -418,11 +577,12 @@ def split_long_segment(seg: Dict, max_chars: int = 40) -> List[Dict]:
             "text": piece["text"],
         })
         # 父段已有词级时间戳时按新区间裁剪保留，否则按字数插值补齐
-        kept = [
-            w for w in orig_words
-            if _to_float(w.get("start")) < piece["end"]
-            and _to_float(w.get("end")) > piece["start"]
-        ]
+        kept = _slice_words(orig_words, piece["start"], piece["end"])
+        # 一致性兜底：文本是被互斥切开的，词必须与之对应。裁剪结果一旦与
+        # 本段文本对不上（旧数据、时间戳漂移、跨界重复等），直接按文本重合成，
+        # 绝不让 words 与 text 出现"多词/少词"。
+        if kept and _norm_text("".join(w.get("word", "") for w in kept)) != _norm_text(piece["text"]):
+            kept = []
         new_seg["words"] = kept or synthesize_words(
             piece["text"], piece["start"], piece["end"])
         out.append(new_seg)

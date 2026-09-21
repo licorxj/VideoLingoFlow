@@ -26,6 +26,25 @@ from backend.utils.sentence_split_core import (
     salvage_json_response, build_smart_batches,
 )
 
+# 「单句严格重试」内置兜底提示词（模板缺失时使用）。
+# 刻意用普通字符串拼接，禁止改成 str.format / f-string：正文含 JSON 示例大括号
+# （{"result": [...]}），format 会把它当作名为 "result" 的替换字段并抛 KeyError，
+# 导致请求还没发出就失败（日志表现为「严格重试全部秒失败: '"result"'」）。
+_STRICT_SPLIT_SYSTEM_PROMPT = (
+    "You are a precise text segmentation assistant.\n\n"
+    "## CRITICAL RULE — STRICT TEXT PRESERVATION\n"
+    "You MUST NOT add, remove, or modify ANY character of the original text.\n"
+    "The concatenation of your output sentences must equal the original text exactly,\n"
+    "character for character, in the same order.\n\n"
+    "## Splitting Rules\n"
+    "- FIRST PRIORITY: Always try to split near the middle of the sentence at the most semantically natural point, so the resulting parts are as balanced in length as possible\n"
+    "- PUNCTUATION BELONGS TO THE PRECEDING SENTENCE: When splitting at a punctuation mark, the punctuation MUST stay at the END of the preceding sentence, NEVER at the BEGINNING of the next sentence\n"
+    "- NEVER produce a segment that starts with a punctuation mark (e.g., no segment should begin with 。！？，、；：.!?,;:)\n"
+    "- NEVER produce a segment that contains only punctuation marks (e.g., a single period, comma, or question mark alone on one line)\n"
+    "- NEVER produce a segment that contains only numbers or a single number\n"
+    "- Split at natural boundaries: punctuation, clause breaks, conjunctions"
+)
+
 
 class S03SentenceSplit(BaseStep):
     step_id = "s03_sentence_split"
@@ -1176,6 +1195,44 @@ class S03SentenceSplit(BaseStep):
                 chunk["end"] = round(current + duration, 4)
                 current += duration
 
+    def _build_strict_split_prompt(self, original_text: str, max_length: int) -> dict:
+        """构造「单句严格重试」提示词（与批量路径同构地走提示词服务）。
+
+        优先使用 ``s03_sentence_split_strict`` 模板（可在提示词管理中编辑），模板缺失时
+        回退内置提示词。内置兜底刻意采用**纯字符串拼接**而非 ``str.format`` / f-string：
+        正文含 JSON 示例大括号（``{"result": [...]}``），``format`` 会把它当成名为
+        ``"result"`` 的替换字段并抛 ``KeyError``，请求还没发出就失败。
+        """
+        from backend.prompts.prompt_service import get_prompt_service
+
+        try:
+            assembled = get_prompt_service().assemble_prompt("s03_sentence_split_strict", {
+                "max_length": max_length,
+                "text": original_text,
+            })
+        except Exception as exc:  # 模板服务异常不应阻断重试
+            assembled = {"found": False}
+            print(f"[Split] Strict prompt template unavailable, using builtin prompt: {exc}")
+
+        if assembled.get("found") and assembled.get("user_prompt"):
+            return {
+                "system_prompt": assembled.get("system_prompt") or _STRICT_SPLIT_SYSTEM_PROMPT,
+                "user_prompt": assembled.get("user_prompt"),
+            }
+
+        user_prompt = (
+            "## Task\n"
+            "Split the following text into shorter sentences.\n"
+            f"Each sentence must be AT MOST {max_length} characters.\n\n"
+            "## Original Text\n"
+            f"{original_text}\n\n"
+            "## Output Format\n"
+            'Return a JSON object with a single key "result" whose value is an array of strings, '
+            'e.g. {"result": ["sentence1", "sentence2"]}\n'
+            "Return ONLY the JSON object, no explanation."
+        )
+        return {"system_prompt": _STRICT_SPLIT_SYSTEM_PROMPT, "user_prompt": user_prompt}
+
     def _llm_split_single_strict(
         self,
         llm,
@@ -1185,37 +1242,15 @@ class S03SentenceSplit(BaseStep):
     ) -> Optional[List[str]]:
         """Retry splitting a single sentence with a strict prompt that emphasises
         exact text preservation.  Returns the list of split texts or None on failure."""
-        prompt = """You are a precise text segmentation assistant.
-
-## CRITICAL RULE — STRICT TEXT PRESERVATION
-You MUST NOT add, remove, or modify ANY character of the original text.
-The concatenation of your output sentences must equal the original text exactly,
-character for character, in the same order.
-
-## Task
-Split the following text into shorter sentences.
-Each sentence must be AT MOST {max_length} characters.
-
-## Splitting Rules
-        - FIRST PRIORITY: Always try to split near the middle of the sentence at the most semantically natural point, so the resulting parts are as balanced in length as possible
-        - PUNCTUATION BELONGS TO THE PRECEDING SENTENCE: When splitting at a punctuation mark, the punctuation MUST stay at the END of the preceding sentence, NEVER at the BEGINNING of the next sentence
-        - NEVER produce a segment that starts with a punctuation mark (e.g., no segment should begin with 。！？，、；：.!?,;:)
-        - NEVER produce a segment that contains only punctuation marks (e.g., a single period, comma, or question mark alone on one line)
-        - NEVER produce a segment that contains only numbers or a single number
-        - Split at natural boundaries: punctuation, clause breaks, conjunctions
-
-## Original Text
-{text}
-
-## Output Format
-Return a JSON object with a single key "result" whose value is an array of strings, e.g. {"result": ["sentence1", "sentence2"]}
-Return ONLY the JSON object, no explanation.""".format(
-            max_length=str(max_length),
-            text=original_text,
-        )
+        prompt_data = self._build_strict_split_prompt(original_text, max_length)
 
         try:
-            resp = llm.chat("s03_sentence_split", prompt, response_json=True)
+            resp = llm.chat(
+                "s03_sentence_split",
+                prompt_data["user_prompt"],
+                system_prompt=prompt_data["system_prompt"],
+                response_json=True,
+            )
             result = resp.get("result") if isinstance(resp, dict) else None
             if not isinstance(result, list) or not result:
                 return None

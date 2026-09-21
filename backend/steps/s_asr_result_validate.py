@@ -168,6 +168,23 @@ class S_ASRResultValidate(BaseStep):
             "勾选节点上的「自动修复」并保存工作流后重新运行，即可自动修复此类不一致。"
         )
 
+    @staticmethod
+    def _join_words(tokens) -> str:
+        """按语言拼接词序列：英文/数字之间补空格，中日韩直接相连。"""
+        out = ""
+        for tok in tokens:
+            tok = tok or ""
+            if not tok:
+                continue
+            if not out:
+                out = tok
+                continue
+            if out[-1].isascii() and tok[0].isascii():
+                out += " " + tok
+            else:
+                out += tok
+        return out
+
     def _fix_segments_from_words(self, items) -> int:
         """规则一：以 words 为准重建每段 text，并更新该段的起始时间。
 
@@ -182,7 +199,9 @@ class S_ASRResultValidate(BaseStep):
             words = item.get("words") or []
             if not words:
                 continue
-            rebuilt = "".join(str(w.get("word") or "") for w in words)
+            # 按语言拼接：英文/数字之间必须补空格，直接 "" 拼接会把
+            # "A row of dots" 粘成 "Arowofdots"，肉眼可见且下游断句全废。
+            rebuilt = self._join_words([str(w.get("word") or "") for w in words])
             # 以「归一化后是否一致」判定是否真的对不上：words 通常不含标点，
             # 若 segment 原文仅多出标点则应视为一致、不覆盖，优先保留原有标点
             # （与校验口径统一，避免把「，」「。」等标点抹掉）。

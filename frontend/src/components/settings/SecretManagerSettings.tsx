@@ -207,7 +207,7 @@ export default function SecretManagerSettings() {
     }
   };
 
-  const fmt = (v?: string | null) => (v ? v.replace("T", " ").slice(0, 19) : "—");
+  const fmt = (v?: string | null) => (v ? v.slice(0, 10) : "—");
 
   return (
     <div className="space-y-4">
@@ -284,7 +284,7 @@ export default function SecretManagerSettings() {
                 <th className="px-4 py-2.5 text-left font-medium">密钥值</th>
                 <th className="w-[8%] px-4 py-2.5 text-left font-medium">注册</th>
                 <th className="w-[6%] px-4 py-2.5 text-left font-medium">轮询</th>
-                <th className="w-[12%] px-4 py-2.5 text-left font-medium">更新时间</th>
+                <th className="w-[10%] px-4 py-2.5 text-left font-medium">更新时间</th>
                 <th className="w-28 px-4 py-2.5 text-right font-medium">操作</th>
               </tr>
             </thead>

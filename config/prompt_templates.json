@@ -21,6 +21,25 @@
       "user_prompt": "## Task\nSplit each text segment into multiple shorter sentences. Each resulting sentence must be AT MOST {{ max_length }} characters.\n\n## Input Segments\n{{ segments }}\n\n## Output Format\nReturn a JSON object mapping each segment index to an array of split sentences:\n{\"0\": [\"sentence1\", \"sentence2\"], \"1\": [\"sentence3\", \"sentence4\"]}"
     },
     {
+      "id": "s03_sentence_split_strict",
+      "name": "句子分割（单句严格重试）",
+      "description": "批量分割失败后，对单个长句做严格重试：强调逐字符保留原文，并要求返回 {\"result\": [...]} 结构",
+      "placeholders": [
+        {
+          "tag": "max_length",
+          "label": "最大字符数",
+          "description": "每句分割后的最大字符长度"
+        },
+        {
+          "tag": "text",
+          "label": "待分割单句",
+          "description": "需要分割的单句原文"
+        }
+      ],
+      "system_prompt": "You are a precise text segmentation assistant.\n\n## CRITICAL RULE — STRICT TEXT PRESERVATION\nYou MUST NOT add, remove, or modify ANY character of the original text.\nThe concatenation of your output sentences must equal the original text exactly,\ncharacter for character, in the same order.\n\n## Splitting Rules\n- FIRST PRIORITY: Always try to split near the middle of the sentence at the most semantically natural point, so the resulting parts are as balanced in length as possible\n- PUNCTUATION BELONGS TO THE PRECEDING SENTENCE: When splitting at a punctuation mark, the punctuation MUST stay at the END of the preceding sentence, NEVER at the BEGINNING of the next sentence\n- NEVER produce a segment that starts with a punctuation mark (e.g., no segment should begin with 。！？，、；：.!?,;:)\n- NEVER produce a segment that contains only punctuation marks (e.g., a single period, comma, or question mark alone on one line)\n- NEVER produce a segment that contains only numbers or a single number\n- Split at natural boundaries: punctuation, clause breaks, conjunctions",
+      "user_prompt": "## Task\nSplit the following text into shorter sentences.\nEach sentence must be AT MOST {{ max_length }} characters.\n\n## Original Text\n{{ text }}\n\n## Output Format\nReturn a JSON object with a single key \"result\" whose value is an array of strings, e.g. {\"result\": [\"sentence1\", \"sentence2\"]}\nReturn ONLY the JSON object, no explanation."
+    },
+    {
       "id": "s04_summarize",
       "name": "内容总结",
       "description": "对视频转录文本进行内容总结并提取术语表",
