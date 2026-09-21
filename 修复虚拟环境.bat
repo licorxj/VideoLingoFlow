@@ -1,11 +1,11 @@
 @echo off
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 setlocal
 rem ============================================================
-rem  åˆ†å‘åŒ…é¦–æ¬¡è¿è¡Œï¼švenv312 é‡å®šä½è‡ªæ„ˆ
-rem  æŠŠéšåŒ… venv312 é€‚é…åˆ°æœ¬æœºè·¯å¾„ï¼ˆé‡å†™ pyvenv.cfg /
-rem  activate / shebangï¼Œå¹¶é‡æ–°ç”Ÿæˆå…¨éƒ¨æ§åˆ¶å°å¯åŠ¨å™¨ï¼‰ã€‚
-rem  ä»…éœ€è¿è¡Œä¸€æ¬¡ï¼Œä¹‹åç”¨ start-prod.bat å¯åŠ¨ã€‚
+rem  ·Ö·¢°üÊ×´ÎÔËĞĞ£ºvenv312 ÖØ¶¨Î»×ÔÓú
+rem  °ÑËæ°ü venv312 ÊÊÅäµ½±¾»úÂ·¾¶£¨ÖØĞ´ pyvenv.cfg /
+rem  activate / shebang£¬²¢ÖØĞÂÉú³ÉÈ«²¿¿ØÖÆÌ¨Æô¶¯Æ÷£©¡£
+rem  ½öĞèÔËĞĞÒ»´Î£¬Ö®ºóÓÃ start-prod.bat Æô¶¯¡£
 rem ============================================================
 cd /d "%~dp0"
 
@@ -14,7 +14,7 @@ if exist "python-base\python.exe" set "PY=python-base\python.exe"
 if not defined PY (where py >nul 2>&1 && set "PY=py -3.12")
 if not defined PY (where python >nul 2>&1 && set "PY=python")
 if not defined PY (
-    echo [é”™è¯¯] æœªæ‰¾åˆ° Pythonï¼Œè¯·å…ˆå®‰è£… Python 3.12 æˆ–éšåŒ…æºå¸¦ python-base\
+    echo [´íÎó] Î´ÕÒµ½ Python£¬ÇëÏÈ°²×° Python 3.12 »òËæ°üĞ¯´ø python-base\
     pause
     exit /b 1
 )
@@ -22,7 +22,7 @@ if not defined PY (
 set "SCRIPT=installer\fix_venv_relocate.py"
 if not exist "%SCRIPT%" set "SCRIPT=fix_venv_relocate.py"
 if not exist "%SCRIPT%" (
-    echo [é”™è¯¯] æœªæ‰¾åˆ° fix_venv_relocate.pyï¼ˆæºç æœªæ‹‰å–æ—¶è¯·å°†è„šæœ¬å‰¯æœ¬æ”¾åœ¨æœ¬ç›®å½•ï¼‰
+    echo [´íÎó] Î´ÕÒµ½ fix_venv_relocate.py£¨Ô´ÂëÎ´À­È¡Ê±Çë½«½Å±¾¸±±¾·ÅÔÚ±¾Ä¿Â¼£©
     pause
     exit /b 1
 )
@@ -31,7 +31,7 @@ if not exist "%SCRIPT%" (
 set "RC=%ERRORLEVEL%"
 if not "%RC%"=="0" (
     echo.
-    echo [é”™è¯¯] venv ä¿®å¤å¤±è´¥ï¼Œé€€å‡ºç : %RC%
+    echo [´íÎó] venv ĞŞ¸´Ê§°Ü£¬ÍË³öÂë: %RC%
     pause
     exit /b %RC%
 )

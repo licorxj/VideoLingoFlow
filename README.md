@@ -264,7 +264,8 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 
 ## 配置说明
 
-- **局域网协作**：复制 `.runtime/local_env.bat.template` 为 `local_env.bat`，设 `VIDEOLINGO_LAN_MODE=1` 后重启 Manager，API 与 Manager 监听 `0.0.0.0`（仅限可信局域网）。
+- **运行时配置**：`.runtime/local_env.bat` 由 `install.bat` 首次从 `.runtime/local_env.bat.template` 生成；再次运行 `install.bat` 会**自动补齐模板新增的配置键（不覆盖任何已有值）**，并按本机显存重算 `GPU_SERVICE_*` / 资源令牌等键。新增可配置开关请写进模板。
+- **局域网协作**：在 `local_env.bat` 中设 `VIDEOLINGO_LAN_MODE=1`（或在「多人协作」页切换）后重启 Manager，API 与 Manager 监听 `0.0.0.0`（仅限可信局域网）。
 - **远程协作**：在「多人协作」页开启远程模式（配 Cloudflare Tunnel 后公网域名可访问），默认关闭时公网请求被 `RemoteAccessGuard` 拦截。
 - **模型缓存**：统一放 `_model_cache/`；`HF_ENDPOINT` 默认 `https://hf-mirror.com`。
 

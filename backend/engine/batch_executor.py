@@ -68,6 +68,17 @@ def _trace(message: str) -> None:
     print(f"[TaskTrace][Batch] {message}", flush=True)
 
 
+def _resource_for_snapshot(node_type: str, snapshot: dict) -> str:
+    """按节点快照解析资源类（生图节点需按接口动态判定）。
+
+    兼容不接受 node 参数的旧版控制平面二进制：降级为只按节点类型判定，避免 TypeError。
+    """
+    try:
+        return _resource_for(node_type, snapshot)
+    except TypeError:
+        return _resource_for(node_type)
+
+
 def _batch_meta(task: Task) -> dict:
     return (task.payload or {}).get("batch", {})
 
@@ -437,7 +448,8 @@ class BatchExecutor:
                     if not node_id:
                         continue
                     node_type = _node_type(node_snapshot)
-                    resource = _resource_for(node_type)
+                    # 传节点快照：生图节点按所选接口动态判定（云端免令牌 / 本地 ComfyUI 走 gpu）
+                    resource = _resource_for_snapshot(node_type, node_snapshot)
                     existing = existing_nodes.get(node_id)
                     if existing is None:
                         session.add(TaskNode(

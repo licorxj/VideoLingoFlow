@@ -20,7 +20,7 @@
           "videoPath": "",
           "audioPath": "",
           "subtitlePath": "",
-          "url": "https://www.youtube.com/@animatedphysicsofficial/videos",
+          "url": "https://youtube.com/playlist?list=PLkahZjV5wKe_Yh-7VFrP1bxJOtkVzdqeB&si=yuwKsYpORf1hZP_V",
           "source_language": "auto",
           "target_language": "zh",
           "copyInputs": false,
@@ -35,7 +35,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "url": "https://youtu.be/mEVl0NS0vu8?si=QxMCPjDFMyJRNYu0",
+          "url": "https://www.youtube.com/@AnimatedMathOfficial",
           "languages": {
             "source_language": "auto",
             "target_language": "zh"
@@ -47,7 +47,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 502
+        "height": 498
       },
       "selected": false,
       "dragging": false,
@@ -72,12 +72,21 @@
           "max_items": 0,
           "folder_name": ""
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "output/batch_download_manifest_node_1_1789507873282.json",
+          "folder": "output/batch_download/Animated Math - Videos_node_1_1789507873282",
+          "video": "output/batch_download/Animated Math - Videos_node_1_1789507873282/001 - We Have To Talk About the Gamma Function.mp4"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 456
+        "height": 599
       },
       "selected": false,
       "dragging": false,
@@ -101,7 +110,7 @@
           "mcps": [],
           "docs_path": "",
           "external_doc": "",
-          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：帮我把下载好的产物归档到：X:\\PCTMoveData\\Videos\\下载\\物理科普，并翻译好文件名",
+          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：帮我把下载好的产物归档到：M:\\视频下载\\youtub图解真相",
           "output_items": [
             {
               "port": "输出1",
@@ -110,12 +119,19 @@
             }
           ]
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output_1": "cache/agent_node_1_1789508536434_1.json"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 651
+        "height": 738
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -151,6 +167,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-16T05:30:34",
-  "updatedAt": "2026-09-16T05:53:41",
-  "revision": 3
+  "updatedAt": "2026-09-21T13:45:27",
+  "revision": 4
 }

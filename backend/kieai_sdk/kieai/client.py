@@ -214,6 +214,8 @@ class KieClient:
         timeout: float = 60.0,
         poll_interval: float = 3.0,
         max_poll: int = 120,
+        net_retries: int = 3,
+        net_backoff: float = 1.0,
         session: Optional[aiohttp.ClientSession] = None,
         output_base: Optional[str] = None,
         secret_name: str = _KIE_SECRET_NAME,
@@ -227,6 +229,8 @@ class KieClient:
         self.timeout = timeout
         self.poll_interval = poll_interval
         self.max_poll = max_poll
+        self.net_retries = net_retries
+        self.net_backoff = net_backoff
         # Root directory for default output when ``output_path`` is omitted.
         # Defaults to ``<cwd>/output`` (i.e. the current project's output dir).
         self.output_base = output_base or os.path.join(os.getcwd(), "output")
@@ -311,7 +315,10 @@ class KieClient:
     # core request primitives
     # ------------------------------------------------------------------ #
     async def _post_json(self, url: str, body: Dict[str, Any]) -> Dict[str, Any]:
-        async with self.session.post(url, json=body, headers=self._auth_headers()) as resp:
+        async with self.session.post(
+            url, json=body, headers=self._auth_headers(),
+            timeout=aiohttp.ClientTimeout(total=self.timeout),
+        ) as resp:
             try:
                 data = await resp.json()
             except Exception:
@@ -329,7 +336,10 @@ class KieClient:
             return data
 
     async def _get_json(self, url: str) -> Dict[str, Any]:
-        async with self.session.get(url, headers=self._auth_headers()) as resp:
+        async with self.session.get(
+            url, headers=self._auth_headers(),
+            timeout=aiohttp.ClientTimeout(total=self.timeout),
+        ) as resp:
             try:
                 data = await resp.json()
             except Exception:
@@ -345,6 +355,38 @@ class KieClient:
                     body=data,
                 )
             return data
+
+    async def _get_json_retry(self, url: str) -> Dict[str, Any]:
+        """带退避的网络层重试：仅对传输层瞬断（连接/超时/断开）重试，
+        不消耗 wait() 的轮询预算；业务层错误（_get_json 抛出的 KieRequestError，
+        含 HTTP>=400、非 JSON）直接上抛、不重试。"""
+        last_err: Optional[BaseException] = None
+        for attempt in range(self.net_retries):
+            try:
+                return await self._get_json(url)
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                last_err = e
+                if attempt < self.net_retries - 1:
+                    await asyncio.sleep(self.net_backoff * (2 ** attempt))
+                    continue
+        # 超过重试上限，原样抛出最后一次网络错误
+        assert last_err is not None
+        raise last_err
+
+    async def _post_json_retry(self, url: str, body: Dict[str, Any]) -> Dict[str, Any]:
+        """与 ``_get_json_retry`` 对称：对传输层瞬断做指数退避重试，
+        业务层错误（_post_json 抛出的 KieRequestError，含 HTTP>=400）直接上抛。"""
+        last_err: Optional[BaseException] = None
+        for attempt in range(self.net_retries):
+            try:
+                return await self._post_json(url, body)
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                last_err = e
+                if attempt < self.net_retries - 1:
+                    await asyncio.sleep(self.net_backoff * (2 ** attempt))
+                    continue
+        assert last_err is not None
+        raise last_err
 
     # ------------------------------------------------------------------ #
     # result download / local persistence
@@ -394,21 +436,42 @@ class KieClient:
         return paths
 
     async def _download_file(self, url: str, path: str) -> None:
-        """Stream ``url`` to ``path`` using the shared session."""
-        try:
-            async with self.session.get(url) as resp:
-                if resp.status >= 400:
-                    raise KieRequestError(
-                        f"Download failed ({resp.status}): {url}",
-                        status=resp.status,
-                    )
-                with open(path, "wb") as fh:
-                    async for chunk in resp.content.iter_chunked(65536):
-                        fh.write(chunk)
-        except KieRequestError:
-            raise
-        except Exception as e:  # noqa: BLE001
-            raise KieRequestError(f"Download failed: {e} ({url})") from e
+        """Stream ``url`` to ``path`` using the shared session.
+
+        对传输层瞬断与 5xx 做指数退避重试；4xx 业务错误直接上抛不重试，
+        避免“任务已成功、仅下载抖了一下”就整任务判失败。
+        """
+        last_err: Optional[BaseException] = None
+        for attempt in range(self.net_retries):
+            try:
+                async with self.session.get(
+                    url, timeout=aiohttp.ClientTimeout(total=self.timeout)
+                ) as resp:
+                    if resp.status >= 400:
+                        err = KieRequestError(
+                            f"Download failed ({resp.status}): {url}",
+                            status=resp.status,
+                        )
+                        # 4xx 为永久失败，不重试；5xx 进入重试
+                        if resp.status < 500:
+                            raise err
+                        last_err = err
+                        break
+                    with open(path, "wb") as fh:
+                        async for chunk in resp.content.iter_chunked(65536):
+                            fh.write(chunk)
+                    return
+            except KieRequestError as e:
+                # 4xx（status<500）不重试；5xx 或 status 未知（瞬断）重试
+                if getattr(e, "status", 0) and e.status < 500:
+                    raise
+                last_err = e
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                last_err = e
+            if attempt < self.net_retries - 1:
+                await asyncio.sleep(self.net_backoff * (2 ** attempt))
+                continue
+        raise last_err or KieRequestError(f"Download failed: {url}")
 
     async def _save_results(
         self,
@@ -479,7 +542,17 @@ class KieClient:
 
         last = None
         for _ in range(attempts):
-            last = await self._get_json(url)
+            last = await self._get_json_retry(url)
+            # 信封级业务状态码：KIE 用 code==200 表示本次请求成功（任务可能仍在跑）；
+            # 非 200 表示请求本身出错 / 任务已终态失败，不应继续盲轮询，直接抛出。
+            code = last.get("code") if isinstance(last, dict) else None
+            if code is not None and code != 200:
+                raise KieTaskFailed(
+                    f"Task {task.task_id} poll returned code={code}: "
+                    f"{last.get('msg') if isinstance(last, dict) else ''}",
+                    task_id=task.task_id,
+                    body=last,
+                )
             payload = last.get("data", last) if isinstance(last, dict) else last
 
             status = _find(payload, _STATUS_KEYS)
@@ -547,7 +620,7 @@ class KieClient:
             "base64": "upload-file-base64",
         }[method]
         entry = self.catalog.get(suffix)
-        data = await self._post_json(entry.endpoint, dict(params))
+        data = await self._post_json_retry(entry.endpoint, dict(params))
         if isinstance(data, dict) and "data" in data:
             return data["data"]
         return data

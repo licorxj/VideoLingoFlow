@@ -279,12 +279,12 @@ export default function SecretManagerSettings() {
           <table className="w-full table-fixed text-sm">
             <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
               <tr>
-                <th className="w-[20%] px-4 py-2.5 text-left font-medium">名称</th>
-                <th className="w-[18%] px-4 py-2.5 text-left font-medium">用途说明</th>
-                <th className="px-4 py-2.5 text-left font-medium">密钥值</th>
-                <th className="w-[8%] px-4 py-2.5 text-left font-medium">注册</th>
-                <th className="w-[6%] px-4 py-2.5 text-left font-medium">轮询</th>
-                <th className="w-[10%] px-4 py-2.5 text-left font-medium">更新时间</th>
+                <th className="w-[18%] px-4 py-2.5 text-left font-medium">名称</th>
+                <th className="w-[16%] px-4 py-2.5 text-left font-medium">用途说明</th>
+                <th className="w-[20%] px-4 py-2.5 text-left font-medium">密钥值</th>
+                <th className="w-[6%] px-4 py-2.5 text-left font-medium">注册</th>
+                <th className="w-[8%] px-4 py-2.5 text-left font-medium">轮询</th>
+                <th className="w-[9%] px-4 py-2.5 text-left font-medium">更新时间</th>
                 <th className="w-28 px-4 py-2.5 text-right font-medium">操作</th>
               </tr>
             </thead>
@@ -345,7 +345,7 @@ export default function SecretManagerSettings() {
                       <button
                         onClick={() => window.open(item.register_url, "_blank")}
                         title={`打开注册页面：${item.register_url}`}
-                        className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full bg-primary/10 px-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/20"
+                        className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full bg-primary/10 px-2 text-[11px] font-medium text-primary transition-colors hover:bg-primary/20"
                       >
                         <ExternalLink className="h-3 w-3" />
                         注册

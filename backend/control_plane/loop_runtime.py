@@ -58,6 +58,17 @@ from backend.control_plane.workflow_runtime import (
 from backend.steps.step_registry import new_step_instance
 
 
+def _resource_for_snapshot(node_type: str, snapshot: dict) -> str:
+    """按节点快照解析资源类（生图节点需按接口动态判定）。
+
+    兼容不接受 node 参数的旧版控制平面二进制：降级为只按节点类型判定，避免 TypeError。
+    """
+    try:
+        return _resource_for(node_type, snapshot)
+    except TypeError:
+        return _resource_for(node_type)
+
+
 # 迭代总数安全上限（防止上游误传超长列表把任务拖死）
 LOOP_MAX_ITEMS = int(os.getenv("LOOP_MAX_ITEMS", "500"))
 LOOP_MAX_CONCURRENCY = int(os.getenv("LOOP_MAX_CONCURRENCY", "16"))
@@ -305,7 +316,7 @@ def _create_iteration_nodes(session, task_id: str, loop_id: str, meta: dict, ind
         node_id = snapshot["id"]
         nodes_by_id[node_id] = snapshot
         node_ids.append(node_id)
-        resource = _resource_for(_node_type(snapshot))
+        resource = _resource_for_snapshot(_node_type(snapshot), snapshot)
         session.add(TaskNode(
             task_id=task_id,
             node_key=node_id,

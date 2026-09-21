@@ -1,19 +1,19 @@
 @echo off
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 setlocal EnableDelayedExpansion
 cd /d %~dp0
-title VideoLingoLc ä¸€é”®å¯åŠ¨ï¼ˆæ­£å¼ç‰ˆï¼‰
+title VideoLingoLc Ò»¼üÆô¶¯£¨ÕıÊ½°æ£©
 
-:: --- åŠ è½½æœ¬åœ°è¦†ç›–é…ç½®ï¼ˆå¦‚æœ‰ï¼›å« LAN æ¨¡å¼å¼€å…³ VIDEOLINGO_LAN_MODEï¼‰---
+:: --- ¼ÓÔØ±¾µØ¸²¸ÇÅäÖÃ£¨ÈçÓĞ£»º¬ LAN Ä£Ê½¿ª¹Ø VIDEOLINGO_LAN_MODE£©---
 if exist "%cd%\.runtime\local_env.bat" call "%cd%\.runtime\local_env.bat"
 
 :: ============================================================
-::  æ­£å¼ç‰ˆä¸€é”®å¯åŠ¨ï¼ˆWindowsï¼‰ï¼šä¸éš”ç¦» CUDA / ç¯å¢ƒï¼Œ
-::  ç›´æ¥ä½¿ç”¨ç”¨æˆ·ç³»ç»Ÿå·²å®‰è£…çš„ CUDA è¿è¡Œæ—¶ã€‚
-::  ä½¿ç”¨å‰è¯·å…ˆè¿è¡Œ install.bat å®Œæˆ Python / ä¾èµ– / ç¬¬ä¸‰æ–¹æ‰©å±•å®‰è£…ã€‚
+::  ÕıÊ½°æÒ»¼üÆô¶¯£¨Windows£©£º²»¸ôÀë CUDA / »·¾³£¬
+::  Ö±½ÓÊ¹ÓÃÓÃ»§ÏµÍ³ÒÑ°²×°µÄ CUDA ÔËĞĞÊ±¡£
+::  Ê¹ÓÃÇ°ÇëÏÈÔËĞĞ install.bat Íê³É Python / ÒÀÀµ / µÚÈı·½À©Õ¹°²×°¡£
 :: ============================================================
 
-:: --- æ¢æµ‹ npm / node / bun / redisï¼ˆä»…æç¤ºï¼Œä¸é‡ç½® PATHï¼‰---
+:: --- Ì½²â npm / node / bun / redis£¨½öÌáÊ¾£¬²»ÖØÖÃ PATH£©---
 set NPM_CMD=
 set NODE_DIR=
 set BUN_CMD=
@@ -27,7 +27,7 @@ if defined BUN_CMD (echo bun: !BUN_CMD!) else (echo WARNING: bun not found)
 if defined REDIS_CMD (echo redis: !REDIS_CMD!) else (echo WARNING: redis-server not found)
 if defined NODE_DIR set NODE_EXE=%NODE_DIR%node.exe
 
-:: --- æ¸…é™¤ç³»ç»Ÿä»£ç†ï¼ˆé¿å… httpx/cloakbrowser è¯»å–ä¸æ”¯æŒçš„ socks:// ä»£ç†ï¼‰---
+:: --- Çå³ıÏµÍ³´úÀí£¨±ÜÃâ httpx/cloakbrowser ¶ÁÈ¡²»Ö§³ÖµÄ socks:// ´úÀí£©---
 set http_proxy=
 set https_proxy=
 set all_proxy=
@@ -35,25 +35,25 @@ set HTTP_PROXY=
 set HTTPS_PROXY=
 set ALL_PROXY=
 
-:: --- venvï¼ˆä»…æ¿€æ´»ï¼Œä¸éš”ç¦» CUDAï¼‰---
+:: --- venv£¨½ö¼¤»î£¬²»¸ôÀë CUDA£©---
 set "VENV_ROOT=%cd%\venv312"
 if not exist "%VENV_ROOT%\Scripts\python.exe" (
-    echo [ERROR] æœªæ‰¾åˆ° Python è™šæ‹Ÿç¯å¢ƒ: %VENV_ROOT%
-    echo         è¯·å…ˆè¿è¡Œ install.bat å®Œæˆå®‰è£…
+    echo [ERROR] Î´ÕÒµ½ Python ĞéÄâ»·¾³: %VENV_ROOT%
+    echo         ÇëÏÈÔËĞĞ install.bat Íê³É°²×°
     pause
     exit /b 1
 )
 call "%VENV_ROOT%\Scripts\activate.bat"
 
-:: --- ä¾èµ–è‡ªæ£€ ---
+:: --- ÒÀÀµ×Ô¼ì ---
 python -c "import sqlite3, alembic, celery, redis, sqlalchemy" >nul 2>&1
 if !errorlevel! neq 0 (
-    echo [ERROR] Python ä¾èµ–ä¸å®Œæ•´ï¼Œè¯·å…ˆè¿è¡Œ install.bat
+    echo [ERROR] Python ÒÀÀµ²»ÍêÕû£¬ÇëÏÈÔËĞĞ install.bat
     pause
     exit /b 1
 )
 
-:: --- æ•°æ®ç›®å½• ---
+:: --- Êı¾İÄ¿Â¼ ---
 if not exist "%cd%\data" mkdir "%cd%\data"
 if not exist "%cd%\data\assets" mkdir "%cd%\data\assets"
 if not exist "%cd%\data\workspace" mkdir "%cd%\data\workspace"
@@ -61,14 +61,14 @@ if not exist "%cd%\data\checkpoints" mkdir "%cd%\data\checkpoints"
 if not exist "%cd%\data\backups" mkdir "%cd%\data\backups"
 if not exist "%cd%\logs" mkdir "%cd%\logs"
 
-:: --- Manager ç«¯å£æ£€æŸ¥ ---
-echo [Manager] æ£€æŸ¥ç«¯å£ 18001...
+:: --- Manager ¶Ë¿Ú¼ì²é ---
+echo [Manager] ¼ì²é¶Ë¿Ú 18001...
 set MANAGER_PID=
 for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":18001" ^| findstr "LISTENING"') do (
     set MANAGER_PID=%%p
 )
 if defined MANAGER_PID (
-    echo [Manager] ç«¯å£ 18001 å·²è¢«å ç”¨ï¼ˆPID: !MANAGER_PID!ï¼‰ï¼Œå…ˆåœæ­¢å·²è¿è¡Œçš„ Manager...
+    echo [Manager] ¶Ë¿Ú 18001 ÒÑ±»Õ¼ÓÃ£¨PID: !MANAGER_PID!£©£¬ÏÈÍ£Ö¹ÒÑÔËĞĞµÄ Manager...
     taskkill /f /pid !MANAGER_PID! >nul 2>&1
     for /L %%i in (1,1,30) do (
         netstat -ano ^| findstr ":18001" ^| findstr "LISTENING" >nul 2>&1
@@ -76,29 +76,29 @@ if defined MANAGER_PID (
         ping -n 2 127.0.0.1 >nul
     )
     :manager_port_free
-    echo [Manager] å·²åœæ­¢æ—§ Managerï¼Œç«¯å£ 18001 å·²é‡Šæ”¾ã€‚
+    echo [Manager] ÒÑÍ£Ö¹¾É Manager£¬¶Ë¿Ú 18001 ÒÑÊÍ·Å¡£
 )
 
-:: --- å‰ç«¯ï¼šæ¸…ç†æ®‹ç•™ vite åï¼Œæ–°çª—å£ç­‰å¾…ä¸»åç«¯(11001)å°±ç»ªå†å¯åŠ¨ Viteï¼ˆåç«¯å…ˆã€å‰ç«¯åï¼‰---
+:: --- Ç°¶Ë£ºÇåÀí²ĞÁô vite ºó£¬ĞÂ´°¿ÚµÈ´ıÖ÷ºó¶Ë(11001)¾ÍĞ÷ÔÙÆô¶¯ Vite£¨ºó¶ËÏÈ¡¢Ç°¶Ëºó£©---
 set VITE_DEPRECATION_SILENT=1
 if exist "%cd%\frontend\node_modules" (
-    echo [Frontend] æ¸…ç† 11003/11004 æ®‹ç•™å‰ç«¯è¿›ç¨‹...
+    echo [Frontend] ÇåÀí 11003/11004 ²ĞÁôÇ°¶Ë½ø³Ì...
     for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":11003" ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>&1
     for /f "tokens=5" %%p in ('netstat -ano ^| findstr ":11004" ^| findstr "LISTENING"') do taskkill /f /pid %%p >nul 2>&1
-    echo [Frontend] ä¸»åç«¯å°±ç»ªåå°†åœ¨æ–°çª—å£å¯åŠ¨ Vite dev serverï¼ˆhttp://127.0.0.1:11003ï¼‰...
+    echo [Frontend] Ö÷ºó¶Ë¾ÍĞ÷ºó½«ÔÚĞÂ´°¿ÚÆô¶¯ Vite dev server£¨http://127.0.0.1:11003£©...
     start "VideoLingoLc Frontend" cmd /c "for /L %%i in (1,1,180) do @((netstat -ano | findstr ":11001" | findstr "LISTENING" >nul 2>&1 && (cd /d "%cd%\frontend" && npx vite --port 11003 --strictPort --open && exit)) & ping -n 2 127.0.0.1 >nul)"
 ) else (
-    echo [æç¤º] frontend\node_modules ä¸å­˜åœ¨ï¼Œè·³è¿‡å‰ç«¯ dev serverï¼›å¯ä½¿ç”¨æ„å»ºäº§ç‰© frontend/dist
+    echo [ÌáÊ¾] frontend\node_modules ²»´æÔÚ£¬Ìø¹ıÇ°¶Ë dev server£»¿ÉÊ¹ÓÃ¹¹½¨²úÎï frontend/dist
 )
 
-:: --- å½“å‰çª—å£è¿è¡Œ Managerï¼ˆå…¨éƒ¨åç«¯æœåŠ¡ä¸ worker åœ¨æ­¤è¾“å‡ºï¼‰---
-echo [Backend] å¯åŠ¨ Managerï¼ˆworker è¾“å‡ºåœ¨å½“å‰çª—å£ï¼‰...
+:: --- µ±Ç°´°¿ÚÔËĞĞ Manager£¨È«²¿ºó¶Ë·şÎñÓë worker ÔÚ´ËÊä³ö£©---
+echo [Backend] Æô¶¯ Manager£¨worker Êä³öÔÚµ±Ç°´°¿Ú£©...
 python backend\manager.py
 if errorlevel 1 (
     echo.
-    echo [ERROR] backend\manager.py å¼‚å¸¸é€€å‡ºï¼Œé€€å‡ºç : !errorlevel!
+    echo [ERROR] backend\manager.py Òì³£ÍË³ö£¬ÍË³öÂë: !errorlevel!
 )
 
 echo.
-echo å·²é€€å‡ºï¼ˆManager åœæ­¢å³å…¨éƒ¨åç«¯æœåŠ¡åœæ­¢ï¼‰
+echo ÒÑÍË³ö£¨Manager Í£Ö¹¼´È«²¿ºó¶Ë·şÎñÍ£Ö¹£©
 pause

@@ -264,7 +264,8 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 
 ## Configuration
 
-- **LAN collaboration**: copy `.runtime/local_env.bat.template` to `local_env.bat`, set `VIDEOLINGO_LAN_MODE=1`, and restart Manager. API and Manager then listen on `0.0.0.0` (trusted LAN only).
+- **Runtime config**: `.runtime/local_env.bat` is generated on first install from `.runtime/local_env.bat.template`. Re-running `install.bat` **backfills keys newly added to the template (existing values are never overwritten)** and recomputes `GPU_SERVICE_*` / resource-token keys from the detected VRAM. Add new configurable switches to the template.
+- **LAN collaboration**: set `VIDEOLINGO_LAN_MODE=1` in `local_env.bat` (or toggle it on the Collaboration page) and restart Manager. API and Manager then listen on `0.0.0.0` (trusted LAN only).
 - **Remote collaboration**: enable Remote mode on the "Collaboration" page (public domain via Cloudflare Tunnel). Off by default — public requests are blocked by `RemoteAccessGuard`.
 - **Model cache**: stored under `_model_cache/`; `HF_ENDPOINT` defaults to `https://hf-mirror.com`.
 

@@ -18,6 +18,8 @@ import logging
 import urllib.parse
 import requests
 
+from backend.imagegen.imagegen_retry import request_with_retry, download_with_retry
+
 logger = logging.getLogger(__name__)
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -74,10 +76,10 @@ def _api_request(method: str, endpoint: str, api_key: str, base_url: str = WULI_
     url = (base_url or WULI_BASE_URL).rstrip("/") + endpoint
     headers = {"Authorization": f"Bearer {api_key}"}
     if method.upper() == "GET":
-        resp = requests.get(url, headers=headers, params=params, timeout=60)
+        resp = request_with_retry("GET", url, headers=headers, params=params, timeout=60)
     else:
         headers["Content-Type"] = "application/json"
-        resp = requests.post(url, headers=headers, json=json_body, timeout=120)
+        resp = request_with_retry("POST", url, headers=headers, json=json_body, timeout=120)
 
     try:
         resp.raise_for_status()
@@ -170,8 +172,8 @@ def upload_file(file_path_or_url: str, api_key: str = "", base_url: str = WULI_B
         raise RuntimeError(f"Wuli: 获取上传地址失败, data={data}")
 
     # 2) PUT 上传二进制内容
-    put_resp = requests.put(
-        upload_url,
+    put_resp = request_with_retry(
+        "PUT", upload_url,
         data=file_bytes,
         headers={"Content-Type": "application/octet-stream"},
         timeout=120,
@@ -235,18 +237,10 @@ def _download_all(urls: list, output_dir: str) -> list:
     saved = []
     for i, url in enumerate(urls):
         try:
-            resp = requests.get(url, timeout=120, stream=True)
-            resp.raise_for_status()
-            ct = resp.headers.get("content-type", "").lower()
-            ext = "png"
-            if "jpeg" in ct or "jpg" in ct:
-                ext = "jpg"
-            elif "webp" in ct:
-                ext = "webp"
+            suffix = os.path.splitext(urllib.parse.urlparse(url).path)[1].lstrip(".").lower()
+            ext = suffix if suffix in ("png", "jpg", "jpeg", "webp", "gif") else "png"
             path = os.path.join(output_dir, f"output_{i}.{ext}")
-            with open(path, "wb") as f:
-                for chunk in resp.iter_content(8192):
-                    f.write(chunk)
+            download_with_retry(url, path, timeout=120)
             saved.append(path)
         except Exception as e:
             logger.error("Wuli: 下载结果图 %s 失败: %s", i, e)

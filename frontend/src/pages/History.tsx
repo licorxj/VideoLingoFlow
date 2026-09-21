@@ -33,6 +33,7 @@ export default function History() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [keyword, setKeyword] = useState("");
   const [sortDir, setSortDir] = useState<"desc" | "asc">("desc");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const navigate = useNavigate();
@@ -54,9 +55,13 @@ export default function History() {
     load();
   }, []);
 
-  // Fuzzy filter by name / task id / workflow name, then sort by created_at
+  // Filter by task type, then fuzzy-match name / task id / workflow name, then sort by created_at
   const visibleTasks = useMemo(() => {
     let list = [...tasks];
+    if (typeFilter !== "all") {
+      // 类型缺失时按「一般任务」处理，与 TaskCard 的类型标签保持一致
+      list = list.filter((t) => (t.task_type || "normal") === typeFilter);
+    }
     const kw = keyword.trim().toLowerCase();
     if (kw) {
       list = list.filter((t) => {
@@ -72,7 +77,9 @@ export default function History() {
       return sortDir === "asc" ? ta.localeCompare(tb) : tb.localeCompare(ta);
     });
     return list;
-  }, [tasks, keyword, sortDir]);
+  }, [tasks, keyword, sortDir, typeFilter]);
+
+  const hasFilter = !!keyword.trim() || typeFilter !== "all";
 
   const allVisibleSelected =
     visibleTasks.length > 0 &&
@@ -155,7 +162,7 @@ export default function History() {
       <PageHeader
         icon={HistoryIcon}
         title="历史项目"
-        detail="查看已完成的任务记录，可回溯执行"
+        detail="查看全部任务记录（含进行中），点击卡片进入画布继续操作"
         actions={
           <>
             <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={visibleTasks.length === 0}>
@@ -205,6 +212,18 @@ export default function History() {
             <SelectItem value="asc">最早创建</SelectItem>
           </SelectContent>
         </Select>
+        {/* 按任务类型筛选：取值与 TaskCard 的类型标签同源（后端 task_type） */}
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-44 flex-shrink-0">
+            <SelectValue placeholder="任务类型" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">全部类型</SelectItem>
+            <SelectItem value="normal">一般任务</SelectItem>
+            <SelectItem value="batch">批量任务</SelectItem>
+            <SelectItem value="workflow">工作流编排任务</SelectItem>
+          </SelectContent>
+        </Select>
         <Button
           variant="outline"
           size="sm"
@@ -234,11 +253,11 @@ export default function History() {
       ) : (
         <EmptyState
           icon={Inbox}
-          title={keyword.trim() ? "未找到匹配的项目" : "暂无历史记录"}
+          title={hasFilter ? "未找到匹配的项目" : "暂无历史记录"}
           detail={
-            keyword.trim()
-              ? "请尝试更换关键词，或清除搜索条件"
-              : "完成的任务将自动出现在这里"
+            hasFilter
+              ? "请尝试更换筛选条件，或清除搜索关键词"
+              : "任务创建后即出现在这里，可直接进入画布执行或操作"
           }
         />
       )}

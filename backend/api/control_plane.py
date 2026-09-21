@@ -237,6 +237,25 @@ def runtime_status():
     }
 
 
+@router.post("/resources/reset")
+def reset_resource_tokens(resource: str = Query("", description="留空=重置全部；可传 tts/gpu/io/llm/cpu")):
+    """释放资源令牌（运维用）。
+
+    持有者进程被强杀（重启进程/OOM/taskkill）时槽位可能残留，表现为节点一直
+    「等待 XX 资源」假死。该接口清理残留占用，让后续节点立即拿到令牌。
+    """
+    from backend.control_plane import workflow_runtime as workflow_runtime_module
+
+    tokens = getattr(workflow_runtime_module, "RESOURCE_TOKENS", None)
+    if tokens is None:
+        raise HTTPException(status_code=404, detail="资源令牌不可用")
+    try:
+        released = tokens.reset(resource or None)
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=500, detail=f"释放资源令牌失败: {exc}")
+    return {"resource": resource or "all", "released": released, "tokens": tokens.snapshot()}
+
+
 @router.get("/system/metrics")
 def system_metrics():
     """系统资源指标（后台采样缓存，纯内存读取）。

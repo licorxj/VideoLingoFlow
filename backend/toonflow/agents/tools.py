@@ -41,8 +41,8 @@ def build_workspace_tools(project_id: int) -> dict[str, Tool]:
         return value if isinstance(value, str) else value
 
     tools["get_flowData"] = _tool(
-        "get_flowData", "获取工作区数据。key 可选：script(剧本)/scriptPlan(拍摄计划)/"
-        "assets(资产清单)/storyboardTable(分镜表)/storyboard(分镜面板)/novelEvents(小说事件)",
+        "get_flowData", "获取工作区数据。key 可选：script(剧本，当前对话剧本)/script:<剧本id>(指定剧本)/"
+        "scriptPlan(拍摄计划)/assets(资产清单)/storyboardTable(分镜表)/storyboard(分镜面板)/novelEvents(小说事件)",
         {"key": {"type": "string"}}, ["key"], get_flow_data)
 
     def add_derive_asset(args):

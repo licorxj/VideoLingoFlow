@@ -2091,12 +2091,16 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         </DialogContent>
       </Dialog>
 
+      {/* 执行模式弹窗：批量任务的判定只在「任务模式」下成立。
+          调试工作流保持 taskMode=false，并绑定固定调试任务
+          （loadWorkflow: debug-task → activeTaskId → /status 刷新进度），
+          此时若沿用上一个批量任务遗留的标志，会误禁用「新建任务执行」。 */}
       <ExecutionModeModal
         isOpen={execModeModalOpen}
         onConfirm={handleExecuteWithMode}
         onCancel={() => setExecModeModalOpen(false)}
         hasCompletedSteps={hasCompletedSteps}
-        isBatchTask={store.isBatchTask}
+        isBatchTask={store.isBatchTask && taskMode}
       />
 
       <Dialog open={groupConfigOpen} onOpenChange={(open) => { setGroupConfigOpen(open); if (!open) setGroupConfigTargetId(null); }}>

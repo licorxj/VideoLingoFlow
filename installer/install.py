@@ -14,7 +14,8 @@ VideoLingoFlow 跨平台安装主程序（Windows / Linux / macOS）
   6. Node.js 检查:  可选（前端构建/部分第三方项目用）；缺失仅告警（dist 已随仓库分发）
   7. 第三方扩展:    调用 thirdparty/install_thirdparty.py（CloakBrowser + 三个项目 + pi）
   8. 配置引导:      补齐 backend/config/config.yaml、.runtime/local_env.bat
-                    （含本机单卡批量：GPU serial/lane、资源令牌、ffmpeg 线程、引擎空闲超时、batch 并发）
+                    （已有 local_env.bat 只补齐模板新增键、不覆盖已有值；
+                     含本机单卡批量：GPU serial/lane、资源令牌、ffmpeg 线程、引擎空闲超时、batch 并发）
   9. 汇总与下一步指引
 
 用法:
@@ -551,6 +552,87 @@ def _read_runtime_flag(local_env: Path, key: str, default: str = "") -> str:
     return default
 
 
+# 生效的赋值行：set "KEY=value" / set KEY=value（不匹配被 rem / :: 注释掉的行）
+_RUNTIME_SET_RE = re.compile(
+    r'^\s*set\s+"?([A-Za-z_][A-Za-z0-9_]*)=(.*?)"?\s*$', re.IGNORECASE
+)
+_RUNTIME_COMMENT_RE = re.compile(r"^\s*(rem\b|::)", re.IGNORECASE)
+
+
+def parse_runtime_blocks(text: str) -> list[tuple[str, list[str]]]:
+    """把 local_env 文本解析为 [(KEY, [前置注释行..., 赋值行]), ...]。
+
+    只收集生效的 set 行；被注释掉的键（rem set "KEY=..."）仅作模板内的说明
+    用途，不参与同步。
+    """
+    blocks: list[tuple[str, list[str]]] = []
+    pending: list[str] = []
+    for raw in text.splitlines():
+        line = raw.rstrip()
+        stripped = line.strip()
+        if not stripped:
+            pending = []
+            continue
+        if _RUNTIME_COMMENT_RE.match(stripped):
+            body = (
+                stripped[3:].strip()
+                if stripped[:3].lower() == "rem"
+                else stripped.lstrip(":").strip()
+            )
+            # 跳过纯分隔横幅（rem ======）与空注释，避免补齐时带出装饰性内容
+            if body.strip("= ").strip():
+                pending.append(line)
+            continue
+        match = _RUNTIME_SET_RE.match(line)
+        if match:
+            blocks.append((match.group(1).upper(), [*pending, line]))
+        pending = []
+    return blocks
+
+
+def ensure_runtime_keys(local_env: Path, template: Path) -> list[str]:
+    """把模板中「生效但本地缺失」的键追加到 local_env.bat，返回追加的键名列表。
+
+    只做追加：已有键的值与注释一律保留用户现值（含手动调优过的键）。
+    这样模板后续新增的可配置开关能随 install.bat 传递到已有用户。
+    """
+    try:
+        template_text = template.read_text(encoding="utf-8", errors="replace")
+        current_text = local_env.read_text(encoding="utf-8", errors="replace")
+    except OSError as exc:
+        warn(f"读取 local_env 配置失败，跳过键位补齐: {exc}")
+        return []
+
+    existing: set[str] = set()
+    for line in current_text.splitlines():
+        match = _RUNTIME_SET_RE.match(line)
+        if match:
+            existing.add(match.group(1).upper())
+
+    appended: list[str] = []
+    added_keys: list[str] = []
+    for key, block in parse_runtime_blocks(template_text):
+        if key in existing:
+            continue
+        if not appended:
+            appended.append("")
+            appended.append(
+                "rem --- keys below were backfilled by the installer from "
+                ".runtime\\local_env.bat.template (existing values untouched) ---"
+            )
+        appended.extend(block)
+        added_keys.append(key)
+
+    if not added_keys:
+        return []
+
+    local_env.write_text(
+        current_text.rstrip() + "\n" + "\n".join(appended).rstrip() + "\n",
+        encoding="utf-8",
+    )
+    return added_keys
+
+
 def configure_chromium_path(local_env: Path) -> None:
     """确保 .runtime/local_env.bat 写入 CloakBrowser 的 Chromium 调用路径。"""
     write_runtime_value(local_env, "CHROMIUM_EXECUTABLE_PATH", r"thirdparty\cloakbrowser\chrome.exe")
@@ -756,8 +838,8 @@ def bootstrap_config() -> None:
 
     runtime = ROOT / ".runtime"
     local_env = runtime / "local_env.bat"
+    tpl = runtime / "local_env.bat.template"
     if not local_env.exists():
-        tpl = runtime / "local_env.bat.template"
         if tpl.exists():
             runtime.mkdir(parents=True, exist_ok=True)
             shutil.copy2(tpl, local_env)
@@ -765,6 +847,13 @@ def bootstrap_config() -> None:
         else:
             warn(".runtime/local_env.bat 缺失且无模板（管理器会自动使用内置默认值）")
             return
+    elif tpl.exists():
+        # 已有配置：补齐模板新增的键，用户现值（含手动调优）一律保留
+        added = ensure_runtime_keys(local_env, tpl)
+        if added:
+            ok(f"已从模板补齐 {len(added)} 个缺失配置项: {', '.join(added)}")
+        else:
+            log("local_env.bat 键位已与模板对齐，无需补齐")
     configure_chromium_path(local_env)
     configure_gpu_service(local_env)
 

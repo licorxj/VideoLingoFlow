@@ -8,7 +8,10 @@ import os
 import base64
 import mimetypes
 import logging
+import time
 import requests
+
+from backend.imagegen.imagegen_retry import request_with_retry, download_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -30,6 +33,24 @@ RESOLUTION_BASE = {"1K": 1024, "2K": 2048, "4K": 4096}
 def _get_api_key(api_key=""):
     """Get API key: env var first, then parameter."""
     return os.environ.get("DASHSCOPE_API_KEY", "") or api_key
+
+
+def _dashscope_call_with_retry(fn, retries=3, backoff=1.0, **params):
+    """对 DashScope 同步调用做指数退避重试。
+
+    仅重试「调用抛出的瞬断异常」；若调用返回错误响应对象（status_code!=200）
+    则不重试，由调用方判定。
+    """
+    last = None
+    for attempt in range(retries):
+        try:
+            return fn(**params)
+        except Exception as e:  # noqa: BLE001
+            last = e
+            if attempt < retries - 1:
+                time.sleep(backoff * (2 ** attempt))
+                continue
+    raise last
 
 
 def _is_wan_model(model):
@@ -86,12 +107,7 @@ def _build_messages(prompt, ref_images=None):
 
 def _download_image(url, save_path):
     """Download image from URL to local file."""
-    resp = requests.get(url, timeout=120, stream=True)
-    resp.raise_for_status()
-    os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
-    with open(save_path, "wb") as f:
-        for chunk in resp.iter_content(8192):
-            f.write(chunk)
+    download_with_retry(url, save_path, timeout=120)
     return save_path
 
 
@@ -138,7 +154,7 @@ def _call_wan(api_key, model, messages, size_str, num_images, **kwargs):
         params["enable_sequential"] = False
 
     logger.info(f"Bailian Wan: {model} size={size_str} n={num_images}")
-    response = ImageGeneration.call(**params)
+    response = _dashscope_call_with_retry(ImageGeneration.call, **params)
 
     if response.status_code != 200:
         logger.error(f"Bailian Wan error: {response.code} - {response.message}")
@@ -172,7 +188,7 @@ def _call_qwen(api_key, model, messages, size_str, num_images, negative_prompt, 
         params["n"] = min(num_images, 6)
 
     logger.info(f"Bailian Qwen: {model} size={size_str} n={num_images}")
-    response = MultiModalConversation.call(**params)
+    response = _dashscope_call_with_retry(MultiModalConversation.call, **params)
 
     if response.status_code != 200:
         logger.error(f"Bailian Qwen error: {response.code} - {response.message}")

@@ -1,39 +1,143 @@
 @echo off
-rem Copy this file to .runtime\local_env.bat to override local runtime settings.
-rem Default behavior binds the API and Manager to 127.0.0.1 only.
-rem Set VIDEOLINGO_LAN_MODE=1 only on a trusted LAN. This mode has no authentication or TLS.
+rem ============================================================================
+rem  VideoLingoFlow - local runtime overrides (TEMPLATE)
+rem
+rem  This file is tracked by git; .runtime\local_env.bat is NOT.
+rem  Manual use: copy this file to .runtime\local_env.bat and edit as needed.
+rem
+rem  IMPORTANT - ASCII ONLY
+rem    cmd.exe cannot reliably parse multi-byte (non-ASCII) text in .bat files:
+rem    a corrupted comment can swallow the newline plus the leading "set " of the
+rem    following line, producing errors such as
+rem      'ONTROL_PLANE_CELERY_BROKER_URL' is not recognized as an internal command
+rem    Keep this file PURE ASCII (English comments only). Put Chinese explanation
+rem    in docs\ instead of in here.
+rem
+rem  Handled by installer/install.py -> bootstrap_config():
+rem    1) first install (local_env.bat missing): copy this template as-is;
+rem    2) local_env.bat already exists: backfill MISSING active keys only
+rem       (appended at the end; existing values and comments are never changed);
+rem    3) afterwards GPU_SERVICE_* and resource-token keys are rewritten
+rem       according to the detected CUDA VRAM (see section 4).
+rem
+rem  Note 1: to add a new switch, put an ACTIVE "set" line here. Existing users
+rem          get it backfilled on their next install.bat run.
+rem  Note 2: "rem set ..." lines below are documentation only and are NOT
+rem          backfilled.
+rem  Note 3: Windows only (.bat). For Docker, edit deploy\.env instead.
+rem ============================================================================
+
+rem ============================================================================
+rem 1. Access mode
+rem ============================================================================
+rem LAN mode: enable ONLY on a trusted LAN.
+rem API and Manager then listen on 0.0.0.0; no authentication and no TLS.
+rem Can also be toggled on the Collaboration page (which writes this file).
 set "VIDEOLINGO_LAN_MODE=0"
 
-rem GPU service + single-GPU batch defaults are written by installer/install.py
-rem (auto-scaled from detected NVIDIA VRAM). Set AUTO_CONFIG=0 to keep manual values.
+rem ============================================================================
+rem 2. Data dirs / database / queues (control plane + VoiceForge)
+rem ============================================================================
+rem NOTE: when started via start.bat (backend/manager.py) the Manager forcibly
+rem overwrites the following keys using the project root
+rem (see backend/manager.py _build_env):
+rem   CONTROL_PLANE_DATA_ROOT / CONTROL_PLANE_DATABASE_PATH /
+rem   VOICEFORGE_REDIS_URL / VOICEFORGE_CELERY_RESULT_URL
+rem and CONTROL_PLANE_DATABASE_URL is cleared (forcing local SQLite).
+rem So these keys only take effect when running the backend directly, or in Docker.
+rem ----------------------------------------------------------------------------
+set "CONTROL_PLANE_DATA_ROOT=data"
+set "CONTROL_PLANE_DATABASE_PATH=data\control-plane.db"
+rem Empty = use the SQLite path above; set postgresql+psycopg://... for PostgreSQL.
+set "CONTROL_PLANE_DATABASE_URL="
+set "CONTROL_PLANE_ASSET_ROOT=data\assets"
+rem local = local file store; minio = use the MINIO_* settings (Docker).
+set "CONTROL_PLANE_ASSET_STORE=local"
+set "VOICEFORGE_REDIS_URL=redis://127.0.0.1:6379/2"
+set "VOICEFORGE_CELERY_RESULT_URL=redis://127.0.0.1:6379/3"
+set "CONTROL_PLANE_CELERY_BROKER_URL=redis://127.0.0.1:6379/2"
+set "CONTROL_PLANE_CELERY_RESULT_URL=redis://127.0.0.1:6379/3"
+
+rem ============================================================================
+rem 3. Source vs compiled modules
+rem ============================================================================
+rem Unset or 0: prefer the compiled binaries (.pyd/.so, production default).
+rem 1: use source .py modules so local edits take effect immediately
+rem    (compiled binaries may lag behind the source; development only).
+set "VIDEOLINGO_USE_SOURCE=0"
+
+rem ============================================================================
+rem 4. GPU service + single-GPU batch resource defaults
+rem ============================================================================
+rem Written by installer/install.py -> configure_gpu_service():
+rem   * GPU_SERVICE_AUTO_CONFIG=1: GPU_* values are rewritten from the detected
+rem     NVIDIA VRAM (GPU_SERVICE_ENABLED=0 when no NVIDIA CUDA GPU is found);
+rem   * 0: keep the manual GPU_* values, but resource tokens / ffmpeg / engine
+rem     idle timeouts are still recalculated.
+rem   * batch.max_concurrent_tasks and batch.task_start_interval are written to
+rem     backend/config/config.yaml, not to this file.
+rem ----------------------------------------------------------------------------
+rem GPU service switch: 1 / true / yes / on enables it, any other value disables.
+rem When enabled, the Manager starts the GPU service, which watches VRAM and
+rem schedules the GPU task lanes.
 set "GPU_SERVICE_AUTO_CONFIG=1"
-rem Valid enabled values: 1, true, yes, on. Auto configuration enables only detected NVIDIA CUDA GPUs.
 set "GPU_SERVICE_ENABLED=0"
-rem Single-GPU batch: 1 forces one lane (recommended for VRAM <= 12GB).
+
+rem Single-GPU batch: force one lane so large ASR/separation models do not OOM.
+rem Set 0 on high-VRAM multi-lane setups.
 set "GPU_SERVICE_SERIAL=1"
-rem Automatic values scale with VRAM. In manual mode this must be an integer >= 1.
+
+rem Max parallel GPU lanes; with SERIAL=1 the effective lane count is always 1.
 set "GPU_SERVICE_MAX_LANES=1"
-rem Free VRAM protection threshold in GB. In manual mode this must be >= 0.
-set "GPU_SERVICE_VRAM_HEADROOM_GB=2.0"
-rem Idle lane timeout and per-task timeout in seconds.
+
+rem Idle lane timeout in seconds; longer residency improves batch throughput.
 set "GPU_SERVICE_LANE_IDLE_TIMEOUT=1800"
-rem Shortened idle timeout (seconds) applied automatically when free VRAM < 2x headroom.
+rem Shortened idle timeout (seconds) applied when free VRAM is below 2x headroom.
 set "GPU_SERVICE_PRESSURE_IDLE_TIMEOUT=120"
+rem Free VRAM headroom threshold (GB) required to spawn a new lane.
+set "GPU_SERVICE_VRAM_HEADROOM_GB=2.0"
+rem Max runtime of one GPU job (seconds).
 set "GPU_SERVICE_JOB_TIMEOUT=7200"
 
-rem Resource tokens / ffmpeg / engine residency (installer always fills these)
+rem Resource token capacity: the GPU capacity only applies when the GPU service is
+rem DISABLED (when enabled, lane scheduling takes over); IO/TTS as needed.
 set "RESOURCE_CAPACITY_GPU=1"
 set "RESOURCE_CAPACITY_TTS=2"
 set "RESOURCE_CAPACITY_LLM=4"
 set "RESOURCE_CAPACITY_IO=3"
 set "RESOURCE_TOKEN_TTL=7200"
 set "RESOURCE_TOKENS_USE_REDIS=1"
+rem Token wait cap (seconds); empty = queue until a token is acquired.
 set "RESOURCE_ACQUIRE_TIMEOUT=900"
+
+rem ffmpeg thread cap: leave cores for the GPU pipeline (about half the cores).
 set "FFMPEG_MAX_THREADS=8"
+
+rem Engine idle residency (seconds), for in-process execution
+rem (the fallback path when the GPU service is unavailable).
 set "ENGINE_IDLE_TIMEOUT_ASR=120"
 set "ENGINE_IDLE_TIMEOUT_OCR=30"
 
-rem Chromium 调用路径：指向随仓库分发的 CloakBrowser 隐匿 Chromium（chrome.exe）。
-rem 浏览器启动（Playwright 等）据此使用指定的 Chromium 可执行文件。
+rem ============================================================================
+rem 5. Optional advanced switches (off by default; remove the "rem" to enable)
+rem ============================================================================
+rem Resource token self-healing: a holder without a heartbeat for this many
+rem seconds (killed process / OOM / taskkill) releases its slot automatically,
+rem so a stuck "waiting for XX resource" state cannot happen. Default 600, min 30.
+rem set "RESOURCE_SLOT_STALE_SECONDS=600"
+
+rem Dedicated Redis for the GPU service; falls back to CONTROL_PLANE_CELERY_BROKER_URL.
+rem set "GPU_SERVICE_REDIS_URL=redis://127.0.0.1:6379/2"
+
+rem Task workspace root (only effective when running the backend directly).
+rem set "CONTROL_PLANE_WORKSPACE_ROOT=control_plane_workspaces"
+
+rem Node.js executable for the Pi agent; the Manager auto-detects it when unset.
+rem set "VIDEOLINGO_PI_NODE_PATH=C:\Program Files\nodejs\node.exe"
+
+rem ============================================================================
+rem 6. Browser (CloakBrowser stealth Chromium)
+rem ============================================================================
+rem Browser launches (Playwright, etc.) use the Chromium shipped with the repo.
 set "CHROMIUM_EXECUTABLE_PATH=thirdparty\cloakbrowser\chrome.exe"
 set "CHROMEDRIVER_EXECUTABLE_PATH=thirdparty\cloakbrowser\chromedriver.exe"

@@ -100,7 +100,10 @@ def _sub_agent_tool(name: str, skill_file: str, description: str,
 
 
 def run_decision_agent(project_id: int, user_text: str, emit=None) -> str:
-    """决策层主循环：理解意图 → 拆解派发 → 质量把关 → 汇报（带向量化记忆）。"""
+    """决策层主循环：理解意图 → 拆解派发 → 质量把关 → 汇报（带向量化记忆）。
+
+    剧本等长文本不预注入：Agent 按需调用 get_flowData("script" / "script:<id>") 自行读取。
+    """
     emit = emit or (lambda kind, payload: None)
     summary = project_summary(project_id)
     memory = Memory("productionAgent", project_id)

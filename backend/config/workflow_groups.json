@@ -34,6 +34,11 @@
       "id": "grp_bac07860",
       "name": "代码生视频",
       "order": 7
+    },
+    {
+      "id": "grp_3ca3eb39",
+      "name": "AI创作",
+      "order": 8
     }
   ],
   "membership": {
@@ -46,6 +51,8 @@
     "55c6efda5e76": "grp_c23b4b83",
     "634834ca8d1b": "grp_c23b4b83",
     "b4d4dcd63826": "grp_d7395d52",
-    "c86ee83c5580": "grp_bac07860"
+    "c86ee83c5580": "grp_bac07860",
+    "cb4721cdaba5": "grp_d7395d52",
+    "d2a34ec6786f": "grp_3ca3eb39"
   }
 }

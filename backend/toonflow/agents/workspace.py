@@ -27,7 +27,14 @@ def get_flow_data(project_id: int, key: str):
     from backend.control_plane.database import session_scope
 
     with session_scope() as session:
-        if key == "script":
+        if key == "script" or key.startswith("script:"):
+            # key 支持 "script"（最新）与 "script:<id>"（指定剧本，前端会话绑定剧本用）
+            script_id = int(key.split(":", 1)[1]) if key.startswith("script:") and key.split(":", 1)[1].isdigit() else None
+            if script_id:
+                target = session.get(TfScript, script_id)
+                if target is None or target.projectId != project_id:
+                    raise ValueError(f"剧本不存在: {script_id}")
+                return target.scriptData or ""
             script = session.scalars(select(TfScript).where(
                 TfScript.projectId == project_id).order_by(TfScript.id.desc())).first()
             return script.scriptData if script else ""
@@ -97,8 +104,12 @@ def project_summary(project_id: int) -> dict:
             TfStoryboard.projectId == project_id)).all()
         script = session.scalars(select(TfScript).where(
             TfScript.projectId == project_id).order_by(TfScript.id.desc())).first()
+        all_scripts = session.scalars(select(TfScript).where(
+            TfScript.projectId == project_id).order_by(TfScript.id.desc())).all()
         return {
             "projectId": project_id, "name": p.name,
+            "scripts": [{"id": s.id, "title": s.title, "chars": len(s.scriptData or "")}
+                        for s in all_scripts],
             "introduce": p.introduce or "",
             "artStyle": p.artStyle or "未设定",
             "storyStyle": getattr(p, "storyStyle", "") or "未设定",

@@ -1,11 +1,13 @@
 import { useState } from "react";
-import { Activity, ChevronDown, ChevronUp, Cpu, Gauge, HardDrive, Layers3, ServerCog } from "lucide-react";
-import { RuntimeStatus } from "@/api/batch";
+import { Activity, ChevronDown, ChevronUp, Cpu, Eraser, Gauge, HardDrive, Layers3, ServerCog } from "lucide-react";
+import { batchApi, RuntimeStatus } from "@/api/batch";
+import { useAlert } from "@/components/ui/AlertProvider";
 import { cn } from "@/lib/utils";
 
 interface Props {
   runtime: RuntimeStatus | null;
   loading?: boolean;
+  onRefresh?: () => void;
 }
 
 function StatCard({
@@ -33,11 +35,40 @@ function StatCard({
   );
 }
 
-export default function BatchRuntimePanel({ runtime, loading = false }: Props) {
+export default function BatchRuntimePanel({ runtime, loading = false, onRefresh }: Props) {
   const [expanded, setExpanded] = useState(true);
+  const [releasing, setReleasing] = useState(false);
+  const { alert: showAlert, confirm: showConfirm } = useAlert();
   const batch = runtime?.batch;
   const control = runtime?.control_plane;
   const gpu = runtime?.gpu_service;
+  const tokens = control?.resources?.tokens;
+
+  const tokenHoldersSummary = Object.entries(tokens || {})
+    .filter(([, info]) => (info?.in_use ?? 0) > 0 && (info?.holders?.length ?? 0) > 0)
+    .map(([key, info]) => `${key}=${info.holders.slice(0, 2).join("、")}`)
+    .join(" · ");
+
+  const handleReleaseTokens = async () => {
+    if (
+      !(await showConfirm(
+        "释放资源令牌只清理残留占用。若确有资源型节点正在执行，可能造成短时并发超限（显存/CPU 压力上升）。确定继续？"
+      ))
+    ) {
+      return;
+    }
+    setReleasing(true);
+    try {
+      const res: any = await batchApi.releaseResourceTokens();
+      const released = Object.keys(res?.released || {}).join("、") || "全部";
+      showAlert(`已释放资源令牌（${released}），等待中的节点可重新获取。`, "success");
+      onRefresh?.();
+    } catch (e: any) {
+      showAlert(e?.response?.data?.detail || e?.message || "释放失败");
+    } finally {
+      setReleasing(false);
+    }
+  };
 
   const workerCount = Object.keys(control?.workers?.stats || {}).length;
   const queueSummary = Object.entries(control?.queues || {})
@@ -138,19 +169,49 @@ export default function BatchRuntimePanel({ runtime, loading = false }: Props) {
         </div>
 
         <div className="rounded-xl border border-border/50 bg-background/40 px-3 py-2.5">
-          <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <Cpu className="h-3.5 w-3.5 text-rose-500" />
-            <span>资源容量</span>
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              <Cpu className="h-3.5 w-3.5 text-rose-500" />
+              <span>资源令牌占用（使用中/容量）</span>
+            </div>
+            <button
+              type="button"
+              onClick={handleReleaseTokens}
+              disabled={releasing}
+              className="inline-flex items-center gap-1 rounded-lg border border-border/60 bg-background/60 px-2 py-0.5 text-[11px] text-muted-foreground transition-colors hover:border-rose-400/50 hover:text-rose-500 disabled:opacity-50"
+              title="持有者进程被强杀后令牌可能残留，导致节点一直「等待 XX 资源」假死。点击清理残留占用。"
+            >
+              <Eraser className="h-3 w-3" />
+              {releasing ? "释放中…" : "释放僵尸令牌"}
+            </button>
           </div>
-          <div className="mt-1 text-[11px] text-foreground/90">
-            {Object.entries(control?.resources?.capacity || {}).map(([key, value]) => (
-              <span key={key} className="mr-3 inline-block">
-                {key}: <span className="font-semibold">{value}</span>
-              </span>
-            ))}
+          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-foreground/90">
+            {Object.entries(control?.resources?.capacity || {}).map(([key, capacity]) => {
+              const info = tokens?.[key];
+              const used = info?.in_use ?? 0;
+              const exhausted = (info?.available ?? capacity - used) === 0;
+              return (
+                <span
+                  key={key}
+                  className="inline-block"
+                  title={
+                    info?.holders?.length
+                      ? `${key} 持有者：${info.holders.join("，")}`
+                      : `${key} 当前无持有者`
+                  }
+                >
+                  {key}:{" "}
+                  <span className={cn("font-semibold", exhausted ? "text-rose-500" : "text-foreground")}>
+                    {used}/{capacity}
+                  </span>
+                </span>
+              );
+            })}
           </div>
-          <div className="mt-1 text-[11px] text-muted-foreground">
-            GPU 主控：{control?.resources?.gpu_service_enabled ? "服务层" : "worker 资源令牌"}
+          <div className="mt-1 text-[11px] text-muted-foreground break-all">
+            {tokenHoldersSummary
+              ? `持有者：${tokenHoldersSummary}`
+              : `当前无持有者 · GPU 主控：${control?.resources?.gpu_service_enabled ? "服务层" : "worker 资源令牌"}`}
           </div>
         </div>
       </div>

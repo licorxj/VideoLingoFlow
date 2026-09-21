@@ -102,6 +102,15 @@ export interface BatchCreateRequest {
   common_config: Record<string, any>;
 }
 
+/** 单个资源类的令牌占用（holders 为「持有者（在位秒数）」列表，用于识别僵尸占用） */
+export interface ResourceTokenInfo {
+  capacity: number;
+  in_use: number;
+  available: number | null;
+  holders: string[];
+  backend: "redis" | "local" | string;
+}
+
 export interface RuntimeStatus {
   batch: {
     inflight_tasks: number;
@@ -119,6 +128,8 @@ export interface RuntimeStatus {
     };
     resources: {
       capacity: Record<string, number>;
+      /** 各资源类的实时占用与持有者（后端 RESOURCE_TOKENS.snapshot()） */
+      tokens?: Record<string, ResourceTokenInfo>;
       gpu_service_enabled: boolean;
       batch_max_inflight_tasks: number;
       batch_task_start_interval: number;
@@ -219,6 +230,10 @@ export const batchApi = {
 
   getRuntimeStatus: () =>
     client.get("/api/control/runtime/status").then((r) => r.data as RuntimeStatus),
+
+  /** 释放资源令牌（运维用）：清理被强杀进程残留的占用，解决「等待 XX 资源」假死 */
+  releaseResourceTokens: (resource = "") =>
+    client.post("/api/control/resources/reset", null, { params: { resource } }).then((r) => r.data),
 
   getSystemMetrics: () =>
     client.get("/api/control/system/metrics").then((r) => r.data as SystemMetrics),

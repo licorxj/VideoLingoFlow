@@ -28,8 +28,9 @@ import time
 import json
 import base64
 import logging
-import requests
 from typing import Callable, Optional
+
+from backend.imagegen.imagegen_retry import request_with_retry, download_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -194,8 +195,8 @@ def _upload_file(file_path: str, api_key: str = "", purpose: str = DEFAULT_FILE_
         data = {"purpose": purpose}
         if expire_at:
             data["expire_at"] = str(int(expire_at))
-        resp = requests.post(
-            SEEDANCE_FILE_ENDPOINT,
+        resp = request_with_retry(
+            "POST", SEEDANCE_FILE_ENDPOINT,
             headers={"Authorization": f"Bearer {api_key}"},
             files=files, data=data, timeout=300,
         )
@@ -223,8 +224,8 @@ def _wait_file_ready(file_id: str, api_key: str = "", timeout: int = DEFAULT_FIL
     interval = 3
     while waited <= timeout:
         try:
-            resp = requests.get(
-                f"{SEEDANCE_FILE_ENDPOINT}/{file_id}",
+            resp = request_with_retry(
+                "GET", f"{SEEDANCE_FILE_ENDPOINT}/{file_id}",
                 headers={"Authorization": f"Bearer {api_key}"},
                 timeout=30,
             )
@@ -332,8 +333,8 @@ def create_task(body: dict, api_key: str = "", timeout: int = 60) -> str:
         json.dumps(_debug_body, ensure_ascii=False),
     )
 
-    resp = requests.post(
-        SEEDANCE_TASK_ENDPOINT,
+    resp = request_with_retry(
+        "POST", SEEDANCE_TASK_ENDPOINT,
         headers=_headers(api_key),
         json=body,
         timeout=timeout,
@@ -354,8 +355,8 @@ def create_task(body: dict, api_key: str = "", timeout: int = 60) -> str:
 def query_task(task_id: str, api_key: str = "", timeout: int = 60) -> dict:
     """查询任务状态，返回完整 task 字典。"""
     api_key = _get_api_key(api_key)
-    resp = requests.get(
-        f"{SEEDANCE_TASK_ENDPOINT}/{task_id}",
+    resp = request_with_retry(
+        "GET", f"{SEEDANCE_TASK_ENDPOINT}/{task_id}",
         headers=_headers(api_key),
         timeout=timeout,
     )
@@ -394,21 +395,9 @@ def _poll_until_done(task_id: str, api_key: str, poll_interval: int, poll_timeou
 # ---------------------------------------------------------------------------
 def _download(url: str, save_dir: str, index: int, ext_hint: str = "mp4") -> str:
     os.makedirs(save_dir, exist_ok=True)
-    resp = requests.get(url, timeout=300, stream=True)
-    resp.raise_for_status()
-    ct = resp.headers.get("content-type", "").lower()
-    if "webm" in ct:
-        ext = "webm"
-    elif "mov" in ct or "quicktime" in ct:
-        ext = "mov"
-    elif "png" in ct:
-        ext = "png"
-    else:
-        ext = ext_hint or "mp4"
+    ext = ext_hint or "mp4"
     path = os.path.join(save_dir, f"output_{index}.{ext}")
-    with open(path, "wb") as f:
-        for chunk in resp.iter_content(8192):
-            f.write(chunk)
+    download_with_retry(url, path, timeout=300)
     logger.info("Seedance: 已保存 %s", path)
     return path
 

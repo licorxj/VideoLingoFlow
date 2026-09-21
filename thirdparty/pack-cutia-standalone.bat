@@ -1,10 +1,10 @@
 @echo off
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 
-rem ---- è‡ªåŠ¨ææƒï¼šbun install åˆ›å»ºç¬¦å·é“¾æ¥/ç¡¬é“¾æ¥éœ€è¦ç®¡ç†å‘˜æƒé™ï¼›ç®¡ç†å‘˜å¯ç›´æ¥åˆ›å»º ----
+rem ---- ×Ô¶¯ÌáÈ¨£ºbun install ´´½¨·ûºÅÁ´½Ó/Ó²Á´½ÓĞèÒª¹ÜÀíÔ±È¨ÏŞ£»¹ÜÀíÔ±¿ÉÖ±½Ó´´½¨ ----
 net session >nul 2>&1
 if %errorLevel% neq 0 (
-    echo [INFO] è¯·æ±‚ç®¡ç†å‘˜æƒé™ï¼ˆbun install åˆ›å»ºç¬¦å·é“¾æ¥éœ€è¦ï¼‰...
+    echo [INFO] ÇëÇó¹ÜÀíÔ±È¨ÏŞ£¨bun install ´´½¨·ûºÅÁ´½ÓĞèÒª£©...
     powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -ArgumentList '%*' -Verb RunAs"
     exit /b
 )
@@ -12,7 +12,7 @@ if %errorLevel% neq 0 (
 setlocal EnableDelayedExpansion
 cd /d "%~dp0"
 
-rem ä»“åº“æ ¹ = è„šæœ¬æ‰€åœ¨ç›®å½•ï¼ˆthirdpartyï¼‰çš„ä¸Šçº§
+rem ²Ö¿â¸ù = ½Å±¾ËùÔÚÄ¿Â¼£¨thirdparty£©µÄÉÏ¼¶
 for %%r in ("%~dp0..") do set "REPO=%%~fr"
 
 title Build cutia standalone (Windows native)
@@ -25,53 +25,53 @@ echo   Do NOT commit on non-Windows (cross-platform binaries invalid).
 echo   Arg: --no-git  build only, skip git add
 echo ============================================================
 
-rem ---- é€‰æ‹© Pythonï¼ˆä¼˜å…ˆ pyï¼Œå…¶æ¬¡ pythonï¼‰----
+rem ---- Ñ¡Ôñ Python£¨ÓÅÏÈ py£¬Æä´Î python£©----
 set "PY="
 for /f "tokens=*" %%i in ('where py 2^>nul') do if not defined PY set "PY=%%i"
 if not defined PY for /f "tokens=*" %%i in ('where python 2^>nul') do if not defined PY set "PY=%%i"
 if not defined PY (
-  echo [ERROR] æœªæ‰¾åˆ° python / pyã€‚è¯·å…ˆå®‰è£… Python 3.10+ æˆ–è¿è¡Œ install.bat åˆ›å»º venvã€‚
+  echo [ERROR] Î´ÕÒµ½ python / py¡£ÇëÏÈ°²×° Python 3.10+ »òÔËĞĞ install.bat ´´½¨ venv¡£
   pause
   exit /b 1
 )
 
-rem ---- æ£€æŸ¥ nodeï¼ˆbuild:web éœ€è¦ nodeï¼‰----
+rem ---- ¼ì²é node£¨build:web ĞèÒª node£©----
 set "NODE_EXE="
 for /f "tokens=*" %%i in ('where node 2^>nul') do if not defined NODE_EXE set "NODE_EXE=%%i"
 if not defined NODE_EXE (
-  echo [WARN] æœªæ‰¾åˆ° nodeã€‚build:web éœ€è¦ Node.jsï¼ˆ^>= 18ï¼‰ï¼›å°†å°è¯•ç»§ç»­ï¼Œ
-  echo        è‹¥æ„å»ºå¤±è´¥ï¼Œè¯·å…ˆè¿è¡Œ install.bat æˆ–å®‰è£… Node.js åå†è¯•ã€‚
+  echo [WARN] Î´ÕÒµ½ node¡£build:web ĞèÒª Node.js£¨^>= 18£©£»½«³¢ÊÔ¼ÌĞø£¬
+  echo        Èô¹¹½¨Ê§°Ü£¬ÇëÏÈÔËĞĞ install.bat »ò°²×° Node.js ºóÔÙÊÔ¡£
 )
 
 echo.
-echo [1/1] è°ƒç”¨ install_thirdparty.ensure_cutia(force=True) æ„å»ºå¹¶æ•´ç† standalone ...
+echo [1/1] µ÷ÓÃ install_thirdparty.ensure_cutia(force=True) ¹¹½¨²¢ÕûÀí standalone ...
 "%PY%" -c "import install_thirdparty; raise SystemExit(0 if install_thirdparty.ensure_cutia(True) else 1)"
 if errorlevel 1 (
-  echo [ERROR] cutia standalone æ„å»ºå¤±è´¥ï¼Œè¯·æŸ¥çœ‹ä¸Šæ–¹æ—¥å¿—ã€‚
+  echo [ERROR] cutia standalone ¹¹½¨Ê§°Ü£¬Çë²é¿´ÉÏ·½ÈÕÖ¾¡£
   pause
   exit /b 1
 )
 
 echo.
-echo [OK] cutia standalone å·²å°±ç»ª: thirdparty\cutia\apps\web\standalone
+echo [OK] cutia standalone ÒÑ¾ÍĞ÷: thirdparty\cutia\apps\web\standalone
 echo.
 
-rem ---- åŠ å…¥ gitï¼ˆè‹¥å­˜åœ¨ä»“åº“æ ¹ .gitï¼‰----
+rem ---- ¼ÓÈë git£¨Èô´æÔÚ²Ö¿â¸ù .git£©----
 if exist "%REPO%\.git" (
   if "%~1"=="--no-git" (
-    echo [INFO] å·²è·³è¿‡ git addï¼ˆ--no-gitï¼‰ã€‚è¯·æ‰‹åŠ¨æ‰§è¡Œï¼š
+    echo [INFO] ÒÑÌø¹ı git add£¨--no-git£©¡£ÇëÊÖ¶¯Ö´ĞĞ£º
   ) else (
-    echo [git] git add cutia standalone äº§ç‰© ...
+    echo [git] git add cutia standalone ²úÎï ...
     git -C "%REPO%" add thirdparty/cutia/apps/web/standalone
-    echo [OK] å·² git addã€‚è¯·äººå·¥ review åæäº¤ï¼š
+    echo [OK] ÒÑ git add¡£ÇëÈË¹¤ review ºóÌá½»£º
   )
-  echo       git -C "%REPO%" commit -m "chore: æäº¤ cutia Windows standalone äº§ç‰©"
+  echo       git -C "%REPO%" commit -m "chore: Ìá½» cutia Windows standalone ²úÎï"
 ) else (
-  echo [INFO] æœªåœ¨ %REPO% æ£€æµ‹åˆ° .gitï¼Œè·³è¿‡ git addã€‚è¯·åœ¨ä¸»ä»“åº“æ‰‹åŠ¨æ‰§è¡Œï¼š
+  echo [INFO] Î´ÔÚ %REPO% ¼ì²âµ½ .git£¬Ìø¹ı git add¡£ÇëÔÚÖ÷²Ö¿âÊÖ¶¯Ö´ĞĞ£º
   echo       git add thirdparty/cutia/apps/web/standalone
-  echo       git commit -m "chore: æäº¤ cutia Windows standalone äº§ç‰©"
+  echo       git commit -m "chore: Ìá½» cutia Windows standalone ²úÎï"
 )
 
 echo.
-echo å®Œæˆã€‚Windows / æ•´åˆåŒ…ç”¨æˆ·å®‰è£…åè¿è¡Œ install.bat å³å¯å…æ„å»ºä½¿ç”¨ cutiaã€‚
+echo Íê³É¡£Windows / ÕûºÏ°üÓÃ»§°²×°ºóÔËĞĞ install.bat ¼´¿ÉÃâ¹¹½¨Ê¹ÓÃ cutia¡£
 pause

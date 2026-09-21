@@ -1,4 +1,4 @@
-"""History API: query completed/failed tasks."""
+"""History API: 任务历史列表（含进行中任务，排除已删除/已归档）。"""
 import os
 import json
 from typing import List, Optional
@@ -17,6 +17,12 @@ WORKFLOWS_DIR = os.path.join(
 )
 
 TERMINAL_STATUSES = {"succeeded", "failed", "cancelled", "deleted", "archived"}
+
+# 历史项目列表「不显示」的状态：已删除 / 删除中断残留（历史遗留的 stuck deleting 记录）、
+# 已归档（产物已挪到外部目录，另有「加载已归档项目」入口）。
+# 其余状态一律显示 —— 进行中的一般任务（待执行/排队中/执行中/暂停/等待继续/停止中）
+# 必须能从历史项目页点进画布继续操作，否则没有其它入口能看到并操作它们。
+HISTORY_HIDDEN_STATUSES = {"deleted", "deleting", "archived"}
 
 
 def _workflow_name(workflow_id: str) -> Optional[str]:
@@ -80,7 +86,7 @@ async def list_history(status: Optional[str] = None):
     if status:
         tasks = [t for t in tasks if t.get("status") == status]
     else:
-        tasks = [t for t in tasks if t.get("status") in ("completed", "failed")]
+        tasks = [t for t in tasks if t.get("status") not in HISTORY_HIDDEN_STATUSES]
     return {"tasks": tasks}
 
 

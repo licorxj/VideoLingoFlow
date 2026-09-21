@@ -74,6 +74,17 @@ from backend.control_plane.workflow_runtime import (
 from backend.steps.step_registry import new_step_instance
 
 
+def _resource_for_snapshot(node_type: str, snapshot: dict) -> str:
+    """按节点快照解析资源类（生图节点需按接口动态判定）。
+
+    兼容不接受 node 参数的旧版控制平面二进制：降级为只按节点类型判定，避免 TypeError。
+    """
+    try:
+        return _resource_for(node_type, snapshot)
+    except TypeError:
+        return _resource_for(node_type)
+
+
 # 递归调用深度上限（防止 A 调 B、B 调 A 的无限展开）
 WF_RUNNER_MAX_DEPTH = int(os.getenv("WF_RUNNER_MAX_DEPTH", "3"))
 # 子工作流内部层内并发上限
@@ -179,7 +190,7 @@ def _create_virtual_nodes(session, task_id: str, inner_nodes: list, prefix: str,
         node_id = snapshot["id"]
         nodes_by_id[node_id] = snapshot
         node_ids.append(node_id)
-        resource = _resource_for(_node_type(snapshot))
+        resource = _resource_for_snapshot(_node_type(snapshot), snapshot)
         session.add(TaskNode(
             task_id=task_id,
             node_key=node_id,

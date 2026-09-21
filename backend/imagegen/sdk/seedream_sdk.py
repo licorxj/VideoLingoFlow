@@ -17,6 +17,9 @@ import base64
 import logging
 import requests
 from typing import Callable, Optional
+from urllib.parse import urlparse
+
+from backend.imagegen.imagegen_retry import request_with_retry, download_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -103,18 +106,24 @@ def _save_one(kind, payload, save_dir, index):
     """保存单张图片（url 或 b64），返回本地路径。"""
     os.makedirs(save_dir, exist_ok=True)
     if kind == "url":
-        resp = requests.get(payload, timeout=120, stream=True)
-        resp.raise_for_status()
-        raw = resp.content
-        ct = resp.headers.get("content-type", "")
-        ext = ("jpg" if ("jpeg" in ct or "jpg" in ct)
-               else "webp" if "webp" in ct else "png")
+        suffix = os.path.splitext(urlparse(payload).path)[1].lstrip(".").lower()
+        ext = suffix if suffix in ("png", "jpg", "jpeg", "webp", "gif") else "png"
+        path = os.path.join(save_dir, f"output_{index}.{ext}")
+        download_with_retry(payload, path, timeout=120)
+        # 用文件头修正扩展名（URL 后缀可能不准确）
+        with open(path, "rb") as f:
+            raw = f.read()
+        real_ext = _guess_ext(raw)
+        if real_ext != ext:
+            new_path = os.path.join(save_dir, f"output_{index}.{real_ext}")
+            os.replace(path, new_path)
+            path, ext = new_path, real_ext
     else:
         raw = base64.b64decode(payload)
         ext = _guess_ext(raw)
-    path = os.path.join(save_dir, f"output_{index}.{ext}")
-    with open(path, "wb") as f:
-        f.write(raw)
+        path = os.path.join(save_dir, f"output_{index}.{ext}")
+        with open(path, "wb") as f:
+            f.write(raw)
     logger.info("Seedream: 已保存 %s", path)
     return path
 
@@ -266,8 +275,8 @@ def generate_image(body: dict, api_key: str = "", stream: bool = False,
     )
 
     try:
-        resp = requests.post(
-            SEEDREAM_ENDPOINT,
+        resp = request_with_retry(
+            "POST", SEEDREAM_ENDPOINT,
             headers=_headers(api_key),
             json=body,
             timeout=timeout,

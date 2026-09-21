@@ -9,6 +9,8 @@ import inspect
 import requests
 from typing import Optional
 
+from backend.imagegen.imagegen_retry import request_with_retry, download_with_retry
+
 try:
     from backend.utils.observability import trace_function, trace_span
 except ImportError:
@@ -158,7 +160,7 @@ class OpenAIVideoGen(GenericVideoGen):
         os.makedirs(output_dir, exist_ok=True)
         saved = []
         try:
-            resp = requests.post(f"{base_url.rstrip('/')}/videos", headers=headers, json=payload, timeout=120)
+            resp = request_with_retry("POST", f"{base_url.rstrip('/')}/videos", headers=headers, json=payload, timeout=120)
             resp.raise_for_status()
             data = resp.json()
             for i, item in enumerate(data.get("data", [])):
@@ -172,12 +174,8 @@ class OpenAIVideoGen(GenericVideoGen):
                     with open(path, "wb") as f:
                         f.write(content)
                 else:
-                    r = requests.get(url, timeout=120, stream=True)
-                    r.raise_for_status()
                     path = os.path.join(output_dir, f"output_{i}.mp4")
-                    with open(path, "wb") as f:
-                        for chunk in r.iter_content(8192):
-                            f.write(chunk)
+                    download_with_retry(url, path, timeout=120)
                 saved.append(path)
         except Exception as e:
             logger.error("OpenAI 视频生成失败: %s", e)

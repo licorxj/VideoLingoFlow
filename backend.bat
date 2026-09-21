@@ -1,27 +1,27 @@
 @echo off
-chcp 65001 >nul 2>&1
+chcp 936 >nul 2>&1
 setlocal EnableDelayedExpansion
 cd /d %~dp0
-title VideoLingoLc ä¸»åç«¯ï¼ˆç‹¬ç«‹å¯åŠ¨ï¼‰
+title VideoLingoLc Ö÷ºó¶Ë£¨¶ÀÁ¢Æô¶¯£©
 
-:: åŠ è½½æœ¬åœ°è¦†ç›–é…ç½®ï¼ˆå¦‚æœ‰ï¼›å« LAN æ¨¡å¼å¼€å…³ï¼‰
+:: ¼ÓÔØ±¾µØ¸²¸ÇÅäÖÃ£¨ÈçÓĞ£»º¬ LAN Ä£Ê½¿ª¹Ø£©
 if exist "%cd%\.runtime\local_env.bat" call "%cd%\.runtime\local_env.bat"
 
 if not exist "venv312\Scripts\python.exe" (
-    echo [é”™è¯¯] æœªæ‰¾åˆ° venv312 è™šæ‹Ÿç¯å¢ƒï¼Œè¯·å…ˆè¿è¡Œ install.bat
+    echo [´íÎó] Î´ÕÒµ½ venv312 ĞéÄâ»·¾³£¬ÇëÏÈÔËĞĞ install.bat
     pause
     exit /b 1
 )
 call "venv312\Scripts\activate.bat"
 
 echo ============================================
-echo   ä¸»åç«¯: http://127.0.0.1:11001
-echo   è¯´æ˜: ä»…å¯åŠ¨ä¸»åç«¯ï¼ˆFastAPIï¼‰ï¼Œä¸å« Manager çš„
-echo   è¿›ç¨‹ç®¡ç† / Redis / Celery ç­‰ã€‚å®Œæ•´ç¯å¢ƒè¯·ç”¨ start.bat
+echo   Ö÷ºó¶Ë: http://127.0.0.1:11001
+echo   ËµÃ÷: ½öÆô¶¯Ö÷ºó¶Ë£¨FastAPI£©£¬²»º¬ Manager µÄ
+echo   ½ø³Ì¹ÜÀí / Redis / Celery µÈ¡£ÍêÕû»·¾³ÇëÓÃ start.bat
 echo ============================================
 python backend\main.py
 if errorlevel 1 (
     echo.
-    echo [ERROR] backend\main.py å¼‚å¸¸é€€å‡ºï¼Œé€€å‡ºç : !errorlevel!
+    echo [ERROR] backend\main.py Òì³£ÍË³ö£¬ÍË³öÂë: !errorlevel!
 )
 pause

@@ -320,7 +320,11 @@ export default function BatchWorkshop() {
         </Button>
       </div>
 
-      <BatchRuntimePanel runtime={effectiveRuntimeStatus} loading={loading && !runtimeStatus} />
+      <BatchRuntimePanel
+        runtime={effectiveRuntimeStatus}
+        loading={loading && !runtimeStatus}
+        onRefresh={() => { loadBatches(); loadRuntimeStatus(); }}
+      />
 
       {/* Batch list */}
       {loading && batches.length === 0 ? (

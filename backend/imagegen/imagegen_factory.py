@@ -4,8 +4,11 @@ import json
 import importlib
 import requests
 from typing import Optional
+from urllib.parse import urlparse
+
 from backend.imagegen.imagegen_base import ImageGenBase
 from backend.imagegen.imagegen_interface_manager import get_imagegen_interface_manager
+from backend.imagegen.imagegen_retry import request_with_retry, download_with_retry
 
 
 def _validate_generation_params(iface_id: str, **kwargs):
@@ -88,14 +91,14 @@ class GenericImageGen(ImageGenBase):
             print("=======================")
 
             if body_type == "form":
-                resp = requests.post(
-                    url=params["url"],
+                resp = request_with_retry(
+                    "POST", params["url"],
                     data={k: str(v) for k, v in body.items() if v is not None},
                     timeout=timeout,
                 )
             else:
-                resp = requests.post(
-                    url=params["url"],
+                resp = request_with_retry(
+                    "POST", params["url"],
                     headers=headers,
                     json=body,
                     timeout=timeout,
@@ -178,25 +181,17 @@ class GenericImageGen(ImageGenBase):
             for i, (kind, payload) in enumerate(items):
                 try:
                     if kind == "url":
-                        img_resp = requests.get(payload, timeout=60)
-                        if img_resp.status_code != 200:
-                            print(f"Download image {i} failed: HTTP {img_resp.status_code}")
-                            continue
-                        ext = "png"
-                        ct = img_resp.headers.get("content-type", "")
-                        if "jpeg" in ct or "jpg" in ct:
-                            ext = "jpg"
-                        elif "webp" in ct:
-                            ext = "webp"
-                        raw = img_resp.content
+                        suffix = os.path.splitext(urlparse(payload).path)[1].lstrip(".").lower()
+                        ext = suffix if suffix in ("png", "jpg", "jpeg", "webp", "gif") else "png"
+                        filepath = os.path.join(output_dir, f"output_{i}.{ext}")
+                        download_with_retry(payload, filepath, timeout=60)
                     else:  # b64_json
                         import base64
                         raw = base64.b64decode(payload)
                         ext = self._guess_ext_from_bytes(raw)
-
-                    filepath = os.path.join(output_dir, f"output_{i}.{ext}")
-                    with open(filepath, "wb") as f:
-                        f.write(raw)
+                        filepath = os.path.join(output_dir, f"output_{i}.{ext}")
+                        with open(filepath, "wb") as f:
+                            f.write(raw)
                     saved.append(filepath)
                 except Exception as dl_e:
                     print(f"Save image {i} failed: {dl_e}")

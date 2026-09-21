@@ -68,7 +68,7 @@ pi:
 # ============ TTS ============
 
 tts:
-  method: "voxcpm"
+  method: "8dc074bb"
   edge_tts:
     voice: "zh-CN-YunjianNeural"
 

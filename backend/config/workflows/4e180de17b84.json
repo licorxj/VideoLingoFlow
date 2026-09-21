@@ -27,7 +27,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\input_video.mp4",
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\cache\\input_video.mp4",
           "languages": {
             "source_language": "en",
             "target_language": "zh"
@@ -153,7 +153,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 394
+        "height": 444
       },
       "selected": false,
       "dragging": false,
@@ -170,9 +170,9 @@
         "nodeType": "tts",
         "label": "语音合成 (TTS)",
         "config": {
-          "tts_engine": "confucius4_tts",
+          "tts_engine": "8dc074bb",
           "tts_mode": [
-            "clone"
+            "preset_voice"
           ],
           "clone_source": "per_segment",
           "voice_design_role_1_desc": "中年、女性、高音叫卖",
@@ -206,7 +206,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 522
+        "height": 689
       },
       "selected": false,
       "dragging": false,
@@ -243,7 +243,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 399
+        "height": 401
       },
       "selected": false,
       "dragging": false,
@@ -274,7 +274,7 @@
           "dub_srt": "output/dub_node_1_1781810867151.srt",
           "dub_bilingual_srt": "output/dub_bilingual_node_1_1781810867151.srt",
           "配音任务单": "cache\\dub_task_node_1_1781709944783.csv",
-          "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\input_video.mp4"
+          "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\cache\\input_video.mp4"
         },
         "error": "",
         "disableExecute": false,
@@ -383,7 +383,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1782422054967.json",
-          "text": "{\n  \"title\": \"量子隧穿揭秘\",\n  \"hook\": \"粒子穿越能量墙的秘密\",\n  \"summary\": \"视频深入解析量子隧穿现象：微观粒子如电子能够穿越经典物理中不可逾越的能量势垒。核心原理是量子力学将粒子描述为概率波（波函数），当遇到势垒时，波函数指数衰减但仍有非零概率出现在势垒另一侧。通过薛定谔方程计算穿透概率，取决于势垒宽度、高度和粒子能量。隧穿解释了太阳发光（氢核聚变）、放射性α衰变、扫描隧道显微镜的原子级成像以及超导电路中的宏观量子效应。视频澄清了常见误解，如粒子借能量或走秘密通道，强调隧穿是连续波函数演化的结果，探测时记录完整粒子。量子隧穿展示了微观世界的非直观特性，是量子力学的重要应用。\"\n}"
+          "text": "{\n  \"tittle\": \"阶乘与pi的意外相遇\",\n  \"hook\": \"无穷多曲线中，为何独此一条？\",\n  \"summary\": \"视频深入探讨了伽玛函数如何突破阶乘的定义域，将“排列物体”的组合概念延伸至实数与复数领域。内容首先揭示了一个常被忽视的数学陷阱：仅凭递推关系无法唯一确定阶乘的连续延拓，存在无限多条通过整数点的平滑曲线。唯有引入“对数凸性”这一额外约束，伽玛函数才成为唯一解，从而赋予“0.5阶乘”确定的数值。\\n\\n视频详细推导了伽玛积分公式，并展示了当输入为0.5时，通过变量代换，原本关于排列的离散问题竟然自然导出了高斯积分（正态分布曲线），从而解释了圆周率π为何会出现在阶乘问题中——这是测量面积这一几何行为必然携带的“几何税”。\\n\\n此外，视频还简述了伽玛函数在解析延拓黎曼Zeta函数、计算任意维度球体体积等领域的核心作用。核心观点在于：数学概念的扩展并非随意定义，而是保留核心规则（递推）并舍弃无关限制（整数计数），最终由严格的几何性质（对数凸性）锁定唯一真理。\"\n}"
         },
         "error": "",
         "workbench_url": "",
@@ -429,15 +429,12 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_3x4"
         },
-        "status": "completed",
+        "status": "failed",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "images": "['output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png']",
-          "text": "output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png"
-        },
-        "error": "",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "permanent",
         "note": "竖图封面",
         "workbench_url": "",
         "logLines": [
@@ -453,7 +450,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 616
+        "height": 567
       },
       "selected": false,
       "dragging": false,
@@ -472,17 +469,17 @@
         "config": {
           "fit": "contain"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 325
+        "height": 227
       },
       "selected": false,
       "dragging": false,
@@ -500,7 +497,7 @@
         "label": "视频抽帧",
         "config": {
           "video_source": "input_node",
-          "time_point": "15",
+          "time_point": "0.1",
           "time_mode": "positive",
           "avoid_subtitles": true
         },
@@ -516,7 +513,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 358
+        "height": 356
       },
       "selected": false,
       "dragging": false,
@@ -545,31 +542,28 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_byfram"
         },
-        "status": "completed",
+        "status": "failed",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "images": "['output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png']",
-          "text": "output/cover_gen_byfram_1_gen_image_node_3_1782641542678.png"
-        },
-        "error": "",
+        "progress": 0,
+        "message": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
+        "outputs": {},
+        "error": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
         "note": "横图封面",
         "workbench_url": "",
         "logLines": [
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
-          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=39016",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_3_1782641542678_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=32260",
           "[step_worker] step instance created: S_ImageGen",
           "[step_worker] step_inputs keys=['image', 'text']",
           "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_3_1782641542678_result.json, exiting 0"
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3, kwargs=['callback'])"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 616
+        "height": 635
       },
       "selected": false,
       "dragging": false,
@@ -588,9 +582,9 @@
         "config": {
           "fit": "contain"
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
+        "status": "pending",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": "",
@@ -598,7 +592,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 325
+        "height": 227
       },
       "selected": false,
       "dragging": false,
@@ -687,7 +681,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1782725550457.json",
-          "text": "{\n  \"tittle\": \"微观世界的‘穿墙术’：量子隧穿揭秘\",\n  \"description\": \"微观粒子如何穿越能量墙？视频解析量子隧穿的原理，展示其在太阳发光、扫描隧道显微镜等领域的神奇应用。\",\n  \"tags\": [\n    \"量子力学\",\n    \"微观世界\",\n    \"科学揭秘\",\n    \"物理原理\"\n  ]\n}"
+          "text": "{\n  \"tittle\": \"阶乘里为何藏着π？\",\n  \"description\": \"0.5阶乘为何出现π？对数凸性锁定伽玛函数唯一解，揭开离散与连续的终极联系。\",\n  \"tags\": [\n    \"数学之美\",\n    \"伽玛函数\",\n    \"圆周率\"\n  ]\n}"
         },
         "error": "",
         "workbench_url": "",
@@ -727,7 +721,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "json": "cache/asr_result_group_mu37qtoy_nanx__node_2_1788054290141.json"
+          "json": "cache/sentences_node_1_1789860352741.json"
         },
         "error": "",
         "workbench_url": "",
@@ -735,7 +729,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 243
+        "height": 245
       },
       "selected": false,
       "dragging": false,
@@ -797,14 +791,14 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\output\\json2text_node_1_1788530708958.txt"
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\output\\json2text_node_1_1788530708958.txt"
         },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 332
+        "height": 334
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -852,12 +846,12 @@
           "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
           "[ASR PostProcess] No post-processing needed, returning original result",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_2_1788530964170_result.json, exiting 0"
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\cache\\.step_node_2_1788530964170_result.json, exiting 0"
         ]
       },
       "measured": {
         "width": 420,
-        "height": 507
+        "height": 506
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -900,7 +894,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 601
+        "height": 602
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -925,7 +919,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\path_to_title.txt"
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\cache\\path_to_title.txt"
         },
         "error": "",
         "workbench_url": ""
@@ -967,7 +961,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 412
+        "height": 415
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1074,44 +1068,11 @@
           "asset_name": "",
           "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Clibraries%5Cvideos%5C84841194_VLF%E7%89%87%E5%A4%B4%E5%AE%A3%E4%BC%A0%E7%89%873%E7%A7%92.mp4"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\asset_1.mp4",
-          "info": {
-            "source": "e66dbf385efb4e9e9d23e6ffd8800645",
-            "source_type": "local",
-            "kind": "video",
-            "asset": {
-              "path": "data/libraries/videos/84841194_VLF片头宣传片3秒.mp4",
-              "width": 1920,
-              "height": 1080,
-              "duration_seconds": 3.827604,
-              "group_tags": [
-                "VLF"
-              ],
-              "custom_tags": [
-                "宣传片头"
-              ],
-              "description": "VLF软件宣传片头加上3秒",
-              "deleted_at": null,
-              "id": "e66dbf385efb4e9e9d23e6ffd8800645",
-              "version": 1,
-              "created_at": "2026-09-18T06:24:17",
-              "updated_at": "2026-09-18T06:24:17",
-              "absolute_path": "Y:\\VideoLingoLc\\data\\libraries\\videos\\84841194_VLF片头宣传片3秒.mp4"
-            },
-            "file": {
-              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\asset_1.mp4",
-              "name": "asset_1.mp4",
-              "size_bytes": 1238277,
-              "copied": true,
-              "from": "Y:\\VideoLingoLc\\data\\libraries\\videos\\84841194_VLF片头宣传片3秒.mp4"
-            }
-          }
-        },
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -1127,7 +1088,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 501
+        "height": 411
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1526,7 +1487,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 318
+        "height": 320
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -1554,7 +1515,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_n_mu386aanb14p.txt",
-          "text": "电影海报图生图提示词：以“输入图片”为底图，添加中文字体标题设计。主标题“量子隧穿揭秘”采用加粗毛笔草书手写体，白色字体，笔触飘移绵长，字号按词块“量子”“隧穿”“揭秘”形成错落大小变化，加细黑色描边与立体阴影，营造跃出画面的景深感。副标题“粒子穿越能量墙的秘密”置于主标题下方，字体稍小，采用科技感现代衬线体，灰蓝白渐变色，带投影，与主标题形成视觉层级。标题整体以穿模交互方式嵌入背景，部分笔画破开势垒视效光带，强化量子隧穿意味。排版根据输入图片构图自动适配，避开主要视觉主体，保持电影海报式的高级对比度与光影层次。"
+          "text": "电影海报风格，超写实质感，深空黑色与幽蓝背景，巨大的白色加粗毛笔草书主标题“阶乘与pi的意外相遇”占据视觉中心，笔触漂移绵长，字体内部根据语义错落有致地调整大小，细微黑色描边配合厚重立体阴影，与背景形成强烈的景深穿模交互效果；下方配有稍小的精致衬线体副标题“无穷多曲线中，为何独此一条？”，同样带有立体阴影，主副标题与背景产生明显的前后景深层次，高对比度光影，高级电影感构图，8k分辨率，极致细节。"
         },
         "error": "",
         "note": "发布平台资料准备",
@@ -1637,7 +1598,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_n_mu43x5dw5ixf.txt",
-          "text": "一张气势磅礴的电影海报，中央悬浮一颗半透明的发光原子核，周围环绕着以概率云形态呈现的电子波函数；一道耀眼白光从左下斜向右上贯穿画面，正穿越一道裂纹状的暗能量壁障。背景是深邃的量子虚空，波动着紫蓝细线，如概率振幅的涟漪。\n\n主标题“量子隧穿揭秘”以加粗的毛笔草书手写体大字横排于画面中上部，笔触漂移绵长，字组大小错落，“量子”略小，“隧穿”最大，“揭秘”中等，纯白字体带有极细的黑色描边和深色投影，字形穿透前景能量壁，与背景的光线形成穿模景深。副标题“粒子穿越能量墙的秘密”用稍小的有衬线字体排列于主标题下方右侧，采用冷青色调，与白光相呼应，形成清晰的信息层级。"
+          "text": "这是一个为视频《阶乘与pi的意外相遇》设计的生图提示词。该提示词严格遵循了您要求的风格、色调、光影及文字排版规范，旨在生成一张兼具数学美感与电影质感的高级封面。\n\n### 视频封面生图提示词 (Image Generation Prompt)\n\n```markdown\n**【画面主体与构图】**\n一张极具张力的电影海报式竖版构图（9:16比例）。画面中心悬浮着一个由发光线条构成的三维伽玛函数曲面（Gamma Function surface），它呈现出优雅的双曲线结构，从左下角延伸至右上角，贯穿整个画面。在曲面的关键整数节点上，点缀着微小的几何立方体代表“阶乘”，而在曲面经过x=0.5的位置，爆发出一圈璀璨的、象征圆周率π的光环，光环内部隐约可见高斯分布的正态曲线轮廓，象征着离散组合与连续几何的交汇。背景是深邃的宇宙黑与数学网格蓝的渐变，网格线条随着景深向远处透视收缩，营造出无限延伸的空间感。\n\n**【色调与光影】**\n采用高对比度的高级电影色调。伽玛函数曲面发出冷冽的青白色荧光（Cyan-white），与背景中象征π的暖金色光晕（Warm Gold）形成强烈的冷暖互补对比。光源来自曲面本身，光线在网格背景上投下清晰的阴影，增强立体感。画面整体呈现出“主次要层次分明”的效果，前景的数学元素锐利清晰，背景虚化深远。\n\n**【文字排版与设计】**\n标题与背景形成复杂的景深交错与穿模效果（Clipping effect），字体极具冲击力。\n\n**1. 主标题：**\n文字内容：“阶乘与pi的意外相遇”\n字体设计：使用加粗的毛笔草书手写体，笔触漂移绵长，充满动感与力量感。\n颜色：纯白色，边缘带有细微的黑色描边，确保在任何背景下都清晰可见。\n字号变化：根据语义断句设计大小，“阶乘”二字略小，“pi”二字极大且醒目，“意外相遇”四字恢弘舒展。\n特效：字体添加厚重的黑色投影以增加立体感。\n布局位置：占据画面上部三分之一处，横跨画面宽度，部分笔画故意穿透背景的数学网格线，形成前后景深的穿模错觉。\n\n**2. 副标题：**\n文字内容：“无穷多曲线中，为何独此一条？”\n字体设计：稍小一号的现代无衬线粗体，简洁有力，与主标题的手写体形成风格反差。\n颜色：亮金色或琥珀色，与主标题的白色形成层级区分，同时呼应画面中的π光环。\n布局位置：位于主标题正下方，略微偏右对齐，不遮挡伽玛函数曲面的核心发光区域。\n\n**【整体氛围】**\n神秘、理性、高端、知识密集型。画面传达出数学之美与几何真理的庄严感，吸引观众探索背后的深刻逻辑。\n```\n\n### 设计思路解析\n\n1.  **主题契合度**：\n    *   **视觉化抽象概念**：将“伽玛函数”具象化为三维曲面，将“阶乘”具象化为整数节点上的几何体，将“π的出现”具象化为x=0.5处的光环和高斯曲线。这直接呼应了视频中关于“从离散到连续”、“π作为几何税”的核心论点。\n    *   **钩子呈现**：副标题“无穷多曲线中，为何独此一条？”直接放在封面上，利用视觉上的唯一性（发光的伽玛函数 vs 背景中无数条模糊的网格线）来强化这一悬念。\n\n2.  **风格与质感**：\n    *   **电影感**：通过“宇宙黑”、“高对比度”、“冷暖光对比（青白 vs 暖金）”来营造大片质感。\n    *   **景深穿模**：明确要求字体与背景网格线产生“穿模”和“前景遮蔽”效果，这是现代高端海报设计的流行手法，能显著增加画面的层次感和设计感。\n\n3.  **文字排版细节**：\n    *   **主标题**：严格按照要求使用“加粗毛笔草书”、“白色带黑描边”、“阴影”，并设计了“字号按语义不同大小”，特别是突出“pi”字，因为它是视频中最反直觉的视觉冲击点。\n    *   **副标题**：使用“金色/琥珀色”以区分层级，并选择“现代无衬线体”与主标题形成刚柔并济的对比。\n    *   **位置**：竖版构图（9:16）适合手机端观看，标题置于上方，留白给下方的曲面主体，避免遮挡关键视觉信息。"
         },
         "error": "",
         "note": "发布平台资料准备",
@@ -1674,7 +1635,7 @@
         "label": "句子分割",
         "config": {
           "processing_language": "from_input",
-          "max_sentence_length": "30",
+          "max_sentence_length": "40",
           "use_llm_split": true,
           "split_sentence_ends": true,
           "split_clause_breaks": false,
@@ -1686,12 +1647,19 @@
           "merge_gap_enabled": false,
           "pause_split_enabled": true
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/sentences_node_1_1789860352741.json",
+          "text": "cache/sentences_text_node_1_1789860352741.txt"
+        },
+        "error": ""
       },
       "measured": {
         "width": 420,
-        "height": 480
+        "height": 598
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1710,12 +1678,18 @@
         "config": {
           "auto_fix": true
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "json": "cache/sentences_node_3_1788531005833.json"
+        },
+        "error": ""
       },
       "measured": {
         "width": 420,
-        "height": 153
+        "height": 243
       },
       "dragHandle": ".wf-node-drag-handle"
     }
@@ -1780,7 +1754,7 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1795,7 +1769,7 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1826,7 +1800,7 @@
       "type": "smoothstep",
       "animated": false,
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2000,7 +1974,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2041,7 +2015,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2153,7 +2127,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2192,7 +2166,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#8b5cf6",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2257,7 +2231,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#8b5cf6",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2270,7 +2244,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2348,6 +2322,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-20T19:26:53",
-  "revision": 77
+  "updatedAt": "2026-09-21T16:48:13",
+  "revision": 80
 }

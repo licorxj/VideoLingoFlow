@@ -16,12 +16,14 @@
 import os
 import time
 import logging
+from urllib.parse import urlparse
 
 from backend.imagegen.sdk.wuli_wrapper import (
     WULI_BASE_URL, TERMINAL_STATUSES, SUBMIT_ENDPOINT, QUERY_ENDPOINT,
     NO_WATERMARK_ENDPOINT, _get_api_key, _api_request, _image_dimensions,
     _resolve_file, upload_file, _submit,
 )
+from backend.imagegen.imagegen_retry import download_with_retry
 
 logger = logging.getLogger(__name__)
 
@@ -80,23 +82,14 @@ def _poll_video(record_id: str, api_key: str, base_url: str, timeout: int = DEFA
 
 
 def _download_all(urls: list, output_dir: str) -> list:
-    import requests as _req
     os.makedirs(output_dir, exist_ok=True)
     saved = []
     for i, url in enumerate(urls):
         try:
-            resp = _req.get(url, timeout=300, stream=True)
-            resp.raise_for_status()
-            ct = resp.headers.get("content-type", "").lower()
-            ext = "mp4"
-            if "webm" in ct:
-                ext = "webm"
-            elif "mov" in ct:
-                ext = "mov"
+            suffix = os.path.splitext(urlparse(url).path)[1].lstrip(".").lower()
+            ext = suffix if suffix in ("mp4", "webm", "mov") else "mp4"
             path = os.path.join(output_dir, f"output_{i}.{ext}")
-            with open(path, "wb") as f:
-                for chunk in resp.iter_content(8192):
-                    f.write(chunk)
+            download_with_retry(url, path, timeout=300)
             saved.append(path)
         except Exception as e:
             logger.error("Wuli: 下载结果视频 %s 失败: %s", i, e)
