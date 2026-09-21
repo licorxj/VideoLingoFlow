@@ -158,11 +158,32 @@ def runtime_status():
                 stats = inspect.stats() or {}
                 active = inspect.active() or {}
                 reserved = inspect.reserved() or {}
+                # 真实线程并发：从各 worker 的 pool 统计里取线程池大小。
+                # 决定"同时跑几个批量任务"的是 control-plane worker 的 --concurrency，
+                # 与 voiceforge worker（语音合成队列）无关，故只累加 control-plane。
+                worker_pools: dict[str, int] = {}
+                control_plane_threads = 0
+                for worker_name, info in stats.items():
+                    pool = info.get("pool") if isinstance(info, dict) else None
+                    pool_concurrency = 0
+                    if isinstance(pool, dict):
+                        raw = pool.get("max-concurrency")
+                        if raw is None:
+                            raw = pool.get("threads")
+                        try:
+                            pool_concurrency = int(raw)
+                        except (TypeError, ValueError):
+                            pool_concurrency = 0
+                    worker_pools[worker_name] = pool_concurrency
+                    if str(worker_name).startswith("control-plane"):
+                        control_plane_threads += pool_concurrency
                 control_plane["workers"] = {
                     "available": True,
                     "stats": stats,
                     "active": active,
                     "reserved": reserved,
+                    "pools": worker_pools,
+                    "control_plane_threads": control_plane_threads,
                 }
             except Exception:
                 pass

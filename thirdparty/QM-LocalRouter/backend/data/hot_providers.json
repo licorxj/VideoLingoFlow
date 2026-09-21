@@ -80,17 +80,9 @@
     "homepage": "https://cloud.siliconflow.cn/i/L5HvpICN"
   },
   {
-    "name": "SiliconFlow (硅基流动)",
-    "protocol": "openai",
-    "base_url": "https://api.siliconflow.cn/v1",
-    "description": "国产模型聚合平台，支持多种开源模型，有免费额度",
-    "icon_keyword": "siliconflow",
-    "homepage": "https://cloud.siliconflow.cn/i/L5HvpICN"
-  },
-  {
     "name": "cavotiAI (国际模型)",
     "protocol": "openai",
-    "base_url": "	https://cavoti.com/v1",
+    "base_url": "https://cavoti.com/v1",
     "description": "前沿模型聚合路由平台，价格便宜，注册送一亿token",
     "icon_keyword": "alibaba dashscope",
     "homepage": "https://cavoti.com/register?aff=4VLMN2NN445Y"

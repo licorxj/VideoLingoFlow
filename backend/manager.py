@@ -18,6 +18,13 @@ import functools
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
+# 以 `python backend/manager.py` 脚本方式启动时，sys.path[0] 是 backend/ 目录而非项目
+# 根目录，进程内 `from backend... import`（如 config_manager / celery_runtime / pi_rpc）
+# 会 ModuleNotFoundError 被静默吞掉，导致 worker 并发回退默认值 4。此处引导项目根目录。
+_PROJECT_ROOT_DIR = str(Path(__file__).resolve().parent.parent)
+if _PROJECT_ROOT_DIR not in sys.path:
+    sys.path.insert(0, _PROJECT_ROOT_DIR)
+
 
 def _argv_port(index: int, default: int) -> int:
     """解析命令行端口参数。
@@ -1519,6 +1526,44 @@ def _wait_for_exit(proc, timeout: float) -> bool:
     return proc.poll() is not None
 
 
+def _existing_control_plane_concurrency() -> list[int]:
+    """查询当前在跑的 control-plane worker 实际并发度（--concurrency）；查询失败返回空列表。
+
+    用于冷启动时核对"残留 worker"的并发是否与配置一致：worker 的并发是启动时
+    冻结的旧值，残留进程不会感知配置变更，需回收重启才能生效。
+    """
+    try:
+        from backend.control_plane.celery_runtime import celery_app
+
+        if celery_app is None:
+            return []
+        # 注意：voiceforge worker 复用同一 Celery app，inspect().stats() 会一并返回，
+        # 必须先按 active_queues 过滤出消费 control-plane 队列的 worker，再取其并发度。
+        target = {"videolingo_cpu", "videolingo_gpu", "videolingo_llm", "videolingo_tts", "videolingo_io"}
+        inspect = celery_app.control.inspect(timeout=3)
+        stats = inspect.stats() or {}
+        active_queues = inspect.active_queues() or {}
+        consumers = {
+            name
+            for name, worker_queues in active_queues.items()
+            if {item.get("name") for item in worker_queues} >= target
+        }
+        values: list[int] = []
+        for name in consumers:
+            info = stats.get(name)
+            pool = info.get("pool") if isinstance(info, dict) else None
+            mc = pool.get("max-concurrency") if isinstance(pool, dict) else None
+            if mc is None:
+                continue
+            try:
+                values.append(int(mc))
+            except (TypeError, ValueError):
+                continue
+        return values
+    except Exception:
+        return []
+
+
 @_serialized
 def start_control_plane_worker():
     global _control_plane_worker_process, _control_plane_worker_start_time
@@ -1531,6 +1576,7 @@ def start_control_plane_worker():
         return
     python_exe, env = prepared
     project_root = _project_root()
+    concurrency = _control_plane_concurrency(env)
     if _worker_available(
         python_exe,
         env,
@@ -1538,9 +1584,20 @@ def start_control_plane_worker():
         {"videolingo_cpu", "videolingo_gpu", "videolingo_llm", "videolingo_tts", "videolingo_io"},
         "backend.control_plane.celery_runtime",
     ):
-        print("[Manager] Control-plane worker queues already have a consumer, skipping start")
-        return
-    concurrency = _control_plane_concurrency(env)
+        # 已有 worker 在消费队列（常见为上一会话残留进程，其 --concurrency 是启动时
+        # 冻结的旧值；也可能残留多个 worker 使实际总并发翻倍）。只要并发度与配置不一致
+        # 或 worker 数量超过 1 个，就软停全部并拉起单个新 worker，确保启动阶段严格
+        # 应用 batch.max_concurrent_tasks；一致则跳过。
+        existing = _existing_control_plane_concurrency()
+        if existing and (any(v != concurrency for v in existing) or len(existing) > 1):
+            print(
+                f"[Manager] Existing control-plane worker(s) concurrency={existing} "
+                f"!= expected [{concurrency}], recycling worker(s) to apply config"
+            )
+            stop_control_plane_worker(soft=True)
+        else:
+            print("[Manager] Control-plane worker queues already have a consumer, skipping start")
+            return
     cmd = [python_exe, "-m", "celery", "-A", "backend.control_plane.celery_runtime:celery_app", "worker", "--loglevel=INFO", "--hostname=control-plane@%h", "--pool=threads", f"--concurrency={concurrency}", "--queues=videolingo_cpu,videolingo_gpu,videolingo_llm,videolingo_tts,videolingo_io"]
     try:
         proc = subprocess.Popen(cmd, cwd=project_root, env=env, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
@@ -1596,8 +1653,10 @@ def _control_plane_concurrency(env: dict[str, str]) -> int:
 
         value = _cfg.get("batch.max_concurrent_tasks", 4)
         return max(1, int(value))
-    except Exception:
-        pass
+    except Exception as exc:
+        # 不再静默吞异常：读取失败时打印原因（历史上曾因脚本模式 sys.path 缺项目根
+        # 目录而 ModuleNotFoundError，导致冷启动 worker 并发始终回退默认 4）
+        print(f"[Manager] Failed to read batch.max_concurrent_tasks from config.yaml: {exc!r}, falling back")
     try:
         return max(1, int(env.get("CELERY_CONTROL_PLANE_CONCURRENCY", "4")))
     except (ValueError, TypeError):

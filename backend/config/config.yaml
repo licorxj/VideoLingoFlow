@@ -133,7 +133,6 @@ advanced:
   demucs: false
   min_subtitle_duration: 0.1
   min_trim_duration: 2
-  max_concurrent_tasks: 3
   model_dir: "./_model_cache"
 
 # ============ Batch ============

@@ -71,6 +71,13 @@ export default function BatchRuntimePanel({ runtime, loading = false, onRefresh 
   };
 
   const workerCount = Object.keys(control?.workers?.stats || {}).length;
+  const realThreads = control?.workers?.control_plane_threads;
+  const configuredConcurrency = control?.resources?.batch_max_inflight_tasks;
+  const concurrencyMismatch =
+    control?.workers?.available === true &&
+    typeof realThreads === "number" &&
+    typeof configuredConcurrency === "number" &&
+    realThreads !== configuredConcurrency;
   const queueSummary = Object.entries(control?.queues || {})
     .map(([key, item]) => `${key}:${item.depth}`)
     .join(" / ");
@@ -133,9 +140,13 @@ export default function BatchRuntimePanel({ runtime, loading = false, onRefresh 
         />
         <StatCard
           icon={Cpu}
-          label="Worker 消费者"
-          value={control?.workers?.available ? workerCount : "不可用"}
-          hint={control?.workers?.available ? `已发现 ${workerCount} 个 worker` : "Celery inspect 不可达"}
+          label="Worker 实际线程数"
+          value={control?.workers?.available ? (realThreads ?? "-") : "不可用"}
+          hint={
+            control?.workers?.available
+              ? `实际并发线程（--concurrency）；已发现 ${workerCount} 个 worker 进程`
+              : "Celery inspect 不可达"
+          }
           accent="text-violet-500"
         />
         <StatCard
@@ -160,7 +171,13 @@ export default function BatchRuntimePanel({ runtime, loading = false, onRefresh 
             <span>队列与投递配置</span>
           </div>
           <div className="mt-1 text-xs text-foreground/90">
-            最大同时执行任务数（Worker 并发）：<span className="font-semibold">{control?.resources?.batch_max_inflight_tasks ?? "-"}</span>
+            最大同时执行任务数（Worker 并发）：配置{" "}
+            <span className="font-semibold">{configuredConcurrency ?? "-"}</span>
+            {"  "}实际{" "}
+            <span className={cn("font-semibold", concurrencyMismatch && "text-amber-600")}>
+              {control?.workers?.available ? (realThreads ?? "-") : "-"}
+            </span>
+            {concurrencyMismatch ? "（点「重启进程生效」对齐）" : ""}
             {"  "} 启动间隔：<span className="font-semibold">{control?.resources?.batch_task_start_interval ?? "-"}</span>s
           </div>
           <div className="mt-1 text-[11px] text-muted-foreground break-all">

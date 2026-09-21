@@ -23,24 +23,17 @@
           "copyInputs": true,
           "filePath": ""
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\cache\\input_video.mp4",
-          "languages": {
-            "source_language": "en",
-            "target_language": "zh"
-          },
-          "no_input": ""
-        },
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 502
+        "height": 428
       },
       "selected": false,
       "dragging": false,
@@ -57,12 +50,10 @@
         "nodeType": "summarize",
         "label": "内容总结",
         "config": {},
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/summarize_result_node_1_1780948332813.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -79,7 +70,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 357
+        "height": 284
       },
       "selected": false,
       "dragging": false,
@@ -101,13 +92,10 @@
           "processing_language": "from_input",
           "target_language": "from_input"
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/translation_direct_node_1_1780954897405_zh.json",
-          "reflect": "cache/translation_reflect_node_1_1780954897405_zh.json"
-        },
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": "",
@@ -124,7 +112,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 475
+        "height": 373
       },
       "selected": false,
       "dragging": false,
@@ -143,7 +131,7 @@
         "config": {
           "title": "原视频展示"
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
         "outputs": {},
@@ -153,7 +141,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 444
+        "height": 439
       },
       "selected": false,
       "dragging": false,
@@ -170,9 +158,9 @@
         "nodeType": "tts",
         "label": "语音合成 (TTS)",
         "config": {
-          "tts_engine": "8dc074bb",
+          "tts_engine": "confucius4_tts",
           "tts_mode": [
-            "preset_voice"
+            "clone"
           ],
           "clone_source": "per_segment",
           "voice_design_role_1_desc": "中年、女性、高音叫卖",
@@ -183,14 +171,11 @@
           "overwrite_generate": false,
           "voice_role_1": "白桦"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "cache/dub_task_node_1_1781709944783.json",
-          "pandas": "cache/dub_task_node_1_1781709944783.csv"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -206,7 +191,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 689
+        "height": 420
       },
       "selected": false,
       "dragging": false,
@@ -224,26 +209,23 @@
         "label": "生成配音任务",
         "config": {
           "ai_read_tone": false,
-          "normalize_chinese_read_text": false,
+          "normalize_chinese_read_text": true,
           "ai_dialect_colloquial": false,
           "dialect_name": "四川话",
           "min_sentence_duration": 0.1,
           "speed_predict_reduce": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "cache/dub_task_node_1_1781709944783.json",
-          "pandas": "cache/dub_task_node_1_1781709944783.csv"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 401
+        "height": 300
       },
       "selected": false,
       "dragging": false,
@@ -261,28 +243,22 @@
         "label": "配音片段合并对齐",
         "config": {
           "video_speed_adjust": false,
-          "speed_min": "0.8",
+          "speed_min": "0.7",
           "speed_max": "3",
-          "gap_threshold": "0.5",
+          "gap_threshold": "0.8",
           "fast_limit": "1.5"
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "audio": "output/dub_node_1_1781810867151.wav",
-          "dub_srt": "output/dub_node_1_1781810867151.srt",
-          "dub_bilingual_srt": "output/dub_bilingual_node_1_1781810867151.srt",
-          "配音任务单": "cache\\dub_task_node_1_1781709944783.csv",
-          "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\cache\\input_video.mp4"
-        },
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 748
+        "height": 566
       },
       "selected": false,
       "dragging": false,
@@ -307,19 +283,17 @@
           "preset_id": "单语-白-半透底",
           "mute_original": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "video": "output/video_with_dub_node_1_1781939413425.mp4"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 865
+        "height": 794
       },
       "selected": false,
       "dragging": false,
@@ -353,7 +327,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 184
+        "height": 183
       },
       "selected": false,
       "dragging": false,
@@ -377,14 +351,11 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "result": "output/LLM_node_1_1782422054967.json",
-          "text": "{\n  \"tittle\": \"阶乘与pi的意外相遇\",\n  \"hook\": \"无穷多曲线中，为何独此一条？\",\n  \"summary\": \"视频深入探讨了伽玛函数如何突破阶乘的定义域，将“排列物体”的组合概念延伸至实数与复数领域。内容首先揭示了一个常被忽视的数学陷阱：仅凭递推关系无法唯一确定阶乘的连续延拓，存在无限多条通过整数点的平滑曲线。唯有引入“对数凸性”这一额外约束，伽玛函数才成为唯一解，从而赋予“0.5阶乘”确定的数值。\\n\\n视频详细推导了伽玛积分公式，并展示了当输入为0.5时，通过变量代换，原本关于排列的离散问题竟然自然导出了高斯积分（正态分布曲线），从而解释了圆周率π为何会出现在阶乘问题中——这是测量面积这一几何行为必然携带的“几何税”。\\n\\n此外，视频还简述了伽玛函数在解析延拓黎曼Zeta函数、计算任意维度球体体积等领域的核心作用。核心观点在于：数学概念的扩展并非随意定义，而是保留核心规则（递推）并舍弃无关限制（整数计数），最终由严格的几何性质（对数凸性）锁定唯一真理。\"\n}"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -400,7 +371,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 537
+        "height": 436
       },
       "selected": false,
       "dragging": false,
@@ -429,7 +400,7 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_3x4"
         },
-        "status": "failed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 0,
         "message": "",
@@ -450,7 +421,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 567
+        "height": 498
       },
       "selected": false,
       "dragging": false,
@@ -501,19 +472,17 @@
           "time_mode": "positive",
           "avoid_subtitles": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "image": "cache/key_frame_node_1_1782640383627.png"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 356
+        "height": 285
       },
       "selected": false,
       "dragging": false,
@@ -542,7 +511,7 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_byfram"
         },
-        "status": "failed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 0,
         "message": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
@@ -563,7 +532,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 635
+        "height": 518
       },
       "selected": false,
       "dragging": false,
@@ -651,7 +620,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 641
+        "height": 636
       },
       "selected": false,
       "dragging": false,
@@ -675,14 +644,11 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "result": "output/LLM_node_1_1782725550457.json",
-          "text": "{\n  \"tittle\": \"阶乘里为何藏着π？\",\n  \"description\": \"0.5阶乘为何出现π？对数凸性锁定伽玛函数唯一解，揭开离散与连续的终极联系。\",\n  \"tags\": [\n    \"数学之美\",\n    \"伽玛函数\",\n    \"圆周率\"\n  ]\n}"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -698,7 +664,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 537
+        "height": 436
       },
       "selected": false,
       "dragging": false,
@@ -717,19 +683,17 @@
         "config": {
           "auto_fix": true
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "json": "cache/sentences_node_1_1789860352741.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 245
+        "height": 173
       },
       "selected": false,
       "dragging": false,
@@ -753,19 +717,17 @@
           "output_format": "wav",
           "custom_command": ""
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "audio": "output/denoised_audio_node_9_1788017295074.wav"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 440
+        "height": 367
       },
       "selected": false,
       "dragging": false,
@@ -786,19 +748,17 @@
           "mode": "key",
           "key_expr": "text"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\output\\json2text_node_1_1788530708958.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 334
+        "height": 261
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -829,13 +789,11 @@
           "post_alignment": true,
           "post_diarization": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/asr_result_node_2_1788530964170.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -851,7 +809,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 506
+        "height": 435
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -881,20 +839,17 @@
           "merge_gap_enabled": false,
           "pause_split_enabled": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/sentences_node_3_1788531005833.json",
-          "text": "cache/sentences_text_node_3_1788531005833.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 602
+        "height": 500
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -914,19 +869,17 @@
           "read_from_input": true,
           "update_task_name": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3\\cache\\path_to_title.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 370
+        "height": 297
       },
       "dragHandle": ".wf-node-drag-handle",
       "selected": false,
@@ -949,19 +902,17 @@
           "punctuation_replace_mode": "space",
           "processing_language": "from_target"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "original": "output/dub_asr_subtitles_node_6_1788533469576.srt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 415
+        "height": 342
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -996,19 +947,17 @@
           "audio_format": "wav",
           "audio_bitrate": "192"
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "audio": "cache\\track_mix_node_3_1788584414700.wav"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 688
+        "height": 613
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -1476,18 +1425,17 @@
           "wait_audition": false,
           "wait_seconds": 600
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "json": "cache/dub_task_node_1_1781709944783.json"
-        },
-        "error": ""
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 320
+        "height": 248
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -1509,14 +1457,11 @@
           "response_json": false,
           "log_request": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "result": "output/LLM_n_mu386aanb14p.txt",
-          "text": "电影海报风格，超写实质感，深空黑色与幽蓝背景，巨大的白色加粗毛笔草书主标题“阶乘与pi的意外相遇”占据视觉中心，笔触漂移绵长，字体内部根据语义错落有致地调整大小，细微黑色描边配合厚重立体阴影，与背景形成强烈的景深穿模交互效果；下方配有稍小的精致衬线体副标题“无穷多曲线中，为何独此一条？”，同样带有立体阴影，主副标题与背景产生明显的前后景深层次，高对比度光影，高级电影感构图，8k分辨率，极致细节。"
-        },
+        "outputs": {},
         "error": "",
         "note": "发布平台资料准备",
         "workbench_url": "",
@@ -1533,7 +1478,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 537
+        "height": 436
       },
       "selected": false,
       "dragging": false,
@@ -1558,18 +1503,17 @@
           "separator": "newline",
           "custom_separator": ""
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "output/text_concat_node_1_1789563482048.txt"
-        },
-        "error": ""
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 426
+        "height": 353
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1592,14 +1536,11 @@
           "response_json": false,
           "log_request": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "result": "output/LLM_n_mu43x5dw5ixf.txt",
-          "text": "这是一个为视频《阶乘与pi的意外相遇》设计的生图提示词。该提示词严格遵循了您要求的风格、色调、光影及文字排版规范，旨在生成一张兼具数学美感与电影质感的高级封面。\n\n### 视频封面生图提示词 (Image Generation Prompt)\n\n```markdown\n**【画面主体与构图】**\n一张极具张力的电影海报式竖版构图（9:16比例）。画面中心悬浮着一个由发光线条构成的三维伽玛函数曲面（Gamma Function surface），它呈现出优雅的双曲线结构，从左下角延伸至右上角，贯穿整个画面。在曲面的关键整数节点上，点缀着微小的几何立方体代表“阶乘”，而在曲面经过x=0.5的位置，爆发出一圈璀璨的、象征圆周率π的光环，光环内部隐约可见高斯分布的正态曲线轮廓，象征着离散组合与连续几何的交汇。背景是深邃的宇宙黑与数学网格蓝的渐变，网格线条随着景深向远处透视收缩，营造出无限延伸的空间感。\n\n**【色调与光影】**\n采用高对比度的高级电影色调。伽玛函数曲面发出冷冽的青白色荧光（Cyan-white），与背景中象征π的暖金色光晕（Warm Gold）形成强烈的冷暖互补对比。光源来自曲面本身，光线在网格背景上投下清晰的阴影，增强立体感。画面整体呈现出“主次要层次分明”的效果，前景的数学元素锐利清晰，背景虚化深远。\n\n**【文字排版与设计】**\n标题与背景形成复杂的景深交错与穿模效果（Clipping effect），字体极具冲击力。\n\n**1. 主标题：**\n文字内容：“阶乘与pi的意外相遇”\n字体设计：使用加粗的毛笔草书手写体，笔触漂移绵长，充满动感与力量感。\n颜色：纯白色，边缘带有细微的黑色描边，确保在任何背景下都清晰可见。\n字号变化：根据语义断句设计大小，“阶乘”二字略小，“pi”二字极大且醒目，“意外相遇”四字恢弘舒展。\n特效：字体添加厚重的黑色投影以增加立体感。\n布局位置：占据画面上部三分之一处，横跨画面宽度，部分笔画故意穿透背景的数学网格线，形成前后景深的穿模错觉。\n\n**2. 副标题：**\n文字内容：“无穷多曲线中，为何独此一条？”\n字体设计：稍小一号的现代无衬线粗体，简洁有力，与主标题的手写体形成风格反差。\n颜色：亮金色或琥珀色，与主标题的白色形成层级区分，同时呼应画面中的π光环。\n布局位置：位于主标题正下方，略微偏右对齐，不遮挡伽玛函数曲面的核心发光区域。\n\n**【整体氛围】**\n神秘、理性、高端、知识密集型。画面传达出数学之美与几何真理的庄严感，吸引观众探索背后的深刻逻辑。\n```\n\n### 设计思路解析\n\n1.  **主题契合度**：\n    *   **视觉化抽象概念**：将“伽玛函数”具象化为三维曲面，将“阶乘”具象化为整数节点上的几何体，将“π的出现”具象化为x=0.5处的光环和高斯曲线。这直接呼应了视频中关于“从离散到连续”、“π作为几何税”的核心论点。\n    *   **钩子呈现**：副标题“无穷多曲线中，为何独此一条？”直接放在封面上，利用视觉上的唯一性（发光的伽玛函数 vs 背景中无数条模糊的网格线）来强化这一悬念。\n\n2.  **风格与质感**：\n    *   **电影感**：通过“宇宙黑”、“高对比度”、“冷暖光对比（青白 vs 暖金）”来营造大片质感。\n    *   **景深穿模**：明确要求字体与背景网格线产生“穿模”和“前景遮蔽”效果，这是现代高端海报设计的流行手法，能显著增加画面的层次感和设计感。\n\n3.  **文字排版细节**：\n    *   **主标题**：严格按照要求使用“加粗毛笔草书”、“白色带黑描边”、“阴影”，并设计了“字号按语义不同大小”，特别是突出“pi”字，因为它是视频中最反直觉的视觉冲击点。\n    *   **副标题**：使用“金色/琥珀色”以区分层级，并选择“现代无衬线体”与主标题形成刚柔并济的对比。\n    *   **位置**：竖版构图（9:16）适合手机端观看，标题置于上方，留白给下方的曲面主体，避免遮挡关键视觉信息。"
-        },
+        "outputs": {},
         "error": "",
         "note": "发布平台资料准备",
         "workbench_url": "",
@@ -1616,7 +1557,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 537
+        "height": 436
       },
       "selected": false,
       "dragging": false,
@@ -1647,19 +1588,17 @@
           "merge_gap_enabled": false,
           "pause_split_enabled": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/sentences_node_1_1789860352741.json",
-          "text": "cache/sentences_text_node_1_1789860352741.txt"
-        },
-        "error": ""
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 598
+        "height": 500
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1678,18 +1617,17 @@
         "config": {
           "auto_fix": true
         },
-        "status": "completed",
+        "status": "pending",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "json": "cache/sentences_node_3_1788531005833.json"
-        },
-        "error": ""
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 243
+        "height": 173
       },
       "dragHandle": ".wf-node-drag-handle"
     }
@@ -1754,7 +1692,7 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1769,7 +1707,7 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1800,7 +1738,7 @@
       "type": "smoothstep",
       "animated": false,
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1907,19 +1845,6 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#f59e0b",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_6_1788533469576",
-      "sourceHandle": "out-original",
-      "target": "node_1_1781939413425",
-      "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_6_1788533469576out-original-node_1_1781939413425in-subtitle"
-    },
-    {
-      "type": "bezier",
-      "style": {
         "stroke": "#10b981",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -1974,7 +1899,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2015,7 +1940,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2127,7 +2052,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2166,7 +2091,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#8b5cf6",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2231,7 +2156,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#8b5cf6",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2244,7 +2169,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2318,10 +2243,23 @@
       "target": "node_6_1788533469576",
       "targetHandle": "in-subtitle",
       "id": "xy-edge__node_4_1789903593670out-json-node_6_1788533469576in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#f59e0b",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_6_1788533469576",
+      "sourceHandle": "out-original",
+      "target": "node_1_1781939413425",
+      "targetHandle": "in-subtitle",
+      "id": "xy-edge__node_6_1788533469576out-original-node_1_1781939413425in-subtitle"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-21T16:48:13",
-  "revision": 80
+  "updatedAt": "2026-09-22T04:46:18",
+  "revision": 88
 }

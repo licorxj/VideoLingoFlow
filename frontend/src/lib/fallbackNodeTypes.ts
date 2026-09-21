@@ -11917,7 +11917,6 @@ export const FALLBACK_NODE_TYPES = [
       "model": "opencode/mimo-v2.5-free",
       "fallback_models": "opencode/big-pickle",
       "agent": "",
-      "variant": "",
       "skills": [],
       "mcps": [],
       "auto_approve": true,
@@ -11993,14 +11992,6 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half",
         "placeholder": "留空则在任务根目录执行",
         "description": "相对任务目录；填写后在该子目录内执行（自动创建）"
-      },
-      {
-        "key": "variant",
-        "label": "模型变体",
-        "type": "text",
-        "colSpan": "half",
-        "placeholder": "如 high / max / minimal；留空不指定",
-        "description": "对应 opencode run --variant（推理强度等）"
       },
       {
         "key": "timeout",

@@ -15,7 +15,7 @@ export default function VideoSettings() {
     Promise.all([
       settingsApi.get("advanced.min_subtitle_duration"),
       settingsApi.get("advanced.min_trim_duration"),
-      settingsApi.get("advanced.max_concurrent_tasks"),
+      settingsApi.get("batch.max_concurrent_tasks"),
       settingsApi.get("advanced.model_dir"),
     ]).then(([ms, mt, mc, md]) => {
       setMinSubDur(ms.data.value ?? 0.5);
@@ -74,7 +74,7 @@ export default function VideoSettings() {
               className="w-full mt-2 px-3.5 py-2.5 border border-border/60 rounded-xl bg-background/50 text-sm focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-200 outline-none"
               value={maxTasks}
               onChange={(e) => setMaxTasks(+e.target.value)}
-              onBlur={() => save("advanced.max_concurrent_tasks", maxTasks)}
+              onBlur={() => save("batch.max_concurrent_tasks", maxTasks)}
             />
           </div>
           <div>

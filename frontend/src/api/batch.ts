@@ -125,6 +125,10 @@ export interface RuntimeStatus {
       stats?: Record<string, any>;
       active?: Record<string, any>;
       reserved?: Record<string, any>;
+      /** 各 worker 线程池并发（hostname -> 线程数） */
+      pools?: Record<string, number>;
+      /** control-plane worker 的实际线程并发之和（= --concurrency，决定同时跑几个任务） */
+      control_plane_threads?: number;
     };
     resources: {
       capacity: Record<string, number>;
