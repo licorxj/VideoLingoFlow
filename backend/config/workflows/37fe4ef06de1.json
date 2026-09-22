@@ -33,7 +33,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 428
+        "height": 430
       },
       "selected": false,
       "dragging": false,
@@ -70,7 +70,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 284
+        "height": 285
       },
       "selected": false,
       "dragging": false,
@@ -112,7 +112,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 373
+        "height": 376
       },
       "selected": false,
       "dragging": false,
@@ -141,7 +141,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 439
+        "height": 440
       },
       "selected": false,
       "dragging": false,
@@ -191,7 +191,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 420
+        "height": 423
       },
       "selected": false,
       "dragging": false,
@@ -225,7 +225,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 300
+        "height": 301
       },
       "selected": false,
       "dragging": false,
@@ -258,7 +258,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 566
+        "height": 568
       },
       "selected": false,
       "dragging": false,
@@ -293,7 +293,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 794
+        "height": 798
       },
       "selected": false,
       "dragging": false,
@@ -421,7 +421,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 498
+        "height": 501
       },
       "selected": false,
       "dragging": false,
@@ -482,7 +482,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 285
+        "height": 287
       },
       "selected": false,
       "dragging": false,
@@ -532,7 +532,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 518
+        "height": 521
       },
       "selected": false,
       "dragging": false,
@@ -693,7 +693,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 173
+        "height": 174
       },
       "selected": false,
       "dragging": false,
@@ -727,7 +727,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 367
+        "height": 370
       },
       "selected": false,
       "dragging": false,
@@ -758,7 +758,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 261
+        "height": 263
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -809,7 +809,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 435
+        "height": 437
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -849,7 +849,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 500
+        "height": 502
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -879,7 +879,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 297
+        "height": 298
       },
       "dragHandle": ".wf-node-drag-handle",
       "selected": false,
@@ -912,7 +912,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 342
+        "height": 344
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -957,7 +957,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 613
+        "height": 616
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -1405,7 +1405,7 @@
       },
       "measured": {
         "width": 440,
-        "height": 578
+        "height": 581
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1435,7 +1435,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 248
+        "height": 249
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -1513,7 +1513,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 353
+        "height": 354
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1598,7 +1598,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 500
+        "height": 502
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1627,7 +1627,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 173
+        "height": 174
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -1643,7 +1643,7 @@
         "nodeType": "translate_task_name",
         "label": "翻译项目名称",
         "config": {
-          "replace_task_name": false
+          "replace_task_name": true
         },
         "status": "pending",
         "disableExecute": false
@@ -2296,6 +2296,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-22T04:49:13",
-  "updatedAt": "2026-09-22T04:49:53",
-  "revision": 1
+  "updatedAt": "2026-09-22T07:09:29",
+  "revision": 2
 }

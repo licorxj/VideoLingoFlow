@@ -23,17 +23,24 @@
           "copyInputs": true,
           "filePath": ""
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\843d5aeea70d4ecf878cd2579adcdf13\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "en",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 428
+        "height": 500
       },
       "selected": false,
       "dragging": false,
@@ -50,10 +57,12 @@
         "nodeType": "summarize",
         "label": "内容总结",
         "config": {},
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "subtitle": "cache/summarize_result_node_1_1780948332813.json"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -70,7 +79,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 284
+        "height": 355
       },
       "selected": false,
       "dragging": false,
@@ -92,10 +101,13 @@
           "processing_language": "from_input",
           "target_language": "from_input"
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "subtitle": "cache/translation_direct_node_1_1780954897405_zh.json",
+          "reflect": "cache/translation_reflect_node_1_1780954897405_zh.json"
+        },
         "error": "",
         "disableExecute": false,
         "workbench_url": "",
@@ -112,7 +124,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 373
+        "height": 473
       },
       "selected": false,
       "dragging": false,
@@ -131,7 +143,7 @@
         "config": {
           "title": "原视频展示"
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
         "outputs": {},
@@ -141,7 +153,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 439
+        "height": 443
       },
       "selected": false,
       "dragging": false,
@@ -171,11 +183,14 @@
           "overwrite_generate": false,
           "voice_role_1": "白桦"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -191,7 +206,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 420
+        "height": 520
       },
       "selected": false,
       "dragging": false,
@@ -215,17 +230,20 @@
           "min_sentence_duration": 0.1,
           "speed_predict_reduce": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "cache/dub_task_node_1_1781709944783.json",
+          "pandas": "cache/dub_task_node_1_1781709944783.csv"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 300
+        "height": 399
       },
       "selected": false,
       "dragging": false,
@@ -249,8 +267,8 @@
           "fast_limit": "1.5"
         },
         "status": "pending",
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "disableExecute": false,
@@ -258,7 +276,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 566
+        "height": 548
       },
       "selected": false,
       "dragging": false,
@@ -285,15 +303,15 @@
         },
         "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 794
+        "height": 778
       },
       "selected": false,
       "dragging": false,
@@ -351,11 +369,14 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "result": "output/LLM_node_1_1782422054967.json",
+          "text": "{\n  \"tittle\": \"史上杀人最多的科学家\",\n  \"hook\": \"他一人造成数百万人死亡\",\n  \"summary\": \"视频讲述了两位科学家托马斯·米奇利与克莱尔·帕特森的故事。米奇利发明了含铅汽油和氟利昂，前者虽解决了发动机爆震问题，却导致全球铅污染，据估计造成数亿人智商下降、犯罪率上升及上千万死亡；后者破坏了臭氧层。帕特森在测定地球年龄时，因环境中的铅污染干扰了实验结果，转而致力于研究铅污染，最终通过冰芯和人体样本确证了人为铅排放的危害。视频揭示了这两项发明对环境和人类健康的深远负面影响，并强调了科学伦理与监管的重要性。\"\n}"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -371,7 +392,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 436
+        "height": 534
       },
       "selected": false,
       "dragging": false,
@@ -400,7 +421,7 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_3x4"
         },
-        "status": "pending",
+        "status": "failed",
         "disableExecute": false,
         "progress": 0,
         "message": "",
@@ -421,7 +442,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 498
+        "height": 570
       },
       "selected": false,
       "dragging": false,
@@ -450,7 +471,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 227
+        "height": 229
       },
       "selected": false,
       "dragging": false,
@@ -472,96 +493,19 @@
           "time_mode": "positive",
           "avoid_subtitles": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "image": "cache/key_frame_node_1_1782640383627.png"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 285
-      },
-      "selected": false,
-      "dragging": false,
-      "dragHandle": ".wf-node-drag-handle"
-    },
-    {
-      "id": "node_3_1782641542678",
-      "type": "workflow",
-      "position": {
-        "x": 15,
-        "y": 120
-      },
-      "data": {
-        "nodeType": "image_gen",
-        "label": "AI生图",
-        "config": {
-          "mode": [
-            "img2img"
-          ],
-          "interface": "kieai",
-          "model": "gpt-image-2-image-to-image",
-          "resolution": "1K",
-          "aspect_ratio": "4:3",
-          "num_images": 1,
-          "custom_prompt_enabled": false,
-          "custom_prompt": "",
-          "output_prefix": "cover_gen_byfram"
-        },
-        "status": "pending",
-        "disableExecute": false,
-        "progress": 0,
-        "message": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
-        "outputs": {},
-        "error": "节点子进程异常退出(code=1): e>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_imagegen.py\", line 134, in run\n    raise RuntimeError(\"Image generation returned no results. Check interface configuration and logs.\")\nRuntimeError: Image generation returned no results. Check interface confi",
-        "note": "横图封面",
-        "workbench_url": "",
-        "logLines": [
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_3_1782641542678_result.json, exiting 0",
-          "[step_worker] start node_type=image_gen node_id=node_3_1782641542678 pid=32260",
-          "[step_worker] step instance created: S_ImageGen",
-          "[step_worker] step_inputs keys=['image', 'text']",
-          "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
-          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\93716ecc5b724860a1b2a7a38ecb24f3, kwargs=['callback'])"
-        ]
-      },
-      "measured": {
-        "width": 420,
-        "height": 518
-      },
-      "selected": false,
-      "dragging": false,
-      "dragHandle": ".wf-node-drag-handle"
-    },
-    {
-      "id": "node_5_1782654274362",
-      "type": "workflow",
-      "position": {
-        "x": 855,
-        "y": 15
-      },
-      "data": {
-        "nodeType": "image_preview",
-        "label": "图片预览器",
-        "config": {
-          "fit": "contain"
-        },
-        "status": "pending",
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": "",
-        "workbench_url": "",
-        "disableExecute": false
-      },
-      "measured": {
-        "width": 420,
-        "height": 227
+        "height": 356
       },
       "selected": false,
       "dragging": false,
@@ -620,7 +564,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 636
+        "height": 640
       },
       "selected": false,
       "dragging": false,
@@ -644,11 +588,14 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "result": "output/LLM_node_1_1782725550457.json",
+          "text": "{\n  \"tittle\": \"发明含铅汽油，致千万人丧命\",\n  \"description\": \"米奇利发明含铅汽油与氟利昂，造成全球铅污染与臭氧层空洞，究竟是谁造成了这场灾难？\",\n  \"tags\": [\n    \"历史科普\",\n    \"科学伦理\",\n    \"铅污染危害\"\n  ]\n}"
+        },
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -664,7 +611,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 436
+        "height": 534
       },
       "selected": false,
       "dragging": false,
@@ -683,17 +630,19 @@
         "config": {
           "auto_fix": true
         },
-        "status": "pending",
+        "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "json": "cache/sentences_node_1_1789860352741.json"
+        },
         "error": "",
         "workbench_url": "",
         "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 173
+        "height": 243
       },
       "selected": false,
       "dragging": false,
@@ -717,17 +666,19 @@
           "output_format": "wav",
           "custom_command": ""
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "audio": "output/denoised_audio_node_9_1788017295074.wav"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 367
+        "height": 440
       },
       "selected": false,
       "dragging": false,
@@ -748,17 +699,19 @@
           "mode": "key",
           "key_expr": "text"
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\843d5aeea70d4ecf878cd2579adcdf13\\output\\json2text_node_1_1788530708958.txt"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 261
+        "height": 332
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -791,8 +744,8 @@
         },
         "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": "",
@@ -809,7 +762,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 435
+        "height": 417
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -841,15 +794,15 @@
         },
         "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 500
+        "height": 482
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -869,17 +822,19 @@
           "read_from_input": true,
           "update_task_name": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\843d5aeea70d4ecf878cd2579adcdf13\\cache\\path_to_title.txt"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 297
+        "height": 368
       },
       "dragHandle": ".wf-node-drag-handle",
       "selected": false,
@@ -904,15 +859,15 @@
         },
         "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 342
+        "height": 323
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -949,15 +904,15 @@
         },
         "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 613
+        "height": 596
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -996,7 +951,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 579
+        "height": 583
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1037,7 +992,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 411
+        "height": 412
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1405,7 +1360,7 @@
       },
       "measured": {
         "width": 440,
-        "height": 578
+        "height": 581
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1427,15 +1382,15 @@
         },
         "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 248
+        "height": 229
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -1457,11 +1412,14 @@
           "response_json": false,
           "log_request": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "result": "output/LLM_n_mu386aanb14p.txt",
+          "text": "输入图片，高级电影感，电影海报式构图，超写实风格，标题与背景形成景深交互穿模效果，提升主体与背景对比度，画面具备清晰主次层次感。主标题为「史上杀人最多的科学家」，采用加粗毛笔草书手写体，笔触漂移绵长，字体为白色，标题内字号依据词块与语义差异设置不同大小，字体带有细微黑色描边，添加阴影效果增强立体感；副标题为「他一人造成数百万人死亡」，采用较主标题小一号的字体，字体大小、颜色与主标题形成明确区分以凸显层级感，添加阴影效果增强立体感。标题排版自适应画面比例，不遮挡画面主体，布局和谐富有设计感。"
+        },
         "error": "",
         "note": "发布平台资料准备",
         "workbench_url": "",
@@ -1478,7 +1436,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 436
+        "height": 534
       },
       "selected": false,
       "dragging": false,
@@ -1503,17 +1461,19 @@
           "separator": "newline",
           "custom_separator": ""
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "text": "output/text_concat_node_1_1789563482048.txt"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 353
+        "height": 424
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1536,11 +1496,14 @@
           "response_json": false,
           "log_request": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "result": "output/LLM_n_mu43x5dw5ixf.txt",
+          "text": "以下提供**横版（16:9，适配B站/西瓜/YouTube等长视频平台）**和**竖版（9:16，适配抖音/快手/视频号等短视频平台）**两套专业封面生图提示词，完全匹配视频主题与设计要求：\n\n---\n\n## 【横版（16:9）封面生图提示词】\n### 一、画面生图内容\n超写实电影海报构图，前景实焦为20世纪中期美国科学家托马斯·米奇利的半身肖像：戴细框圆眼镜，穿深色西装配条纹领带，神情平静略带自得（强化“无意造祸”的反差感），站在老式实木实验台后；实验台左右分别摆放核心标志性物品：左侧是贴有泛黄“乙基含铅汽油”标签的琥珀色玻璃试剂瓶，瓶口飘出极淡的铅灰色烟雾，右侧是带轻微锈迹的银灰色氟利昂制冷罐，罐体有老式金属铭牌。\n中景半虚：细碎的铅尘颗粒从实验台向四周漂浮扩散。\n背景大虚化：暗调全球卫星俯视图，南极区域可见清晰的暗紫色臭氧层空洞，地面布满微弱的暖红色细碎光点（代表受污染影响的人群），画面右下角背景处有一个极小的虚化科学家剪影，手持冰芯样本（暗指克莱尔·帕特森，呼应视频双线叙事）。\n\n### 二、主标题设计\n- 文字内容：「史上杀人最多的科学家」\n- 字体：加粗毛笔草书手写体，笔触漂移绵长，带有自然飞白质感\n- 字号层级（按语义权重设计）：「杀人最多」四字字号最大（核心冲突点，抓眼球），「的科学家」字号次之（点出身份，强化反差），「史上」字号最小（限定范围）\n- 样式：纯白色字体，带0.3px细微黑色描边，加2px偏移的柔和黑色投影，强化立体感\n- 排版与穿模效果：标题位于画面上半部分居中对齐，整体处于人物头顶上方空白区；其中「杀」字的撇画、「多」字的捺画向下延伸，嵌入前景含铅汽油试剂瓶的瓶口区域，与瓶口飘出的铅灰色烟雾自然融合，形成**“笔触一半在瓶身前、一半穿透瓶身”的景深穿模效果**，完全不遮挡试剂瓶标签与人物面部。\n\n### 三、副标题设计\n- 文字内容：「他一人造成数百万人死亡」\n- 字体：硬朗粗体无衬线字体，与主标题的柔化草书形成风格对比\n- 字号：为主标题最大字号的1/3，明确层级差\n- 样式：暗血红色字体，带0.2px细微深黑描边，保证在暗背景上的可读性\n- 排版与穿模效果：位于主标题正下方居中对齐，处于人物胸部以上的空白区域，完全不遮挡人物面部与核心实验器材；字体底部轻微嵌入背景的虚化光点层，形成前后交错的景深层级。\n\n### 四、整体风格与光影\n高级电影感，超写实8K分辨率，柯达彩色电影胶片质感，细腻颗粒，宽动态范围；侧顶冷白光打亮前景主体，人物面部有清晰明暗交界线，实验器材高光锐利；背景整体压暗2档，四周加自然暗角，主体与背景对比度极强，主次层次分明；标题与前景/背景元素的穿模交互自然不刻意，设计感高级克制。\n\n---\n\n## 【竖版（9:16）封面生图提示词】\n### 一、画面生图内容\n超写实电影海报构图，前景实焦为20世纪中期美国科学家托马斯·米奇利的半身肖像：戴细框圆眼镜，穿深色西装配条纹领带，神情平静略带自得（强化“无意造祸”的反差感），位于画面中间偏下区域，身前是老式实木实验台；实验台左右分别摆放核心标志性物品：左侧是贴有泛黄“乙基含铅汽油”标签的琥珀色玻璃试剂瓶，瓶口飘出极淡的铅灰色烟雾，右侧是带轻微锈迹的银灰色氟利昂制冷罐，罐体有老式金属铭牌。\n中景半虚：细碎的铅尘颗粒从实验台向四周漂浮扩散。\n背景大虚化：暗调全球卫星俯视图，南极区域可见清晰的暗紫色臭氧层空洞，地面布满微弱的暖红色细碎光点（代表受污染影响的人群），画面底部背景处有一个极小的虚化科学家剪影，手持冰芯样本（暗指克莱尔·帕特森，呼应视频双线叙事）。\n\n### 二、主标题设计\n- 文字内容：「史上杀人最多的科学家」\n- 字体：加粗毛笔草书手写体，笔触漂移绵长，带有自然飞白质感\n- 字号层级（按语义权重设计）：「杀人最多」四字字号最大（核心冲突点，抓眼球），「的科学家」字号次之（点出身份，强化反差），「史上」字号最小（限定范围）\n- 样式：纯白色字体，带0.3px细微黑色描边，加2px偏移的柔和黑色投影，强化立体感\n- 排版与穿模效果：标题位于画面上1/3区域，居中对齐横跨画面上半部分；其中「杀」字的撇画、「多」字的捺画向下延伸，嵌入前景含铅汽油试剂瓶的瓶口区域，与瓶口飘出的铅灰色烟雾自然融合，形成**“笔触一半在瓶身前、一半穿透瓶身”的景深穿模效果**，完全不遮挡试剂瓶标签与人物面部。\n\n### 三、副标题设计\n- 文字内容：「他一人造成数百万人死亡」\n- 字体：硬朗粗体无衬线字体，与主标题的柔化草书形成风格对比\n- 字号：为主标题最大字号的1/3，明确层级差\n- 样式：暗血红色字体，带0.2px细微深黑描边，保证在暗背景上的可读性\n- 排版与穿模效果：位于主标题正下方居中对齐，处于人物头顶上方的空白区域，完全不遮挡人物面部与核心实验器材；字体底部轻微嵌入背景的虚化光点层，形成前后交错的景深层级。\n\n### 四、整体风格与光影\n高级电影感，超写实8K分辨率，柯达彩色电影胶片质感，细腻颗粒，宽动态范围；侧顶冷白光打亮前景主体，人物面部有清晰明暗交界线，实验器材高光锐利；背景整体压暗2档，四周加自然暗角，主体与背景对比度极强，主次层次分明；标题与前景/背景元素的穿模交互自然不刻意，设计感高级克制。"
+        },
         "error": "",
         "note": "发布平台资料准备",
         "workbench_url": "",
@@ -1557,7 +1520,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 436
+        "height": 534
       },
       "selected": false,
       "dragging": false,
@@ -1588,17 +1551,20 @@
           "merge_gap_enabled": false,
           "pause_split_enabled": true
         },
-        "status": "pending",
+        "status": "completed",
         "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {},
+        "outputs": {
+          "subtitle": "cache/sentences_node_1_1789860352741.json",
+          "text": "cache/sentences_text_node_1_1789860352741.txt"
+        },
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 500
+        "height": 600
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1619,16 +1585,81 @@
         },
         "status": "pending",
         "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 173
+        "height": 153
       },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1790055224572",
+      "type": "workflow",
+      "position": {
+        "x": 30,
+        "y": -15
+      },
+      "data": {
+        "nodeType": "seedream_img2img",
+        "label": "Seedream图生图",
+        "config": {
+          "model": "doubao-seedream-5-0-lite-260128",
+          "resolution": "2K",
+          "aspect_ratio": "4:3",
+          "num_images": 1,
+          "output_format": "png",
+          "watermark": false,
+          "stream_output": true,
+          "optimize_prompt": true,
+          "custom_prompt_enabled": false,
+          "custom_prompt": ""
+        },
+        "status": "running",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 362
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1790055233764",
+      "type": "workflow",
+      "position": {
+        "x": 855,
+        "y": -255
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "image_compare",
+        "label": "图片对比",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 230
+      },
+      "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     }
   ],
@@ -1692,7 +1723,7 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1701,21 +1732,6 @@
       "target": "node_1_1782509281196",
       "targetHandle": "in-image",
       "id": "xy-edge__node_1_1782507205161out-text-node_1_1782509281196in-image",
-      "selected": false,
-      "animated": false
-    },
-    {
-      "type": "smoothstep",
-      "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_3_1782641542678",
-      "sourceHandle": "out-text",
-      "target": "node_5_1782654274362",
-      "targetHandle": "in-image",
-      "id": "xy-edge__node_3_1782641542678out-text-node_5_1782654274362in-image",
       "selected": false,
       "animated": false
     },
@@ -1738,7 +1754,7 @@
       "type": "smoothstep",
       "animated": false,
       "style": {
-        "stroke": "#ec4899",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1899,21 +1915,6 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_3_1782641542678",
-      "sourceHandle": "out-text",
-      "target": "node_1_1789405925581",
-      "targetHandle": "in-cover",
-      "id": "xy-edge__node_3_1782641542678out-text-node_1_1789405925581in-cover",
-      "selected": false,
-      "animated": false
-    },
-    {
-      "type": "bezier",
-      "style": {
         "stroke": "#3b82f6",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -1936,19 +1937,6 @@
       "target": "node_1_1782672877872",
       "targetHandle": "in-video",
       "id": "xy-edge__node_1_1789405925581out-video-node_1_1782672877872in-video"
-    },
-    {
-      "type": "bezier",
-      "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_3_1782641542678",
-      "sourceHandle": "out-text",
-      "target": "node_1_1782672877872",
-      "targetHandle": "in-cover_landscape",
-      "id": "xy-edge__node_3_1782641542678out-text-node_1_1782672877872in-cover_landscape"
     },
     {
       "type": "smoothstep",
@@ -2052,19 +2040,6 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_1_1782640383627",
-      "sourceHandle": "out-image",
-      "target": "node_3_1782641542678",
-      "targetHandle": "in-image",
-      "id": "xy-edge__node_1_1782640383627out-image-node_3_1782641542678in-image"
-    },
-    {
-      "type": "bezier",
-      "style": {
         "stroke": "#3b82f6",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
@@ -2087,19 +2062,6 @@
       "target": "n_mu386aanb14p",
       "targetHandle": "in-json",
       "id": "xy-edge__node_1_1782422054967out-result-n_mu386aanb14pin-json"
-    },
-    {
-      "type": "bezier",
-      "style": {
-        "stroke": "#8b5cf6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "n_mu386aanb14p",
-      "sourceHandle": "out-text",
-      "target": "node_3_1782641542678",
-      "targetHandle": "in-text",
-      "id": "xy-edge__n_mu386aanb14pout-text-node_3_1782641542678in-text"
     },
     {
       "type": "bezier",
@@ -2156,7 +2118,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#8b5cf6",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2165,19 +2127,6 @@
       "target": "node_1_1782507205161",
       "targetHandle": "in-text",
       "id": "xy-edge__n_mu43x5dw5ixfout-text-node_1_1782507205161in-text"
-    },
-    {
-      "type": "bezier",
-      "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "source": "node_3_1782641542678",
-      "sourceHandle": "out-text",
-      "target": "node_3_1789406114242",
-      "targetHandle": "in-any",
-      "id": "xy-edge__node_3_1782641542678out-text-node_3_1789406114242in-any"
     },
     {
       "type": "bezier",
@@ -2256,10 +2205,101 @@
       "target": "node_1_1781939413425",
       "targetHandle": "in-subtitle",
       "id": "xy-edge__node_6_1788533469576out-original-node_1_1781939413425in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ff0099",
+        "strokeWidth": 2
+      },
+      "source": "node_1_1782640383627",
+      "sourceHandle": "out-image",
+      "target": "node_3_1790055224572",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_1_1782640383627out-image-node_3_1790055224572in-image",
+      "animated": true
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ff0099",
+        "strokeWidth": 2
+      },
+      "source": "n_mu386aanb14p",
+      "sourceHandle": "out-text",
+      "target": "node_3_1790055224572",
+      "targetHandle": "in-text",
+      "id": "xy-edge__n_mu386aanb14pout-text-node_3_1790055224572in-text",
+      "animated": true
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ff0099",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1790055224572",
+      "sourceHandle": "out-text",
+      "target": "node_3_1789406114242",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_3_1790055224572out-text-node_3_1789406114242in-any",
+      "animated": true
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ff0099",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1790055224572",
+      "sourceHandle": "out-text",
+      "target": "node_1_1789405925581",
+      "targetHandle": "in-cover",
+      "id": "xy-edge__node_3_1790055224572out-text-node_1_1789405925581in-cover",
+      "animated": true
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ff0099",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1790055224572",
+      "sourceHandle": "out-text",
+      "target": "node_1_1782672877872",
+      "targetHandle": "in-cover_landscape",
+      "id": "xy-edge__node_3_1790055224572out-text-node_1_1782672877872in-cover_landscape",
+      "animated": true
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#ff0099",
+        "strokeWidth": 2
+      },
+      "source": "node_3_1790055224572",
+      "sourceHandle": "out-text",
+      "target": "node_4_1790055233764",
+      "targetHandle": "in-image1",
+      "id": "xy-edge__node_3_1790055224572out-text-node_4_1790055233764in-image1"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1782640383627",
+      "sourceHandle": "out-image",
+      "target": "node_4_1790055233764",
+      "targetHandle": "in-image2",
+      "id": "xy-edge__node_1_1782640383627out-image-node_4_1790055233764in-image2"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-22T04:46:18",
-  "revision": 88
+  "updatedAt": "2026-09-22T13:36:52",
+  "revision": 93
 }
