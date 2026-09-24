@@ -102,15 +102,18 @@
         "model_details": {
           "2stems": {
             "name": "2 Stems",
-            "description": "双轨分离：人声 + 伴奏"
+            "description": "双轨分离：人声 + 伴奏",
+            "category": "vocal"
           },
           "4stems": {
             "name": "4 Stems",
-            "description": "四轨分离：人声/鼓/贝斯/其他"
+            "description": "四轨分离：人声/鼓/贝斯/其他",
+            "category": "multistem"
           },
           "5stems": {
             "name": "5 Stems",
-            "description": "五轨分离：人声/鼓/贝斯/钢琴/其他"
+            "description": "五轨分离：人声/鼓/贝斯/钢琴/其他",
+            "category": "multistem"
           }
         },
         "format": "wav",
@@ -685,7 +688,7 @@
         "model_details": {
           "Kim_Inst": {
             "name": "Kim Inst",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "Kim_Vocal_1": {
@@ -700,17 +703,17 @@
           },
           "kuielab_a_bass": {
             "name": "kuielab_a_bass",
-            "description": "伴奏/乐器分离：提取低音。用途：单独获取贝斯音轨，用于混音、扒谱与练习。",
+            "description": "伴奏/乐器分离：提取低音。用途：单独获取贝斯音轨，用于混音、扒谱与练习。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "kuielab_a_drums": {
             "name": "kuielab_a_drums",
-            "description": "伴奏/乐器分离：提取鼓组。用途：单独获取鼓组音轨，用于混音、扒谱与练习。",
+            "description": "伴奏/乐器分离：提取鼓组。用途：单独获取鼓组音轨，用于混音、扒谱与练习。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "kuielab_a_other": {
             "name": "kuielab_a_other",
-            "description": "伴奏/乐器分离：提取其他声部。用途：提取剩余的其他乐器声部。",
+            "description": "伴奏/乐器分离：提取其他声部。用途：提取剩余的其他乐器声部。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "kuielab_a_vocals": {
@@ -720,17 +723,17 @@
           },
           "kuielab_b_bass": {
             "name": "kuielab_b_bass",
-            "description": "伴奏/乐器分离：提取低音。用途：单独获取贝斯音轨，用于混音、扒谱与练习。",
+            "description": "伴奏/乐器分离：提取低音。用途：单独获取贝斯音轨，用于混音、扒谱与练习。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "kuielab_b_drums": {
             "name": "kuielab_b_drums",
-            "description": "伴奏/乐器分离：提取鼓组。用途：单独获取鼓组音轨，用于混音、扒谱与练习。",
+            "description": "伴奏/乐器分离：提取鼓组。用途：单独获取鼓组音轨，用于混音、扒谱与练习。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "kuielab_b_other": {
             "name": "kuielab_b_other",
-            "description": "伴奏/乐器分离：提取其他声部。用途：提取剩余的其他乐器声部。",
+            "description": "伴奏/乐器分离：提取其他声部。用途：提取剩余的其他乐器声部。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "kuielab_b_vocals": {
@@ -740,7 +743,7 @@
           },
           "Reverb_HQ_By_FoxJoy": {
             "name": "Reverb HQ By FoxJoy",
-            "description": "音频增强(去混响/降噪)：提取混响/噪声。用途：去除音频中的混响与噪声，输出增强后的干净音频，用于后期降噪与修复。",
+            "description": "音频增强(去混响/降噪)：提取混响/噪声。用途：去除音频中的混响与噪声，输出增强后的干净音频，用于后期降噪与修复。用于人声分离节点时，“人声”端口输出的是增强后的音频。",
             "category": "enhancement"
           },
           "UVR-MDX-NET_Crowd_HQ_1": {
@@ -765,57 +768,57 @@
           },
           "UVR-MDX-NET-Inst_1": {
             "name": "UVR-MDX-NET Inst 1",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR-MDX-NET-Inst_2": {
             "name": "UVR-MDX-NET Inst 2",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR-MDX-NET-Inst_3": {
             "name": "UVR-MDX-NET Inst 3",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_1": {
             "name": "UVR-MDX-NET Inst HQ 1",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_2": {
             "name": "UVR-MDX-NET Inst HQ 2",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_3": {
             "name": "UVR-MDX-NET Inst HQ 3",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_4": {
             "name": "UVR-MDX-NET Inst HQ 4",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR-MDX-NET-Inst_HQ_5": {
             "name": "UVR-MDX-NET Inst HQ 5",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR-MDX-NET-Inst_Main": {
             "name": "UVR-MDX-NET Inst Main",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR_MDXNET_KARA": {
             "name": "UVR-MDX-NET Karaoke",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR_MDXNET_KARA_2": {
             "name": "UVR-MDX-NET Karaoke 2",
-            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。",
+            "description": "伴奏/乐器分离：提取伴奏/乐器。用途：分离出人声得到卡拉OK伴奏，用于 remix、编曲、伴奏提取。用于人声分离节点时，“人声”端口输出的是其余声部（补集），非纯人声。",
             "category": "stem"
           },
           "UVR_MDXNET_Main": {

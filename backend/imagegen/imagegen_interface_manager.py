@@ -69,6 +69,8 @@ class ImageGenInterfaceManager:
                 "type": data.get("type", "sdk"),
                 "builtin": False,
                 "enabled": data.get("enabled", True),
+                # cloud：显式云端标识（不占本机 GPU）；调度层据此判资源令牌
+                "cloud": bool(data.get("cloud", False)),
                 "description": data.get("description", ""),
                 "api_source_url": data.get("api_source_url", ""),
                 "model_docs_url": data.get("model_docs_url", ""),
@@ -84,7 +86,7 @@ class ImageGenInterfaceManager:
             if iface_id not in self._interfaces:
                 return None
             iface = self._interfaces[iface_id]
-            for key in ["name", "type", "enabled", "description", "api_source_url", "model_docs_url", "balance"]:
+            for key in ["name", "type", "enabled", "cloud", "description", "api_source_url", "model_docs_url", "balance"]:
                 if key in data:
                     iface[key] = data[key]
             if "config" in data:

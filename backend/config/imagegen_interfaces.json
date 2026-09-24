@@ -1609,6 +1609,143 @@
       }
     },
     {
+      "id": "mimo_desktop",
+      "name": "MiMo 桌面反代生图（云端）",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "cloud": true,
+      "description": "通过本机 MiMo Desktop 生图反代服务（mimo-api-service，OpenAI Images 兼容 + 任务队列）调用桌面端 image_gen / image_edit。云端出图、不占本机 GPU；需先启动反代服务并让 Desktop 会话排空生图队列。",
+      "api_source_url": "",
+      "model_docs_url": "",
+      "balance": null,
+      "config": {
+        "api_url": "",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.imagegen.sdk.mimo_desktop_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "",
+        "default_model": "desktop/image_gen",
+        "model_options": [
+          "desktop/image_gen",
+          "desktop/image_edit"
+        ],
+        "model_metadata": {
+          "desktop/image_gen": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "0",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "21:9",
+              "2:1",
+              "1:2"
+            ]
+          },
+          "desktop/image_edit": {
+            "modes": [
+              "i2i"
+            ],
+            "price": "0",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "21:9",
+              "2:1",
+              "1:2"
+            ]
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "response_format": "url",
+        "output_format": "png",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2img": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2img": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "base_url",
+            "default": "http://127.0.0.1:8000",
+            "description": "MiMo Desktop 生图反代服务地址（局域网请改宿主机 IP）"
+          },
+          {
+            "key": "quality",
+            "default": "medium",
+            "description": "输出质量：low / medium / high"
+          },
+          {
+            "key": "output_format",
+            "default": "png",
+            "description": "输出格式：png / jpeg / webp"
+          },
+          {
+            "key": "background",
+            "default": "opaque",
+            "description": "背景：opaque / transparent / auto"
+          },
+          {
+            "key": "timeout",
+            "default": "300",
+            "description": "同步等待秒数（对应服务端 IMAGE_TIMEOUT），超时后自动按 job_id 轮询"
+          },
+          {
+            "key": "poll_interval",
+            "default": "5",
+            "description": "504 后按 job_id 轮询的间隔（秒）"
+          },
+          {
+            "key": "poll_timeout",
+            "default": "600",
+            "description": "job 轮询总时长（秒），Desktop 排空队列可能数分钟"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 600,
+        "sdk_extra_args": {
+          "base_url": "http://127.0.0.1:8000",
+          "quality": "medium",
+          "output_format": "png",
+          "background": "opaque",
+          "timeout": 180,
+          "poll_interval": 2,
+          "poll_timeout": 600
+        }
+      }
+    },
+    {
       "id": "33c78ad1",
       "name": "字节 Seedream（火山方舟）",
       "type": "sdk",

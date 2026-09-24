@@ -1051,7 +1051,7 @@ export const FALLBACK_NODE_TYPES = [
         "key": "model",
         "label": "分离模型",
         "type": "api-select",
-        "apiEndpoint": "/api/separation-interfaces/config-fields?scope=vocal",
+        "apiEndpoint": "/api/separation-interfaces/config-fields?scope=twostem",
         "dependsOn": "method",
         "optionLabel": "label",
         "optionValue": "value",
@@ -1988,6 +1988,90 @@ export const FALLBACK_NODE_TYPES = [
         "description": "素材的备注信息，入库后记录在素材库"
       }
     ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "file_transit_in",
+    "name": "文件中转站入库",
+    "category": "asset",
+    "description": "把接入的单个文件或文件列表登记进「文件中转站」（记录文件名称、类型、所属任务名称、文件路径、入库时间）。只登记元信息，文件仍停在原位置，不移动也不复制。",
+    "icon": "Upload",
+    "color": "#84cc16",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "file",
+        "label": "单文件",
+        "type": "filepath",
+        "required": false
+      },
+      {
+        "id": "files",
+        "label": "文件",
+        "type": "list",
+        "required": false,
+        "description": "接入文件列表（如多产物/合并列表节点）时逐条登记"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "path",
+        "label": "素材路径",
+        "type": "filepath"
+      },
+      {
+        "id": "paths",
+        "label": "素材路径列表",
+        "type": "list"
+      },
+      {
+        "id": "count",
+        "label": "入库条数",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {},
+    "configFields": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "file_transit_out",
+    "name": "文件中转站取自",
+    "category": "asset",
+    "description": "从「文件中转站」取一件素材并输出其文件路径。可点「选择文件」在弹窗中手动指定，也可按文件类型 + 排序规则自动取件（最新入库 / 最旧入库 / 排序序号 / 文件名称）。",
+    "icon": "Download",
+    "color": "#84cc16",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "any",
+        "label": "触发",
+        "type": "any",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "id": "path",
+        "label": "素材路径",
+        "type": "filepath"
+      },
+      {
+        "id": "info",
+        "label": "素材信息",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "pick_mode": "auto",
+      "selected_path": "",
+      "selected_name": "",
+      "file_type": "all",
+      "order": "latest",
+      "index": 1,
+      "keyword": ""
+    },
+    "configFields": [],
     "isBuiltIn": true
   },
   {
@@ -3830,7 +3914,6 @@ export const FALLBACK_NODE_TYPES = [
       "speed_min": "",
       "speed_max": "",
       "gap_threshold": "",
-      "speed_limit": "",
       "fast_limit": "",
       "audio_format": "",
       "audio_bitrate": ""
@@ -3867,20 +3950,11 @@ export const FALLBACK_NODE_TYPES = [
         "description": "对缩减后仍超长的片段，对视频进行局部变速以匹配配音时长"
       },
       {
-        "key": "speed_limit",
+        "key": "fast_limit",
         "label": "视频变速最大倍率",
         "type": "text",
-        "colSpan": "half",
-        "placeholder": "留空读取全局 video.speed.limit，默认 2.0",
-        "description": "视频变速的最大倍率上限"
-      },
-      {
-        "key": "fast_limit",
-        "label": "视频减速最小倍率",
-        "type": "text",
-        "colSpan": "half",
-        "placeholder": "留空读取全局 video.speed.fast_limit，默认 2.0",
-        "description": "视频局部变速的最小倍率"
+        "placeholder": "留空读取全局 video.speed.fast_limit，默认 1.5",
+        "description": "视频局部变速的倍率上限：加速与放慢（拉伸）都受此约束，仍放不下则截断配音"
       },
       {
         "key": "audio_format",
@@ -5038,6 +5112,60 @@ export const FALLBACK_NODE_TYPES = [
         ]
       }
     ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "audio_multitrack_preview",
+    "name": "音频多轨预览",
+    "category": "preview",
+    "description": "最多接入 6 路音频，卡片按实际接入情况分轨展示：每轨可独立播放/拖动进度/静音；顶部「同步播放」开启时六轨对齐到同一时间轴播放（静音轨仍同步走位，取消静音即与其他轨对齐），用于对比检查多轨音频",
+    "icon": "AudioLines",
+    "color": "#14b8a6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "audio1",
+        "label": "音轨1",
+        "type": "audio",
+        "required": false
+      },
+      {
+        "id": "audio2",
+        "label": "音轨2",
+        "type": "audio",
+        "required": false
+      },
+      {
+        "id": "audio3",
+        "label": "音轨3",
+        "type": "audio",
+        "required": false
+      },
+      {
+        "id": "audio4",
+        "label": "音轨4",
+        "type": "audio",
+        "required": false
+      },
+      {
+        "id": "audio5",
+        "label": "音轨5",
+        "type": "audio",
+        "required": false
+      },
+      {
+        "id": "audio6",
+        "label": "音轨6",
+        "type": "audio",
+        "required": false
+      }
+    ],
+    "outputs": [],
+    "defaultConfig": {
+      "sync_play": true,
+      "solo_mode": false
+    },
+    "configFields": [],
     "isBuiltIn": true
   },
   {
@@ -11878,9 +12006,9 @@ export const FALLBACK_NODE_TYPES = [
   },
   {
     "id": "opencode_agent",
-    "name": "OpenCode 智能体",
+    "name": "本地CLI智能体",
     "category": "agent",
-    "description": "把本地 opencode CLI 以工作流节点方式嵌入工作流：注入任务背景与输入输出契约，非交互执行一次 opencode 会话（run --format json），解析事件流并收拢产物到任务 cache 目录。需本机已安装 opencode（或在节点设置中填写可执行文件路径）",
+    "description": "以本机已安装的 CLI 智能体（opencode / mimo / Claude Code / Codex）非交互执行一次会话，解析事件流并按输出契约收拢产物到任务 cache 目录；各 CLI 的命令与事件协议差异已自动适配",
     "icon": "Terminal",
     "color": "#0ea5e9",
     "execution_domain": "process",
@@ -11913,8 +12041,11 @@ export const FALLBACK_NODE_TYPES = [
     "defaultConfig": {
       "inputCount": 2,
       "outputCount": 2,
+      "cli": "opencode",
+      "cli_path": "",
       "opencode_exe": "",
       "model": "opencode/mimo-v2.5-free",
+      "model_free_only": false,
       "fallback_models": "opencode/big-pickle",
       "agent": "",
       "skills": [],
@@ -11955,11 +12086,11 @@ export const FALLBACK_NODE_TYPES = [
       },
       {
         "key": "opencode_exe",
-        "label": "opencode 路径",
+        "label": "CLI 路径",
         "type": "text",
         "colSpan": "half",
         "placeholder": "留空自动探测",
-        "description": "opencode 可执行文件绝对路径；留空则依次尝试 PATH、环境变量 OPENCODE_EXE 与常见安装位置"
+        "description": "随所选 CLI 生效"
       },
       {
         "key": "agent",
@@ -11967,31 +12098,31 @@ export const FALLBACK_NODE_TYPES = [
         "type": "text",
         "colSpan": "half",
         "placeholder": "留空用默认主 Agent",
-        "description": "对应 opencode run --agent，需为 primary agent"
+        "description": "仅部分 CLI 有效"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "opencode-models",
         "colSpan": "full",
-        "placeholder": "provider/model，如 opencode/mimo-v2.5-free；留空用 opencode 默认模型",
-        "description": "对应 opencode run -m。点「加载模型」可自检 opencode 可用性并列出可选模型；默认 opencode/mimo-v2.5-free（免费模型），留空则用 opencode 自身默认模型"
+        "placeholder": "provider/model；留空用默认模型",
+        "description": "留空用默认模型；claude / codex 需手填"
       },
       {
         "key": "fallback_models",
         "label": "兜底模型",
-        "type": "textarea",
+        "type": "text",
         "colSpan": "half",
-        "placeholder": "一行一个 provider/model",
-        "description": "主模型调用失败（未授权 / 无支付方式 / 全程无输出超时）时按顺序回退；一行一个或逗号分隔，留空则不回退"
+        "placeholder": "多个用逗号分隔",
+        "description": "主模型失败时按序回退"
       },
       {
         "key": "dir_name",
         "label": "工作子目录",
         "type": "text",
         "colSpan": "half",
-        "placeholder": "留空则在任务根目录执行",
-        "description": "相对任务目录；填写后在该子目录内执行（自动创建）"
+        "placeholder": "留空在任务目录执行",
+        "description": "相对任务目录，自动创建"
       },
       {
         "key": "timeout",
@@ -11999,54 +12130,50 @@ export const FALLBACK_NODE_TYPES = [
         "type": "number",
         "min": 60,
         "max": 28800,
-        "colSpan": "half",
-        "description": "单次 opencode 会话的最长执行时间"
+        "colSpan": "half"
       },
       {
         "key": "auto_approve",
         "label": "自动放行工具权限",
         "type": "checkbox",
         "colSpan": "half",
-        "description": "对应 --auto。非交互模式下未预授权的工具权限会被自动拒绝，关闭后智能体可能无法读写文件、执行命令"
+        "description": "非交互下权限会被拒绝，建议开启"
       },
       {
         "key": "thinking",
         "label": "输出思考过程",
         "type": "checkbox",
-        "colSpan": "half",
-        "description": "对应 --thinking，将 reasoning 事件一并计入"
+        "colSpan": "half"
       },
       {
         "key": "pure",
         "label": "纯净模式(不加载插件)",
         "type": "checkbox",
-        "colSpan": "half",
-        "description": "对应 --pure，运行时不加载外部插件"
+        "colSpan": "half"
       },
       {
         "key": "skills",
         "label": "可调用 Skill",
         "type": "multiselect",
         "colSpan": "half",
-        "placeholder": "自行选择（不指定时由智能体自行决定）",
+        "placeholder": "自行选择",
         "options": [],
-        "description": "本次任务推荐优先使用的 Skill，多选；留空表示由智能体自行选择"
+        "description": "推荐优先使用，留空由智能体自选"
       },
       {
         "key": "mcps",
         "label": "可调用 MCP",
         "type": "multiselect",
         "colSpan": "half",
-        "placeholder": "自行选择（不指定时由智能体自行决定）",
+        "placeholder": "自行选择",
         "options": [],
-        "description": "本次任务推荐优先使用的 MCP，多选；留空表示由智能体自行选择"
+        "description": "推荐优先使用，留空由智能体自选"
       },
       {
         "key": "instruction",
         "label": "任务指令",
         "type": "textarea",
-        "placeholder": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：",
-        "description": "节点任务指令，会与任务背景、输入端口数据、输出产物契约一起拼接为 opencode 的输入消息"
+        "placeholder": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是："
       }
     ],
     "isBuiltIn": true

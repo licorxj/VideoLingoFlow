@@ -28,6 +28,8 @@ import {
   Film,
   Image as ImageIcon,
   Loader2,
+  Maximize2,
+  Mic,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -42,12 +44,13 @@ import {
   UserRound,
   Users,
   Wand2,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import client from "@/api/client";
 import { settingsApi } from "@/api/settings";
-import toonflowApi, { ProjectCreatePayload, TfProject } from "@/api/toonflow";
+import toonflowApi, { ProjectCreatePayload, TfProject, TfVoiceItem } from "@/api/toonflow";
 import { useCanvasWheelGuard } from "@/lib/canvasWheelGuard";
 
 // ---------------- 快照类型 ----------------
@@ -61,7 +64,8 @@ interface Snapshot {
     duration: number; imageUrl: string; state: string; videoUrl: string;
   }[];
   videos: { id: number; storyboardId: number | null; prompt: string; candidates: { id: number; url: string; state: string; selected: boolean }[] }[];
-  bindings: { id: number; assetId: number; assetName: string; audioId: string }[];
+  bindings: { id: number; assetId: number; assetName: string; audioId: string;
+              voiceName?: string; gender?: string; designText?: string; previewUrl?: string }[];
   /** 后台任务活动计数（type → 生成中数量），执行状态条数据源 */
   activities: Record<string, number>;
 }
@@ -87,6 +91,11 @@ type CanvasData = {
   hasVideo?: boolean;
   /** 视频候选（视频卡片操作菜单用） */
   candidates?: { id: number; url: string; state: string; selected: boolean }[];
+  /** 角色音色绑定 */
+  assetType?: string;
+  boundVoiceName?: string;
+  boundPreviewUrl?: string;
+  boundAudioId?: string;
 };
 
 const KIND_META: Record<CanvasData["kind"], { label: string; color: string; icon: typeof Film }> = {
@@ -150,9 +159,30 @@ function CanvasNodeCard({ data }: NodeProps) {
         </div>
       </div>
       {d.imageUrl ? (
-        <img src={d.imageUrl} alt="" loading="lazy" className="w-full h-24 object-cover" />
+        <img
+          src={d.imageUrl} alt="" loading="lazy"
+          className="w-full h-24 object-cover cursor-zoom-in"
+          title="点击放大查看"
+          onClick={(e) => {
+            e.stopPropagation();
+            (window as any).__tfCanvasAction?.("preview", d);
+          }}
+        />
       ) : d.videoUrl ? (
-        <video src={d.videoUrl} controls preload="metadata" className="w-full h-24 bg-black" />
+        <div className="relative group/media">
+          <video src={d.videoUrl} controls preload="metadata" className="w-full h-24 bg-black" />
+          <button
+            type="button"
+            title="放大查看"
+            className="absolute top-1 right-1 p-1 rounded-md bg-black/55 text-white opacity-0 group-hover/media:opacity-100 transition-opacity"
+            onClick={(e) => {
+              e.stopPropagation();
+              (window as any).__tfCanvasAction?.("preview", d);
+            }}
+          >
+            <Maximize2 className="w-3 h-3" />
+          </button>
+        </div>
       ) : null}
       <div
         className="px-2 py-1.5 cursor-pointer hover:bg-muted/40 transition-colors"
@@ -269,13 +299,21 @@ function snapshotToNodes(snap: Snapshot, projectId: number) {
     ...assetTypeOrder.filter((t) => assetGroups.has(t)),
     ...[...assetGroups.keys()].filter((t) => !assetTypeOrder.includes(t)),
   ];
+  const bindings = snap.bindings || [];
   for (const t of assetLaneTypes) {
-    place("asset", (assetGroups.get(t) || []).map((a) => ({
-      nid: `as-${a.id}`,
-      data: { kind: "asset", title: a.name, desc: a.describe,
-              imageUrl: a.imageUrl, badge: ASSET_TYPE_LABEL[a.type] || a.type, projectId,
-              imageId: a.imageId, assetId: a.id } as CanvasData,
-    })));
+    place("asset", (assetGroups.get(t) || []).map((a) => {
+      const bound = bindings.find((b) => b.assetId === a.id);
+      return {
+        nid: `as-${a.id}`,
+        data: { kind: "asset", title: a.name,
+                desc: (bound?.voiceName ? `🎤 ${bound.voiceName}\n` : "") + a.describe,
+                imageUrl: a.imageUrl, badge: ASSET_TYPE_LABEL[a.type] || a.type, projectId,
+                imageId: a.imageId, assetId: a.id, assetType: a.type,
+                boundVoiceName: bound?.voiceName || "",
+                boundPreviewUrl: bound?.previewUrl || "",
+                boundAudioId: bound?.audioId || "" } as CanvasData,
+      };
+    }));
   }
   place("storyboard", snap.storyboards.map((b) => ({
     nid: `sb-${b.id}`,
@@ -415,6 +453,8 @@ export default function CreationCanvas() {
   // ---------------- 卡片操作：快捷按钮 + 「更多」菜单 + 编辑弹窗 ----------------
   const [menu, setMenu] = useState<{ x: number; y: number; data: CanvasData } | null>(null);
   const [editor, setEditor] = useState<CanvasData | null>(null);
+  const [preview, setPreview] = useState<{ url: string; isVideo?: boolean; isAudio?: boolean; title: string } | null>(null);
+  const [voicePicker, setVoicePicker] = useState<CanvasData | null>(null);
 
   const refresh = useCallback(() => {
     if (activeId) loadSnapshot(activeId);
@@ -450,6 +490,21 @@ export default function CreationCanvas() {
       items.push({ label: "删除剧本", danger: true, run: () => toonflowApi.deleteScript(id).then(refresh) });
     } else if (d.kind === "asset" && d.assetId) {
       const id = d.assetId;
+      if (d.assetType === "role") {
+        if (d.boundVoiceName) {
+          items.push({ label: `▶ 试听音色：${d.boundVoiceName.slice(0, 14)}`,
+                       run: () => d.boundPreviewUrl && setPreview({ url: d.boundPreviewUrl!, isAudio: true, title: `${d.title} · ${d.boundVoiceName}` }) });
+          items.push({ label: "解绑音色", danger: true, run: () => toonflowApi.unbindRoleVoice(id).then(refresh) });
+        } else {
+          items.push({ label: "未绑定音色", run: () => setVoicePicker(d) });
+        }
+        items.push({ label: d.boundVoiceName ? "换绑音色" : "绑定音色", run: () => setVoicePicker(d) });
+        items.push({ label: "AI 设计音色", run: () => {
+          toonflowApi.designRoleVoice(id).then(refresh);
+          setMessages((prev) => [...prev, { role: "assistant", kind: "note" as const,
+            text: `🎧 正在为「${d.title}」设计专属音色（生成设计指令 → 合成 → 入配音谷库 → 自动绑定），完成后卡片会显示 🎤 标记。` }]);
+        } });
+      }
       items.push({ label: "编辑资产信息", run: () => setEditor(d) });
       items.push({ label: d.hasImage ? "重生资产图" : "生成资产图", run: () => toonflowApi.regenerateAssetImage(id).then(refresh) });
       items.push({ label: "删除资产", danger: true, run: () => toonflowApi.deleteAsset(id).then(refresh) });
@@ -480,7 +535,10 @@ export default function CreationCanvas() {
       if (action === "delete") doDelete(d);
       else if (action === "regenerate") doRegenerate(d);
       else if (action === "open") setEditor(d);
-      else if (action === "menu") setMenu({ x: e?.clientX ?? 200, y: e?.clientY ?? 200, data: d });
+      else if (action === "preview") {
+        const url = d.videoUrl || d.imageUrl || "";
+        if (url) setPreview({ url, isVideo: !!d.videoUrl, title: d.title || "" });
+      } else if (action === "menu") setMenu({ x: e?.clientX ?? 200, y: e?.clientY ?? 200, data: d });
     };
     return () => { delete (window as any).__tfCanvasAction; };
   }, [activeId, doDelete, doRegenerate]);
@@ -806,6 +864,34 @@ export default function CreationCanvas() {
       )}
       <CardEditDialog data={editor} snap={snap} onClose={() => setEditor(null)}
         onSaved={() => { setEditor(null); refresh(); }} />
+      {preview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85"
+          onClick={() => setPreview(null)} title="点击任意处关闭">
+          <div className="max-w-[94vw] max-h-[92vh] flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2 text-xs text-white/80">
+              <span className="truncate max-w-[70vw]">{preview.title}</span>
+              <button type="button" className="p-1 rounded-md bg-white/10 hover:bg-white/20"
+                onClick={(e) => { e.stopPropagation(); setPreview(null); }} title="关闭">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
+            {preview.isVideo ? (
+              <video src={preview.url} controls autoPlay className="max-w-[94vw] max-h-[86vh] rounded-lg shadow-2xl" />
+            ) : preview.isAudio ? (
+              <div className="w-[420px] max-w-[90vw] rounded-xl bg-background p-4 shadow-2xl">
+                <div className="text-xs text-muted-foreground mb-3 flex items-center gap-1.5">
+                  <Mic className="w-3.5 h-3.5 text-primary" />音色试听
+                </div>
+                <audio src={preview.url} controls autoPlay className="w-full" />
+              </div>
+            ) : (
+              <img src={preview.url} alt="" className="max-w-[94vw] max-h-[86vh] rounded-lg shadow-2xl object-contain" />
+            )}
+          </div>
+        </div>
+      )}
+      <VoicePickerDialog data={voicePicker} onClose={() => setVoicePicker(null)}
+        onBound={() => { setVoicePicker(null); refresh(); }} />
       <CanvasSettingsDialog open={settingsOpen} onClose={() => setSettingsOpen(false)} />
     </div>
     </div>
@@ -1295,6 +1381,114 @@ function NovelImportDialog({ open, onClose, onImport, busy }: {
 }
 
 type ProjectPayload = ProjectCreatePayload;
+
+/** 从配音谷音色库为角色选择/换绑音色（支持关键词搜索与试听） */
+function VoicePickerDialog({ data, onClose, onBound }: {
+  data: CanvasData | null; onClose: () => void; onBound: () => void;
+}) {
+  const [keyword, setKeyword] = useState("");
+  const [voices, setVoices] = useState<TfVoiceItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [playing, setPlaying] = useState(""); // 正在试听的音色 id
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState("");
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const loadVoices = useCallback((kw: string) => {
+    setLoading(true);
+    toonflowApi.listVoiceLibrary(kw)
+      .then(({ data }) => setVoices(data.voices || []))
+      .catch(() => setErr("音色库读取失败"))
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    if (!data) return;
+    setErr(""); setKeyword(""); setPlaying("");
+    loadVoices("");
+    return () => { audioRef.current?.pause(); };
+  }, [data, loadVoices]);
+
+  if (!data) return null;
+
+  const preview = (v: TfVoiceItem) => {
+    if (!v.previewUrl) return;
+    if (playing === v.id) { audioRef.current?.pause(); setPlaying(""); return; }
+    audioRef.current?.pause();
+    const a = new Audio(v.previewUrl);
+    audioRef.current = a;
+    a.play().catch(() => undefined);
+    setPlaying(v.id);
+    a.onended = () => setPlaying("");
+  };
+
+  const bind = async (v: TfVoiceItem) => {
+    if (!data.assetId) return;
+    setSaving(true); setErr("");
+    try {
+      await toonflowApi.bindRoleVoice(data.assetId, v.id);
+      onBound();
+    } catch {
+      setErr("绑定失败，请重试");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
+      <div className="w-[640px] max-w-[92vw] max-h-[86vh] flex flex-col rounded-xl border border-border bg-background shadow-lg"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50">
+          <Mic className="w-4 h-4 text-primary" />
+          <span className="text-sm font-semibold">为「{data.title}」选择音色</span>
+          {data.boundVoiceName && (
+            <span className="text-xs text-muted-foreground">当前：{data.boundVoiceName}</span>
+          )}
+        </div>
+        <div className="px-4 pt-3 flex items-center gap-2">
+          <Input autoFocus value={keyword} onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") loadVoices(keyword); }}
+            placeholder="按名称 / 描述搜索音色…" className="h-9 flex-1 text-sm" />
+          <Button size="sm" variant="outline" onClick={() => loadVoices(keyword)}>搜索</Button>
+        </div>
+        <div className="flex-1 min-h-0 overflow-y-auto px-4 py-3 space-y-2">
+          {loading ? (
+            <div className="flex items-center justify-center py-10 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin mr-2" />加载中…
+            </div>
+          ) : voices.length === 0 ? (
+            <div className="text-center py-10 text-muted-foreground text-sm">没有匹配的音色（可先在配音谷或用 AI 设计音色）</div>
+          ) : voices.map((v) => (
+            <div key={v.id} className="rounded-lg border border-border/50 p-2.5 flex items-start gap-2.5">
+              <button type="button" onClick={() => preview(v)} disabled={!v.previewUrl}
+                title={v.previewUrl ? "试听" : "无试听音频"}
+                className={`p-2 rounded-full border flex-shrink-0 ${v.previewUrl ? "border-primary/40 text-primary hover:bg-primary/10" : "border-border/40 text-muted-foreground/40 cursor-not-allowed"} ${playing === v.id ? "bg-primary/10" : ""}`}>
+                {playing === v.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Mic className="w-3.5 h-3.5" />}
+              </button>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold truncate">{v.displayName}</span>
+                  {v.gender && <span className="text-[10px] px-1 rounded bg-muted text-muted-foreground">{v.gender}</span>}
+                  {v.age && <span className="text-[10px] px-1 rounded bg-muted text-muted-foreground">{v.age}</span>}
+                </div>
+                <div className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">
+                  {v.designText || v.description || "—"}
+                </div>
+              </div>
+              <Button size="sm" disabled={saving} onClick={() => bind(v)}>绑定</Button>
+            </div>
+          ))}
+          {err && <div className="text-xs text-destructive">{err}</div>}
+        </div>
+        <div className="flex items-center gap-2 px-4 py-3 border-t border-border/50">
+          <span className="text-[11px] text-muted-foreground">音色来自配音谷音色库；没有合适的可用角色菜单里的「AI 设计音色」</span>
+          <Button size="sm" variant="ghost" className="ml-auto" onClick={onClose}>关闭</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /** 卡片内容编辑弹窗：章节/剧本（长文本，按需从接口取全文）、资产、分镜 */
 function CardEditDialog({ data, snap, onClose, onSaved }: {

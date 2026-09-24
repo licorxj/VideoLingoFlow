@@ -15,12 +15,20 @@ but the fallback keeps the wrapper usable in any context.
 The factory contract (see ``ImageGenBase.generate``) passes:
     prompt, output_dir, model, negative_prompt, resolution, aspect_ratio,
     num_images, ref_images, mode, api_key (+ custom_params via sdk_extra_args).
+
+Proxy handling: the SDK creates ``aiohttp.ClientSession()`` internally, which
+defaults to ``trust_env=False`` and therefore ignores both the proxy environment
+variables and the Windows system proxy (Internet Options).  KIE is an overseas
+service that usually needs a local proxy (Clash etc.), so this wrapper injects
+its own ``trust_env=True`` session via the SDK's ``session=`` parameter.
 """
 import os
 import asyncio
 import base64
 import logging
 import mimetypes
+import urllib.request
+from contextlib import asynccontextmanager
 
 from backend.kieai_sdk.kieai import KieClient
 
@@ -45,6 +53,66 @@ _IMAGE_PARAMS = (
 )
 
 _DEFAULT_MODEL = "seedream/5-lite-text-to-image"
+
+
+def _effective_proxy() -> str:
+    """解析出网应使用的代理 URL（无则空串）：环境变量优先，其次 Windows 系统代理。
+
+    ``urllib.request.getproxies()`` 是「环境变量 **OR** 注册表」的短路取值：只要环境里存在
+    **任何**以 ``_proxy`` 结尾的变量——连 ``NO_PROXY`` 都算（被收成 ``{'no': ...}``）——它就
+    只返回环境代理、**不再读取系统代理**（Internet 选项）。于是会出现「明明开着 Clash 系统
+    代理，程序却直连超时」的怪象。这里显式合并两层，绕开该遮蔽。
+    """
+    try:
+        env = urllib.request.getproxies_environment()
+    except Exception:  # noqa: BLE001
+        env = {}
+    for key in ("https", "http", "all"):
+        if env.get(key):
+            return env[key]
+    # 注册表读取函数仅在 Windows 存在
+    registry_getter = getattr(urllib.request, "getproxies_registry", None)
+    if registry_getter is not None:
+        try:
+            registry = registry_getter()
+        except Exception:  # noqa: BLE001
+            registry = {}
+        for key in ("https", "http"):
+            if registry.get(key):
+                return registry[key]
+    return ""
+
+
+def _build_session():
+    """构造尊重代理的 aiohttp 会话。
+
+    KIE SDK 内部用默认的 ``aiohttp.ClientSession()``（``trust_env=False``），既不认代理
+    环境变量、也不认 Windows 系统代理，导致直连海外站点超时，因此由调用方注入会话。
+    代理地址由 :func:`_effective_proxy` 显式解析后传入：既避免上述 ``getproxies()`` 遮蔽，
+    也不再依赖 ``NO_PROXY`` 的绕过逻辑——KIE SDK 只访问外部主机（api.kie.ai 与结果 CDN），
+    无需本机绕过。未配置任何代理时行为与默认一致（直连）。
+    """
+    import aiohttp
+
+    proxy = _effective_proxy()
+    if proxy:
+        logger.info("KIE AI: 经代理出网 %s", proxy)
+    return aiohttp.ClientSession(trust_env=True, proxy=proxy or None)
+
+
+@asynccontextmanager
+async def _kie_client(api_key: str):
+    """KieClient + 尊重代理的会话（会话由本模块创建，退出时关闭）。
+
+    ``KieClient`` 仅在未注入 session 时负责关闭（``_owns_session``），
+    因此这里必须自己 close。
+    """
+    session = _build_session()
+    try:
+        async with KieClient(api_key=api_key or None, session=session) as client:
+            yield client
+    finally:
+        await session.close()
 
 
 async def _resolve_ref_urls(client: KieClient, ref_images) -> list:
@@ -145,7 +213,7 @@ async def generate(prompt, output_dir, model="", negative_prompt="", resolution=
     background = kwargs.get("background", "")
     poll_timeout = int(kwargs.get("poll_timeout", 600) or 600)
 
-    async with KieClient(api_key=api_key or None) as client:
+    async with _kie_client(api_key) as client:
         try:
             entry = client.catalog.get(model)
         except Exception as e:  # noqa: BLE001
@@ -209,7 +277,7 @@ def list_models(api_key=""):
 
 
 async def _fetch_balance(api_key: str):
-    async with KieClient(api_key=api_key or None) as client:
+    async with _kie_client(api_key) as client:
         url = f"{_KIE_API_BASE}/api/v1/chat/credit"
         try:
             data = await client._get_json(url)

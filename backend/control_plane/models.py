@@ -477,6 +477,27 @@ class VideoAsset(SoftDeleteMixin, TimestampedVersioned, Base):
     description: Mapped[str] = mapped_column(Text, nullable=False, default="")
 
 
+class FileTransit(SoftDeleteMixin, TimestampedVersioned, Base):
+    """文件中转站：登记任务产出的暂存文件元信息。
+
+    只做登记，**不移动/不复制文件**：path 保持文件原始位置（绝对路径或任务工作区
+    相对路径）。task_id 用于把相对路径按任务工作区还原（前端预览走
+    /api/files/stream?path=...&task_id=...）。入库时间即基类的 created_at。
+    """
+    __tablename__ = "cp_file_transit"
+    __table_args__ = (
+        Index("ix_cp_file_transit_type_seq", "file_type", "seq"),
+    )
+    name: Mapped[str] = mapped_column(String(512), nullable=False)
+    file_type: Mapped[str] = mapped_column(String(32), nullable=False, default="other")
+    task_name: Mapped[str] = mapped_column(String(512), nullable=False, default="")
+    path: Mapped[str] = mapped_column(String(1024), nullable=False)
+    task_id: Mapped[str | None] = mapped_column(String(64))
+    # 入库序号：created_at 在 SQLite 下只精确到秒，同批入库时间相同，
+    # 排序必须靠这个单调递增的序号才能保证「最新/最旧/第 N 个」稳定可预期。
+    seq: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
 class VideoDubWorkspace(TimestampedVersioned, Base):
     """视频配音工作台工程:视频文件 + 字幕/片段/轨道布局(JSON state)。"""
     __tablename__ = "cp_videodub_workspaces"

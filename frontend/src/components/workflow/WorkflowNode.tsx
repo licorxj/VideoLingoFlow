@@ -6,6 +6,7 @@ import { LANGUAGE_OPTIONS } from "@/lib/languages";
 import { Handle, Position, useReactFlow } from "@xyflow/react";
 import type { NodeProps } from "@xyflow/react";
 import { cn } from "@/lib/utils";
+import { resolveNodeLabel } from "@/lib/nodeLabels";
 import client from "@/api/client";
 import CreationBrowserDialog from "./CreationBrowserDialog";
 import { useWorkflowStore } from "@/stores/workflowStore";
@@ -43,6 +44,8 @@ import { AudioAssetLibraryNode } from "./AudioAssetLibraryNode";
 import { MaterialLibraryNodeCard } from "@/components/materials/MaterialLibraryNodeCard";
 import { VoiceCharacterNode } from "./VoiceCharacterNode";
 import WorkflowRunnerMappingField from "./WorkflowRunnerMappingField";
+import { AudioMultitrackPreview, AUDIO_TRACK_COUNT } from "./AudioMultitrackPreview";
+import { FileTransitOutNode } from "./FileTransitOutNode";
 
 const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
@@ -497,6 +500,18 @@ function normalizeListPaths(raw: any): string[] {
     }
   }
   return paths;
+}
+
+/** 取单路音频输入值：直接是路径就用它；是列表/JSON 形态时取第一条可播放音频。 */
+function resolveAudioTrack(raw: any): string {
+  if (raw === null || raw === undefined) return "";
+  if (typeof raw === "string") {
+    const text = raw.trim();
+    if (!text) return "";
+    if (text.startsWith("[") || text.startsWith("{")) return normalizeListPaths(text)[0] || "";
+    return text;
+  }
+  return normalizeListPaths(raw)[0] || "";
 }
 
 function ListVideoItem({ path, taskId, refreshKey }: { path: string; taskId?: string; refreshKey?: string }) {
@@ -1506,13 +1521,13 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   const [opencodeModelStatus, setOpencodeModelStatus] = useState<{ kind: "busy" | "ok" | "err"; text: string } | null>(null);
 
   const loadOpencodeModels = async () => {
-    setOpencodeModelStatus({ kind: "busy", text: "正在执行 opencode models..." });
+    const cliKind = String(config.cli || "opencode");
+    setOpencodeModelStatus({ kind: "busy", text: `正在执行 ${cliKind} models...` });
     try {
-      const exePath = String(config.opencode_exe || "").trim();
-      const res = await client.get(
-        "/api/opencode/models",
-        exePath ? { params: { exe: exePath } } : undefined,
-      );
+      const exePath = String(config.cli_path || config.opencode_exe || "").trim();
+      const params: Record<string, string> = { cli: cliKind };
+      if (exePath) params.exe = exePath;
+      const res = await client.get("/api/opencode/models", { params });
       const data = (res.data || {}) as { ok?: boolean; models?: string[]; elapsed?: number; error?: string; exe?: string };
       const models = Array.isArray(data.models) ? data.models : [];
       if (data.ok && models.length) {
@@ -1786,15 +1801,23 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           // opencode_agent 模型选择：未加载时为文本框，点「加载模型」后变为下拉选择
           if (field.type === "opencode-models") {
             const current = String(value ?? "");
-            const options = current && !opencodeModelList.includes(current)
-              ? [current, ...opencodeModelList]
+            const cliKind = String(config.cli || "opencode");
+            // Claude Code 无 models 子命令：模型只能手填，隐藏加载按钮与 free 开关
+            const noModelList = cliKind === "claude" || cliKind === "codex";
+            // free 开关：勾选后仅保留模型名含 free 的条目（本地筛选，不重复执行 CLI）
+            const freeOnly = !!config.model_free_only;
+            const filteredList = freeOnly
+              ? opencodeModelList.filter((m) => /free/i.test(m))
               : opencodeModelList;
+            const options = current && !filteredList.includes(current)
+              ? [current, ...filteredList]
+              : filteredList;
             const busy = opencodeModelStatus?.kind === "busy";
             return (
               <div key={field.key} className={fieldSpanClass(field)}>
                 <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
                 <div className="flex gap-1">
-                  {opencodeModelList.length > 0 ? (
+                  {!noModelList && opencodeModelList.length > 0 ? (
                     <select
                       value={current}
                       onChange={(e) => onConfigChange(field.key, e.target.value)}
@@ -1802,7 +1825,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                       onWheel={(e) => e.stopPropagation()}
                       className="flex-1 min-w-0 text-xs px-2 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
                     >
-                      <option value="">（留空 = opencode 默认模型）</option>
+                      <option value="">（留空 = {cliKind} 默认模型）</option>
                       {options.map((m) => (
                         <option key={m} value={m}>{m}</option>
                       ))}
@@ -1812,25 +1835,60 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                       type="text"
                       value={current}
                       onChange={(e) => onConfigChange(field.key, e.target.value)}
-                      placeholder={field.placeholder}
+                      placeholder={noModelList ? (cliKind === "claude" ? "如 sonnet / opus，留空用默认模型" : "如 gpt-5-codex，留空用默认模型") : field.placeholder}
                       onPointerDown={(e) => e.stopPropagation()}
                       onWheel={(e) => e.stopPropagation()}
                       className="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
                     />
                   )}
-                  <button
-                    type="button"
-                    onClick={(e) => { e.stopPropagation(); void loadOpencodeModels(); }}
+                  <select
+                    value={cliKind}
+                    onChange={(e) => {
+                      onConfigChange("cli", e.target.value);
+                      // 不同 CLI 的模型 namespace 不同，切换后清空并重新加载
+                      setOpencodeModelList([]);
+                      setOpencodeModelStatus(null);
+                    }}
                     onPointerDown={(e) => e.stopPropagation()}
-                    disabled={busy}
-                    title="执行 opencode models：既测试 opencode 是否可用，也加载模型列表供下拉选择"
-                    className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1.5 text-[11px] font-medium rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
+                    onWheel={(e) => e.stopPropagation()}
+                    title="选择 CLI：mimo 与 opencode 同源；Claude Code 与 Codex 命令模型不同，已分别适配"
+                    className="flex-shrink-0 w-[84px] text-[11px] px-1 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
                   >
-                    <RefreshCw className={cn("w-3 h-3", busy && "animate-spin")} />
-                    加载模型
-                  </button>
+                    <option value="opencode">opencode</option>
+                    <option value="mimo">mimo</option>
+                    <option value="claude">claude</option>
+                    <option value="codex">codex</option>
+                  </select>
+                  {!noModelList && (
+                    <label
+                      className="flex-shrink-0 inline-flex items-center gap-1 text-[11px] text-muted-foreground cursor-pointer select-none"
+                      title="只显示名称含 free 的模型"
+                      onPointerDown={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={freeOnly}
+                        onChange={(e) => onConfigChange("model_free_only", e.target.checked)}
+                        className="w-3 h-3 accent-primary cursor-pointer"
+                      />
+                      free
+                    </label>
+                  )}
+                  {!noModelList && (
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); void loadOpencodeModels(); }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      disabled={busy}
+                      title="执行 models：既测试 CLI 是否可用，也加载模型列表供下拉选择"
+                      className="flex-shrink-0 inline-flex items-center gap-1 px-2 py-1.5 text-[11px] font-medium rounded-md border border-primary/40 bg-primary/10 text-primary hover:bg-primary/20 disabled:opacity-50 transition-colors"
+                    >
+                      <RefreshCw className={cn("w-3 h-3", busy && "animate-spin")} />
+                      加载模型
+                    </button>
+                  )}
                 </div>
-                {opencodeModelStatus ? (
+                {noModelList ? null : opencodeModelStatus ? (
                   <p className={cn(
                     "mt-1 text-[10px] leading-snug break-all",
                     opencodeModelStatus.kind === "ok" && "text-emerald-600",
@@ -1842,6 +1900,9 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                 ) : field.description ? (
                   <p className="mt-1 text-[10px] text-muted-foreground leading-snug">{field.description}</p>
                 ) : null}
+                {!noModelList && freeOnly && opencodeModelList.length > 0 && filteredList.length === 0 && (
+                  <p className="mt-1 text-[10px] text-amber-600 leading-snug">未找到名称含 free 的模型</p>
+                )}
               </div>
             );
           }
@@ -1939,6 +2000,11 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           }
 
           if (field.type === "text") {
+            // 本地CLI智能体（opencode_agent）的 CLI 路径：按当前 CLI 写入 cli_path（兼容历史 opencode_exe）
+            const isCliPathField = nodeType.id === "opencode_agent" && field.key === "opencode_exe";
+            const textFieldValue = isCliPathField
+              ? String(config.cli_path ?? config.opencode_exe ?? "")
+              : value;
             // Special handling for path_to_title node's template field
             const isPathTemplate = nodeType.id === "path_to_title" && field.key === "template";
             const pathPlaceholders = [
@@ -1953,8 +2019,8 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                 <div className="relative group">
                   <input
                     type="text"
-                    value={value}
-                    onChange={(e) => onConfigChange(field.key, e.target.value)}
+                    value={textFieldValue}
+                    onChange={(e) => onConfigChange(isCliPathField ? "cli_path" : field.key, e.target.value)}
                     placeholder={field.placeholder}
                     onPointerDown={(e) => e.stopPropagation()}
                     onWheel={(e) => e.stopPropagation()}
@@ -1962,7 +2028,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                   />
                   <button
                     onPointerDown={(e) => e.stopPropagation()}
-                    onClick={() => setExpandField({ key: field.key, label: field.label, value: value || "" })}
+                    onClick={() => setExpandField({ key: field.key, label: field.label, value: textFieldValue || "" })}
                     className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1 rounded text-muted-foreground/70 hover:text-primary opacity-0 group-hover:opacity-100 transition-opacity"
                     title="放大编辑"
                   >
@@ -2544,9 +2610,11 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
     const VIDEO_EXTS = [".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv"];
     const SUBTITLE_EXTS = [".srt", ".ass", ".ssa", ".vtt", ".sub"];
     const IMAGE_EXTS = [".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp", ".svg"];
+    const AUDIO_EXTS = [".mp3", ".wav", ".m4a", ".aac", ".flac", ".ogg", ".opus", ".wma", ".aiff", ".aif", ".amr"];
     const isVideoFile = (p: string) => VIDEO_EXTS.some((ext) => p.toLowerCase().endsWith(ext));
     const isSubtitleFile = (p: string) => SUBTITLE_EXTS.some((ext) => p.toLowerCase().endsWith(ext));
     const isImageFile = (p: string) => IMAGE_EXTS.some((ext) => p.toLowerCase().endsWith(ext));
+    const isAudioFile = (p: string) => AUDIO_EXTS.some((ext) => p.toLowerCase().endsWith(ext));
 
     for (const edge of incomingEdges) {
       const sourceNode = nodes.find((n) => n.id === edge.source);
@@ -2586,6 +2654,10 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
       } else if (targetType === "image") {
         const found = allPaths.find(isImageFile);
         if (found) { outputs[targetType] = found; matched = true; }
+      } else if (targetType.startsWith("audio")) {
+        // 多轨音频预览：上游输出键与目标端口不一致时，按扩展名挑一路可播放音频
+        const found = allPaths.find(isAudioFile);
+        if (found) { outputs[targetType] = found; matched = true; }
       }
 
       // 3. Last resort: take the first file path output
@@ -2603,7 +2675,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
   // For preview nodes, get paths from upstream outputs or configs
   const { outputs: upstreamOutputs, configs: upstreamConfigs, refreshKey: upstreamRefreshKey } =
-    (nodeType.id.startsWith("agi_") || nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "image_compare" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask" || nodeType.id === "dub_visual_check") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
+    (nodeType.id.startsWith("agi_") || nodeType.id === "video_preview" || nodeType.id === "image_preview" || nodeType.id === "image_compare" || nodeType.id === "audio_multitrack_preview" || nodeType.id === "json_visual_editor" || nodeType.id === "text_editor" || nodeType.id === "subtitle_editor" || nodeType.id === "lcwr_watermark_removal" || nodeType.id === "online_watermark_removal" || nodeType.id === "qm_virtual_mailbox" || nodeType.id === "image_mask" || nodeType.id === "dub_visual_check") ? getUpstreamOutputs() : { outputs: {}, configs: {}, refreshKey: "" };
 
   // 当前任务 id（调试任务 activeTaskId 或一般/批量任务 taskModeId），用于相对产物路径解析
   const storeActiveTaskId = useWorkflowStore((s) => s.activeTaskId);
@@ -2823,7 +2895,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           <IconComp className="w-5 h-5" style={{ color: nodeType.color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold truncate">{nd.label || nodeType.name}</div>
+          <div className="text-sm font-bold truncate">{resolveNodeLabel(nodeType, nd.label)}</div>
           <div className="text-xs text-muted-foreground truncate">{(nodeType.description || "").slice(0, 25)}</div>
         </div>
         {nodeType.id !== "input" && (
@@ -3195,6 +3267,13 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         />
       )}
             {/* 图片/视频/角色/音色素材库：选择素材ID + 卡片预览 */}
+      {/* 文件中转站取自：取件方式 + 类型/排序规则 + 选择文件弹窗 */}
+      {nodeType.id === "file_transit_out" && (
+        <FileTransitOutNode
+          config={config}
+          onChange={(k, v) => handleConfigChange(k, v)}
+        />
+      )}
       {(["image_asset_library", "video_asset_library", "character_asset_library", "voice_asset_library"] as const).map((id) =>
         nodeType.id === id ? (
           <MaterialLibraryNodeCard
@@ -3778,6 +3857,15 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           image2Path={resolveImagePath(nd.image2Path) || resolveImagePath(upstreamOutputs.image2) || resolveImagePath(upstreamConfigs.image2Path)}
           taskId={previewTaskId}
           refreshKey={upstreamRefreshKey}
+        />
+      )}
+      {nodeType.id === "audio_multitrack_preview" && (
+        <AudioMultitrackPreview
+          config={config}
+          tracks={Array.from({ length: AUDIO_TRACK_COUNT }, (_, i) => resolveAudioTrack(upstreamOutputs[`audio${i + 1}`]))}
+          taskId={previewTaskId}
+          refreshKey={upstreamRefreshKey}
+          onConfigChange={handleConfigChange}
         />
       )}
 

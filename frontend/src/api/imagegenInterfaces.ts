@@ -51,6 +51,8 @@ export interface ImageGenInterface {
   type: "sdk" | "openai_compatible";
   builtin: boolean;
   enabled: boolean;
+  /** 显式云端标识：实际算力在云端（含本机反代外壳），不占本机 GPU 令牌 */
+  cloud?: boolean;
   description: string;
   api_source_url?: string;
   model_docs_url?: string;

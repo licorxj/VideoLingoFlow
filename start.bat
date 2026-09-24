@@ -20,20 +20,42 @@ set BUN_CMD=
 set REDIS_CMD=
 for /f "tokens=*" %%i in ('where npm 2^>nul') do if not defined NPM_CMD set NPM_CMD=%%i
 for /f "tokens=*" %%i in ('where node 2^>nul') do if not defined NODE_DIR set NODE_DIR=%%~dpi
+
+::: --- npm 全局目录（npmrc 的 prefix）：mimo / opencode 等 CLI 安装于此 ---
+::: 清空 PATH 的启动脚本必须在此记录，否则后端无法发现这些 CLI（只能由用户手填路径）
+set NPM_GLOBAL_DIR=
+if exist "%USERPROFILE%\.npmrc" (
+    for /f "usebackq tokens=1,* delims==" %%a in ("%USERPROFILE%\.npmrc") do (
+        if /i "%%a"=="prefix" if not defined NPM_GLOBAL_DIR set NPM_GLOBAL_DIR=%%b
+    )
+)
+if defined NPM_GLOBAL_DIR set NPM_GLOBAL_DIR=!NPM_GLOBAL_DIR:"=!
+if not defined NPM_GLOBAL_DIR if defined NPM_CMD (
+    for /f "tokens=*" %%i in ('"%NPM_CMD%" prefix -g 2^>nul') do (
+        if not defined NPM_GLOBAL_DIR set NPM_GLOBAL_DIR=%%i
+    )
+)
+if not defined NPM_GLOBAL_DIR if exist "%APPDATA%\npm\" set NPM_GLOBAL_DIR=%APPDATA%\npm
+if defined NPM_GLOBAL_DIR if not exist "!NPM_GLOBAL_DIR!\*" set NPM_GLOBAL_DIR=
 for /f "tokens=*" %%i in ('where bun 2^>nul') do if not defined BUN_CMD set BUN_CMD=%%i
 for /f "tokens=*" %%i in ('where redis-server 2^>nul') do if not defined REDIS_CMD set REDIS_CMD=%%i
 if defined NPM_CMD (echo npm: !NPM_CMD!) else (echo WARNING: npm not found)
 if defined BUN_CMD (echo bun: !BUN_CMD!) else (echo WARNING: bun not found)
 if defined REDIS_CMD (echo redis: !REDIS_CMD!) else (echo WARNING: redis-server not found)
+
+if defined NPM_GLOBAL_DIR (
+    echo npm global: !NPM_GLOBAL_DIR!
+) else (
+    echo WARNING: npm global dir not found
+)
 if defined NODE_DIR set NODE_EXE=%NODE_DIR%node.exe
 
-:: --- 清除系统代理（避免 httpx/cloakbrowser 读取不支持的 socks:// 代理）---
-set http_proxy=
-set https_proxy=
-set all_proxy=
-set HTTP_PROXY=
-set HTTPS_PROXY=
-set ALL_PROXY=
+:: --- 保留代理（不再清空）---
+:: 云端接口（KIE AI / 百炼 / 呜哩 / 火山方舟等）需要经本机代理出网，清空后这些接口会直接连接失败。
+:: 注意：这里**不要**设 NO_PROXY/no_proxy！它以 "_proxy" 结尾，会让 urllib.getproxies()
+::       误判「环境里已有代理」而不再读取系统代理（Internet 选项），反而使云端接口直连失败。
+::       本机/内网直连由系统代理的绕过列表保证（ProxyOverride 默认含 <local>）。
+:: 如需强制指定代理：set https_proxy=http://127.0.0.1:7892（可同时 set no_proxy 排除本机）
 
 :: --- venv（仅激活，不隔离 CUDA）---
 set "VENV_ROOT=%cd%\venv312"

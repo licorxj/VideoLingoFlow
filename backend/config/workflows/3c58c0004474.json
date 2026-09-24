@@ -35,7 +35,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 411
+        "height": 410
       },
       "dragHandle": ".wf-node-drag-handle",
       "selected": false
@@ -64,7 +64,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 335
+        "height": 334
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -72,10 +72,10 @@
       "id": "node_4_1789854336635",
       "type": "workflow",
       "position": {
-        "x": -30,
-        "y": -2040
+        "x": 60,
+        "y": -1905
       },
-      "selected": false,
+      "selected": true,
       "data": {
         "nodeType": "pi_agent",
         "label": "小pi通用智能体",
@@ -107,9 +107,64 @@
       },
       "measured": {
         "width": 420,
-        "height": 682
+        "height": 679
       },
-      "dragHandle": ".wf-node-drag-handle"
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_1_1790105442102",
+      "type": "workflow",
+      "position": {
+        "x": 645,
+        "y": -2325
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "opencode_agent",
+        "label": "OpenCode 智能体",
+        "config": {
+          "inputCount": 2,
+          "outputCount": 2,
+          "opencode_exe": "",
+          "model": "opencode/ling-3.0-flash-fin-free",
+          "fallback_models": "opencode/big-pickle",
+          "agent": "",
+          "skills": [
+            "pexels-media",
+            "free-material-search"
+          ],
+          "mcps": [],
+          "auto_approve": true,
+          "thinking": false,
+          "pure": false,
+          "dir_name": "",
+          "timeout": 1800,
+          "instruction": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：使用skill技能搜索在线素材，并返回结果。输入一即为本次需要搜索到素材",
+          "output_items": [
+            {
+              "port": "输出1",
+              "type": "text",
+              "desc": ""
+            },
+            {
+              "port": "输出2",
+              "type": "json",
+              "desc": ""
+            }
+          ],
+          "cli": "opencode",
+          "model_free_only": true
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 796
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
     }
   ],
   "edges": [
@@ -140,10 +195,23 @@
       },
       "id": "xy-edge__node_2_1789854186142out-text-node_4_1789854336635in-input_1",
       "selected": false
+    },
+    {
+      "source": "node_2_1789854186142",
+      "sourceHandle": "out-text",
+      "target": "node_1_1790105442102",
+      "targetHandle": "in-input_1",
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1789854186142out-text-node_1_1790105442102in-input_1"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-20T05:42:32",
-  "updatedAt": "2026-09-20T05:48:34",
-  "revision": 2
+  "updatedAt": "2026-09-23T04:40:56",
+  "revision": 4
 }

@@ -68,6 +68,17 @@ export interface TfArtStyle {
   desc: string;
 }
 
+export interface TfVoiceItem {
+  id: string;
+  name: string;
+  displayName: string;
+  gender: string;
+  age: string;
+  description: string;
+  designText: string;
+  previewUrl: string;
+}
+
 export interface TfSnapshot {
   project: { id: number; name: string; introduce: string; artStyle: string; videoRatio: string; imageQuality: string; mode: string };
   chapters: { id: number; reel: string; chapter: string; event: string; eventState: number; chars: number }[];
@@ -79,7 +90,8 @@ export interface TfSnapshot {
     shouldGenerateImage: boolean; videoUrl: string;
   }[];
   videos: { id: number; storyboardId: number | null; prompt: string; candidates: { id: number; url: string; state: string; duration: number; selected: boolean }[] }[];
-  bindings: { id: number; assetId: number; assetName: string; audioId: string }[];
+  bindings: { id: number; assetId: number; assetName: string; audioId: string;
+              voiceName?: string; gender?: string; designText?: string; previewUrl?: string }[];
   /** 后台任务活动计数（type → 生成中数量），执行状态条数据源 */
   activities: Record<string, number>;
 }
@@ -144,6 +156,13 @@ export const toonflowApi = {
     client.post(`/api/tf/projects/${projectId}/storyboards/images`, { ids }),
   generateVideoForStoryboard: (projectId: number, storyboardId: number) =>
     client.post(`/api/tf/projects/${projectId}/videos/generate`, { ids: [storyboardId], force: true }),
+  // ---- 角色音色：音色库 / 绑定 / 解绑 / 设计 ----
+  listVoiceLibrary: (keyword = "") =>
+    client.get<{ voices: TfVoiceItem[] }>("/api/tf/voice-library", { params: keyword ? { keyword } : {} }),
+  bindRoleVoice: (assetId: number, audioId: string) =>
+    client.post(`/api/tf/roles/${assetId}/bind`, { audioId }),
+  unbindRoleVoice: (assetId: number) => client.post(`/api/tf/roles/${assetId}/unbind`),
+  designRoleVoice: (assetId: number) => client.post(`/api/tf/roles/${assetId}/design-voice`),
   bindDubbing: (projectId: number) => client.post(`/api/tf/projects/${projectId}/dubbing/bind`),
 };
 

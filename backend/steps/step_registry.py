@@ -102,6 +102,8 @@ from backend.steps.s_material_library import (
     S_ImageAssetLibrary, S_VideoAssetLibrary, S_CharacterAssetLibrary, S_VoiceAssetLibrary,
 )
 from backend.steps.s_material_storage import S_MaterialStorage
+from backend.steps.s_file_transit_in import S_FileTransitIn
+from backend.steps.s_file_transit_out import S_FileTransitOut
 from backend.steps.s_dub_visual_check import S_DubVisualCheck
 from backend.steps.s_seedream import (
     S_SeedreamTxt2Img, S_SeedreamImg2Img, S_SeedreamFusion,
@@ -193,6 +195,7 @@ _STEPS = {
     "video_preview": PassthroughStep(),
     "image_preview": PassthroughStep(),
     "image_compare": PassthroughStep(),
+    "audio_multitrack_preview": PassthroughStep(),
     # 其余真实执行节点（与 thread_scheduler.NODE_STEP_MAP 对齐）
     "s14_output": StepOutput(),
     "output": StepOutput(),
@@ -332,6 +335,11 @@ _STEPS = {
     # 素材入库（asset 分组，自动识别类型并写入对应素材库数据库）
     "material_storage": S_MaterialStorage(),
     "s_material_storage": S_MaterialStorage(),
+    # 文件中转站（asset 分组：入库登记 / 按规则取件，只记录文件元信息不搬运文件）
+    "file_transit_in": S_FileTransitIn(),
+    "s_file_transit_in": S_FileTransitIn(),
+    "file_transit_out": S_FileTransitOut(),
+    "s_file_transit_out": S_FileTransitOut(),
     # 配音可视化检查（translation 分组，卡片按钮打开检查页）
     "dub_visual_check": S_DubVisualCheck(),
     "s_dub_visual_check": S_DubVisualCheck(),

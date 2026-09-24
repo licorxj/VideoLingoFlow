@@ -59,6 +59,7 @@ const DEFAULT_CONFIG: ImageGenInterfaceConfig = {
 export default function ImageGenInterfaceEditor({ iface, onSaved, onCancel }: Props) {
   const [name, setName] = useState("");
   const [type, setType] = useState<"sdk" | "openai_compatible">("sdk");
+  const [cloud, setCloud] = useState(false);
   const [description, setDescription] = useState("");
   const [apiSourceUrl, setApiSourceUrl] = useState("");
   const [modelDocsUrl, setModelDocsUrl] = useState("");
@@ -77,6 +78,7 @@ export default function ImageGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
     if (iface) {
       setName(iface.name);
       setType(iface.type);
+      setCloud(!!iface.cloud);
       setDescription(iface.description || "");
       setApiSourceUrl(iface.api_source_url || "");
       setModelDocsUrl(iface.model_docs_url || "");
@@ -91,7 +93,7 @@ export default function ImageGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
   const handleSave = async () => {
     setSaving(true);
     try {
-      const data = { name, type, description, api_source_url: apiSourceUrl.trim(), model_docs_url: modelDocsUrl.trim(), config };
+      const data = { name, type, cloud, description, api_source_url: apiSourceUrl.trim(), model_docs_url: modelDocsUrl.trim(), config };
       if (iface) {
         await imagegenInterfacesApi.update(iface.id, data);
       } else {
@@ -219,6 +221,17 @@ export default function ImageGenInterfaceEditor({ iface, onSaved, onCancel }: Pr
             </select>
           </div>
         </div>
+        <label className="flex items-start gap-2 cursor-pointer select-none">
+          <input
+            type="checkbox"
+            className="mt-0.5 w-3.5 h-3.5 accent-primary"
+            checked={cloud}
+            onChange={(e) => setCloud(e.target.checked)}
+          />
+          <span className="text-xs text-muted-foreground">
+            云端接口：实际算力在云端（本机/局域网反代外壳也勾选），不占本机 GPU 令牌、不与本地模型排队
+          </span>
+        </label>
         <div>
           <label className={labelCls}>描述</label>
           <input className={cn(inputCls, "mt-1.5")} value={description} onChange={(e) => setDescription(e.target.value)} />

@@ -103,8 +103,13 @@ def canvas_snapshot(project_id: int):
         for r in session.scalars(select(TfAssetRoleAudio).where(
                 TfAssetRoleAudio.projectId == project_id)).all():
             a = session.get(TfAsset, r.assetId)
+            v = _voice_by_id(r.audioId)
             out["bindings"].append({"id": r.id, "assetId": r.assetId,
-                                    "assetName": a.name if a else "", "audioId": r.audioId})
+                                    "assetName": a.name if a else "", "audioId": r.audioId,
+                                    "voiceName": v.get("displayName", ""),
+                                    "gender": v.get("gender", ""),
+                                    "designText": v.get("designText", ""),
+                                    "previewUrl": v.get("previewUrl", "")})
         for t in session.scalars(select(TfTask).where(
                 TfTask.state == "生成中", TfTask.projectId == project_id)).all():
             key = t.type or "other"
@@ -431,3 +436,97 @@ def bind_dubbing(project_id: int):
     from backend.toonflow.pipeline import dubbing as pipe
 
     return pipe.bind_character_audios(project_id)
+
+
+# ---------------- 角色音色：音色库列表 / 绑定 / 解绑 / 设计 ----------------
+
+def _voice_media_url(sample_key: str) -> str:
+    """vf_voices.sample_storage_key → /api/files/stream 试听地址。"""
+    if not sample_key:
+        return ""
+    try:
+        from backend.voiceforge.database import storage_root
+
+        root = storage_root().resolve()
+        p = (root / sample_key).resolve()
+        if p.is_file() and root in p.parents:
+            return f"/api/files/stream?path={quote(str(p))}"
+    except Exception:  # noqa: BLE001
+        pass
+    return ""
+
+
+def _voice_row(row) -> dict:
+    return {
+        "id": row["id"], "name": row["name"],
+        "displayName": row["display_name"] or row["name"],
+        "gender": row["gender"] or "", "age": row["voice_age"] or "",
+        "description": row["description"] or "",
+        "designText": row["design_text"] or "",
+        "previewUrl": _voice_media_url(row["sample_storage_key"] or ""),
+    }
+
+
+@router.get("/voice-library")
+def voice_library(keyword: str = ""):
+    """配音谷音色库（画布角色音色选择/试听数据源）。"""
+    from backend.voiceforge.database import session as vf_session
+
+    sql = ("SELECT id, name, display_name, gender, voice_age, description, "
+           "design_text, sample_storage_key FROM vf_voices")
+    params: tuple = ()
+    if keyword.strip():
+        sql += " WHERE name LIKE ? OR display_name LIKE ? OR description LIKE ?"
+        like = f"%{keyword.strip()}%"
+        params = (like, like, like)
+    from backend.voiceforge.database import storage_root  # noqa: F401  # 确保目录就绪
+
+    with vf_session() as conn:
+        rows = conn.execute(sql + " ORDER BY created_at DESC", params).fetchall()
+    return {"voices": [_voice_row(dict(r)) for r in rows]}
+
+
+def _voice_by_id(audio_id: str) -> dict:
+    try:
+        from backend.voiceforge.database import session as vf_session
+
+        with vf_session() as conn:
+            row = conn.execute(
+                "SELECT id, name, display_name, gender, voice_age, description, "
+                "design_text, sample_storage_key FROM vf_voices WHERE id = ?",
+                (audio_id,)).fetchone()
+        return _voice_row(dict(row)) if row else {}
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+class BindPayload(BaseModel):
+    audioId: str
+
+
+@router.post("/roles/{asset_id}/bind")
+def bind_role(asset_id: int, payload: BindPayload):
+    from backend.control_plane.database import session_scope
+    from backend.toonflow.core.models import TfAsset
+    from backend.toonflow.pipeline.voice_design import bind_role_voice
+
+    with session_scope() as session:
+        asset = session.get(TfAsset, asset_id)
+        if asset is None:
+            raise HTTPException(404, f"资产不存在: {asset_id}")
+        project_id = asset.projectId
+    return bind_role_voice(project_id, asset_id, payload.audioId.strip())
+
+
+@router.post("/roles/{asset_id}/unbind")
+def unbind_role(asset_id: int):
+    from backend.toonflow.pipeline.voice_design import unbind_role_voice
+
+    return unbind_role_voice(asset_id)
+
+
+@router.post("/roles/{asset_id}/design-voice")
+def design_role_voice(asset_id: int):
+    from backend.toonflow.pipeline.voice_design import design_role_voice
+
+    return design_role_voice(asset_id)

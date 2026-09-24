@@ -117,9 +117,16 @@ async def get_sep_config_fields(scope: str = None):
             category = detail.get("category")
             if scope:
                 if scope == "vocal":
-                    # Untagged engines (spleeter/demucs/...) are vocal-capable by
-                    # default, so keep them for the vocal-separation node.
+                    # Untagged engines (demucs/bs_roformer/...) are vocal-capable
+                    # by default, so keep them for the vocal-separation node.
                     if category not in (None, "vocal"):
+                        continue
+                elif scope == "twostem":
+                    # Every 2-stem model, whatever it isolates (vocals, instrument,
+                    # de-reverb). Only genuine multi-stem presets are excluded -
+                    # e.g. spleeter 4/5stems emit no accompaniment track, so the
+                    # vocal-separation node cannot use them.
+                    if category == "multistem":
                         continue
                 elif category != scope:
                     # e.g. scope=enhancement only shows tagged enhancement models

@@ -89,7 +89,7 @@ BUILTIN_STEP_REGISTRY = {
     "qm_virtual_mailbox": ("backend.steps.s_qm_virtual_mailbox", "S_QmVirtualMailbox"),
 }
 
-FRONTEND_ONLY_NODE_TYPES = {"video_preview", "image_preview"}
+FRONTEND_ONLY_NODE_TYPES = {"video_preview", "image_preview", "audio_multitrack_preview"}
 
 # 需要在独立子进程中执行的重型节点。
 # 这些步骤会加载大模型并做长时间推理（whisperx 对齐、pyannote 说话人识别、

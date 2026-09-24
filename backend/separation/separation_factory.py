@@ -82,6 +82,33 @@ class _ServiceSeparationProxy(SeparationBase):
                 print(f"[Separation] GPU 服务调用失败，回退进程内执行: {exc}")
         return self._ensure_real().separate(input_path, output_dir, callback, model=model, format=format, **kwargs)
 
+    def separate_multi_stem(
+        self,
+        input_path: str,
+        output_dir: str,
+        callback=None,
+        *,
+        model: str = "",
+        format: str = "",
+        **kwargs,
+    ) -> dict:
+        """Multi-stem separation (track_separation node).
+
+        The GPU service job layer only knows the "asr"/"separation" (2-stem)
+        kinds, so multi-stem always runs the real engine in-process. Delegating
+        here also keeps ``hasattr(engine, "separate_multi_stem")`` true for the
+        proxy, otherwise the track-separation node rejects EVERY interface -
+        including Demucs, which actually supports it.
+        """
+        real = self._ensure_real()
+        if not hasattr(real, "separate_multi_stem"):
+            raise Exception(
+                f"接口 {self._iface_id} 不支持多轨分离，请选择支持多轨的接口（如 demucs / spleeter）"
+            )
+        return real.separate_multi_stem(
+            input_path, output_dir, callback, model=model, format=format, **kwargs
+        )
+
 
 def get_separation_engine(iface_id: str) -> SeparationBase:
     """Get or create a separation engine for the given interface ID."""

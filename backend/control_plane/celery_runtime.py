@@ -6,10 +6,11 @@ from backend.control_plane.runtime import TaskCancelledError, TaskTimeoutError, 
 
 try:
     from celery import Celery
-    from celery.signals import worker_ready
+    from celery.signals import worker_ready, setup_logging
 except ImportError:
     Celery = None
     worker_ready = None
+    setup_logging = None
 
 
 def celery_config() -> dict:
@@ -43,6 +44,21 @@ def create_celery_app(name: str = "videolingo"):
 
 
 celery_app = create_celery_app()
+
+
+if celery_app is not None and setup_logging is not None:
+    @setup_logging.connect
+    def _configure_worker_logging(**_kwargs):
+        """接管 worker 日志格式：把默认的
+        ``[2026-09-23 07:44:03,396: WARNING/MainProcess]`` 压缩为 ``[09-23 07:44:03]``。
+        连接本信号后 Celery 不再自行配置日志，由这里统一装 handler。"""
+        import logging
+
+        root = logging.getLogger()
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("[%(asctime)s] %(message)s", datefmt="%m-%d %H:%M:%S"))
+        root.handlers = [handler]
+        root.setLevel(logging.INFO)
 
 
 if celery_app is not None and worker_ready is not None:

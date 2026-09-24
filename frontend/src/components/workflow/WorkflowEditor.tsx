@@ -17,7 +17,7 @@ import QuickConnectMenu, { type QuickConnectRequest } from "./QuickConnectMenu";
 import {
   Save, FolderOpen, Play, Trash2, RotateCcw, FileText, Loader2,
   Plus, Workflow as WorkflowIcon, Clock, CheckCircle2, Pause, Square, Copy,
-  ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2, Layers3, Group, Ungroup, Settings2, CornerDownRight, Spline, Minus, LayoutGrid, Repeat,
+  ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2, Layers3, Group, Ungroup, Settings2, CornerDownRight, Spline, Minus, LayoutGrid, Repeat, Search,
 } from "lucide-react";
 import client from "@/api/client";
 import { TaskMonitor } from "@/api/taskMonitor";
@@ -48,6 +48,27 @@ const EDGE_TYPES = [
 ] as const;
 
 type EdgeType = typeof EDGE_TYPES[number]["value"];
+
+/**
+ * 工作流模糊搜索匹配：查询词按空白拆分，每个词命中名称或描述之一即算匹配；
+ * 匹配方式为子序列模糊匹配（包含普通子串命中），大小写不敏感。
+ */
+function fuzzyMatchWorkflow(w: { name?: string; description?: string }, query: string): boolean {
+  const q = (query || "").trim().toLowerCase();
+  if (!q) return true;
+  const name = (w.name || "").toLowerCase();
+  const desc = (w.description || "").toLowerCase();
+  const isSubsequence = (text: string, pattern: string): boolean => {
+    let i = 0;
+    for (let j = 0; j < text.length && i < pattern.length; j++) {
+      if (text[j] === pattern[i]) i++;
+    }
+    return i === pattern.length;
+  };
+  return q.split(/\s+/).every((token) =>
+    name.includes(token) || desc.includes(token) || isSubsequence(name, token) || isSubsequence(desc, token)
+  );
+}
 
 /**
  * 确保节点数组每个元素都有 position（React Flow 必需字段），
@@ -139,6 +160,7 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   video_preview: "视频预览",
   image_preview: "图片预览",
   image_compare: "图片对比",
+  audio_multitrack_preview: "音频多轨预览",
   s02_asr: "语音识别",
     asr_recognize: "ASR识别",
     asr_postprocess: "ASR后处理",
@@ -367,13 +389,14 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const cardHoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [cardHover, setCardHover] = useState<{ wf: SavedWorkflow; rect: DOMRect } | null>(null);
   const [wfGridOpen, setWfGridOpen] = useState(false);
+  const [wfSearch, setWfSearch] = useState(""); // 工作流模糊搜索关键字（作用于卡片行与宫格弹窗）
 
-  // 当前分组下的工作流（卡片行与宫格弹窗共用同一份筛选结果）
+  // 当前分组下的工作流（卡片行与宫格弹窗共用同一份筛选结果；叠加顶部模糊搜索）
   const activeGroupWorkflows = useMemo(() => savedWorkflows.filter((w) => {
     if (activeGroup === "all") return true;
     if (activeGroup === "ungrouped") return !w.groupId;
     return w.groupId === activeGroup;
-  }), [savedWorkflows, activeGroup]);
+  }).filter((w) => fuzzyMatchWorkflow(w, wfSearch)), [savedWorkflows, activeGroup, wfSearch]);
 
   const activeGroupName = activeGroup === "all"
     ? "全部分组"
@@ -1739,6 +1762,25 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               <Plus className="w-3 h-3" />
             </button>
           </div>
+          {/* 模糊搜索：按名称/描述筛选当前分组下的工作流 */}
+          <div className="relative ml-auto flex-shrink-0">
+            <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/60 pointer-events-none" />
+            <input
+              value={wfSearch}
+              onChange={(e) => setWfSearch(e.target.value)}
+              placeholder="搜索工作流"
+              className="w-36 h-5 pl-6 pr-5 text-xs rounded-md border border-border bg-background/60 focus:bg-background focus:border-primary/50 focus:outline-none text-foreground placeholder:text-muted-foreground/50 transition-colors"
+            />
+            {wfSearch && (
+              <button
+                onClick={() => setWfSearch("")}
+                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-muted-foreground/60 hover:text-foreground transition-colors"
+                title="清除搜索"
+              >
+                <X className="w-2.5 h-2.5" />
+              </button>
+            )}
+          </div>
           <button
             onClick={() => setWfGridOpen(true)}
             className="flex items-center justify-center w-5 h-5 rounded-md border border-border text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all flex-shrink-0"
@@ -1763,7 +1805,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             {(() => {
               const filtered = activeGroupWorkflows;
               if (filtered.length === 0 && !loadingList) {
-                return <div className="text-xs text-muted-foreground/50 py-1">{"\u8be5\u5206\u7ec4\u6682\u65e0\u5de5\u4f5c\u6d41"}</div>;
+                return <div className="text-xs text-muted-foreground/50 py-1">{wfSearch.trim() ? "没有匹配的工作流" : "\u8be5\u5206\u7ec4\u6682\u65e0\u5de5\u4f5c\u6d41"}</div>;
               }
               return filtered.map((wf) => (
             <div
@@ -2472,7 +2514,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           </DialogHeader>
           <div className="max-h-[62vh] overflow-y-auto pr-1">
             {activeGroupWorkflows.length === 0 ? (
-              <div className="py-10 text-center text-sm text-muted-foreground">该分组暂无工作流</div>
+              <div className="py-10 text-center text-sm text-muted-foreground">{wfSearch.trim() ? "没有匹配的工作流" : "该分组暂无工作流"}</div>
             ) : (
               <div className="grid grid-cols-6 gap-2">
                 {activeGroupWorkflows.map((wf) => (

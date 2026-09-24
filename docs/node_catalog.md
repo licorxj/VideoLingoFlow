@@ -1,14 +1,14 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-21 23:31:08  
-> 节点总数：153　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-09-23 18:37:10  
+> 节点总数：156　（带 `*` 的接口为必填项）
 
 ## 总览
 
 | 分组 | 节点数 |
 |------|-------|
 | 输入输出节点（`io`） | 5 |
-| 预览节点（`preview`） | 3 |
+| 预览节点（`preview`） | 4 |
 | 音频处理节点（`audio`） | 10 |
 | 视频处理节点（`video`） | 18 |
 | AI生成类节点（`ai_gen`） | 20 |
@@ -25,7 +25,7 @@
 | 工具类节点（`utility`） | 11 |
 | 文件操作类节点（`file`） | 3 |
 | 组合节点（`group_node`） | 3 |
-| asset（`asset`） | 7 |
+| asset（`asset`） | 9 |
 | cutia（`cutia`） | 4 |
 | hyperframes（`hyperframes`） | 5 |
 | music_gen（`music_gen`） | 10 |
@@ -49,6 +49,7 @@
 | 图片对比 | `image_compare` | 叠加对比两张图片：图片2在上、图片1在下，鼠标横向拖动分割线去除上层蒙版，快速对比图形差异；默认上层蒙版只显示右半部，分割线居中 | thread | 图片1（下层）(`image1`:any); 图片2（上层）(`image2`:any) | 图片(`image`:any) |
 | 图片预览器 | `image_preview` | 预览图片结果 | thread | 图片(`image`:image); 列表输入(`list`:any) | — |
 | 视频预览器 | `video_preview` | 预览视频和字幕，支持标题设置、快捷调整字体大小和位置 | thread | 视频(`video`:video); 译文字幕(`subtitle`:subtitle); 原文字幕(`original`:subtitle); 双语字幕(`bilingual`:subtitle); 列表输入(`list`:any) | — |
+| 音频多轨预览 | `audio_multitrack_preview` | 最多接入 6 路音频，卡片按实际接入情况分轨展示：每轨可独立播放/拖动进度/静音；顶部「同步播放」开启时六轨对齐到同一时间轴播放（静音轨仍同步走位，取消静音即与其他轨对齐），用于对比检查多轨音频 | thread | 音轨1(`audio1`:audio); 音轨2(`audio2`:audio); 音轨3(`audio3`:audio); 音轨4(`audio4`:audio); 音轨5(`audio5`:audio); 音轨6(`audio6`:audio) | — |
 
 ### 音频处理节点（`audio`）
 
@@ -190,9 +191,9 @@
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| OpenCode 智能体 | `opencode_agent` | 把本地 opencode CLI 以工作流节点方式嵌入工作流：注入任务背景与输入输出契约，非交互执行一次 opencode 会话（run --format json），解析事件流并收拢产物到任务 cache 目录。需本机已安装 opencode（或在节点设置中填写可执行文件路径） | process | 输入1(`input_1`:any); 输入2(`input_2`:any) | 输出1(`output_1`:any); 输出2(`output_2`:any) |
 | 剪辑AI Agent | `editor_agent` | 接收上游剪辑项目JSON，按编辑指令对时间线二次精选，输出精选后的剪辑json | process | 剪辑项目(`project`:json); 编辑指令(`text`:text) | 剪辑项目(`project`:json); 运行记录(`artifacts`:json); 执行结果(`result`:text) |
 | 小pi通用智能体 | `pi_agent` | 将小 Pi 以工作流节点方式嵌入工作流：注入任务背景与输入输出契约，发起一次 Pi 会话并执行任务，产物保存到任务 cache 目录 | process | 输入1(`input_1`:any); 输入2(`input_2`:any) | 输出1(`output_1`:any); 输出2(`output_2`:any) |
+| 本地CLI智能体 | `opencode_agent` | 以本机已安装的 CLI 智能体（opencode / mimo / Claude Code / Codex）非交互执行一次会话，解析事件流并按输出契约收拢产物到任务 cache 目录；各 CLI 的命令与事件协议差异已自动适配 | process | 输入1(`input_1`:any); 输入2(`input_2`:any) | 输出1(`output_1`:any); 输出2(`output_2`:any) |
 
 ### 流程控制节点（`flow_control`）
 
@@ -254,6 +255,8 @@
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
 | 图片素材库 | `image_asset_library` | 从公共图片素材库选择素材（记录素材ID），执行时回查详情并复制到当前工作文件夹；输出素材路径与素材全信息 JSON。 | process | 来源(`any`:any) | 素材路径(`image`:image); 素材全信息JSON(`info`:json) |
+| 文件中转站入库 | `file_transit_in` | 把接入的单个文件或文件列表登记进「文件中转站」（记录文件名称、类型、所属任务名称、文件路径、入库时间）。只登记元信息，文件仍停在原位置，不移动也不复制。 | thread | 单文件(`file`:filepath); 文件(`files`:list) | 素材路径(`path`:filepath); 素材路径列表(`paths`:list); 入库条数(`count`:text) |
+| 文件中转站取自 | `file_transit_out` | 从「文件中转站」取一件素材并输出其文件路径。可点「选择文件」在弹窗中手动指定，也可按文件类型 + 排序规则自动取件（最新入库 / 最旧入库 / 排序序号 / 文件名称）。 | thread | 触发(`any`:any) | 素材路径(`path`:filepath); 素材信息(`info`:json) |
 | 新建音色角色 | `voice_character` | LLM 根据角色描述/面板设计生成朗读提示词与TTS指令，合成角色默认音色片段与多情绪片段，并写入配音谷音色库；输出音色ID、主片段音频与全信息JSON。 | process | 角色描述文本(`description`:any); 角色设计JSON(`design_json`:json) | 音色ID(`voice_id`:text); 音色主片段音频(`audio`:audio); 音色全信息JSON(`info`:json) |
 | 素材入库 | `material_storage` | 将接入的视频/图片/音频素材归档到项目公共素材库并写入数据库。后端自动识别素材类型，按前端设置的素材属性（名称/分组标签/自定义标签/描述）入库，支持视频、图片、音频三种类型。 | thread | 素材(`media`:any) | 素材路径(`material`:any); 素材库引用(`library_ref`:text); 素材类型(`asset_type`:text); 素材ID(`asset_id`:text) |
 | 视频素材库 | `video_asset_library` | 从公共视频素材库选择素材（记录素材ID），执行时回查详情并复制到当前工作文件夹；输出素材路径与素材全信息 JSON。 | process | 来源(`any`:any) | 素材路径(`video`:video); 素材全信息JSON(`info`:json) |

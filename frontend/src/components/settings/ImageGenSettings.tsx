@@ -16,6 +16,7 @@ import {
   ExternalLink,
   Wallet,
   BookOpen,
+  Cloud,
 } from "lucide-react";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -235,6 +236,12 @@ export default function ImageGenSettings() {
                     <span className="text-[11px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">
                       {TYPE_LABELS[iface.type] || iface.type}
                     </span>
+                    {iface.cloud && (
+                      <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-sky-500/10 text-sky-500 font-medium">
+                        <Cloud className="w-3 h-3" />
+                        云端
+                      </span>
+                    )}
                     {iface.builtin && (
                       <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 font-medium">
                         <Shield className="w-3 h-3" />

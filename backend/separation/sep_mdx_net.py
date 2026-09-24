@@ -64,7 +64,12 @@ def _load_registry():
 
 
 class ConvTDFNet:
-    """ConvTDFNet lifted from the UVR MDX-NET ONNX example (verbatim)."""
+    """Convolutional-TDF net port of the UVR MDX-NET ONNX example.
+
+    Layout convention (must stay consistent): audio tensors are [2, samples]
+    (channels-first), spectrograms are [batch, 4, dim_f, dim_t] where the
+    4 channels pack (L/R channel) x (re/im). stft/istft are exact inverses.
+    """
 
     def __init__(self, target_name, L, dim_f, dim_t, n_fft, hop=1024):
         self.dim_c = 4
@@ -82,23 +87,46 @@ class ConvTDFNet:
 
     def stft(self, x):
         x = x.reshape([-1, self.chunk_size])
-        x = torch.stft(x, self.n_fft, self.hop, window=self.window, return_complex=True)
+        x = torch.stft(
+            x,
+            n_fft=self.n_fft,
+            hop_length=self.hop,
+            window=self.window,
+            center=True,
+            return_complex=True,
+        )
         x = torch.view_as_real(x)
+        # view_as_real puts re/im last; it must move in front of freq/time before
+        # being folded into the dim_c=4 channel axis, otherwise the forward/backward
+        # transforms are not inverses of each other.
+        x = x.permute([0, 3, 1, 2])
         x = x.reshape([-1, 2, 2, self.n_bins, self.dim_t]).reshape(
             [-1, self.dim_c, self.n_bins, self.dim_t]
         )
         return x[:, :, : self.dim_f]
 
     def istft(self, x, freq_pad=None):
-        if freq_pad is None:
-            freq_pad = self.freq_pad  # [1, out_c, n_bins-dim_f, dim_t]
-        x = torch.cat([x, freq_pad.repeat([1, 1, 1, x.shape[-1]])], -2)
-        x = x.reshape([x.shape[0], x.shape[1] // 2, 2, self.n_bins, self.dim_t]).reshape(
-            [-1, 2, 2, self.n_bins, self.dim_t]
+        # Tile the zero pad along the BATCH axis to match x; tiling the last
+        # (time) axis instead inflates the tensor and leaves batch=1, which makes
+        # the cat fail as soon as a track is split into more than one chunk.
+        freq_pad = (
+            self.freq_pad.repeat([x.shape[0], 1, 1, 1])
+            if freq_pad is None
+            else freq_pad
         )
-        x = x.reshape([-1, 2 * self.n_bins, self.dim_t])
-        x = torch.istft(x, self.n_fft, self.hop, window=self.window)
-        return x.reshape([-1, self.chunk_size])
+        x = torch.cat([x, freq_pad], -2)
+        c = 4 * 2 if self.target_name == "*" else 2
+        x = x.reshape([-1, c, 2, self.n_bins, self.dim_t]).reshape(
+            [-1, 2, self.n_bins, self.dim_t]
+        )
+        x = x.permute([0, 2, 3, 1])
+        x = x.contiguous()
+        x = torch.view_as_complex(x)
+        x = torch.istft(
+            x, n_fft=self.n_fft, hop_length=self.hop, window=self.window, center=True
+        )
+        # Keep the channel axis: demix_base indexes tar_waves[:, :, trim:-trim].
+        return x.reshape([-1, c, self.chunk_size])
 
 
 class Predictor:
@@ -201,15 +229,56 @@ class Predictor:
     def predict(self, file_path):
         mix, rate = librosa.load(file_path, mono=False, sr=44100)
 
+        # librosa returns channels-first already: stereo -> [2, n], mono -> [n].
+        # demix/demix_base index along the LAST axis as time (they build
+        # np.concatenate((..., cmix, ...), 1) with row count == channels), so the
+        # layout here must be exactly [channels, samples] == [2, n].
+        # Do NOT transpose: doing so yields [n, 2] and breaks every axis-1 op.
         if mix.ndim == 1:
-            mix = np.asfortranarray([mix, mix])
+            mix = np.asfortranarray([mix, mix])  # mono -> [2, n]
+        else:
+            mix = np.asarray(mix)
+            # Defensive: normalise to [2, n] if a backend hands us [n, 2]
+            if mix.shape[0] != 2 and mix.shape[-1] == 2:
+                mix = mix.T
+            if mix.shape[0] > 2:
+                # >2 channels: keep the first two
+                mix = mix[:2, :]
 
-        mix = mix.T  # -> [2, n]
-        # NOTE: reference passed ``self.demix(mix.T)`` here, which is a bug;
-        # demix expects the [2, n] layout produced above.
         sources = self.demix(mix)
+        # demix_base concatenates chunks/segments along the LAST axis but each
+        # segment contributes its own leading axis, so the raw result is
+        # [n_segments, 2, total_samples]. Take [0] (same as the reference) to get
+        # the real stem layout [2, total_samples].
+        if sources.ndim == 3 and sources.shape[1] == 2:
+            sources = sources[0]
         opt = sources  # [2, n] isolated stem (model output)
         return (mix, opt, rate)
+
+
+def _assert_single_source(session, label=""):
+    """Reject multi-source MDX models before they corrupt the ISTFT layout.
+
+    ConvTDFNet is instantiated with a non-"*" target, so the model predicts ONE
+    stereo source packed as 4 channels (2 channels x re/im). A multi-source MDX
+    model (target_name="*") emits more channels (typically 16) and would be
+    silently mangled by this adapter, so fail loudly instead.
+    """
+    try:
+        shape = session.get_outputs()[0].shape
+    except Exception:
+        return
+    if not shape or len(shape) < 2:
+        return
+    channels = shape[1]
+    if not isinstance(channels, int):
+        return  # dynamic/unknown dimension: nothing to assert
+    if channels != 4:
+        raise ValueError(
+            f"MDX-NET 模型 {label} 输出通道数为 {channels}，并非单源模型预期的 4"
+            f"（2 声道 x re/im）。该模型疑似多源 MDX 模型，当前 MDX-NET 适配器不支持；"
+            f"多轨分离请改用 demucs / spleeter 接口。"
+        )
 
 
 class MDXNetOnnxSeparation(SeparationBase):
@@ -259,6 +328,10 @@ class MDXNetOnnxSeparation(SeparationBase):
             providers = ["CPUExecutionProvider"]
 
         sess = ort.InferenceSession(model_path, providers=providers)
+
+        # This adapter only handles single-source MDX-NET models - fail loudly
+        # rather than silently mangling a multi-source model's output.
+        _assert_single_source(sess, entry.get("file", name))
 
         # Derive ConvTDFNet dims from the ONNX input tensor so the STFT spectrogram
         # exactly matches what the model was exported with.

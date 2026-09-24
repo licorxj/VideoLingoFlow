@@ -20,7 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import ClientDisconnect
 from starlette.types import Scope, Receive, Send
 
-from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, musicgen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects, creation_tasks, notifications, agent_ws, dub_check, opencode
+from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, musicgen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects, creation_tasks, notifications, agent_ws, dub_check, opencode, file_transit
 from backend.api.public_info import APP_VERSION
 from backend.toonflow import api as toonflow_api
 from backend.control_plane import runtime_flags
@@ -210,6 +210,7 @@ app.include_router(subtitle_preview.router, prefix="/api/subtitle-preview", tags
 app.include_router(voiceforge.router, prefix="/api/voiceforge", tags=["voiceforge"])
 app.include_router(videodub.router, prefix="/api/videodub", tags=["videodub"])
 app.include_router(materials.router, prefix="/api/materials", tags=["materials"])
+app.include_router(file_transit.router, prefix="/api/file-transit", tags=["file-transit"])
 app.include_router(creation_selects.router, tags=["creation-selects"])
 app.include_router(creation_tasks.router, tags=["creation-tasks"])
 app.include_router(dub_check.router, prefix="/api/dub-check", tags=["dub-check"])

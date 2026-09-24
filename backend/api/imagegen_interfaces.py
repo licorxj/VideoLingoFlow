@@ -29,6 +29,7 @@ class ImageGenInterfaceCreate(BaseModel):
     type: str = "sdk"
     builtin: Optional[bool] = None
     enabled: bool = True
+    cloud: Optional[bool] = None
     description: str = ""
     api_source_url: str = ""
     model_docs_url: str = ""
@@ -39,6 +40,7 @@ class ImageGenInterfaceUpdate(BaseModel):
     name: Optional[str] = None
     type: Optional[str] = None
     enabled: Optional[bool] = None
+    cloud: Optional[bool] = None
     description: Optional[str] = None
     api_source_url: Optional[str] = None
     model_docs_url: Optional[str] = None

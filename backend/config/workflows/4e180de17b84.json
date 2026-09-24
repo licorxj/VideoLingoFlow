@@ -27,7 +27,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\843d5aeea70d4ecf878cd2579adcdf13\\cache\\input_video.mp4",
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\b795b177f8d44f9083c9dffe6c1dfa32\\cache\\input_video.mp4",
           "languages": {
             "source_language": "en",
             "target_language": "zh"
@@ -375,7 +375,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1782422054967.json",
-          "text": "{\n  \"tittle\": \"史上杀人最多的科学家\",\n  \"hook\": \"他一人造成数百万人死亡\",\n  \"summary\": \"视频讲述了两位科学家托马斯·米奇利与克莱尔·帕特森的故事。米奇利发明了含铅汽油和氟利昂，前者虽解决了发动机爆震问题，却导致全球铅污染，据估计造成数亿人智商下降、犯罪率上升及上千万死亡；后者破坏了臭氧层。帕特森在测定地球年龄时，因环境中的铅污染干扰了实验结果，转而致力于研究铅污染，最终通过冰芯和人体样本确证了人为铅排放的危害。视频揭示了这两项发明对环境和人类健康的深远负面影响，并强调了科学伦理与监管的重要性。\"\n}"
+          "text": "{\n  \"tittle\": \"数学最美证明\",\n  \"hook\": \"无圆处得根号π\",\n  \"summary\": \"这段视频展示了数学中最优美的证明之一：高斯积分——计算正态分布曲线下的面积。该曲线由公式 e^(-x²) 定义，虽然它没有初等函数的原函数（即无法通过常规积分公式求解），但其在全实轴上的定积分值恰好为 √π。\\n\\n证明的精髓在于一种维度的跃迁：直接计算一维积分 I 陷入僵局，于是转而计算 I²，即将两个相同的一维积分相乘。利用积分变量是“哑变量”的性质，将两个独立的 x 和 y 积分转化为二维平面上的二重积分，被积函数变为 e^(-(x²+y²))。此时，指数中的 x²+y² 瞬间揭示了隐藏的几何本质——圆的方程。通过极坐标变换，问题从直角坐标系的矩形网格切换到极坐标系的同心圆环，Jacobian 因子 r 意外地解决了积分难题，使得计算变得异常简洁。最终得出 I² = π，即 I = √π。\\n\\n这一证明不仅优雅地连接了指数函数、圆的几何与概率统计，更深刻揭示了一个数学哲学：当问题在一维空间显得复杂无解时，升维到更高维度往往能暴露出隐藏的对称性，从而化繁为简。这种“通过让问题变得更复杂来使其可解”的思维，正是数学与物理学中解决难题的核心智慧。\"\n}"
         },
         "error": "",
         "workbench_url": "",
@@ -402,8 +402,8 @@
       "id": "node_1_1782507205161",
       "type": "workflow",
       "position": {
-        "x": 30,
-        "y": 810
+        "x": -45,
+        "y": 870
       },
       "data": {
         "nodeType": "image_gen",
@@ -421,12 +421,15 @@
           "custom_prompt": "",
           "output_prefix": "cover_gen_3x4"
         },
-        "status": "failed",
+        "status": "completed",
         "disableExecute": false,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": "permanent",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": "['output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png']",
+          "text": "output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png"
+        },
+        "error": "",
         "note": "竖图封面",
         "workbench_url": "",
         "logLines": [
@@ -442,9 +445,9 @@
       },
       "measured": {
         "width": 420,
-        "height": 570
+        "height": 615
       },
-      "selected": false,
+      "selected": true,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -471,7 +474,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 229
+        "height": 382
       },
       "selected": false,
       "dragging": false,
@@ -594,7 +597,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_node_1_1782725550457.json",
-          "text": "{\n  \"tittle\": \"发明含铅汽油，致千万人丧命\",\n  \"description\": \"米奇利发明含铅汽油与氟利昂，造成全球铅污染与臭氧层空洞，究竟是谁造成了这场灾难？\",\n  \"tags\": [\n    \"历史科普\",\n    \"科学伦理\",\n    \"铅污染危害\"\n  ]\n}"
+          "text": "{\n  \"tittle\": \"一维无解？升维得√π\",\n  \"description\": \"高斯积分证明：e^(-x²)无法直接积，但平方后换极坐标，圆的几何显现，一维死局瞬间破解，美到窒息！\",\n  \"tags\": [\n    \"数学之美\",\n    \"高斯积分\",\n    \"极坐标\",\n    \"硬核科普\"\n  ]\n}"
         },
         "error": "",
         "workbench_url": "",
@@ -704,7 +707,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\843d5aeea70d4ecf878cd2579adcdf13\\output\\json2text_node_1_1788530708958.txt"
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\b795b177f8d44f9083c9dffe6c1dfa32\\output\\json2text_node_1_1788530708958.txt"
         },
         "error": "",
         "workbench_url": ""
@@ -827,7 +830,7 @@
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\843d5aeea70d4ecf878cd2579adcdf13\\cache\\path_to_title.txt"
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\b795b177f8d44f9083c9dffe6c1dfa32\\cache\\path_to_title.txt"
         },
         "error": "",
         "workbench_url": ""
@@ -1418,7 +1421,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_n_mu386aanb14p.txt",
-          "text": "输入图片，高级电影感，电影海报式构图，超写实风格，标题与背景形成景深交互穿模效果，提升主体与背景对比度，画面具备清晰主次层次感。主标题为「史上杀人最多的科学家」，采用加粗毛笔草书手写体，笔触漂移绵长，字体为白色，标题内字号依据词块与语义差异设置不同大小，字体带有细微黑色描边，添加阴影效果增强立体感；副标题为「他一人造成数百万人死亡」，采用较主标题小一号的字体，字体大小、颜色与主标题形成明确区分以凸显层级感，添加阴影效果增强立体感。标题排版自适应画面比例，不遮挡画面主体，布局和谐富有设计感。"
+          "text": "基于输入图片，设计电影海报式标题排版，通过AI图生图技术将文字融入画面，实现高级电影感、超写实风格，标题与背景产生景深交互和穿模立体效果。强化主体与背景的明暗对比，突出层次感。主标题文字：“数学最美证明”，采用加粗毛笔草书手写体，白色字体带极细黑色描边，笔触飘逸绵长，字号根据词块语义渐变（“数学·最美·证明”大小错落），添加投影增加浮雕立体感。副标题文字：“无圆处得根号π”，使用比主标题小一号的书法字体，颜色为略带暖灰的白色，与主标题形成色调层级，同样添加立体阴影。根据输入图片的实际横竖比例和主体位置，灵活安排文字布局：若主体偏左，标题右置；若主体居中，标题分居上下或环绕；确保不遮挡核心视觉元素，大小和位置和谐且充满海报设计感。图生图指令：以输入图片为基础，生成带有上述标题设计的最终图像。"
         },
         "error": "",
         "note": "发布平台资料准备",
@@ -1502,7 +1505,7 @@
         "message": "Completed",
         "outputs": {
           "result": "output/LLM_n_mu43x5dw5ixf.txt",
-          "text": "以下提供**横版（16:9，适配B站/西瓜/YouTube等长视频平台）**和**竖版（9:16，适配抖音/快手/视频号等短视频平台）**两套专业封面生图提示词，完全匹配视频主题与设计要求：\n\n---\n\n## 【横版（16:9）封面生图提示词】\n### 一、画面生图内容\n超写实电影海报构图，前景实焦为20世纪中期美国科学家托马斯·米奇利的半身肖像：戴细框圆眼镜，穿深色西装配条纹领带，神情平静略带自得（强化“无意造祸”的反差感），站在老式实木实验台后；实验台左右分别摆放核心标志性物品：左侧是贴有泛黄“乙基含铅汽油”标签的琥珀色玻璃试剂瓶，瓶口飘出极淡的铅灰色烟雾，右侧是带轻微锈迹的银灰色氟利昂制冷罐，罐体有老式金属铭牌。\n中景半虚：细碎的铅尘颗粒从实验台向四周漂浮扩散。\n背景大虚化：暗调全球卫星俯视图，南极区域可见清晰的暗紫色臭氧层空洞，地面布满微弱的暖红色细碎光点（代表受污染影响的人群），画面右下角背景处有一个极小的虚化科学家剪影，手持冰芯样本（暗指克莱尔·帕特森，呼应视频双线叙事）。\n\n### 二、主标题设计\n- 文字内容：「史上杀人最多的科学家」\n- 字体：加粗毛笔草书手写体，笔触漂移绵长，带有自然飞白质感\n- 字号层级（按语义权重设计）：「杀人最多」四字字号最大（核心冲突点，抓眼球），「的科学家」字号次之（点出身份，强化反差），「史上」字号最小（限定范围）\n- 样式：纯白色字体，带0.3px细微黑色描边，加2px偏移的柔和黑色投影，强化立体感\n- 排版与穿模效果：标题位于画面上半部分居中对齐，整体处于人物头顶上方空白区；其中「杀」字的撇画、「多」字的捺画向下延伸，嵌入前景含铅汽油试剂瓶的瓶口区域，与瓶口飘出的铅灰色烟雾自然融合，形成**“笔触一半在瓶身前、一半穿透瓶身”的景深穿模效果**，完全不遮挡试剂瓶标签与人物面部。\n\n### 三、副标题设计\n- 文字内容：「他一人造成数百万人死亡」\n- 字体：硬朗粗体无衬线字体，与主标题的柔化草书形成风格对比\n- 字号：为主标题最大字号的1/3，明确层级差\n- 样式：暗血红色字体，带0.2px细微深黑描边，保证在暗背景上的可读性\n- 排版与穿模效果：位于主标题正下方居中对齐，处于人物胸部以上的空白区域，完全不遮挡人物面部与核心实验器材；字体底部轻微嵌入背景的虚化光点层，形成前后交错的景深层级。\n\n### 四、整体风格与光影\n高级电影感，超写实8K分辨率，柯达彩色电影胶片质感，细腻颗粒，宽动态范围；侧顶冷白光打亮前景主体，人物面部有清晰明暗交界线，实验器材高光锐利；背景整体压暗2档，四周加自然暗角，主体与背景对比度极强，主次层次分明；标题与前景/背景元素的穿模交互自然不刻意，设计感高级克制。\n\n---\n\n## 【竖版（9:16）封面生图提示词】\n### 一、画面生图内容\n超写实电影海报构图，前景实焦为20世纪中期美国科学家托马斯·米奇利的半身肖像：戴细框圆眼镜，穿深色西装配条纹领带，神情平静略带自得（强化“无意造祸”的反差感），位于画面中间偏下区域，身前是老式实木实验台；实验台左右分别摆放核心标志性物品：左侧是贴有泛黄“乙基含铅汽油”标签的琥珀色玻璃试剂瓶，瓶口飘出极淡的铅灰色烟雾，右侧是带轻微锈迹的银灰色氟利昂制冷罐，罐体有老式金属铭牌。\n中景半虚：细碎的铅尘颗粒从实验台向四周漂浮扩散。\n背景大虚化：暗调全球卫星俯视图，南极区域可见清晰的暗紫色臭氧层空洞，地面布满微弱的暖红色细碎光点（代表受污染影响的人群），画面底部背景处有一个极小的虚化科学家剪影，手持冰芯样本（暗指克莱尔·帕特森，呼应视频双线叙事）。\n\n### 二、主标题设计\n- 文字内容：「史上杀人最多的科学家」\n- 字体：加粗毛笔草书手写体，笔触漂移绵长，带有自然飞白质感\n- 字号层级（按语义权重设计）：「杀人最多」四字字号最大（核心冲突点，抓眼球），「的科学家」字号次之（点出身份，强化反差），「史上」字号最小（限定范围）\n- 样式：纯白色字体，带0.3px细微黑色描边，加2px偏移的柔和黑色投影，强化立体感\n- 排版与穿模效果：标题位于画面上1/3区域，居中对齐横跨画面上半部分；其中「杀」字的撇画、「多」字的捺画向下延伸，嵌入前景含铅汽油试剂瓶的瓶口区域，与瓶口飘出的铅灰色烟雾自然融合，形成**“笔触一半在瓶身前、一半穿透瓶身”的景深穿模效果**，完全不遮挡试剂瓶标签与人物面部。\n\n### 三、副标题设计\n- 文字内容：「他一人造成数百万人死亡」\n- 字体：硬朗粗体无衬线字体，与主标题的柔化草书形成风格对比\n- 字号：为主标题最大字号的1/3，明确层级差\n- 样式：暗血红色字体，带0.2px细微深黑描边，保证在暗背景上的可读性\n- 排版与穿模效果：位于主标题正下方居中对齐，处于人物头顶上方的空白区域，完全不遮挡人物面部与核心实验器材；字体底部轻微嵌入背景的虚化光点层，形成前后交错的景深层级。\n\n### 四、整体风格与光影\n高级电影感，超写实8K分辨率，柯达彩色电影胶片质感，细腻颗粒，宽动态范围；侧顶冷白光打亮前景主体，人物面部有清晰明暗交界线，实验器材高光锐利；背景整体压暗2档，四周加自然暗角，主体与背景对比度极强，主次层次分明；标题与前景/背景元素的穿模交互自然不刻意，设计感高级克制。"
+          "text": "**封面设计提示词：**\n\n一幅极具高级电影感的数学美学海报，超写实摄影风格，景深层次丰富，构图采用经典对称式电影海报构图。画面主体：一维数轴与二维极坐标圆环在空间中交错融合，立体金属质感的钟形曲线（高斯正态分布曲线）从画面左下方优雅地向上升腾，曲线下方透出半透明的积分符号 ∫，曲线在最高点逐渐化为金色粒子散开，构成一个完美的金色圆环；圆环内部是深邃的宇宙虚空，中央悬浮着数字符号“e^(-x²)”，被微积分算子环绕。背景是充满公式与光轨的四维空间隧道，深蓝与黑渐变，有微弱的高斯模糊；前景中一粒粒发光像素组成的“I”立方体正在棱柱光中旋转解体，边缘为锐利高光。色调：主体曲线与圆环用暖金色和极白色，背景为深靛蓝，形成强烈冷暖与明暗对比，黄金时刻质感，局部有镜头光晕和色散，呈现精密计算美学与宇宙宏大感的碰撞。\n\n文字排版与景深交互——“穿模”特效：  \n主标题“数学最美证明”为超大号白色毛笔草书手写体，笔触飘逸苍劲，每个字按词块不同大小错落：“数学”二字略小、紧靠，“最美”突然放大、笔锋拉长，“证明”适度缩小、字尾墨迹飞溅融入背景。标题整体位置置于画面上方1/4处，略微倾斜，与上升的钟形曲线形成动感呼应；字体添加极细的黑色描边和深色阴影，营造悬浮于空间的三维感，部分笔画“穿模”——即穿过圆环和粒子层，产生前景字压在背景与中景之间的景深交错。  \n副标题“无圆处得根号π”以小一档字号，用淡琥珀金与白色渐变，字体为精致宋体与手写体融合，位于画面右下角黄金分割点，由一束从圆环射出的光线牵引而出；部分笔画同样穿过高斯曲线，形成次级景深层次。整幅画面文字与数学符号、几何结构完美交融，传达维度跃迁的哲学诗意。"
         },
         "error": "",
         "note": "发布平台资料准备",
@@ -1598,48 +1601,11 @@
       "dragHandle": ".wf-node-drag-handle"
     },
     {
-      "id": "node_3_1790055224572",
-      "type": "workflow",
-      "position": {
-        "x": 30,
-        "y": -15
-      },
-      "data": {
-        "nodeType": "seedream_img2img",
-        "label": "Seedream图生图",
-        "config": {
-          "model": "doubao-seedream-5-0-lite-260128",
-          "resolution": "2K",
-          "aspect_ratio": "4:3",
-          "num_images": 1,
-          "output_format": "png",
-          "watermark": false,
-          "stream_output": true,
-          "optimize_prompt": true,
-          "custom_prompt_enabled": false,
-          "custom_prompt": ""
-        },
-        "status": "running",
-        "disableExecute": false,
-        "progress": 0,
-        "message": "",
-        "outputs": {},
-        "error": ""
-      },
-      "measured": {
-        "width": 420,
-        "height": 362
-      },
-      "selected": false,
-      "dragging": false,
-      "dragHandle": ".wf-node-drag-handle"
-    },
-    {
       "id": "node_4_1790055233764",
       "type": "workflow",
       "position": {
-        "x": 855,
-        "y": -255
+        "x": 885,
+        "y": -285
       },
       "selected": false,
       "data": {
@@ -1653,12 +1619,66 @@
         "progress": 0,
         "message": "",
         "outputs": {},
-        "error": ""
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 230
+        "height": 753
       },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "n_mucli5z2h6gr",
+      "type": "workflow",
+      "position": {
+        "x": -75,
+        "y": 150
+      },
+      "data": {
+        "nodeType": "image_gen",
+        "label": "AI生图",
+        "config": {
+          "mode": [
+            "img2img"
+          ],
+          "interface": "kieai",
+          "model": "gpt-image-2-image-to-image",
+          "resolution": "1K",
+          "aspect_ratio": "4:3",
+          "num_images": 1,
+          "custom_prompt_enabled": false,
+          "custom_prompt": "",
+          "output_prefix": "cover_gen_3x4"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": "['output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png']",
+          "text": "output/cover_gen_3x4_1_gen_image_node_1_1782507205161.png"
+        },
+        "error": "",
+        "note": "竖图封面",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
+          "[step_worker] start node_type=image_gen node_id=node_1_1782507205161 pid=36320",
+          "[step_worker] step instance created: S_ImageGen",
+          "[step_worker] step_inputs keys=['text']",
+          "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\9c86e89c465f4ee0bb464c3ccd4157a2\\cache\\.step_node_1_1782507205161_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 619
+      },
+      "selected": false,
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
     }
@@ -1723,7 +1743,7 @@
     {
       "type": "smoothstep",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -1754,7 +1774,7 @@
       "type": "smoothstep",
       "animated": false,
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#ec4899",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2118,7 +2138,7 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ef4444",
+        "stroke": "#8b5cf6",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
@@ -2209,80 +2229,28 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1782640383627",
       "sourceHandle": "out-image",
-      "target": "node_3_1790055224572",
-      "targetHandle": "in-image",
-      "id": "xy-edge__node_1_1782640383627out-image-node_3_1790055224572in-image",
-      "animated": true
+      "target": "node_4_1790055233764",
+      "targetHandle": "in-image2",
+      "id": "xy-edge__node_1_1782640383627out-image-node_4_1790055233764in-image2"
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
-      "source": "n_mu386aanb14p",
-      "sourceHandle": "out-text",
-      "target": "node_3_1790055224572",
-      "targetHandle": "in-text",
-      "id": "xy-edge__n_mu386aanb14pout-text-node_3_1790055224572in-text",
-      "animated": true
-    },
-    {
-      "type": "bezier",
-      "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
-      },
-      "source": "node_3_1790055224572",
-      "sourceHandle": "out-text",
-      "target": "node_3_1789406114242",
-      "targetHandle": "in-any",
-      "id": "xy-edge__node_3_1790055224572out-text-node_3_1789406114242in-any",
-      "animated": true
-    },
-    {
-      "type": "bezier",
-      "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
-      },
-      "source": "node_3_1790055224572",
-      "sourceHandle": "out-text",
-      "target": "node_1_1789405925581",
-      "targetHandle": "in-cover",
-      "id": "xy-edge__node_3_1790055224572out-text-node_1_1789405925581in-cover",
-      "animated": true
-    },
-    {
-      "type": "bezier",
-      "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
-      },
-      "source": "node_3_1790055224572",
-      "sourceHandle": "out-text",
-      "target": "node_1_1782672877872",
-      "targetHandle": "in-cover_landscape",
-      "id": "xy-edge__node_3_1790055224572out-text-node_1_1782672877872in-cover_landscape",
-      "animated": true
-    },
-    {
-      "type": "bezier",
-      "animated": true,
-      "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
-      },
-      "source": "node_3_1790055224572",
+      "source": "n_mucli5z2h6gr",
       "sourceHandle": "out-text",
       "target": "node_4_1790055233764",
       "targetHandle": "in-image1",
-      "id": "xy-edge__node_3_1790055224572out-text-node_4_1790055233764in-image1"
+      "id": "xy-edge__n_mucli5z2h6grout-text-node_4_1790055233764in-image1"
     },
     {
       "type": "bezier",
@@ -2293,13 +2261,26 @@
       },
       "source": "node_1_1782640383627",
       "sourceHandle": "out-image",
-      "target": "node_4_1790055233764",
-      "targetHandle": "in-image2",
-      "id": "xy-edge__node_1_1782640383627out-image-node_4_1790055233764in-image2"
+      "target": "n_mucli5z2h6gr",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_1_1782640383627out-image-n_mucli5z2h6grin-image"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "n_mu386aanb14p",
+      "sourceHandle": "out-text",
+      "target": "n_mucli5z2h6gr",
+      "targetHandle": "in-text",
+      "id": "xy-edge__n_mu386aanb14pout-text-n_mucli5z2h6grin-text"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-22T13:36:52",
-  "revision": 93
+  "updatedAt": "2026-09-22T19:34:27",
+  "revision": 95
 }

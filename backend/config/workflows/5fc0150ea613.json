@@ -20,7 +20,7 @@
           "videoPath": "",
           "audioPath": "",
           "subtitlePath": "",
-          "url": "https://youtu.be/MTytGfyfTLc?si=8uJilqbCOlS_QgHh",
+          "url": "https://youtube.com/shorts/i0AOokzwb1k?si=UYshetdUtki5d56N",
           "source_language": "auto",
           "target_language": "zh",
           "copyInputs": false,
@@ -31,11 +31,11 @@
           "filePath": ""
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
-          "url": "https://youtu.be/bvSJm7fHXto?si=Y6yd8RlukzRD81Fk",
+          "url": "https://youtube.com/shorts/i0AOokzwb1k?si=UYshetdUtki5d56N",
           "languages": {
             "source_language": "auto",
             "target_language": "zh"
@@ -47,7 +47,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 494
+        "height": 496
       },
       "selected": true,
       "dragging": false,
@@ -71,17 +71,17 @@
           "backgroundColor": "rgba(0,0,0,0.6)",
           "subtitlePosition": "bottom"
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
+        "status": "pending",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 444
+        "height": 183
       },
       "selected": false,
       "dragging": false,
@@ -104,31 +104,27 @@
           "cookie_file": "",
           "use_as_task_name": true
         },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "video": "cache\\How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016.mp4",
-          "image": "cache\\How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016.jpg",
-          "filename": "How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016.mp4"
-        },
+        "status": "running",
+        "disableExecute": true,
+        "progress": 5,
+        "message": "Updating yt-dlp...",
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
-          "[S00] yt-dlp stderr: <empty>",
-          "[S00] yt-dlp stdout: VLDL\tHow Public and Private Key Work In Your Crypto Wallets\tY:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\How Public and Private Key Work In Your Crypto Wallets [bvSJm7fHXto].mp4",
-          "[S00] task_name set to: How Public and Private Key Work In Your Crypto Wallets",
-          "[S00] Output: video -> How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016.mp4",
-          "[S00] Output: cover -> How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016.jpg",
-          "[S00] Done: 2 files produced",
-          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
-          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\.step_node_2_1783324281016_result.json, exiting 0"
+          "[step_worker] start node_type=platform_download node_id=node_2_1783324281016 pid=35712",
+          "[step_worker] step instance created: S00PlatformDownload",
+          "[step_worker] step_inputs keys=['url']",
+          "[step_worker] node_config keys=['download_subs', 'download_cover', 'resolution', 'cookie_file', 'use_as_task_name']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f, kwargs=['callback'])",
+          "[S00] URL: https://youtube.com/shorts/i0AOokzwb1k?si=UYshetdUtki5d56N",
+          "[S00] Resolution: best, Subs: True, Cover: True, Cookie: False",
+          "[S00] Updating yt-dlp..."
         ]
       },
       "measured": {
         "width": 420,
-        "height": 459
+        "height": 348
       },
       "selected": false,
       "dragging": false,
@@ -147,17 +143,17 @@
         "config": {
           "fit": "contain"
         },
-        "status": "completed",
-        "progress": 100,
-        "message": "Completed",
+        "status": "pending",
+        "progress": 0,
+        "message": "",
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 406
+        "height": 229
       },
       "selected": false,
       "dragging": false,
@@ -176,7 +172,7 @@
         "config": {
           "operation": "copy",
           "targetType": "custom",
-          "customPath": "X:\\PCTMoveData\\Videos\\下载",
+          "customPath": "X:\\PCTMoveData\\Videos\\下载\\动画物理",
           "useSubfolder": true,
           "subfolderNaming": "by_name",
           "renameEnabled": false,
@@ -184,19 +180,17 @@
           "prefix": "",
           "suffix": ""
         },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "output": "X:\\PCTMoveData\\Videos\\下载\\How Public and Private Key Work In Your Crypto Wallets_node_2_1783324281016_2"
-        },
+        "status": "pending",
+        "disableExecute": true,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 455
+        "height": 366
       },
       "selected": false,
       "dragging": false,
@@ -221,23 +215,20 @@
           "response_json": false,
           "log_request": true
         },
-        "status": "completed",
-        "disableExecute": false,
+        "status": "pending",
+        "disableExecute": true,
         "note": "翻译文件名",
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "result": "output/LLM_node_1_1789760369292.txt",
-          "text": "如何在加密钱包中工作_节点2_1783324281016.mp4"
-        },
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": "",
         "logLines": [
           "[step_worker] step instance created: S_LLMRequest",
           "[step_worker] step_inputs keys=['text', 'source_language', 'target_language']",
           "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f, kwargs=['callback'])",
-          "[LLM] direct (step=vlf-04, strategy=vlf-01, stream=False, response_json=False, timeout=300s, prompt_chars=186)",
-          "[LLM] direct ok (step=vlf-04, elapsed=0.8s)",
+          "[LLM] direct (step=vlf-04, strategy=vlf-01, stream=False, response_json=False, timeout=300s, prompt_chars=176)",
+          "[LLM] direct ok (step=vlf-04, elapsed=10.2s)",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\.step_node_1_1789760369292_result.json, exiting 0"
         ],
@@ -245,7 +236,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 534
+        "height": 416
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -267,19 +258,17 @@
           "prefix": "",
           "suffix": ""
         },
-        "status": "completed",
-        "disableExecute": false,
-        "progress": 100,
-        "message": "Completed",
-        "outputs": {
-          "any": "Y:\\VideoLingoLc\\control_plane_workspaces\\4d20b175ae8f4e42a705e326b2a3f43f\\cache\\如何在加密钱包中工作_节点2_1783324281016.mp4"
-        },
+        "status": "pending",
+        "disableExecute": true,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 276
+        "height": 187
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -288,11 +277,10 @@
   "edges": [
     {
       "type": "bezier",
-      "animated": false,
+      "animated": true,
       "style": {
-        "stroke": "#06b6d4",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_1_1783324270560",
       "sourceHandle": "out-url",
@@ -303,11 +291,10 @@
     },
     {
       "type": "bezier",
-      "animated": false,
+      "animated": true,
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-video",
@@ -319,41 +306,41 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-image",
       "target": "node_1_1787596716961",
       "targetHandle": "in-image",
-      "id": "xy-edge__node_2_1783324281016out-image-node_1_1787596716961in-image"
+      "id": "xy-edge__node_2_1783324281016out-image-node_1_1787596716961in-image",
+      "animated": true
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#f59e0b",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-subtitle",
       "target": "node_2_1787611118465",
       "targetHandle": "in-any",
-      "id": "xy-edge__node_2_1783324281016out-subtitle-node_2_1787611118465in-any"
+      "id": "xy-edge__node_2_1783324281016out-subtitle-node_2_1787611118465in-any",
+      "animated": true
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-image",
       "target": "node_2_1787611118465",
       "targetHandle": "in-any",
-      "id": "xy-edge__node_2_1783324281016out-image-node_2_1787611118465in-any"
+      "id": "xy-edge__node_2_1783324281016out-image-node_2_1787611118465in-any",
+      "animated": true
     },
     {
       "source": "node_2_1783324281016",
@@ -362,11 +349,11 @@
       "targetHandle": "in-text",
       "type": "bezier",
       "style": {
-        "stroke": "#8b5cf6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
-      "id": "xy-edge__node_2_1783324281016out-filename-node_1_1789760369292in-text"
+      "id": "xy-edge__node_2_1783324281016out-filename-node_1_1789760369292in-text",
+      "animated": true
     },
     {
       "type": "bezier",
@@ -384,15 +371,15 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#3b82f6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "stroke": "#ff0099",
+        "strokeWidth": 2
       },
       "source": "node_2_1783324281016",
       "sourceHandle": "out-video",
       "target": "node_2_1789760520866",
       "targetHandle": "in-any",
-      "id": "xy-edge__node_2_1783324281016out-video-node_2_1789760520866in-any"
+      "id": "xy-edge__node_2_1783324281016out-video-node_2_1789760520866in-any",
+      "animated": true
     },
     {
       "type": "bezier",
@@ -410,6 +397,6 @@
   ],
   "type": "user",
   "createdAt": "2026-07-06T15:53:12",
-  "updatedAt": "2026-09-20T09:46:57",
-  "revision": 14
+  "updatedAt": "2026-09-23T06:18:14",
+  "revision": 17
 }
