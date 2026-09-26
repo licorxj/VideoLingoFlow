@@ -23,6 +23,7 @@ export interface BatchTaskDetail {
     progress: number;
     message: string;
     error: string;
+    duration?: number | null;
   }>;
   started_at: string;
   finished_at: string;

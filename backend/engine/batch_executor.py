@@ -142,6 +142,8 @@ def _task_payload(task: Task) -> dict:
                 "message": (node.payload or {}).get("message", "") or (node.payload or {}).get("wait_message", ""),
                 "error": ((node.payload or {}).get("message") or node.error_class or "") if node.status == "failed" else (node.error_class or ""),
                 "error_class": node.error_class or "",
+                # 节点用时（秒）；执行中/待执行节点为 None
+                "duration": (node.payload or {}).get("timings", {}).get("duration"),
             }
             for node in task.nodes
         },

@@ -16,6 +16,17 @@ interface NodeStatus {
   progress?: number;
   message?: string;
   error?: string;
+  duration?: number | null;
+}
+
+/** 秒数 → 紧凑中文用时（10 秒内保留一位小数，≥1 小时进位到小时） */
+export function formatNodeDuration(seconds: number): string {
+  if (seconds < 60) return `${seconds < 10 ? seconds.toFixed(1) : Math.round(seconds)}秒`;
+  const minutes = Math.floor(seconds / 60);
+  const rest = Math.round(seconds % 60);
+  if (minutes < 60) return `${minutes}分${String(rest).padStart(2, "0")}秒`;
+  const hours = Math.floor(minutes / 60);
+  return `${hours}小时${String(minutes % 60).padStart(2, "0")}分`;
 }
 
 interface Props {
@@ -336,6 +347,14 @@ export default function NodeProgressBar({ nodes, workflowNodes }: Props) {
                         {percent !== null && (
                           <span className={cn("shrink-0 text-[10px] font-semibold tabular-nums", meta.text)}>
                             {percent}%
+                          </span>
+                        )}
+                        {typeof ns?.duration === "number" && ns.duration > 0 && (
+                          <span
+                            className="shrink-0 text-[10px] tabular-nums text-muted-foreground/80"
+                            title={`节点用时 ${formatNodeDuration(ns.duration)}`}
+                          >
+                            用时 {formatNodeDuration(ns.duration)}
                           </span>
                         )}
                       </div>
