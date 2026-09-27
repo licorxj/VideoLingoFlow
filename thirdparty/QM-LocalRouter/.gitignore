@@ -43,12 +43,16 @@ Thumbs.db
 # === Logs ===
 *.log
 logs/
+run/
 
 # === Environment Files (local config only) ===
 .env
 .env.local
 .env.*.local
 backend/.env
+
+# === Runtime caches (auto-fetched, not seed data) ===
+backend/data/online_providers.json
 
 # === Generated / Scratch files ===
 *_gen.py

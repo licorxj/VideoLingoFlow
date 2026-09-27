@@ -67,6 +67,7 @@ class WhisperXLocal(ASRBase):
         batch_size: Optional[int] = None,
         compute_type: str = DEFAULT_COMPUTE_TYPE,
         word_timestamps: bool = True,
+        vad_method: str = "silero",
         vad_options: Optional[dict] = None,
         asr_options: Optional[dict] = None,
         align_model_name: Optional[str] = None,
@@ -156,11 +157,26 @@ class WhisperXLocal(ASRBase):
             if callback:
                 callback(20, f"Local model acquired, loading '{model_name}' on {device}...")
             try:
+                # 选择 VAD 实现：默认 silero，避免 pyannote 在 Windows 子进程
+                # （step_worker 由 multiprocessing spawn 产生）里使用多进程
+                # DataLoader 造成死锁/无限等待。pyannote VAD 加载本地模型后会
+                # 在推理阶段 hang 住，日志表现为停在
+                # "Performing voice activity detection using Pyannote..."。
+                # 注意 silero 首次会从 torch hub 下载 snakers4/silero-vad，把 hub
+                # 目录指到模型缓存下，便于离线预置与统一清理。
+                if vad_method == "silero":
+                    try:
+                        import torch as _th
+                        _th.hub.set_dir(os.path.join(self._model_dir, "hub"))
+                    except Exception:
+                        pass
+
                 asr_model = whisperx.load_model(
                     whisper_arch=model_name,
                     device=device,
                     compute_type=compute_type,
                     language=whisper_language,
+                    vad_method=vad_method,
                     vad_options=vad_opts,
                     asr_options=asr_opts,
                     download_root=self._model_dir,

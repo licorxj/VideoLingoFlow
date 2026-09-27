@@ -106,6 +106,17 @@ def build_workspace_tools(project_id: int) -> dict[str, Tool]:
         "generate_assets", "为资产生成图片（异步）。ids 为空时自动补齐所有还没有图的资产",
         {"ids": {"type": "array", "items": {"type": "integer"}}}, [], generate_assets)
 
+    def polish_assets(args):
+        ids = _ids(args)
+        if not ids:
+            ids = [a["id"] for a in pipe_assets.list_asset_ids_without_image(project_id)]
+        return pipe_assets.polish_asset_prompts(project_id, ids or None)
+
+    tools["polish_assets"] = _tool(
+        "polish_assets", "按画风视觉手册润色资产生图提示词（异步）。ids 为空时处理项目全部资产；"
+        "角色图将带四视图语义，需项目已设定画风",
+        {"ids": {"type": "array", "items": {"type": "integer"}}}, [], polish_assets)
+
     def generate_storyboard(args):
         """触发分镜表+面板（同步执行：单次 LLM 调用，结果直接可查）。"""
         script_id = args.get("scriptId")

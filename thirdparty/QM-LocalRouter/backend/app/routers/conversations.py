@@ -11,6 +11,8 @@ router = APIRouter(prefix="/api/conversations", tags=["conversations"])
 
 
 class ConversationCreate(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     title: str = "New Chat"
     strategy_name: str = ""
     chat_mode: str = "strategy"
@@ -21,6 +23,8 @@ class ConversationCreate(BaseModel):
 
 
 class ConversationUpdate(BaseModel):
+    model_config = {"protected_namespaces": ()}
+
     title: Optional[str] = None
     strategy_name: Optional[str] = None
     chat_mode: Optional[str] = None

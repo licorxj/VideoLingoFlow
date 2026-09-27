@@ -5,6 +5,7 @@ from typing import Optional
 from datetime import datetime
 from app.database import get_db
 from app.models.log import RequestLog
+from app.models.api_key import ApiKey
 from app.schemas.schemas import LogOut, PaginatedResponse
 
 router = APIRouter(prefix="/api/logs", tags=["logs"])
@@ -21,7 +22,7 @@ async def list_logs(
     end_date: Optional[str] = None,
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(RequestLog)
+    query = select(RequestLog, ApiKey.alias).outerjoin(ApiKey, RequestLog.api_key_id == ApiKey.id)
     count_query = select(func.count()).select_from(RequestLog)
 
     if strategy_id:
@@ -45,6 +46,10 @@ async def list_logs(
     total = await db.scalar(count_query)
     query = query.order_by(RequestLog.id.desc()).offset((page - 1) * page_size).limit(page_size)
     result = await db.execute(query)
-    items = [LogOut.model_validate(r) for r in result.scalars().all()]
+    items = []
+    for log, key_alias in result.all():
+        item = LogOut.model_validate(log)
+        item.key_alias = key_alias or ""
+        items.append(item)
 
     return PaginatedResponse(items=items, total=total or 0, page=page, page_size=page_size)

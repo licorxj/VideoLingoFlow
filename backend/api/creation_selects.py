@@ -129,6 +129,17 @@ def update_creation(creation_id: str, data: CreationUpdate) -> dict:
         raise HTTPException(status_code=400, detail=str(exc))
 
 
+@router.delete("/{creation_id}")
+def delete_creation(creation_id: str) -> dict:
+    """删除创作项目（软删除，级联子表）。"""
+    _require_creation(creation_id)
+    try:
+        agi.delete_creation(creation_id)
+    except agi.NotFoundError:
+        raise HTTPException(status_code=404, detail=f"创作项目不存在: {creation_id}")
+    return {"ok": True, "id": creation_id}
+
+
 @router.put("/characters/{character_id}")
 def update_creation_character(character_id: str, data: CharacterUpdate) -> dict:
     """编辑人物设定。"""
@@ -503,6 +514,10 @@ def creation_tree(creation_id: str):
                 "id": s.get("id"), "order_no": s.get("order_no"),
                 "label": f"#{s.get('order_no')} {(scenes_txt[0] if scenes_txt else '')[:24]}".strip(),
                 "scene_descriptions": scenes_txt,
+                # 提示词字段：驾驶舱「分镜提示词」阶段要靠它展示/判断缺口
+                "image_prompt": s.get("image_prompt") or "",
+                "video_prompt": s.get("video_prompt") or "",
+                "image_prompt_refs": s.get("image_prompt_refs") or "",
                 "characters": s.get("characters") or [],
                 "dialogues": s.get("dialogues") or [],
                 "bgm_design": s.get("bgm_design") or "",

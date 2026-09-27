@@ -28,19 +28,98 @@ class Forwarder:
     def __init__(self, db: AsyncSession):
         self.db = db
 
+    async def _post_json(self, url: str, headers: dict, body: dict, timeout: int) -> httpx.Response:
+        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+            return await client.post(url, headers=headers, json=body)
+
+    async def _real_key(self, api_key: ApiKey) -> str:
+        """Decrypt the key, rotating OAuth access tokens that are about to expire."""
+        if api_key.oauth_profile:
+            from app.services import oauth_providers
+            await oauth_providers.ensure_fresh_token(self.db, api_key)
+        return decrypt_value(api_key.key_value)
+
+    @staticmethod
+    def _claude_auth_headers(real_key: str) -> dict:
+        # OAuth tokens for Claude subscriptions authenticate with Bearer + the oauth beta header
+        return {"Authorization": f"Bearer {real_key}", "anthropic-beta": "oauth-2025-04-20"}
+
+    def _oauth_upstream(self, api_key: ApiKey) -> dict | None:
+        """Profile 'upstream' config for OAuth/CLI-imported keys (auth headers, styles)."""
+        if not api_key.oauth_profile:
+            return None
+        from app.services import oauth_providers, local_cli
+        profile = oauth_providers.get_profile(api_key.oauth_profile) or {}
+        upstream = dict(profile.get("upstream") or {})
+        if not upstream:
+            upstream = dict(local_cli.CLI_PLATFORMS.get(api_key.oauth_profile, {}).get("upstream") or {})
+        upstream["profile_id"] = api_key.oauth_profile
+        return upstream
+
+    OPENCODE_FREE_MODELS = {"big-pickle", "deepseek-v4-flash-free", "mimo-v2.5-free",
+                            "hy3-free", "nemotron-3-ultra-free", "north-mini-code-free"}
+
+    def _opencode_keyless_gate(self, upstream: dict, real_key: str, model_id: str):
+        """Keyless opencode connections may only call free-tier models (no auth header);
+        premium models get a clear error instead of an upstream 401."""
+        if upstream.get("profile_id") != "opencode" or real_key != "KEYLESS":
+            return None
+        if model_id.endswith("-free") or model_id in self.OPENCODE_FREE_MODELS:
+            return {"skip_auth": True}
+        raise ValueError("This model requires an opencode API key — use a '-free' model or import your Zen key (本地CLI 检测本机凭据)")
+
+    @staticmethod
+    def _apply_upstream_auth(headers: dict, upstream: dict, real_key: str) -> dict:
+        """Apply the platform's auth scheme onto the headers dict."""
+        auth = upstream.get("auth", "bearer")
+        if auth == "none":
+            headers.pop("Authorization", None)
+        elif auth == "cloud-ide-jwt":
+            headers["Authorization"] = f"Cloud-IDE-JWT {real_key}"
+        elif auth == "bearer-workos":
+            headers["Authorization"] = f"Bearer workos:{real_key}"
+        elif auth == "bearer":
+            headers["Authorization"] = f"Bearer {real_key}"
+        return headers
+
     async def forward(
         self, strategy: Strategy, rule: StrategyRule,
         provider: Provider, model: Model, api_key: ApiKey,
         request_body: dict, is_stream: bool,
     ) -> httpx.Response:
-        real_key = decrypt_value(api_key.key_value)
+        real_key = await self._real_key(api_key)
         protocol = provider.protocol
         base_url = provider.base_url.rstrip("/")
+        upstream = self._oauth_upstream(api_key) or {}
+        extra_headers = upstream.get("extra_headers") or {}
+        responses_style = upstream.get("upstream_style") == "responses"
 
         # Build upstream request based on protocol
+        if responses_style:
+            # Codex OAuth upstream speaks the Responses API, not chat/completions
+            from app.utils.protocol_adapter import chat_to_responses_request, responses_to_chat
+            url = f"{base_url}/responses"
+            headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json", **extra_headers}
+            resp = await self._post_json(url, headers, chat_to_responses_request(request_body, model.model_id),
+                                         strategy.timeout or 120)
+            if resp.status_code == 200:
+                converted = responses_to_chat(resp.json(), model.model_id)
+                from io import BytesIO
+                return httpx.Response(status_code=200, content=json.dumps(converted).encode(),
+                                      headers={"content-type": "application/json"})
+            return resp
+
         if protocol == "openai" or protocol == "custom":
-            url = f"{base_url}/chat/completions"
-            headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
+            keyless = self._opencode_keyless_gate(upstream, real_key, model.model_id)
+            if upstream.get("auth") and upstream.get("auth") != "bearer":
+                headers = self._apply_upstream_auth({"Content-Type": "application/json"}, upstream, real_key)
+            else:
+                headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
+            if keyless and keyless.get("skip_auth"):
+                headers.pop("Authorization", None)
+            headers.update(extra_headers)
+            chat_path = upstream.get("chat_path") or "/chat/completions"
+            url = f"{base_url}{chat_path}"
             upstream_body = {**request_body, "model": model.model_id}
             if is_stream:
                 upstream_body["stream"] = True
@@ -50,9 +129,9 @@ class Forwarder:
             upstream_body, extra_headers = openai_to_claude(request_body)
             upstream_body["model"] = model.model_id
             headers = {
-                "x-api-key": real_key,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
+                **(self._claude_auth_headers(real_key) if api_key.oauth_profile else {"x-api-key": real_key}),
                 **extra_headers,
             }
 
@@ -77,13 +156,52 @@ class Forwarder:
         request_body: dict,
     ):
         """Yield SSE chunks from upstream, translated to OpenAI format."""
-        real_key = decrypt_value(api_key.key_value)
+        real_key = await self._real_key(api_key)
         protocol = provider.protocol
         base_url = provider.base_url.rstrip("/")
+        upstream = self._oauth_upstream(api_key) or {}
+        extra_headers = upstream.get("extra_headers") or {}
+
+        if upstream.get("upstream_style") == "responses":
+            # Codex OAuth upstream: Responses API streaming -> OpenAI chunks
+            from app.utils.protocol_adapter import chat_to_responses_request, responses_stream_chunk_to_chat
+            url = f"{base_url}/responses"
+            headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json", **extra_headers}
+            upstream_body = chat_to_responses_request({**request_body, "stream": True}, model.model_id)
+            timeout = strategy.timeout or 120
+            completion_id = f"chatcmpl-{int(time.time()*1000)}"
+
+            async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+                async with client.stream("POST", url, headers=headers, json=upstream_body) as resp:
+                    if resp.status_code != 200:
+                        body = await resp.aread()
+                        raise httpx.HTTPStatusError(f"Upstream error {resp.status_code}", request=resp.request, response=resp)
+                    async for line in resp.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:].strip()
+                            if data_str == "[DONE]":
+                                yield 'data: [DONE]\n\n'
+                                break
+                            try:
+                                event = json.loads(data_str)
+                            except Exception:
+                                continue
+                            chunk = responses_stream_chunk_to_chat(event, model.model_id, completion_id)
+                            if chunk:
+                                yield 'data: ' + json.dumps(chunk, ensure_ascii=False) + '\n\n'
+            return
 
         if protocol == "openai" or protocol == "custom":
-            url = f"{base_url}/chat/completions"
-            headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
+            keyless = self._opencode_keyless_gate(upstream, real_key, model.model_id)
+            if upstream.get("auth") and upstream.get("auth") != "bearer":
+                headers = self._apply_upstream_auth({"Content-Type": "application/json"}, upstream, real_key)
+            else:
+                headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
+            if keyless and keyless.get("skip_auth"):
+                headers.pop("Authorization", None)
+            headers.update(extra_headers)
+            chat_path = upstream.get("chat_path") or "/chat/completions"
+            url = f"{base_url}{chat_path}"
             upstream_body = {**request_body, "model": model.model_id, "stream": True, "stream_options": {"include_usage": True}}
 
         elif protocol == "claude":
@@ -92,9 +210,10 @@ class Forwarder:
             upstream_body["model"] = model.model_id
             upstream_body["stream"] = True
             headers = {
-                "x-api-key": real_key,
                 "anthropic-version": "2023-06-01",
                 "content-type": "application/json",
+                **(self._claude_auth_headers(real_key) if api_key.oauth_profile else {"x-api-key": real_key}),
+                **extra_headers,
             }
 
         elif protocol == "gemini":
@@ -221,6 +340,92 @@ class Forwarder:
         self.db.add(log)
         await self.db.commit()
 
+
+    async def forward_embeddings(
+        self, provider: Provider, model: Model, api_key: ApiKey,
+        input_texts: list[str],
+    ) -> list[list[float]]:
+        """Return one embedding vector per input text."""
+        real_key = decrypt_value(api_key.key_value)
+        protocol = provider.protocol
+        base_url = provider.base_url.rstrip("/")
+
+        if protocol in ("openai", "custom"):
+            url = f"{base_url}/embeddings"
+            headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
+            upstream_body = {"model": model.model_id, "input": input_texts}
+            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+                resp = await client.post(url, headers=headers, json=upstream_body)
+                if resp.status_code != 200:
+                    raise ValueError(f"Upstream error {resp.status_code}: {resp.text[:300]}")
+                data = resp.json()
+                return [item["embedding"] for item in data.get("data", [])]
+
+        elif protocol == "gemini":
+            url = f"{base_url}/models/{model.model_id}:batchEmbedContents?key={real_key}"
+            headers = {"Content-Type": "application/json"}
+            upstream_body = {
+                "requests": [
+                    {"model": f"models/{model.model_id}", "content": {"parts": [{"text": t}]}}
+                    for t in input_texts
+                ]
+            }
+            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+                resp = await client.post(url, headers=headers, json=upstream_body)
+                if resp.status_code != 200:
+                    raise ValueError(f"Upstream error {resp.status_code}: {resp.text[:300]}")
+                data = resp.json()
+                return [e["values"] for e in data.get("embeddings", [])]
+
+        raise ValueError(f"Embeddings are not supported for protocol '{protocol}' (Claude has no embeddings API)")
+
+    async def forward_transcription(
+        self, provider: Provider, model: Model, api_key: ApiKey,
+        filename: str, file_bytes: bytes, content_type: str, fields: dict,
+    ) -> dict:
+        """Forward an audio transcription request. Returns OpenAI-style {"text": ...}."""
+        real_key = decrypt_value(api_key.key_value)
+        protocol = provider.protocol
+        base_url = provider.base_url.rstrip("/")
+
+        if protocol in ("openai", "custom"):
+            url = f"{base_url}/audio/transcriptions"
+            headers = {"Authorization": f"Bearer {real_key}"}
+            data = {**fields, "model": model.model_id}
+            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+                resp = await client.post(
+                    url, headers=headers,
+                    files={"file": (filename, file_bytes, content_type)},
+                    data=data,
+                )
+                if resp.status_code != 200:
+                    raise ValueError(f"Upstream error {resp.status_code}: {resp.text[:300]}")
+                return resp.json()
+
+        elif protocol == "gemini":
+            # Audio understanding via generateContent with inline audio data
+            import base64 as _b64
+            mime = content_type or "audio/mpeg"
+            url = f"{base_url}/models/{model.model_id}:generateContent?key={real_key}"
+            headers = {"Content-Type": "application/json"}
+            upstream_body = {
+                "contents": [{
+                    "parts": [
+                        {"text": fields.get("prompt", "Transcribe this audio.")},
+                        {"inline_data": {"mime_type": mime, "data": _b64.b64encode(file_bytes).decode()}},
+                    ]
+                }]
+            }
+            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+                resp = await client.post(url, headers=headers, json=upstream_body)
+                if resp.status_code != 200:
+                    raise ValueError(f"Upstream error {resp.status_code}: {resp.text[:300]}")
+                data = resp.json()
+                parts = data.get("candidates", [{}])[0].get("content", {}).get("parts", [])
+                text = "".join(p.get("text", "") for p in parts)
+                return {"text": text}
+
+        raise ValueError(f"Audio transcription is not supported for protocol '{protocol}' (Claude has no transcription API)")
 
     # ============================================================
     # Image Generation Forwarding

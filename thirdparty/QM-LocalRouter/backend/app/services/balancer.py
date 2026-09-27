@@ -1,10 +1,13 @@
+import asyncio
 import random
 import time
 from collections import defaultdict
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from app.database import async_session
 from app.models.strategy import Strategy, StrategyRule
 from app.models.api_key import ApiKey
+from app.models.rotation_state import RotationState
 
 
 class KeyUsageTracker:
@@ -89,10 +92,67 @@ class RuleTokenTracker:
 _rule_token_tracker = RuleTokenTracker()
 
 
+class RotationIndex:
+    """Cross-request round-robin counter, persisted to DB so restarts resume.
+
+    In-memory cache avoids a DB read per request; every selection writes the
+    new counter back to the rotation_states table (single row upsert).
+    """
+
+    def __init__(self):
+        self._cache: dict[str, int] = {}
+        self._loaded: set[str] = set()
+        self._lock = asyncio.Lock()
+
+    async def next(self, scope: str, length: int) -> int:
+        if length <= 0:
+            return 0
+        async with self._lock:
+            if scope not in self._loaded:
+                try:
+                    await self._load(scope)
+                except Exception:
+                    pass  # fall back to 0; retry load on next call
+                else:
+                    self._loaded.add(scope)
+            counter = self._cache.get(scope, 0)
+            self._cache[scope] = counter + 1
+            try:
+                await self._persist(scope, counter + 1)
+            except Exception:
+                pass  # rotation still works; worst case restart resumes from an older counter
+        return counter % length
+
+    async def _load(self, scope: str):
+        async with async_session() as session:
+            result = await session.execute(
+                select(RotationState).where(RotationState.scope == scope)
+            )
+            state = result.scalar_one_or_none()
+            if state:
+                self._cache[scope] = state.rr_index or 0
+
+    async def _persist(self, scope: str, value: int):
+        # Dedicated session so caller transactions are untouched
+        async with async_session() as session:
+            result = await session.execute(
+                select(RotationState).where(RotationState.scope == scope)
+            )
+            state = result.scalar_one_or_none()
+            if state is None:
+                session.add(RotationState(scope=scope, rr_index=value))
+            else:
+                state.rr_index = value
+            await session.commit()
+
+
+# Global rotation index instance
+_rotation_index = RotationIndex()
+
+
 class Balancer:
     def __init__(self, db: AsyncSession):
         self.db = db
-        self._rr_index: dict[int, int] = {}
 
     async def select_rule(
         self, strategy: Strategy, exclude_rule_ids: set | None = None
@@ -115,8 +175,7 @@ class Balancer:
         method = strategy.lb_strategy
 
         if method == "round_robin":
-            idx = self._rr_index.get(strategy.id, 0) % len(rules)
-            self._rr_index[strategy.id] = idx + 1
+            idx = await _rotation_index.next(f"rule_{strategy.id}", len(rules))
             return rules[idx]
 
         elif method == "weighted":
@@ -186,7 +245,7 @@ class Balancer:
 
         # Apply key strategy
         if key_method == "round_robin":
-            selected = self._round_robin_key(eligible)
+            selected = await self._round_robin_key(eligible, provider_id)
         elif key_method == "random":
             selected = random.choice(eligible)
         elif key_method == "failover":
@@ -200,14 +259,11 @@ class Balancer:
 
         return selected
 
-    def _round_robin_key(self, keys: list[ApiKey]) -> ApiKey:
-        """Round-robin across keys using a shared index keyed by the first key's provider."""
+    async def _round_robin_key(self, keys: list[ApiKey], provider_id: int) -> ApiKey | None:
+        """Round-robin across keys of one provider, persisted across requests/restarts."""
         if not keys:
             return None
-        # Use provider_id from first key as the rr group key
-        group = keys[0].provider_id
-        idx = self._rr_index.get(f"key_{group}", 0) % len(keys)
-        self._rr_index[f"key_{group}"] = idx + 1
+        idx = await _rotation_index.next(f"key_{provider_id}", len(keys))
         return keys[idx]
 
     def _weighted_random(self, keys: list[ApiKey]) -> ApiKey:

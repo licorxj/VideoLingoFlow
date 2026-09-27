@@ -325,6 +325,20 @@ def generate_asset_images(project_id: int, payload: IdsPayload):
     return pipe.generate_asset_images(payload.ids)
 
 
+@router.post("/assets/{asset_id}/prompt-polish")
+def polish_asset(asset_id: int):
+    from backend.toonflow.pipeline import assets as pipe
+
+    return pipe.polish_asset_prompt(asset_id)
+
+
+@router.post("/projects/{project_id}/assets/prompt-polish")
+def polish_assets_batch(project_id: int, payload: IdsPayload):
+    from backend.toonflow.pipeline import assets as pipe
+
+    return pipe.polish_asset_prompts(project_id, payload.ids or None)
+
+
 @router.post("/assets/{asset_id}/images/regenerate")
 def regenerate_asset_image(asset_id: int):
     from backend.toonflow.pipeline import assets as pipe

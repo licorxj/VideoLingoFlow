@@ -96,10 +96,28 @@ FRONTEND_ONLY_NODE_TYPES = {"video_preview", "image_preview", "audio_multitrack_
 # funasr VAD、demucs 分离等），在同一进程内会长时间占用 GIL，
 # 饿死单进程 uvicorn 的事件循环线程，导致前端无法与后端通信。
 PROCESS_ISOLATED_NODE_TYPES = {"asr", "vocal_separation", "track_separation", "audio_enhance", "http_request"}
+_BUILTIN_NODE_TYPES = get_builtin_node_types()
 BUILTIN_NODE_OUTPUT_IDS = {
     node["id"]: [output.get("id") for output in node.get("outputs", []) if output.get("id")]
-    for node in get_builtin_node_types()
+    for node in _BUILTIN_NODE_TYPES
 }
+_BUILTIN_NODE_NAMES = {node["id"]: str(node.get("name") or "") for node in _BUILTIN_NODE_TYPES}
+# 节点改名后，老工作流 JSON 里保存的 label 仍是旧名（画布/日志会一直显示旧名）；
+# 节点定义里用 legacyNames 登记历史名，这里统一兜底替换（用户自定义名不受影响）。
+_BUILTIN_NODE_LEGACY_LABELS = {
+    node["id"]: set(node.get("legacyNames") or [])
+    for node in _BUILTIN_NODE_TYPES
+}
+
+
+def resolve_node_label(node_type: str, label: str = "") -> str:
+    """把节点显示名中的历史默认名替换为当前节点名（其余原样返回）。"""
+    raw = str(label or "").strip()
+    if not raw:
+        return _BUILTIN_NODE_NAMES.get(node_type) or node_type
+    if raw in _BUILTIN_NODE_LEGACY_LABELS.get(node_type, set()):
+        return _BUILTIN_NODE_NAMES.get(node_type) or raw
+    return raw
 
 
 class TaskCancelledError(Exception):
@@ -234,9 +252,10 @@ class ThreadScheduler:
         self._log(task_info.get("id", ""), "__task__", -1, message, {"status": "cancelled"})
 
     def _build_node_state(self, node):
+        node_type = node.get("data", {}).get("nodeType", "")
         return {
-            "nodeType": node.get("data", {}).get("nodeType", ""),
-            "label": node.get("data", {}).get("label", ""),
+            "nodeType": node_type,
+            "label": resolve_node_label(node_type, node.get("data", {}).get("label", "")),
             "status": "pending",
             "progress": 0,
             "message": "",
@@ -712,7 +731,7 @@ class ThreadScheduler:
 
                 node_type = node.get("data", {}).get("nodeType", "")
                 node_config = node.get("data", {}).get("config", {})
-                node_label = node.get("data", {}).get("label", node_type)
+                node_label = resolve_node_label(node_type, node.get("data", {}).get("label", ""))
                 
                 # Ensure the node exists in task_info["nodes"]
                 if target_node_id not in task_info.get("nodes", {}):

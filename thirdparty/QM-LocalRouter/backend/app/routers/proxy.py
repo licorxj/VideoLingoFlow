@@ -16,9 +16,11 @@ from app.services.balancer import Balancer, _rule_token_tracker
 from app.services.forwarder import Forwarder
 from app.utils.protocol_adapter import (claude_response_to_openai, gemini_response_to_openai, openai_to_claude_response, openai_to_gemini_response, convert_openai_stream_to_claude_chunks, convert_openai_stream_to_gemini_chunks)
 from app.routers.settings import get_output_protocol
+from app.services.access_auth import verify_client_auth, verify_alias_client_key
 import httpx
 
-router = APIRouter(tags=["proxy"])
+router = APIRouter(tags=["proxy"], dependencies=[Depends(verify_client_auth)])
+alias_router = APIRouter(tags=["proxy-alias"])
 
 
 async def _resolve(strategy_name: str, db: AsyncSession):
@@ -305,8 +307,7 @@ async def _handle_non_stream(strategy, rule, provider, model, api_key, request_b
     return JSONResponse(content=data)
 
 
-@router.post("/v1/chat/completions")
-async def chat_completions(request: Request, db: AsyncSession = Depends(get_db)):
+async def _chat_completions_impl(request: Request, db: AsyncSession):
     body = await request.json()
     model_name = body.get("model", "")
     is_stream = body.get("stream", False)
@@ -362,6 +363,11 @@ async def chat_completions(request: Request, db: AsyncSession = Depends(get_db))
     return await _try_forward(strategy, db, body, is_stream)
 
 
+@router.post("/v1/chat/completions")
+async def chat_completions(request: Request, db: AsyncSession = Depends(get_db)):
+    return await _chat_completions_impl(request, db)
+
+
 @router.post("/v1/completions")
 async def completions(request: Request, db: AsyncSession = Depends(get_db)):
     body = await request.json()
@@ -377,8 +383,7 @@ async def completions(request: Request, db: AsyncSession = Depends(get_db)):
     return await _try_forward(strategy, db, chat_body, body.get("stream", False))
 
 
-@router.get("/v1/models")
-async def list_available_models(db: AsyncSession = Depends(get_db)):
+async def _models_impl(db: AsyncSession):
     result = await db.execute(select(Strategy).where(Strategy.is_active == True))
     strategies = result.scalars().all()
     return {
@@ -393,6 +398,11 @@ async def list_available_models(db: AsyncSession = Depends(get_db)):
             for s in strategies
         ],
     }
+
+
+@router.get("/v1/models")
+async def list_available_models(db: AsyncSession = Depends(get_db)):
+    return await _models_impl(db)
 
 
 # ============================================================
@@ -501,6 +511,160 @@ async def image_generations(request: Request, db: AsyncSession = Depends(get_db)
 
     # For openai/custom protocol, pass through as-is (already OpenAI format)
     return JSONResponse(content=data)
+
+
+# ============================================================
+# Embeddings Proxy
+# ============================================================
+
+async def _find_provider_and_model_for_embedding(model_name: str, provider_id: int | None, db: AsyncSession):
+    """Resolve provider and model for embeddings."""
+    if provider_id:
+        provider = await db.get(Provider, int(provider_id))
+        if not provider or not provider.is_active:
+            raise HTTPException(404, detail=f"Provider '{provider_id}' not found or inactive")
+        model_obj = await _resolve_model_from_provider(model_name, provider.id, db)
+        if not model_obj:
+            raise HTTPException(404, detail=f"Model '{model_name}' not found for provider {provider.name}")
+        return provider, model_obj
+
+    result = await db.execute(
+        select(Model).where(Model.model_id == model_name, Model.model_type == "embedding", Model.is_active == True)
+    )
+    model_obj = result.scalars().first()
+    if not model_obj:
+        result2 = await db.execute(
+            select(Model).where(Model.display_name == model_name, Model.model_type == "embedding", Model.is_active == True)
+        )
+        model_obj = result2.scalars().first()
+    if not model_obj:
+        raise HTTPException(404, detail=f"Embedding model '{model_name}' not found in any active provider")
+
+    provider = await db.get(Provider, model_obj.provider_id)
+    if not provider or not provider.is_active:
+        raise HTTPException(404, detail=f"Provider for model '{model_name}' is not active")
+    return provider, model_obj
+
+
+@router.post("/v1/embeddings")
+async def embeddings(request: Request, db: AsyncSession = Depends(get_db)):
+    """OpenAI-compatible embeddings proxy (supports openai/custom and gemini upstreams)."""
+    body = await request.json()
+    model_name = body.pop("model", "")
+    direct_provider_id = body.pop("_direct_provider_id", None)
+
+    provider, model_obj = await _find_provider_and_model_for_embedding(
+        model_name, int(direct_provider_id) if direct_provider_id else None, db
+    )
+
+    api_key = await _select_key_for_provider(provider.id, db)
+    if not api_key:
+        raise HTTPException(503, detail=f"No active API key for provider {provider.name}")
+
+    raw_input = body.get("input", "")
+    input_texts = [raw_input] if isinstance(raw_input, str) else [str(t) for t in raw_input]
+    if not input_texts:
+        raise HTTPException(400, detail="input must be a string or a list of strings")
+
+    forwarder = Forwarder(db)
+    start = time.time()
+    try:
+        vectors = await forwarder.forward_embeddings(provider, model_obj, api_key, input_texts)
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(502, detail=f"Embedding request failed: {str(e)[:500]}")
+
+    latency = int((time.time() - start) * 1000)
+    try:
+        await forwarder.log_request(
+            0, provider.id, api_key.id, model_obj.model_id, {},
+            200, latency, False, None,
+            prompt_tokens=0, completion_tokens=0, total_tokens=0,
+        )
+    except Exception:
+        pass
+
+    return {
+        "object": "list",
+        "data": [{"object": "embedding", "index": i, "embedding": v} for i, v in enumerate(vectors)],
+        "model": model_obj.model_id,
+        "usage": {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0},
+    }
+
+
+# ============================================================
+# Audio Transcription Proxy
+# ============================================================
+
+async def _find_provider_and_model_for_transcription(model_name: str, provider_id: int | None, db: AsyncSession):
+    """Resolve provider and model for audio transcription (whisper-style models)."""
+    if provider_id:
+        provider = await db.get(Provider, int(provider_id))
+        if not provider or not provider.is_active:
+            raise HTTPException(404, detail=f"Provider '{provider_id}' not found or inactive")
+        model_obj = await _resolve_model_from_provider(model_name, provider.id, db)
+        if not model_obj:
+            raise HTTPException(404, detail=f"Model '{model_name}' not found for provider {provider.name}")
+        return provider, model_obj
+
+    result = await db.execute(
+        select(Model).where(Model.model_id == model_name, Model.model_type.in_(["tts", "audio"]), Model.is_active == True)
+    )
+    model_obj = result.scalars().first()
+    if not model_obj:
+        result2 = await db.execute(
+            select(Model).where(Model.display_name == model_name, Model.model_type.in_(["tts", "audio"]), Model.is_active == True)
+        )
+        model_obj = result2.scalars().first()
+    if not model_obj:
+        raise HTTPException(404, detail=f"Transcription model '{model_name}' not found in any active provider")
+
+    provider = await db.get(Provider, model_obj.provider_id)
+    if not provider or not provider.is_active:
+        raise HTTPException(404, detail=f"Provider for model '{model_name}' is not active")
+    return provider, model_obj
+
+
+@router.post("/v1/audio/transcriptions")
+async def audio_transcriptions(request: Request, db: AsyncSession = Depends(get_db)):
+    """OpenAI-compatible audio transcription proxy (multipart: file + model)."""
+    form = await request.form()
+    upload = form.get("file")
+    if upload is None or not hasattr(upload, "read"):
+        raise HTTPException(400, detail="multipart field 'file' is required")
+    model_name = str(form.get("model", ""))
+    if not model_name:
+        raise HTTPException(400, detail="model is required")
+
+    direct_provider_id = form.get("_direct_provider_id")
+    provider, model_obj = await _find_provider_and_model_for_transcription(
+        model_name, int(direct_provider_id) if direct_provider_id else None, db
+    )
+
+    api_key = await _select_key_for_provider(provider.id, db)
+    if not api_key:
+        raise HTTPException(503, detail=f"No active API key for provider {provider.name}")
+
+    file_bytes = await upload.read()
+    fields = {}
+    for key in ("language", "prompt", "response_format", "temperature"):
+        if form.get(key) is not None:
+            fields[key] = str(form.get(key))
+
+    forwarder = Forwarder(db)
+    try:
+        result = await forwarder.forward_transcription(
+            provider, model_obj, api_key,
+            filename=upload.filename or "audio", file_bytes=file_bytes,
+            content_type=upload.content_type or "audio/mpeg", fields=fields,
+        )
+    except ValueError as e:
+        raise HTTPException(400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(502, detail=f"Transcription failed: {str(e)[:500]}")
+
+    return result
 
 
 # ============================================================
@@ -993,3 +1157,24 @@ async def multi_stream_chat_completions(request: Request, db: AsyncSession = Dep
         yield b"data: [DONE]\n\n"
 
     return StreamingResponse(generate(), media_type="text/event-stream")
+
+# ============================================================
+# Key-in-path aliases (OmniRoute-style): for clients that cannot
+# attach Authorization headers. The key itself is the credential.
+# ============================================================
+
+@alias_router.post("/k/{client_key}/v1/chat/completions")
+async def alias_chat_completions(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _key: None = Depends(verify_alias_client_key),
+):
+    return await _chat_completions_impl(request, db)
+
+
+@alias_router.get("/k/{client_key}/v1/models")
+async def alias_models(
+    db: AsyncSession = Depends(get_db),
+    _key: None = Depends(verify_alias_client_key),
+):
+    return await _models_impl(db)

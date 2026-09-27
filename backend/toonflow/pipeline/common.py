@@ -49,6 +49,39 @@ def story_narrative_body(style: str, filename: str) -> str:
     return ""
 
 
+def get_art_prompt(style: str, manual: str) -> str:
+    """画风视觉手册：art_skills/<画风>/art_prompt/<manual>.md，prefix.md 自动拼前。
+
+    对齐源 getArtPrompt：先取递归找到的 prefix.md 正文，再拼目标手册正文。
+    未配置画风或手册缺失返回空串。
+    """
+    style = (style or "").strip()
+    manual = (manual or "").strip()
+    if not style or not manual:
+        return ""
+    base = SKILLS_ROOT / "art_skills" / style
+    if not base.is_dir():
+        return ""
+    if not manual.endswith(".md"):
+        manual += ".md"
+
+    def _read(p: Path) -> str:
+        try:
+            return p.read_text(encoding="utf-8").strip()
+        except Exception:  # noqa: BLE001
+            return ""
+
+    prefix = ""
+    for cand in (base / "prefix.md", base / "art_prompt" / "prefix.md"):
+        if cand.is_file():
+            prefix = _read(cand)
+            break
+    body = _read(base / "art_prompt" / manual)
+    if not body:
+        return ""
+    return f"{prefix}\n{body}".strip() if prefix else body
+
+
 def skill_body(filename: str) -> str:
     """读技能正文（剥离 frontmatter），作为 system 指令。"""
     p = SKILLS_ROOT / filename

@@ -83,6 +83,7 @@ export default function Logs() {
                   <TableHead>{t('logs.strategy')}</TableHead>
                   <TableHead>{t('logs.platform')}</TableHead>
                   <TableHead>{t('logs.model')}</TableHead>
+                  <TableHead>{t('logs.key')}</TableHead>
                   <TableHead>{t('logs.statusCode')}</TableHead>
                   <TableHead>{t('logs.latency')}</TableHead>
                   <TableHead>{t('logs.stream')}</TableHead>
@@ -97,6 +98,7 @@ export default function Logs() {
                     <TableCell className='text-sm'>{l.strategy_id ? getStrategyName(l.strategy_id) : '-'}</TableCell>
                     <TableCell className='text-sm'>{l.provider_id ? getProviderName(l.provider_id) : '-'}</TableCell>
                     <TableCell className='font-mono text-xs text-muted-foreground'>{l.model_used || '-'}</TableCell>
+                    <TableCell className='text-sm'>{l.key_alias || '-'}</TableCell>
                     <TableCell>
                       {l.status_code && l.status_code >= 200 && l.status_code < 300 ? (
                         <Badge variant='success'>{l.status_code}</Badge>
@@ -119,7 +121,7 @@ export default function Logs() {
                   </TableRow>
                 ))}
                 {isLoading && (
-                  <TableRow><TableCell colSpan={9} className='text-center text-muted-foreground py-8'>{t('logs.loading')}</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={10} className='text-center text-muted-foreground py-8'>{t('logs.loading')}</TableCell></TableRow>
                 )}
               </TableBody>
             </Table>
@@ -152,6 +154,7 @@ export default function Logs() {
             </div>
             <div className='flex gap-4 text-sm text-muted-foreground'>
               <span>{t('logs.model')}: {selectedError?.model_used || '-'}</span>
+              <span>{t('logs.key')}: {selectedError?.key_alias || '-'}</span>
               <span>{t('logs.stream')}: {selectedError?.is_stream ? 'SSE' : '-'}</span>
               {selectedError?.strategy_id && <span>{t('logs.strategy')}: {getStrategyName(selectedError.strategy_id)}</span>}
             </div>

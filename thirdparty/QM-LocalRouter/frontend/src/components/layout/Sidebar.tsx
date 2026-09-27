@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { useI18n } from "../../i18n";
 import {
   LayoutDashboard, Server, GitBranch, ScrollText, Settings, MessageSquare,
-  Play, Loader2,
+  Play, Loader2, Network,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 
@@ -15,6 +15,7 @@ function useNavItems() {
     { to: "/providers", icon: Server, label: t("sidebar.providers") },
     { to: "/strategies", icon: GitBranch, label: t("sidebar.strategies") },
     { to: "/logs", icon: ScrollText, label: t("sidebar.logs") },
+    { to: "/endpoints", icon: Network, label: t("sidebar.endpoints") },
     { to: "/settings", icon: Settings, label: t("sidebar.settings") },
   ];
 }

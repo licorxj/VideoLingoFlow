@@ -21,8 +21,9 @@ backend/venv/
 backend/.venv/
 backend/.env
 
-# 运行时数据（由 Docker volume 持久化）
-backend/data/
+# 运行时数据（由 Docker volume 持久化；种子数据 hot_providers.json 除外）
+backend/data/*
+!backend/data/hot_providers.json
 *.db
 *.db-journal
 *.db-wal

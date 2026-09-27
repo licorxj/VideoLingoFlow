@@ -5,7 +5,7 @@ import CreationMatrixPanel from "@/components/creation/CreationMatrixPanel";
 import {
   X, RefreshCw, Network, BookOpen, Users, Clapperboard, Scissors,
   Image as ImageIcon, Film, Mic2, AudioLines, Loader2, AlertTriangle,
-  LayoutGrid, ArrowLeft, Pencil, Save, Eye, Package,
+  LayoutGrid, ArrowLeft, Pencil, Save, Eye, Package, Trash2,
 } from "lucide-react";
 
 /** 文本固定框：限定高度内部滚动，避免长文撑爆版面 */
@@ -361,13 +361,70 @@ const HEADER_CARD = "rounded-xl border border-border/50 bg-gradient-to-r p-3 sha
 
 const ASSET_KIND_ORDER = ["character", "scene_image", "shot_video", "voiceover", "sfx", "bgm", "shot_render", "chapter_render"];
 
+/** 删除项目二次确认弹窗 */
+function DeleteCreationDialog({ project, onCancel, onConfirm }: {
+  project: ProjectSummary;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+}) {
+  const [deleting, setDeleting] = useState(false);
+  const [err, setErr] = useState("");
+
+  const confirm = async () => {
+    setDeleting(true);
+    setErr("");
+    try {
+      await onConfirm();
+    } catch (e: any) {
+      setErr(e?.response?.data?.detail || e?.message || "删除失败");
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[10040] bg-black/70 flex items-center justify-center p-6"
+      onClick={(e) => { e.stopPropagation(); onCancel(); }}>
+      <div className="w-[92vw] max-w-md rounded-2xl border border-border/60 bg-background shadow-2xl overflow-hidden"
+        onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-border/50 bg-destructive/5">
+          <AlertTriangle className="w-4 h-4 text-destructive" />
+          <span className="text-sm font-semibold">删除项目</span>
+          <button type="button" onClick={onCancel}
+            className="ml-auto p-1.5 rounded-md hover:bg-muted text-muted-foreground" title="关闭">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div className="px-4 py-4 space-y-2">
+          <div className="text-sm">
+            确认删除项目 <span className="font-semibold text-foreground">{project.name}</span> 吗？
+          </div>
+          <div className="text-[11px] text-muted-foreground leading-relaxed">
+            删除后该项目及其章节、分镜、人物、场景、道具与资产记录都会被软删除，数据仍保留在数据库中以便恢复。
+          </div>
+          {err && <div className="text-xs text-destructive">{err}</div>}
+        </div>
+        <div className="flex items-center justify-end gap-2 px-4 py-3 border-t border-border/50 bg-muted/30">
+          <button type="button" onClick={onCancel}
+            className="px-3 py-1.5 rounded-md text-xs border border-border/50 hover:bg-muted">取消</button>
+          <button type="button" onClick={confirm} disabled={deleting}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-destructive text-destructive-foreground hover:opacity-90 disabled:opacity-60">
+            {deleting ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+            确认删除
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /** 项目多宫格首页：所有创作项目的简介 / 进度 / 资产数量 */
-function ProjectGrid({ projects, loading, error, onOpen, onReload }: {
+function ProjectGrid({ projects, loading, error, onOpen, onReload, onDelete }: {
   projects: ProjectSummary[];
   loading: boolean;
   error: string;
   onOpen: (id: string) => void;
   onReload: () => void;
+  onDelete: (p: ProjectSummary) => void;
 }) {
   if (loading && !projects.length) {
     return (
@@ -397,13 +454,13 @@ function ProjectGrid({ projects, loading, error, onOpen, onReload }: {
       {projects.map((p) => {
         const pct = Math.max(0, Math.min(100, p.progress?.percent ?? 0));
         return (
-          <button
-            key={p.id}
-            type="button"
-            onClick={(e) => { e.stopPropagation(); onOpen(p.id); }}
-            className={`${CARD} text-left w-full hover:border-primary/50 hover:shadow-md transition-all flex flex-col overflow-hidden`}
-          >
-            {/* 封面 */}
+          <div key={p.id} className="relative group w-full h-full">
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onOpen(p.id); }}
+              className={`${CARD} text-left w-full h-full hover:border-primary/50 hover:shadow-md transition-all flex flex-col overflow-hidden`}
+            >
+              {/* 封面 */}
             <div className="h-24 bg-muted/50 border-b border-border/40 flex items-center justify-center overflow-hidden">
               {p.cover ? (
                 <img src={p.cover} alt="" className="w-full h-full object-cover" loading="lazy"
@@ -454,7 +511,16 @@ function ProjectGrid({ projects, loading, error, onOpen, onReload }: {
                 </div>
               )}
             </div>
-          </button>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDelete(p); }}
+              className="absolute bottom-2 right-2 p-1.5 rounded-lg text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-colors"
+              title="删除项目"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         );
       })}
     </div>
@@ -479,6 +545,8 @@ export default function CreationBrowserDialog({ open, onClose, creationId }: {
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [projectsLoading, setProjectsLoading] = useState(false);
   const [projectsError, setProjectsError] = useState("");
+  /** 待删除的项目（非空时显示二次确认弹窗） */
+  const [deleteTarget, setDeleteTarget] = useState<ProjectSummary | null>(null);
 
   const effId = browseId || creationId || "";
 
@@ -505,6 +573,15 @@ export default function CreationBrowserDialog({ open, onClose, creationId }: {
       .then((res) => { setProjects(res.data || []); })
       .catch((e) => { setProjectsError(e?.response?.data?.detail || e?.message || "加载失败"); })
       .finally(() => setProjectsLoading(false));
+  };
+
+  /** 删除项目：成功后关闭确认框、清理当前浏览项目并刷新列表 */
+  const confirmDeleteProject = async () => {
+    if (!deleteTarget) return;
+    await client.delete(`/api/creation/${deleteTarget.id}`);
+    if (browseId === deleteTarget.id) setBrowseId("");
+    setDeleteTarget(null);
+    loadProjects();
   };
 
   useEffect(() => {
@@ -586,6 +663,7 @@ export default function CreationBrowserDialog({ open, onClose, creationId }: {
               error={projectsError}
               onOpen={(id) => { setBrowseId(id); setView("map"); }}
               onReload={loadProjects}
+              onDelete={(p) => setDeleteTarget(p)}
             />
           ) : view === "matrix" ? (
             <CreationMatrixPanel creationId={effId} />
@@ -891,6 +969,15 @@ export default function CreationBrowserDialog({ open, onClose, creationId }: {
           chapter={editing}
           onCancel={() => setEditing(null)}
           onSaved={() => { setEditing(null); load(); }}
+        />
+      )}
+
+      {/* 删除项目二次确认 */}
+      {deleteTarget && (
+        <DeleteCreationDialog
+          project={deleteTarget}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={confirmDeleteProject}
         />
       )}
 

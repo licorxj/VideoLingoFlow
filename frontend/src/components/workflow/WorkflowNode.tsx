@@ -1803,7 +1803,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
             const current = String(value ?? "");
             const cliKind = String(config.cli || "opencode");
             // Claude Code 无 models 子命令：模型只能手填，隐藏加载按钮与 free 开关
-            const noModelList = cliKind === "claude" || cliKind === "codex";
+            const noModelList = cliKind === "claude" || cliKind === "codex" || cliKind === "cline";
             // free 开关：勾选后仅保留模型名含 free 的条目（本地筛选，不重复执行 CLI）
             const freeOnly = !!config.model_free_only;
             const filteredList = freeOnly
@@ -1835,7 +1835,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                       type="text"
                       value={current}
                       onChange={(e) => onConfigChange(field.key, e.target.value)}
-                      placeholder={noModelList ? (cliKind === "claude" ? "如 sonnet / opus，留空用默认模型" : "如 gpt-5-codex，留空用默认模型") : field.placeholder}
+                      placeholder={noModelList ? (cliKind === "claude" ? "如 sonnet / opus，留空用默认模型" : cliKind === "codex" ? "如 gpt-5-codex，留空用默认模型" : "留空用 cline 默认模型") : field.placeholder}
                       onPointerDown={(e) => e.stopPropagation()}
                       onWheel={(e) => e.stopPropagation()}
                       className="flex-1 min-w-0 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
@@ -1858,6 +1858,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                     <option value="mimo">mimo</option>
                     <option value="claude">claude</option>
                     <option value="codex">codex</option>
+                    <option value="cline">cline</option>
                   </select>
                   {!noModelList && (
                     <label

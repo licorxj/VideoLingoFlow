@@ -26,6 +26,7 @@
         "word_timestamps": true,
         "vad_onset": 0.5,
         "vad_offset": 0.363,
+        "vad_method": "silero",
         "temperatures": [
           0
         ],

@@ -2,45 +2,6 @@
   "nvidia": {
     "models": [
       {
-        "id": "deepseek-ai/deepseek-v4-flash-0731",
-        "name": "DeepSeek V4 Flash 0731",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false,
-          "requiresReasoningContentOnAssistantMessages": true,
-          "thinkingFormat": "deepseek"
-        },
-        "contextWindow": 1000000,
-        "maxTokens": 384000,
-        "thinkingLevelMap": {
-          "minimal": null,
-          "low": null,
-          "medium": null,
-          "high": "high",
-          "max": "max"
-        }
-      },
-      {
         "id": "google/gemma-3-12b-it",
         "name": "Gemma 3 12B IT",
         "api": "openai-completions",
@@ -65,11 +26,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 131072,
-        "maxTokens": 16384
+        "maxTokens": 16384,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "google/gemma-3-4b-it",
@@ -96,11 +68,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 131072,
-        "maxTokens": 16384
+        "maxTokens": 16384,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "meta/llama-3.2-11b-vision-instruct",
@@ -127,11 +110,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 128000,
-        "maxTokens": 4096
+        "maxTokens": 4096,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "meta/llama-3.2-90b-vision-instruct",
@@ -158,11 +152,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 128000,
-        "maxTokens": 8192
+        "maxTokens": 8192,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "meta/muse-glimmer-30b",
@@ -189,11 +194,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 131072,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "mistralai/mistral-7b-instruct-v0.3",
@@ -219,11 +235,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 65536,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "type": "chat"
       },
       {
         "id": "moonshotai/kimi-k2.6",
@@ -250,11 +267,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 262144,
-        "maxTokens": 262144
+        "maxTokens": 262144,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "moonshotai/kimi-k3",
@@ -281,11 +309,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 1048576,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "nvidia/cosmos-reason2-8b",
@@ -312,11 +351,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 131072,
-        "maxTokens": 16384
+        "maxTokens": 16384,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "nvidia/llama-3.1-nemotron-70b-instruct",
@@ -342,11 +392,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 128000,
-        "maxTokens": 8192
+        "maxTokens": 8192,
+        "type": "chat"
       },
       {
         "id": "nvidia/llama-3.1-nemotron-ultra-253b-v1",
@@ -372,11 +423,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 128000,
-        "maxTokens": 16384
+        "maxTokens": 16384,
+        "type": "chat"
       },
       {
         "id": "nvidia/nemotron-3-nano-omni-30b-a3b-reasoning",
@@ -403,11 +455,22 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 256000,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "nvidia/nemotron-3-super-120b-a12b",
@@ -433,11 +496,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 262144,
-        "maxTokens": 262144
+        "maxTokens": 262144,
+        "type": "chat"
       },
       {
         "id": "nvidia/nemotron-3-ultra-550b-a55b",
@@ -463,11 +527,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 1000000,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "type": "chat"
       },
       {
         "id": "nvidia/nemotron-3.5-lightning-30b-a3b",
@@ -493,11 +558,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 262144,
-        "maxTokens": 262144
+        "maxTokens": 262144,
+        "type": "chat"
       },
       {
         "id": "openai/gpt-oss-20b",
@@ -523,11 +589,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 131072,
-        "maxTokens": 32768
+        "maxTokens": 32768,
+        "type": "chat"
       },
       {
         "id": "poolside/laguna-xs-2.1",
@@ -553,11 +620,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 262144,
-        "maxTokens": 16384
+        "maxTokens": 16384,
+        "type": "chat"
       },
       {
         "id": "z-ai/glm-5.3",
@@ -583,11 +651,12 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 1000000,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "type": "chat"
       },
       {
         "id": "z-ai/glm-5.3-flash",
@@ -614,16 +683,27 @@
           "supportsDeveloperRole": false,
           "supportsReasoningEffort": false,
           "maxTokensField": "max_tokens",
-          "supportsStrictMode": false,
-          "supportsLongCacheRetention": false
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
         },
         "contextWindow": 1000000,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       }
     ],
-    "checkedAt": 1789854350799,
-    "lastModified": 1789728262000,
-    "etag": "W/\"2c2d304dec9d6611c40db0885c328ea0\""
+    "checkedAt": 1790444987399,
+    "lastModified": 1790340035000,
+    "etag": "W/\"fd618468d259cfd12b70206204a81069\""
   },
   "xiaomi": {
     "models": [
@@ -634,6 +714,7 @@
         "provider": "xiaomi",
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
+          "supportsStrictMode": true,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
@@ -649,7 +730,18 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "mimo-v2.5-pro",
@@ -658,6 +750,7 @@
         "provider": "xiaomi",
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
+          "supportsStrictMode": true,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
@@ -672,7 +765,8 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "type": "chat"
       },
       {
         "id": "mimo-v2.5-pro-ultraspeed",
@@ -681,6 +775,7 @@
         "provider": "xiaomi",
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
+          "supportsStrictMode": true,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
@@ -695,12 +790,121 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "type": "chat"
+      },
+      {
+        "id": "mimo-v2.6-flash",
+        "name": "MiMo-V2.6-Flash",
+        "api": "openai-completions",
+        "provider": "xiaomi",
+        "baseUrl": "https://api.xiaomimimo.com/v1",
+        "compat": {
+          "supportsStrictMode": true,
+          "requiresReasoningContentOnAssistantMessages": true,
+          "thinkingFormat": "deepseek"
+        },
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.14,
+          "output": 0.28,
+          "cacheRead": 0.0028,
+          "cacheWrite": 0
+        },
+        "contextWindow": 1048576,
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "mimo-v2.6-pro",
+        "name": "MiMo-V2.6-Pro",
+        "api": "openai-completions",
+        "provider": "xiaomi",
+        "baseUrl": "https://api.xiaomimimo.com/v1",
+        "compat": {
+          "supportsStrictMode": true,
+          "requiresReasoningContentOnAssistantMessages": true,
+          "thinkingFormat": "deepseek"
+        },
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.435,
+          "output": 0.87,
+          "cacheRead": 0.0036,
+          "cacheWrite": 0
+        },
+        "contextWindow": 1048576,
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "mimo-v2.6-pro-ultraspeed",
+        "name": "MiMo-V2.6-Pro-UltraSpeed",
+        "api": "openai-completions",
+        "provider": "xiaomi",
+        "baseUrl": "https://api.xiaomimimo.com/v1",
+        "compat": {
+          "supportsStrictMode": true,
+          "requiresReasoningContentOnAssistantMessages": true,
+          "thinkingFormat": "deepseek"
+        },
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 4.35,
+          "output": 8.7,
+          "cacheRead": 0.036,
+          "cacheWrite": 0
+        },
+        "contextWindow": 1048576,
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       }
     ],
-    "checkedAt": 1789854350802,
-    "lastModified": 1787571286000,
-    "etag": "W/\"3db76cd3404affdf755b2efc443b74c3\""
+    "checkedAt": 1790444986449,
+    "lastModified": 1790340067000,
+    "etag": "W/\"c6e5204bdd5c6de144b577d8f9233a6c\""
   },
   "google": {
     "models": [
@@ -722,7 +926,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 131072,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "deep-research-preview-04-2026",
@@ -742,7 +959,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 131072,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-2.5-computer-use-preview-10-2025",
@@ -761,8 +991,21 @@
           "cacheRead": 0,
           "cacheWrite": 0
         },
-        "contextWindow": 131072,
-        "maxTokens": 65536
+        "contextWindow": 128000,
+        "maxTokens": 64000,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-2.5-flash",
@@ -782,7 +1025,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-2.5-flash-lite",
@@ -802,7 +1058,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-2.5-pro",
@@ -822,7 +1091,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3-flash-preview",
@@ -851,7 +1133,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.1-flash-lite",
@@ -880,7 +1175,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.1-flash-lite-image",
@@ -909,7 +1217,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 65536,
-        "maxTokens": 65536
+        "maxTokens": 4096,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.1-flash-lite-preview",
@@ -938,7 +1259,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.1-flash-live-preview",
@@ -967,7 +1301,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 131072,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.1-pro-preview",
@@ -996,7 +1343,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.1-pro-preview-customtools",
@@ -1025,7 +1385,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.5-flash",
@@ -1054,7 +1427,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.5-flash-lite",
@@ -1083,7 +1469,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.6-flash",
@@ -1112,7 +1511,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.7-flash",
@@ -1141,7 +1553,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-3.8-flash",
@@ -1170,7 +1595,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-flash-latest",
@@ -1199,7 +1637,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemini-flash-lite-latest",
@@ -1228,7 +1679,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 1048576,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemma-4-26b-a4b-it",
@@ -1255,7 +1719,20 @@
           "cacheWrite": 0
         },
         "contextWindow": 262144,
-        "maxTokens": 32768
+        "maxTokens": 32768,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gemma-4-31b-it",
@@ -1282,12 +1759,25 @@
           "cacheWrite": 0
         },
         "contextWindow": 262144,
-        "maxTokens": 32768
+        "maxTokens": 32768,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       }
     ],
-    "checkedAt": 1789854350784,
-    "lastModified": 1789728248000,
-    "etag": "W/\"34bc717955016c92642b123f416eca88\""
+    "checkedAt": 1790444986439,
+    "lastModified": 1790340008000,
+    "etag": "W/\"7479536815e7f52fb17815e7f6031a76\""
   },
   "openai": {
     "models": [
@@ -1311,7 +1801,8 @@
         "maxTokens": 8192,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4-turbo",
@@ -1334,7 +1825,20 @@
         "maxTokens": 4096,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4.1",
@@ -1357,7 +1861,20 @@
         "maxTokens": 32768,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4.1-mini",
@@ -1380,7 +1897,20 @@
         "maxTokens": 32768,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4.1-nano",
@@ -1403,7 +1933,20 @@
         "maxTokens": 32768,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4o",
@@ -1426,7 +1969,20 @@
         "maxTokens": 16384,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4o-2024-05-13",
@@ -1449,7 +2005,20 @@
         "maxTokens": 4096,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4o-2024-08-06",
@@ -1472,7 +2041,20 @@
         "maxTokens": 16384,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4o-2024-11-20",
@@ -1495,7 +2077,20 @@
         "maxTokens": 16384,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-4o-mini",
@@ -1518,7 +2113,20 @@
         "maxTokens": 16384,
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5",
@@ -1551,7 +2159,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5-chat-latest",
@@ -1578,7 +2199,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5-mini",
@@ -1611,7 +2245,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5-nano",
@@ -1644,7 +2291,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5-pro",
@@ -1677,7 +2337,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.1",
@@ -1710,7 +2383,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.2",
@@ -1743,7 +2429,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.2-chat-latest",
@@ -1776,7 +2475,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.2-pro",
@@ -1809,7 +2521,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.3-chat-latest",
@@ -1837,7 +2562,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.3-codex",
@@ -1870,7 +2608,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.3-codex-spark",
@@ -1903,7 +2654,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.4",
@@ -1948,7 +2712,20 @@
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.4-mini",
@@ -1984,7 +2761,20 @@
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.4-nano",
@@ -2017,7 +2807,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.4-pro",
@@ -2062,7 +2865,20 @@
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.5",
@@ -2107,7 +2923,20 @@
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.5-pro",
@@ -2149,7 +2978,20 @@
         "compat": {
           "supportsStrictMode": true,
           "supportsOpenAIGrammarTools": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.6-luna",
@@ -2195,7 +3037,20 @@
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true,
           "supportsExplicitPromptCacheMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.6-sol",
@@ -2241,7 +3096,20 @@
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true,
           "supportsExplicitPromptCacheMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-5.6-terra",
@@ -2287,7 +3155,20 @@
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true,
           "supportsExplicitPromptCacheMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-6-astra",
@@ -2333,7 +3214,138 @@
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true,
           "supportsExplicitPromptCacheMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "gpt-6-luna",
+        "name": "GPT-6 Luna",
+        "api": "openai-responses",
+        "provider": "openai",
+        "baseUrl": "https://api.openai.com/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.1,
+          "output": 0.5,
+          "cacheRead": 0.01,
+          "cacheWrite": 0.125,
+          "tiers": [
+            {
+              "inputTokensAbove": 272000,
+              "input": 0.2,
+              "output": 0.75,
+              "cacheRead": 0.02,
+              "cacheWrite": 0.25
+            }
+          ]
+        },
+        "contextWindow": 272000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": "none",
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsOpenAIGrammarTools": true,
+          "supportsAdditionalTools": true,
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true,
+          "supportsExplicitPromptCacheMode": true
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "gpt-6-sol",
+        "name": "GPT-6 Sol",
+        "api": "openai-responses",
+        "provider": "openai",
+        "baseUrl": "https://api.openai.com/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 2,
+          "output": 10,
+          "cacheRead": 0.2,
+          "cacheWrite": 2.5,
+          "tiers": [
+            {
+              "inputTokensAbove": 272000,
+              "input": 4,
+              "output": 15,
+              "cacheRead": 0.4,
+              "cacheWrite": 5
+            }
+          ]
+        },
+        "contextWindow": 272000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": "none",
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsOpenAIGrammarTools": true,
+          "supportsAdditionalTools": true,
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true,
+          "supportsExplicitPromptCacheMode": true
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "gpt-realtime-2.1",
@@ -2365,7 +3377,20 @@
         },
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "o1",
@@ -2397,7 +3422,20 @@
         },
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "o1-pro",
@@ -2429,7 +3467,20 @@
         },
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "o3",
@@ -2461,7 +3512,20 @@
         },
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "o3-mini",
@@ -2492,7 +3556,8 @@
         },
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "type": "chat"
       },
       {
         "id": "o3-pro",
@@ -2524,7 +3589,20 @@
         },
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "o4-mini",
@@ -2556,740 +3634,28 @@
         },
         "compat": {
           "supportsStrictMode": true
-        }
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       }
     ],
-    "checkedAt": 1789854350798,
-    "lastModified": 1789728263000,
-    "etag": "W/\"366f64bf5a0393415638d6a50d4cead4\""
+    "checkedAt": 1790444986431,
+    "lastModified": 1790340037000,
+    "etag": "W/\"d8710b077c3ba185cd70e038b8ca34d7\""
   },
   "huggingface": {
     "models": [
-      {
-        "id": "MiniMaxAI/MiniMax-M2",
-        "name": "MiniMax-M2",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 1.2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 204800,
-        "maxTokens": 131072
-      },
-      {
-        "id": "MiniMaxAI/MiniMax-M2.1",
-        "name": "MiniMax-M2.1",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 1.2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 204800,
-        "maxTokens": 131072
-      },
-      {
-        "id": "MiniMaxAI/MiniMax-M2.5",
-        "name": "MiniMax-M2.5",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 1.2,
-          "cacheRead": 0.03,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 204800,
-        "maxTokens": 131072
-      },
-      {
-        "id": "MiniMaxAI/MiniMax-M2.7",
-        "name": "MiniMax-M2.7",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 1.2,
-          "cacheRead": 0.06,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 204800,
-        "maxTokens": 131072
-      },
-      {
-        "id": "MiniMaxAI/MiniMax-M3",
-        "name": "MiniMax-M3",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 1.2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 524288,
-        "maxTokens": 512000
-      },
-      {
-        "id": "Qwen/Qwen2.5-Coder-32B-Instruct",
-        "name": "Qwen2.5-Coder-32B-Instruct",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.06,
-          "output": 0.2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 8192
-      },
-      {
-        "id": "Qwen/Qwen3-235B-A22B",
-        "name": "Qwen3 235B-A22B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.2,
-          "output": 0.8,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 40960,
-        "maxTokens": 16384
-      },
-      {
-        "id": "Qwen/Qwen3-235B-A22B-Instruct-2507",
-        "name": "Qwen3 235B-A22B Instruct 2507",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.855,
-          "output": 2.565,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 16384
-      },
-      {
-        "id": "Qwen/Qwen3-235B-A22B-Thinking-2507",
-        "name": "Qwen3-235B-A22B-Thinking-2507",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 3,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 131072
-      },
-      {
-        "id": "Qwen/Qwen3-30B-A3B",
-        "name": "Qwen3 30B A3B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.12,
-          "output": 0.5,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 40960,
-        "maxTokens": 16384
-      },
-      {
-        "id": "Qwen/Qwen3-32B",
-        "name": "Qwen3 32B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.29,
-          "output": 0.59,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 16384
-      },
-      {
-        "id": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-        "name": "Qwen3-Coder 30B-A3B Instruct",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.07,
-          "output": 0.26,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 65536
-      },
-      {
-        "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
-        "name": "Qwen3-Coder-480B-A35B-Instruct",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 2,
-          "output": 2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 66536
-      },
-      {
-        "id": "Qwen/Qwen3-Coder-Next",
-        "name": "Qwen3-Coder-Next",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.2,
-          "output": 1.5,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 65536
-      },
-      {
-        "id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
-        "name": "Qwen3-Next-80B-A3B-Instruct",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.25,
-          "output": 1,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 66536
-      },
-      {
-        "id": "Qwen/Qwen3-Next-80B-A3B-Thinking",
-        "name": "Qwen3-Next-80B-A3B-Thinking",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": false,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 131072
-      },
-      {
-        "id": "Qwen/Qwen3-VL-235B-A22B-Instruct",
-        "name": "Qwen3 VL 235B A22B Instruct",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": false,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 1.5,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 32768
-      },
-      {
-        "id": "Qwen/Qwen3-VL-235B-A22B-Thinking",
-        "name": "Qwen3 VL 235B A22B Thinking",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.98,
-          "output": 3.95,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 131072,
-        "maxTokens": 32768,
-        "thinkingLevelMap": {
-          "off": null,
-          "minimal": null,
-          "low": "low",
-          "medium": "medium",
-          "high": "high",
-          "xhigh": null,
-          "max": null
-        }
-      },
-      {
-        "id": "Qwen/Qwen3.5-122B-A10B",
-        "name": "Qwen3.5 122B-A10B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.4,
-          "output": 3.2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 65536
-      },
-      {
-        "id": "Qwen/Qwen3.5-27B",
-        "name": "Qwen3.5 27B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.3,
-          "output": 2.4,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 65536
-      },
-      {
-        "id": "Qwen/Qwen3.5-35B-A3B",
-        "name": "Qwen3.5 35B-A3B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.25,
-          "output": 2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 65536
-      },
-      {
-        "id": "Qwen/Qwen3.5-397B-A17B",
-        "name": "Qwen3.5-397B-A17B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.6,
-          "output": 3.6,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 32768,
-        "thinkingLevelMap": {
-          "off": "none",
-          "minimal": null,
-          "low": "low",
-          "medium": "medium",
-          "high": "high",
-          "xhigh": null,
-          "max": null
-        }
-      },
-      {
-        "id": "Qwen/Qwen3.5-9B",
-        "name": "Qwen3.5 9B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.17,
-          "output": 0.25,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 65536
-      },
-      {
-        "id": "Qwen/Qwen3.6-27B",
-        "name": "Qwen3.6 27B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.47,
-          "output": 3.19,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 65536
-      },
-      {
-        "id": "Qwen/Qwen3.6-35B-A3B",
-        "name": "Qwen3.6 35B-A3B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.15,
-          "output": 0.95,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 65536
-      },
-      {
-        "id": "Qwen/Qwen3.8-2.4T-A95B",
-        "name": "Qwen3.8 2.4T A95B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 2.5,
-          "output": 6.25,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 131072,
-        "thinkingLevelMap": {
-          "off": null,
-          "minimal": null,
-          "low": "low",
-          "medium": "medium",
-          "high": null,
-          "xhigh": "xhigh",
-          "max": null
-        }
-      },
-      {
-        "id": "Qwen/Qwen3.8-27B",
-        "name": "Qwen3.8 27B",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0.4,
-          "output": 3,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 32768,
-        "thinkingLevelMap": {
-          "off": null,
-          "minimal": null,
-          "low": "low",
-          "medium": "medium",
-          "high": null,
-          "xhigh": "xhigh",
-          "max": null
-        }
-      },
-      {
-        "id": "XiaomiMiMo/MiMo-V2-Flash",
-        "name": "MiMo-V2-Flash",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.1,
-          "output": 0.3,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 4096
-      },
-      {
-        "id": "XiaomiMiMo/MiMo-V2.5",
-        "name": "MiMo-V2.5",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.4,
-          "output": 2,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 131072,
-        "thinkingLevelMap": {
-          "off": "none",
-          "minimal": null,
-          "low": "low",
-          "medium": "medium",
-          "high": "high",
-          "xhigh": "xhigh",
-          "max": null
-        }
-      },
-      {
-        "id": "XiaomiMiMo/MiMo-V2.5-Pro",
-        "name": "MiMo-V2.5-Pro",
-        "api": "openai-completions",
-        "provider": "huggingface",
-        "baseUrl": "https://router.huggingface.co/v1",
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 1,
-          "output": 3,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsDeveloperRole": false
-        },
-        "contextWindow": 1048576,
-        "maxTokens": 131072,
-        "thinkingLevelMap": {
-          "off": "none",
-          "minimal": null,
-          "low": "low",
-          "medium": "medium",
-          "high": "high",
-          "xhigh": "xhigh",
-          "max": null
-        }
-      },
       {
         "id": "deepseek-ai/DeepSeek-R1",
         "name": "DeepSeek-R1",
@@ -3307,10 +3673,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 64000,
-        "maxTokens": 32768
+        "maxTokens": 32768,
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-R1-0528",
@@ -3329,10 +3697,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 163840,
-        "maxTokens": 163840
+        "maxTokens": 163840,
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V3",
@@ -3351,10 +3721,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 64000,
-        "maxTokens": 8192
+        "maxTokens": 8192,
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V3-0324",
@@ -3373,10 +3745,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 163840,
-        "maxTokens": 163840
+        "maxTokens": 163840,
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V3.1",
@@ -3395,10 +3769,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 8192
+        "maxTokens": 8192,
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V3.2",
@@ -3417,10 +3793,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 163840,
-        "maxTokens": 65536
+        "maxTokens": 65536,
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V4-Flash",
@@ -3439,10 +3817,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1048576,
-        "maxTokens": 384000
+        "maxTokens": 384000,
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V4-Flash-0731",
@@ -3461,6 +3841,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1048576,
@@ -3473,7 +3854,8 @@
           "high": "high",
           "xhigh": null,
           "max": "max"
-        }
+        },
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V4-Flash-Vision-Exp",
@@ -3493,6 +3875,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1048576,
@@ -3505,7 +3888,18 @@
           "high": "high",
           "xhigh": null,
           "max": "max"
-        }
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V4-Pro",
@@ -3524,6 +3918,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1048576,
@@ -3536,7 +3931,8 @@
           "high": "high",
           "xhigh": null,
           "max": null
-        }
+        },
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V4-Pro-0813",
@@ -3555,6 +3951,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1000000,
@@ -3567,7 +3964,8 @@
           "high": "high",
           "xhigh": null,
           "max": "max"
-        }
+        },
+        "type": "chat"
       },
       {
         "id": "deepseek-ai/DeepSeek-V4.1-Flash",
@@ -3587,6 +3985,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1048576,
@@ -3599,7 +3998,18 @@
           "high": "high",
           "xhigh": "xhigh",
           "max": "max"
-        }
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "google/gemma-3-12b-it",
@@ -3619,10 +4029,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "google/gemma-3-27b-it",
@@ -3642,10 +4064,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "google/gemma-3-4b-it",
@@ -3665,10 +4099,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "google/gemma-4-26B-A4B-it",
@@ -3688,10 +4134,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 32768
+        "maxTokens": 32768,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "google/gemma-4-31B-it",
@@ -3711,10 +4169,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 32768
+        "maxTokens": 32768,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "meta-llama/Llama-3.1-8B-Instruct",
@@ -3733,10 +4203,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 4096
+        "maxTokens": 4096,
+        "type": "chat"
       },
       {
         "id": "meta-llama/Llama-3.3-70B-Instruct",
@@ -3755,10 +4227,143 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 4096
+        "maxTokens": 4096,
+        "type": "chat"
+      },
+      {
+        "id": "MiniMaxAI/MiniMax-M2",
+        "name": "MiniMax-M2",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 1.2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 204800,
+        "maxTokens": 131072,
+        "type": "chat"
+      },
+      {
+        "id": "MiniMaxAI/MiniMax-M2.1",
+        "name": "MiniMax-M2.1",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 1.2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 204800,
+        "maxTokens": 131072,
+        "type": "chat"
+      },
+      {
+        "id": "MiniMaxAI/MiniMax-M2.5",
+        "name": "MiniMax-M2.5",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 1.2,
+          "cacheRead": 0.03,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 204800,
+        "maxTokens": 131072,
+        "type": "chat"
+      },
+      {
+        "id": "MiniMaxAI/MiniMax-M2.7",
+        "name": "MiniMax-M2.7",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 1.2,
+          "cacheRead": 0.06,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 204800,
+        "maxTokens": 131072,
+        "type": "chat"
+      },
+      {
+        "id": "MiniMaxAI/MiniMax-M3",
+        "name": "MiniMax-M3",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 1.2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 524288,
+        "maxTokens": 512000,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "moonshotai/Kimi-K2-Instruct",
@@ -3777,10 +4382,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 16384
+        "maxTokens": 16384,
+        "type": "chat"
       },
       {
         "id": "moonshotai/Kimi-K2-Instruct-0905",
@@ -3799,10 +4406,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 16384
+        "maxTokens": 16384,
+        "type": "chat"
       },
       {
         "id": "moonshotai/Kimi-K2-Thinking",
@@ -3821,10 +4430,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 262144
+        "maxTokens": 262144,
+        "type": "chat"
       },
       {
         "id": "moonshotai/Kimi-K2.5",
@@ -3844,10 +4455,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 262144
+        "maxTokens": 262144,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "moonshotai/Kimi-K2.6",
@@ -3867,10 +4490,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 262144
+        "maxTokens": 262144,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "moonshotai/Kimi-K2.7-Code",
@@ -3890,10 +4525,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 262144
+        "maxTokens": 262144,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "moonshotai/Kimi-K3",
@@ -3913,6 +4560,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1000000,
@@ -3925,7 +4573,18 @@
           "high": "high",
           "xhigh": null,
           "max": "max"
-        }
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "openai/gpt-oss-120b",
@@ -3944,6 +4603,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
@@ -3956,7 +4616,8 @@
           "high": "high",
           "xhigh": null,
           "max": null
-        }
+        },
+        "type": "chat"
       },
       {
         "id": "openai/gpt-oss-20b",
@@ -3975,6 +4636,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
@@ -3987,7 +4649,682 @@
           "high": "high",
           "xhigh": null,
           "max": null
-        }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen2.5-Coder-32B-Instruct",
+        "name": "Qwen2.5-Coder-32B-Instruct",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.06,
+          "output": 0.2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 131072,
+        "maxTokens": 8192,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-235B-A22B",
+        "name": "Qwen3 235B-A22B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.2,
+          "output": 0.8,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 40960,
+        "maxTokens": 16384,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-235B-A22B-Instruct-2507",
+        "name": "Qwen3 235B-A22B Instruct 2507",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.855,
+          "output": 2.565,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 16384,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-235B-A22B-Thinking-2507",
+        "name": "Qwen3-235B-A22B-Thinking-2507",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 3,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 131072,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-30B-A3B",
+        "name": "Qwen3 30B A3B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.12,
+          "output": 0.5,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 40960,
+        "maxTokens": 16384,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-32B",
+        "name": "Qwen3 32B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.29,
+          "output": 0.59,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 131072,
+        "maxTokens": 16384,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+        "name": "Qwen3-Coder 30B-A3B Instruct",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.07,
+          "output": 0.26,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 65536,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-Coder-480B-A35B-Instruct",
+        "name": "Qwen3-Coder-480B-A35B-Instruct",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 2,
+          "output": 2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 66536,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-Coder-Next",
+        "name": "Qwen3-Coder-Next",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.2,
+          "output": 1.5,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 65536,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-Next-80B-A3B-Instruct",
+        "name": "Qwen3-Next-80B-A3B-Instruct",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.25,
+          "output": 1,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 66536,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-Next-80B-A3B-Thinking",
+        "name": "Qwen3-Next-80B-A3B-Thinking",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 131072,
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-VL-235B-A22B-Instruct",
+        "name": "Qwen3 VL 235B A22B Instruct",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 1.5,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 131072,
+        "maxTokens": 32768,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-VL-235B-A22B-Thinking",
+        "name": "Qwen3 VL 235B A22B Thinking",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.98,
+          "output": 3.95,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 131072,
+        "maxTokens": 32768,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.5-122B-A10B",
+        "name": "Qwen3.5 122B-A10B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.4,
+          "output": 3.2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 65536,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.5-27B",
+        "name": "Qwen3.5 27B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.3,
+          "output": 2.4,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 65536,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.5-35B-A3B",
+        "name": "Qwen3.5 35B-A3B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.25,
+          "output": 2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 65536,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.5-397B-A17B",
+        "name": "Qwen3.5-397B-A17B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.6,
+          "output": 3.6,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 32768,
+        "thinkingLevelMap": {
+          "off": "none",
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.5-9B",
+        "name": "Qwen3.5 9B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.17,
+          "output": 0.25,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 65536,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.6-27B",
+        "name": "Qwen3.6 27B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.47,
+          "output": 3.19,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 65536,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.6-35B-A3B",
+        "name": "Qwen3.6 35B-A3B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.15,
+          "output": 0.95,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 65536,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.8-2.4T-A95B",
+        "name": "Qwen3.8 2.4T A95B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 2.5,
+          "output": 6.25,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 131072,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": null,
+          "xhigh": "xhigh",
+          "max": null
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3.8-27B",
+        "name": "Qwen3.8 27B",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.4,
+          "output": 3,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 32768,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": null,
+          "xhigh": "xhigh",
+          "max": null
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "stepfun-ai/Step-3.5-Flash",
@@ -4006,10 +5343,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 256000
+        "maxTokens": 256000,
+        "type": "chat"
       },
       {
         "id": "stepfun-ai/Step-3.7-Flash",
@@ -4029,6 +5368,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
@@ -4041,7 +5381,18 @@
           "high": "high",
           "xhigh": null,
           "max": null
-        }
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "tencent/Hy3",
@@ -4060,6 +5411,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
@@ -4072,7 +5424,41 @@
           "high": "high",
           "xhigh": null,
           "max": null
-        }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "tencent/Hy4-preview",
+        "name": "Hy4 preview",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.834,
+          "output": 2.501,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 1000000,
+        "maxTokens": 64000,
+        "thinkingLevelMap": {
+          "off": "none",
+          "minimal": null,
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
+        "type": "chat"
       },
       {
         "id": "thinkingmachines/Inkling",
@@ -4092,6 +5478,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1048576,
@@ -4104,7 +5491,18 @@
           "high": "high",
           "xhigh": null,
           "max": null
-        }
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "thinkingmachines/Inkling-Small",
@@ -4124,10 +5522,112 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 524288,
-        "maxTokens": 1048576
+        "maxTokens": 1048576,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "XiaomiMiMo/MiMo-V2-Flash",
+        "name": "MiMo-V2-Flash",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.1,
+          "output": 0.3,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 4096,
+        "type": "chat"
+      },
+      {
+        "id": "XiaomiMiMo/MiMo-V2.5",
+        "name": "MiMo-V2.5",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.4,
+          "output": 2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 262144,
+        "maxTokens": 131072,
+        "thinkingLevelMap": {
+          "off": "none",
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": null
+        },
+        "type": "chat"
+      },
+      {
+        "id": "XiaomiMiMo/MiMo-V2.5-Pro",
+        "name": "MiMo-V2.5-Pro",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 1,
+          "output": 3,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 1048576,
+        "maxTokens": 131072,
+        "thinkingLevelMap": {
+          "off": "none",
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": null
+        },
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-4.5",
@@ -4146,10 +5646,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 98304
+        "maxTokens": 98304,
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-4.5-Air",
@@ -4168,10 +5670,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 98304
+        "maxTokens": 98304,
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-4.5V",
@@ -4191,10 +5695,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 65536,
-        "maxTokens": 16384
+        "maxTokens": 16384,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-4.6",
@@ -4213,10 +5729,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 204800,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-4.6V-Flash",
@@ -4236,10 +5754,22 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 131072,
-        "maxTokens": 32768
+        "maxTokens": 32768,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-4.7",
@@ -4258,10 +5788,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 204800,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-4.7-Flash",
@@ -4280,10 +5812,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 200000,
-        "maxTokens": 128000
+        "maxTokens": 128000,
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-5",
@@ -4302,10 +5836,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 202752,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-5.1",
@@ -4324,10 +5860,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 202752,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-5.2",
@@ -4346,10 +5884,12 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 262144,
-        "maxTokens": 131072
+        "maxTokens": 131072,
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-5.3",
@@ -4368,6 +5908,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1048576,
@@ -4380,7 +5921,8 @@
           "high": "high",
           "xhigh": null,
           "max": "max"
-        }
+        },
+        "type": "chat"
       },
       {
         "id": "zai-org/GLM-5.3-Flash",
@@ -4400,6 +5942,7 @@
           "cacheWrite": 0
         },
         "compat": {
+          "supportsStrictMode": true,
           "supportsDeveloperRole": false
         },
         "contextWindow": 1048576,
@@ -4412,12 +5955,23 @@
           "high": "high",
           "xhigh": null,
           "max": "max"
-        }
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       }
     ],
-    "checkedAt": 1789854350781,
-    "lastModified": 1789122481000,
-    "etag": "W/\"28072739aa66bd465a4694f6e8f6f9de\""
+    "checkedAt": 1790444986433,
+    "lastModified": 1790340016000,
+    "etag": "W/\"16fd3507eb5807845f3f87d72e24c778\""
   },
   "anthropic": {
     "models": [
@@ -4472,7 +6026,24 @@
           "off": null,
           "xhigh": "xhigh",
           "max": "max"
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-fable-5-1",
@@ -4504,7 +6075,24 @@
           "off": null,
           "xhigh": "xhigh",
           "max": "max"
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-haiku-4-5",
@@ -4527,7 +6115,24 @@
         "maxTokens": 64000,
         "compat": {
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 100,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-haiku-4-5-20251001",
@@ -4550,7 +6155,24 @@
         "maxTokens": 64000,
         "compat": {
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 100,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-opus-4-5",
@@ -4573,7 +6195,24 @@
         "maxTokens": 64000,
         "compat": {
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 100,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-opus-4-5-20251101",
@@ -4596,7 +6235,24 @@
         "maxTokens": 64000,
         "compat": {
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 100,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-opus-4-6",
@@ -4623,7 +6279,24 @@
         "compat": {
           "forceAdaptiveThinking": true,
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-opus-4-7",
@@ -4652,7 +6325,24 @@
           "forceAdaptiveThinking": true,
           "supportsTemperature": false,
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-opus-4-8",
@@ -4683,7 +6373,24 @@
         "thinkingLevelMap": {
           "xhigh": "xhigh",
           "max": "max"
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-opus-5",
@@ -4716,7 +6423,78 @@
           "off": null,
           "xhigh": "xhigh",
           "max": "max"
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "claude-opus-5-5",
+        "name": "Claude Opus 5.5",
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "baseUrl": "https://api.anthropic.com",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 4,
+          "output": 20,
+          "cacheRead": 0.2,
+          "cacheWrite": 5
+        },
+        "contextWindow": 1000000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsMidConvoEffort": true,
+          "supportsMidConvoSystemMessages": true,
+          "supportsMidConvoToolChanges": true,
+          "forceAdaptiveThinking": true,
+          "supportsTemperature": false,
+          "supportsStrictTools": true
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-sonnet-4-5",
@@ -4739,7 +6517,24 @@
         "maxTokens": 64000,
         "compat": {
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-sonnet-4-5-20250929",
@@ -4762,7 +6557,24 @@
         "maxTokens": 64000,
         "compat": {
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-sonnet-4-6",
@@ -4789,7 +6601,24 @@
         "compat": {
           "forceAdaptiveThinking": true,
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       },
       {
         "id": "claude-sonnet-5",
@@ -4817,11 +6646,28 @@
         "compat": {
           "forceAdaptiveThinking": true,
           "supportsStrictTools": true
-        }
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       }
     ],
-    "checkedAt": 1789854350800,
-    "lastModified": 1789728235000,
-    "etag": "W/\"55c75c28bdf0cb4bb15080d80f87acb3\""
+    "checkedAt": 1790444987401,
+    "lastModified": 1790339986000,
+    "etag": "W/\"6f3aa1a70db379098bbdda6d0286153f\""
   }
 }

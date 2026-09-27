@@ -11,17 +11,22 @@ import { CharacterMaterialCard, ImageMaterialCard, VideoMaterialCard } from "@/c
 import { UploadMaterialDialog } from "@/components/materials/UploadMaterialDialog";
 import { CharacterAddDialog } from "@/components/materials/CharacterAddDialog";
 import { MaterialEditDialog, EditTarget } from "@/components/materials/MaterialEditDialog";
+import { MaterialFilesPanel } from "@/components/materials/MaterialFilesPanel";
 
 const PAGE_SIZE = 12;
 
 type PanelResult = MaterialListResult<MaterialImage & MaterialVideo & MaterialCharacter>;
 
-const KIND_META: Record<MaterialKind, { label: string; icon: typeof Images; summaryKey: keyof MaterialSummary }> = {
-  image: { label: "图片", icon: Images, summaryKey: "images" },
-  video: { label: "视频", icon: Video, summaryKey: "videos" },
-  character: { label: "角色", icon: UserRound, summaryKey: "characters" },
-  audio: { label: "音频", icon: Music2, summaryKey: "audio" },
-};
+/** 标签页比素材类别多一个「文件」:浏览素材库落盘目录内的真实文件。 */
+type LibraryTab = MaterialKind | "files";
+
+const TAB_META: { key: LibraryTab; label: string; icon: typeof Images; summaryKey: keyof MaterialSummary }[] = [
+  { key: "image", label: "图片", icon: Images, summaryKey: "images" },
+  { key: "video", label: "视频", icon: Video, summaryKey: "videos" },
+  { key: "character", label: "角色", icon: UserRound, summaryKey: "characters" },
+  { key: "audio", label: "音频", icon: Music2, summaryKey: "audio" },
+  { key: "files", label: "文件", icon: FolderOpen, summaryKey: "files" },
+];
 
 function errorText(error: any, fallback: string) {
   const detail = error?.response?.data?.detail;
@@ -181,8 +186,8 @@ function MaterialPanel({ kind, onChanged }: { kind: Exclude<MaterialKind, "audio
 }
 
 export default function MaterialLibrary() {
-  const [kind, setKind] = useState<MaterialKind>("image");
-  const [summary, setSummary] = useState({ images: 0, videos: 0, characters: 0, audio: 0 });
+  const [kind, setKind] = useState<LibraryTab>("image");
+  const [summary, setSummary] = useState({ images: 0, videos: 0, characters: 0, audio: 0, files: 0 });
 
   const refreshSummary = useCallback(() => {
     materialsApi.summary().then(({ data }) => setSummary(data)).catch(() => undefined);
@@ -192,12 +197,17 @@ export default function MaterialLibrary() {
     refreshSummary();
   }, [refreshSummary, kind]);
 
+  const detail =
+    kind === "files"
+      ? "浏览素材库落盘目录内(data/materials、data/libraries、data/characters)的真实文件,支持上传/重命名/删除"
+      : "分类浏览与添加本地素材 · 视频与音频按需加载";
+
   return (
     <PageBackground tone="voiceforge" className="mx-auto max-w-7xl space-y-5 p-1">
       <PageHeader
         icon={Images}
         title="素材库"
-        detail="分类浏览与添加本地素材 · 视频与音频按需加载"
+        detail={detail}
         breadcrumbs={[{ label: "素材库" }]}
         actions={
           <Button variant="outline" onClick={refreshSummary}>
@@ -208,8 +218,7 @@ export default function MaterialLibrary() {
       />
 
       <div className="flex gap-1 border-b border-border/60">
-        {(Object.keys(KIND_META) as MaterialKind[]).map((item) => {
-          const { label, icon: Icon, summaryKey } = KIND_META[item];
+        {TAB_META.map(({ key: item, label, icon: Icon, summaryKey }) => {
           const isActive = item === kind;
           return (
             <button
@@ -233,6 +242,8 @@ export default function MaterialLibrary() {
           <p className="mb-2 text-xs text-muted-foreground">音频素材(音效/背景音乐/环境音)由配音谷统一管理,支持在线抓取与收藏;列表按需加载,不会整页拉流。</p>
           <AssetLibrary embedded />
         </div>
+      ) : kind === "files" ? (
+        <MaterialFilesPanel onChanged={refreshSummary} />
       ) : (
         <MaterialPanel key={kind} kind={kind} onChanged={refreshSummary} />
       )}

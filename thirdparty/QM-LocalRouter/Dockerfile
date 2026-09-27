@@ -36,12 +36,13 @@ ENV PYTHONUNBUFFERED=1 \
 
 WORKDIR /app
 
-# 安装 nginx（静态文件 + 反向代理）、curl（健康检查）、时区数据
+# 安装 nginx（静态文件 + 反向代理）、curl（健康检查）、gettext-base（envsubst 渲染配置）、时区数据
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         nginx \
         curl \
         ca-certificates \
+        gettext-base \
         tzdata \
     && rm -rf /var/lib/apt/lists/* \
     && rm -f /etc/nginx/conf.d/default.conf \
@@ -63,7 +64,7 @@ COPY --from=frontend-build /app/dist ./frontend/dist
 RUN useradd --system --uid 1001 --create-home --shell /usr/sbin/nologin app \
     && mkdir -p /app/backend/data/backups /app/backend/data/icons \
     && chown -R app:app /app \
-    && chown -R app:app /var/cache/nginx
+    && chown -R app:app /var/cache/nginx /var/lib/nginx /var/log/nginx
 
 # 部署 nginx 配置模板与启动脚本
 COPY docker/nginx.conf /etc/nginx/nginx.conf.template

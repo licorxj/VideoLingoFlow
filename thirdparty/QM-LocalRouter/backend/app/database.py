@@ -44,6 +44,10 @@ async def _add_missing_columns():
         ("models", "status", "VARCHAR(20) DEFAULT 'untested'"),
         ("models", "last_error", "VARCHAR(500) DEFAULT ''"),
         ("providers", "homepage", "VARCHAR(500) DEFAULT ''"),
+        ("providers", "auth_type", "VARCHAR(20) DEFAULT 'api_key'"),
+        ("api_keys", "oauth_profile", "VARCHAR(50) DEFAULT ''"),
+        ("api_keys", "oauth_refresh", "TEXT DEFAULT ''"),
+        ("api_keys", "oauth_expires_at", "INTEGER DEFAULT 0"),
     ]
     async with engine.begin() as conn:
         for table, col, col_def in columns_to_add:

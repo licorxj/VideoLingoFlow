@@ -28,12 +28,15 @@ def serial_mode() -> bool:
         return True
     if raw in {"0", "false", "no", "off"}:
         return False
-    # 未显式设置时：显存 ≤12GB 默认串行（本机单卡安全默认）
+    # 未显式设置时：显存 ≤16GB 默认串行（本机单卡安全默认）。
+    # 16GB 单卡（RTX 4060 Ti 16G / 4070 Ti 16G 等）同时加载两个大模型
+    # （如 qwen3_asr-1.7B+aligner ≈5GB 与 MOSS/whisperx ≈3GB）极易 OOM，
+    # 故把阈值抬到 16GB，让这类卡默认单 lane，避免双开崩溃。
     try:
         from backend.gpu_service.monitor import gpu_info
         info = gpu_info()
         total = float(info.get("total_gb") or 0)
-        return info.get("available") and total <= 12.0
+        return info.get("available") and total <= 16.0
     except Exception:
         return False
 

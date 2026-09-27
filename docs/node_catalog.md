@@ -1,6 +1,6 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-23 18:37:10  
+> 自动生成时间：2026-09-27 03:16:06  
 > 节点总数：156　（带 `*` 的接口为必填项）
 
 ## 总览
@@ -193,7 +193,7 @@
 |------|----|------|-------|---------|---------|
 | 剪辑AI Agent | `editor_agent` | 接收上游剪辑项目JSON，按编辑指令对时间线二次精选，输出精选后的剪辑json | process | 剪辑项目(`project`:json); 编辑指令(`text`:text) | 剪辑项目(`project`:json); 运行记录(`artifacts`:json); 执行结果(`result`:text) |
 | 小pi通用智能体 | `pi_agent` | 将小 Pi 以工作流节点方式嵌入工作流：注入任务背景与输入输出契约，发起一次 Pi 会话并执行任务，产物保存到任务 cache 目录 | process | 输入1(`input_1`:any); 输入2(`input_2`:any) | 输出1(`output_1`:any); 输出2(`output_2`:any) |
-| 本地CLI智能体 | `opencode_agent` | 以本机已安装的 CLI 智能体（opencode / mimo / Claude Code / Codex）非交互执行一次会话，解析事件流并按输出契约收拢产物到任务 cache 目录；各 CLI 的命令与事件协议差异已自动适配 | process | 输入1(`input_1`:any); 输入2(`input_2`:any) | 输出1(`output_1`:any); 输出2(`output_2`:any) |
+| 本地CLI智能体 | `opencode_agent` | 以本机已安装的 CLI 智能体（opencode / mimo / Claude Code / Codex / Cline）非交互执行一次会话，解析事件流并按输出契约收拢产物到任务 cache 目录；各 CLI 的命令与事件协议差异已自动适配 | process | 输入1(`input_1`:any); 输入2(`input_2`:any) | 输出1(`output_1`:any); 输出2(`output_2`:any) |
 
 ### 流程控制节点（`flow_control`）
 

@@ -12,6 +12,7 @@ class ProviderCreate(_Base):
     name: str = Field(..., max_length=100)
     protocol: str = Field(default="openai", pattern=r"^(openai|gemini|claude|custom)$")
     base_url: str = Field(..., max_length=500)
+    auth_type: str = Field(default="api_key", max_length=20)
     description: str = ""
     icon: str = ""
     homepage: str = ""
@@ -22,6 +23,7 @@ class ProviderUpdate(_Base):
     name: Optional[str] = None
     protocol: Optional[str] = None
     base_url: Optional[str] = None
+    auth_type: Optional[str] = None
     description: Optional[str] = None
     icon: Optional[str] = None
     homepage: Optional[str] = None
@@ -33,6 +35,7 @@ class ProviderOut(_Base):
     name: str
     protocol: str
     base_url: str
+    auth_type: str = "api_key"
     description: str
     icon: str = ""
     homepage: str = ""
@@ -58,6 +61,12 @@ class ApiKeyUpdate(_Base):
     weight: Optional[int] = None
 
 
+class ApiKeyBatchCreate(_Base):
+    keys: list[str] = Field(..., min_length=1)
+    alias_prefix: str = "Key"
+    weight: int = Field(default=1, ge=0)
+
+
 class ApiKeyOut(_Base):
     id: int
     provider_id: int
@@ -66,6 +75,8 @@ class ApiKeyOut(_Base):
     alias: str
     status: str
     weight: int
+    oauth_profile: str = ""
+    oauth_expires_at: int = 0
     last_used_at: Optional[datetime] = None
     last_error: Optional[str] = None
     created_at: Optional[datetime] = None
@@ -78,6 +89,11 @@ class ApiKeyTestResult(_Base):
     success: bool
     message: str
     latency_ms: Optional[int] = None
+
+
+class ApiKeyBatchCreateResult(_Base):
+    created: list[ApiKeyOut] = []
+    duplicates: int = 0
 
 
 class BatchTestResult(_Base):
@@ -255,6 +271,7 @@ class LogOut(_Base):
     strategy_id: Optional[int]
     provider_id: Optional[int]
     api_key_id: Optional[int]
+    key_alias: str = ""
     model_used: str
     status_code: Optional[int]
     latency_ms: Optional[int]

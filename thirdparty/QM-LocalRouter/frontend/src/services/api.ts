@@ -7,6 +7,23 @@ const api = axios.create({
 
 // Providers
 export const getHotProviders = () => api.get('/api/providers/hot-providers');
+export const getOnlineProviders = () => api.get('/api/providers/online-providers');
+export const refreshOnlineProviders = () => api.post('/api/providers/online-providers/refresh');
+export const getClientKeys = () => api.get('/api/client-keys');
+export const createClientKey = (data: any) => api.post('/api/client-keys', data);
+export const updateClientKey = (id: number, data: any) => api.patch('/api/client-keys/' + id, data);
+export const deleteClientKey = (id: number) => api.delete('/api/client-keys/' + id);
+export const getEndpointsInfo = () => api.get('/api/endpoints');
+export const getAuthStatus = () => api.get('/api/auth/status');
+export const saveAuthCredentials = (data: any) => api.post('/api/auth/credentials', data);
+export const getOauthProfiles = () => api.get('/api/oauth/profiles');
+export const startOauthLogin = (data: any) => api.post('/api/oauth/start', data);
+export const getOauthStatus = (sessionId: string) => api.get('/api/oauth/status/' + sessionId);
+export const getCliPlatforms = () => api.get('/api/cli/platforms');
+export const cliDetect = (data: any) => api.post('/api/cli/detect', data);
+export const cliImport = (data: any) => api.post('/api/cli/import', data);
+export const cliBrowserStart = (data: any) => api.post('/api/cli/browser-start', data);
+export const cliStatus = (sessionId: string) => api.get('/api/cli/status/' + sessionId);
 export const getProviders = () => api.get('/api/providers');
 export const createProvider = (data: any) => api.post('/api/providers', data);
 export const updateProvider = (id: number, data: any) => api.put('/api/providers/' + id, data);
@@ -15,6 +32,7 @@ export const deleteProvider = (id: number) => api.delete('/api/providers/' + id)
 // API Keys
 export const getKeys = (providerId: number) => api.get('/api/providers/' + providerId + '/keys');
 export const createKey = (data: any) => api.post('/api/api-keys', data);
+export const createKeysBatch = (providerId: number, data: any) => api.post('/api/providers/' + providerId + '/keys/batch', data);
 export const updateKey = (id: number, data: any) => api.put('/api/api-keys/' + id, data);
 export const deleteKey = (id: number) => api.delete('/api/api-keys/' + id);
 export const testKey = (id: number) => api.post('/api/api-keys/' + id + '/test');

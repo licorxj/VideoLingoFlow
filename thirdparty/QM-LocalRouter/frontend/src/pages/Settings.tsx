@@ -22,7 +22,7 @@ export default function SettingsPage() {
   const [backing, setBacking] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
   const [deletingBackup, setDeletingBackup] = useState<string | null>(null);
-  const [appSettings, setAppSettings] = useState({ output_protocol: "openai", default_model: "", default_provider_id: 0, lan_access: false });
+  const [appSettings, setAppSettings] = useState({ output_protocol: "openai", default_model: "", default_provider_id: 0, lan_access: false, auth_mode: "open", oauth_token_hours: 24 });
   const [lanIp, setLanIp] = useState("");
   const [repositoryStatus, setRepositoryStatus] = useState<any>(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
@@ -504,7 +504,7 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+</div>
   );
 }
 

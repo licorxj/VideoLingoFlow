@@ -9,6 +9,7 @@ class Provider(Base):
     name = Column(String(100), nullable=False, unique=True)
     protocol = Column(String(20), nullable=False, default="openai")
     base_url = Column(String(500), nullable=False)
+    auth_type = Column(String(20), default="api_key")  # api_key / oauth profile id
     description = Column(Text, default="")
     icon = Column(String(500), default="")
     homepage = Column(String(500), default="")

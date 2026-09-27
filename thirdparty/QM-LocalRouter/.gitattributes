@@ -1,0 +1,4 @@
+# Shell scripts must use LF even when edited on Windows, otherwise
+# bash fails with '\r: command not found' on Linux/macOS.
+*.sh text eol=lf
+docker/nginx.conf text eol=lf

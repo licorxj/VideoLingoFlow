@@ -30,12 +30,23 @@
           "var2": "",
           "var2Required": false
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 410
+        "height": 434
       },
       "dragHandle": ".wf-node-drag-handle",
       "selected": false
@@ -59,58 +70,21 @@
           "separator": "space",
           "custom_separator": ""
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "output/text_concat_node_2_1789854186142.txt"
+        },
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 334
+        "height": 424
       },
       "dragHandle": ".wf-node-drag-handle"
-    },
-    {
-      "id": "node_4_1789854336635",
-      "type": "workflow",
-      "position": {
-        "x": 60,
-        "y": -1905
-      },
-      "selected": true,
-      "data": {
-        "nodeType": "pi_agent",
-        "label": "小pi通用智能体",
-        "config": {
-          "inputCount": 1,
-          "outputCount": 2,
-          "skills": [
-            "free-material-search"
-          ],
-          "mcps": [],
-          "docs_path": "",
-          "external_doc": "",
-          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：使用skill技能搜索在线素材，并返回结果。输入一即为本次需要搜索到素材",
-          "output_items": [
-            {
-              "port": "输出1",
-              "type": "json",
-              "desc": "全部素材结果json"
-            },
-            {
-              "port": "输出2",
-              "type": "text",
-              "desc": "第一个素材的url"
-            }
-          ]
-        },
-        "status": "pending",
-        "disableExecute": false
-      },
-      "measured": {
-        "width": 420,
-        "height": 679
-      },
-      "dragHandle": ".wf-node-drag-handle",
-      "dragging": false
     },
     {
       "id": "node_1_1790105442102",
@@ -127,7 +101,7 @@
           "inputCount": 2,
           "outputCount": 2,
           "opencode_exe": "",
-          "model": "opencode/ling-3.0-flash-fin-free",
+          "model": "opencode/mimo-v2.6-flash-free",
           "fallback_models": "opencode/big-pickle",
           "agent": "",
           "skills": [
@@ -144,27 +118,64 @@
           "output_items": [
             {
               "port": "输出1",
-              "type": "text",
-              "desc": ""
+              "type": "json",
+              "desc": "全部素材结果json"
             },
             {
               "port": "输出2",
-              "type": "json",
-              "desc": ""
+              "type": "text",
+              "desc": "第一个素材的url"
             }
           ],
           "cli": "opencode",
           "model_free_only": true
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output_1": "",
+          "output_2": ""
+        },
+        "error": "permanent",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 796
+        "height": 806
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
+    },
+    {
+      "id": "node_3_1790445244596",
+      "type": "workflow",
+      "position": {
+        "x": 1200,
+        "y": -2085
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "json_visual_editor",
+        "label": "JSON可视化编辑",
+        "config": {
+          "enable_copy": true,
+          "edited_json": ""
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 213
+      },
+      "dragHandle": ".wf-node-drag-handle"
     }
   ],
   "edges": [
@@ -184,21 +195,6 @@
     {
       "source": "node_2_1789854186142",
       "sourceHandle": "out-text",
-      "target": "node_4_1789854336635",
-      "targetHandle": "in-input_1",
-      "type": "bezier",
-      "animated": false,
-      "style": {
-        "stroke": "#8b5cf6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
-      },
-      "id": "xy-edge__node_2_1789854186142out-text-node_4_1789854336635in-input_1",
-      "selected": false
-    },
-    {
-      "source": "node_2_1789854186142",
-      "sourceHandle": "out-text",
       "target": "node_1_1790105442102",
       "targetHandle": "in-input_1",
       "type": "bezier",
@@ -208,10 +204,23 @@
         "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_2_1789854186142out-text-node_1_1790105442102in-input_1"
+    },
+    {
+      "source": "node_1_1790105442102",
+      "sourceHandle": "out-output_1",
+      "target": "node_3_1790445244596",
+      "targetHandle": "in-json",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1790105442102out-output_1-node_3_1790445244596in-json"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-20T05:42:32",
-  "updatedAt": "2026-09-23T04:40:56",
-  "revision": 4
+  "updatedAt": "2026-09-27T02:12:22",
+  "revision": 7
 }

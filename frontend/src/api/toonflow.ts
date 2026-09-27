@@ -154,6 +154,9 @@ export const toonflowApi = {
     client.put(`/api/tf/storyboards/${storyboardId}`, data),
   generateStoryboardImage: (projectId: number, ids: number[]) =>
     client.post(`/api/tf/projects/${projectId}/storyboards/images`, { ids }),
+  polishAssetPrompt: (assetId: number) => client.post(`/api/tf/assets/${assetId}/prompt-polish`),
+  polishAssetPrompts: (projectId: number, ids: number[]) =>
+    client.post(`/api/tf/projects/${projectId}/assets/prompt-polish`, { ids }),
   generateVideoForStoryboard: (projectId: number, storyboardId: number) =>
     client.post(`/api/tf/projects/${projectId}/videos/generate`, { ids: [storyboardId], force: true }),
   // ---- 角色音色：音色库 / 绑定 / 解绑 / 设计 ----

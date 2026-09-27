@@ -18,6 +18,9 @@ DEFAULTS = {
     "default_model": "",
     "default_provider_id": 0,
     "lan_access": False,
+    "auth_mode": "open",
+    "enabled_groups": {"openai": True, "media": True, "multi": True, "alias": True},
+    "oauth_token_hours": 24,
 }
 
 class AppSettings(BaseModel):
@@ -25,6 +28,9 @@ class AppSettings(BaseModel):
     default_model: str = ""
     default_provider_id: int = 0
     lan_access: bool = False
+    auth_mode: str = "open"
+    enabled_groups: dict = {}
+    oauth_token_hours: int = 24
 
 def _get_settings() -> dict:
     if SETTINGS_PATH.exists():
@@ -117,9 +123,12 @@ async def _repository_status(fetch: bool) -> dict:
         "working_tree_clean": not bool(status),
     }
 
+_SENSITIVE_SETTINGS = ("jwt_secret", "admin_password_hash")
+
 @router.get("")
 async def get_settings():
-    return _get_settings()
+    data = _get_settings()
+    return {k: v for k, v in data.items() if k not in _SENSITIVE_SETTINGS}
 
 @router.put("")
 async def update_settings(data: AppSettings):

@@ -439,6 +439,7 @@ export default function CreationCanvas() {
       ? toonflowApi.extractScriptAssets(latestScript.id)
       : Promise.reject(new Error("缺少剧本"));
     else if (action === "assetImages") req = toonflowApi.generateAssetImages(activeId, body.ids || []);
+    else if (action === "assetPolish") req = toonflowApi.polishAssetPrompts(activeId, []);
     else req = toonflowApi.runStage(activeId, action, body);
     req
       .then(() => {
@@ -506,6 +507,7 @@ export default function CreationCanvas() {
         } });
       }
       items.push({ label: "编辑资产信息", run: () => setEditor(d) });
+      items.push({ label: "润色提示词（画风手册）", run: () => toonflowApi.polishAssetPrompt(id).then(refresh) });
       items.push({ label: d.hasImage ? "重生资产图" : "生成资产图", run: () => toonflowApi.regenerateAssetImage(id).then(refresh) });
       items.push({ label: "删除资产", danger: true, run: () => toonflowApi.deleteAsset(id).then(refresh) });
     } else if (d.kind === "storyboard" && d.storyboardId && activeId) {
@@ -729,6 +731,9 @@ export default function CreationCanvas() {
             <StageButton icon={<Users className="w-3 h-3" />} label="提取资产" busy={busy === "extract"}
               active={stageActive.extract} disabled={!gates.extract}
               onClick={() => runStage("extract")} title={gateHint(gates.extract, "先生成剧本") || `从剧本《${latestScript?.title || ""}》提取角色/场景/道具资产`} />
+            <StageButton icon={<Wand2 className="w-3 h-3" />} label="润色提示词" busy={busy === "assetPolish"}
+              disabled={!gates.extract}
+              onClick={() => runStage("assetPolish")} title={gateHint(gates.extract, "先提取资产") || "按画风视觉手册批量润色全部资产的生图提示词（角色含四视图语义）"} />
             <StageButton icon={<ImageIcon className="w-3 h-3" />} label={`资产出图${assetsWithoutImage.length ? `(${assetsWithoutImage.length})` : ""}`} busy={busy === "assetImages"}
               active={stageActive.assetImages} disabled={!gates.assetImages}
               onClick={() => runStage("assetImages", { ids: assetsWithoutImage })} title={gateHint(gates.assetImages, "先提取资产（且全部资产已有图）") || "为没有图的资产生成设定图"} />

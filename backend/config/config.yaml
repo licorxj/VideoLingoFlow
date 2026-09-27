@@ -150,7 +150,7 @@ audio:
   bit_depth: 32
 imagegen:
   method: kieai
-  default_t2i_model: "z-image"
+  default_t2i_model: "gpt-image-2-text-to-image"
   default_i2i_model: "gpt-image-2-image-to-image"
 separation:
   method: demucs

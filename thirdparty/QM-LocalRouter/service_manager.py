@@ -14,6 +14,18 @@ _lock = threading.Lock()
 def get_backend_dir():
     return os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend")
 
+def get_python_exe():
+    venv_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend", "venv")
+    if sys.platform == "win32":
+        candidates = [os.path.join(venv_dir, "Scripts", "python.exe")]
+    else:
+        candidates = [os.path.join(venv_dir, "bin", "python")]
+    candidates.append(sys.executable)
+    for path in candidates:
+        if os.path.isfile(path):
+            return path
+    return sys.executable
+
 class ServiceHandler(http.server.BaseHTTPRequestHandler):
     def log_message(self, format, *args):
         pass
@@ -51,7 +63,7 @@ class ServiceHandler(http.server.BaseHTTPRequestHandler):
                     return
                 try:
                     backend_dir = get_backend_dir()
-                    python_exe = os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend", "venv", "Scripts", "python.exe")
+                    python_exe = get_python_exe()
                     _backend_process = subprocess.Popen(
                         [python_exe, "-m", "uvicorn", "app.main:app",
                          "--host", "0.0.0.0", "--port", str(BACKEND_PORT)],

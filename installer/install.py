@@ -538,7 +538,9 @@ def write_runtime_value(path: Path, key: str, value: str) -> None:
         output.append(line)
     if not replaced:
         output.append(assignment)
-    path.write_text("\n".join(output).rstrip() + "\n", encoding="utf-8")
+    # .bat 必须保持 CRLF：cmd 对 LF-only 文件解析不可靠（本地实验曾出现
+    # 注释行错位断行、把 "set https_proxy=" 腰斩成 'tps_proxy' 报错）
+    path.write_text("\r\n".join(output).rstrip() + "\r\n", encoding="utf-8")
 
 
 def _read_runtime_flag(local_env: Path, key: str, default: str = "") -> str:
@@ -627,7 +629,7 @@ def ensure_runtime_keys(local_env: Path, template: Path) -> list[str]:
         return []
 
     local_env.write_text(
-        current_text.rstrip() + "\n" + "\n".join(appended).rstrip() + "\n",
+        current_text.rstrip() + "\r\n" + "\r\n".join(appended).rstrip() + "\r\n",
         encoding="utf-8",
     )
     return added_keys
@@ -843,6 +845,9 @@ def bootstrap_config() -> None:
         if tpl.exists():
             runtime.mkdir(parents=True, exist_ok=True)
             shutil.copy2(tpl, local_env)
+            # 模板可能以 LF 检出（git 换行归一化），统一转成 CRLF（.bat 必须 CRLF）
+            data = local_env.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+            local_env.write_bytes(data)
             ok("已从模板生成 .runtime/local_env.bat")
         else:
             warn(".runtime/local_env.bat 缺失且无模板（管理器会自动使用内置默认值）")

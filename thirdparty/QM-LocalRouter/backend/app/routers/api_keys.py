@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 from app.database import get_db
 from app.models.api_key import ApiKey
 from app.models.provider import Provider
-from app.schemas.schemas import ApiKeyCreate, ApiKeyUpdate, ApiKeyOut, ApiKeyTestResult, BatchTestResult, BatchDeleteResult
+from app.schemas.schemas import ApiKeyCreate, ApiKeyUpdate, ApiKeyOut, ApiKeyTestResult, ApiKeyBatchCreate, ApiKeyBatchCreateResult, BatchTestResult, BatchDeleteResult
 from app.utils.crypto import encrypt_value, decrypt_value, mask_key
 import httpx
 import time
@@ -31,6 +31,8 @@ def _key_to_out(key: ApiKey) -> dict:
         alias=key.alias or "",
         status=key.status or "active",
         weight=key.weight or 1,
+        oauth_profile=key.oauth_profile or "",
+        oauth_expires_at=key.oauth_expires_at or 0,
         last_used_at=key.last_used_at,
         last_error=key.last_error or "",
         created_at=key.created_at,
@@ -62,6 +64,64 @@ async def create_key(data: ApiKeyCreate, db: AsyncSession = Depends(get_db)):
     await db.commit()
     await db.refresh(key)
     return _key_to_out(key)
+
+
+@router.post("/providers/{provider_id}/keys/batch", response_model=ApiKeyBatchCreateResult, status_code=201)
+async def create_keys_batch(provider_id: int, data: ApiKeyBatchCreate, db: AsyncSession = Depends(get_db)):
+    """Create multiple keys at once with auto-numbered aliases (prefix-N).
+
+    Empty/whitespace lines and duplicate keys (within the batch or already
+    stored for this provider) are skipped. Numbering continues from the
+    provider's existing key count.
+    """
+    provider = await db.get(Provider, provider_id)
+    if not provider:
+        raise HTTPException(404, "Provider not found")
+
+    # Clean input: strip whitespace, drop empties, dedupe preserving order
+    cleaned: list[str] = []
+    seen: set[str] = set()
+    for raw in data.keys:
+        k = raw.strip()
+        if k and k not in seen:
+            cleaned.append(k)
+            seen.add(k)
+    if not cleaned:
+        raise HTTPException(400, "No valid keys provided")
+
+    # Skip keys identical to existing ones (need decryption to compare)
+    duplicates = 0
+    existing_values: set[str] = set()
+    result = await db.execute(select(ApiKey).where(ApiKey.provider_id == provider_id))
+    for existing_key in result.scalars():
+        try:
+            existing_values.add(decrypt_value(existing_key.key_value))
+        except Exception:
+            pass
+    new_keys = [k for k in cleaned if k not in existing_values]
+    duplicates = len(cleaned) - len(new_keys)
+    if not new_keys:
+        return ApiKeyBatchCreateResult(created=[], duplicates=duplicates)
+
+    result = await db.execute(select(func.count(ApiKey.id)).where(ApiKey.provider_id == provider_id))
+    existing_count = result.scalar() or 0
+
+    prefix = (data.alias_prefix or "Key").strip() or "Key"
+    created: list[ApiKey] = []
+    for i, kv in enumerate(new_keys):
+        key = ApiKey(
+            provider_id=provider_id,
+            key_value=encrypt_value(kv),
+            alias=f"{prefix}-{existing_count + i + 1}",
+            weight=data.weight,
+            status="untested",
+        )
+        db.add(key)
+        created.append(key)
+    await db.commit()
+    for k in created:
+        await db.refresh(k)
+    return ApiKeyBatchCreateResult(created=[_key_to_out(k) for k in created], duplicates=duplicates)
 
 
 @router.put("/api-keys/{key_id}", response_model=ApiKeyOut)

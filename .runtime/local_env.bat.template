@@ -110,6 +110,23 @@ set "RESOURCE_TOKENS_USE_REDIS=1"
 rem Token wait cap (seconds); empty = queue until a token is acquired.
 set "RESOURCE_ACQUIRE_TIMEOUT=900"
 
+rem ============================================================================
+rem 4.5 Node execution timeout (seconds), per resource class.
+rem     Read by the control-plane worker: CELERY_TIMEOUT_<RESOURCE> (default 3600).
+rem     A node subprocess exceeding it is killed and the node fails.
+rem     - TTS nodes (tts/dub_task)  -> CELERY_TIMEOUT_TTS
+rem     - Local ASR nodes           -> CELERY_TIMEOUT_GPU (ASR shares the gpu class
+rem       with separation nodes; cloud ASR/LLM/HTTP calls are "free" and read
+rem       CELERY_TIMEOUT_FREE)
+rem     NOTE: the whole workflow message also has Celery soft/hard limits
+rem     (CELERY_SOFT_TIMEOUT / CELERY_HARD_TIMEOUT). They must be >= the largest
+rem     node timeout, otherwise the whole workflow gets killed first.
+rem ----------------------------------------------------------------------------
+set "CELERY_TIMEOUT_TTS=7200"
+set "CELERY_TIMEOUT_GPU=7200"
+set "CELERY_SOFT_TIMEOUT=7200"
+set "CELERY_HARD_TIMEOUT=7500"
+
 rem ffmpeg thread cap: leave cores for the GPU pipeline (about half the cores).
 set "FFMPEG_MAX_THREADS=8"
 

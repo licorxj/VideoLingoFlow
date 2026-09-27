@@ -168,6 +168,26 @@ CLI_SPECS: dict = {
         "auto_flag": "--dangerously-bypass-approvals-and-sandbox",
         "extra_paths": ((".cherrystudio", "bin", "codex.exe"),),
     },
+    "cline": {
+        "label": "cline",
+        "protocol": "cline",
+        "run_style": "plain",
+        "json_output_args": ("--json",),
+        # 注意：Cline 的 -c 是 --cwd（opencode 的 -c 是 --continue），按 CLI 区分
+        "dir_flag": "-c",
+        "model_flag": "-m",
+        "supports": (),
+        "list_models": False,
+        "model_hint": "留空用 cline 默认模型",
+        # Cline 默认即自动放行工具（--auto-approve 默认 true），故关闭时需显式传 false
+        "auto_flag": "--auto-approve",
+        "auto_value": "true",
+        "auto_off_args": ("--auto-approve", "false"),
+        "path_keys": ("cli_path", "cline_exe"),
+        "envs": ("CLINE_EXE",),
+        "commands": ("cline",),
+        "extra_paths": (),
+    },
 }
 
 DEFAULT_CLI = "opencode"
@@ -451,7 +471,12 @@ class S_OpenCodeAgent(BaseStep):
             if index == 1:
                 progress(5, f"正在启动 {cli_name} 会话（模型：{label}）")
             else:
-                progress(5, f"主模型不可用，切换兜底模型 {index}/{len(attempts)}：{label}")
+                reason = failures[-1].split(":", 1)[-1].strip() if failures else ""
+                progress(
+                    5,
+                    f"切换兜底模型 {index}/{len(attempts)}：{label}"
+                    + (f"（上一模型失败：{reason[:60]}）" if reason else ""),
+                )
             cmd = self._build_command(exe, config, work_dir, prompt, node_id, cache_dir, model)
             try:
                 proc = subprocess.Popen(
@@ -550,6 +575,8 @@ class S_OpenCodeAgent(BaseStep):
             )
 
         run_style = spec["run_style"]
+        # Cline 需把 message 放到最后：实测输出类 flag 位于 prompt 之后时不生效
+        message_last = run_style == "plain"
         if run_style == "run":
             cmd = [exe, "run", message, *spec["json_output_args"]]
         elif run_style == "exec":
@@ -557,9 +584,12 @@ class S_OpenCodeAgent(BaseStep):
             # 作为与事件协议无关的最终文本兜底
             cmd = [exe, "exec", message, *spec["json_output_args"], *spec.get("always_args", ())]
             cmd += ["-o", str(S_OpenCodeAgent._last_message_path(cache_dir, node_id))]
-        else:
+        elif run_style == "print":
             # Claude Code：-p/--print 非交互，prompt 紧随其后
             cmd = [exe, "-p", message, *spec["json_output_args"]]
+        else:
+            # Cline：没有子命令，prompt 作为位置参数（最后追加）
+            cmd = [exe, *spec["json_output_args"]]
         dir_flag = spec.get("dir_flag")
         if dir_flag:
             cmd += [dir_flag, str(work_dir)]
@@ -572,13 +602,21 @@ class S_OpenCodeAgent(BaseStep):
         if variant and "variant" in spec["supports"]:
             cmd += ["--variant", variant]
         # 非交互模式下未预授权的工具权限会被自动拒绝，故默认自动放行
-        # （flag 名随 CLI 而变，见 CLI_SPECS.auto_flag）
+        # （flag 名/取值随 CLI 而变，见 CLI_SPECS.auto_flag / auto_value / auto_off_args）
         if config.get("auto_approve", True):
             cmd.append(spec["auto_flag"])
+            auto_value = spec.get("auto_value")
+            if auto_value:
+                cmd.append(auto_value)
+        elif spec.get("auto_off_args"):
+            # 某些 CLI 默认就放行（如 Cline），关闭时必须显式传 false
+            cmd += list(spec["auto_off_args"])
         if config.get("thinking") and "thinking" in spec["supports"]:
             cmd.append("--thinking")
         if config.get("pure") and "pure" in spec["supports"]:
             cmd.append("--pure")
+        if message_last:
+            cmd.append(message)
         return cmd
 
     @staticmethod
@@ -691,6 +729,15 @@ class S_OpenCodeAgent(BaseStep):
                 + (f"\nstderr: {stderr_tail}" if stderr_tail else "")
             )
 
+        if not texts and not counters["tool_calls"]:
+            # 进程正常退出但零产出：CLI 实际什么都没做（多为模型不可用、鉴权或网络问题）。
+            # 判为本次尝试失败 → 触发兜底模型；全部失败则明确报错，
+            # 避免出现「节点成功但产物为空」的假成功。
+            raise _ModelAttemptError(
+                f"模型 {model_label} 未产生任何输出（退出码 {returncode}）"
+                + (f"\nstderr: {stderr_tail}" if stderr_tail else "")
+            )
+
         return {
             "texts": texts,
             "tool_calls": counters["tool_calls"],
@@ -710,6 +757,8 @@ class S_OpenCodeAgent(BaseStep):
             return cls._claude_event_updates(event, texts, errors, counters)
         if protocol == "codex":
             return cls._codex_event_updates(event, texts, errors, counters)
+        if protocol == "cline":
+            return cls._cline_event_updates(event, texts, errors, counters)
 
         updates: list = []
         etype = event.get("type")
@@ -821,6 +870,71 @@ class S_OpenCodeAgent(BaseStep):
         elif etype == "error":
             errors.append(str(event.get("message") or cls._error_message(event)))
             updates.append((90, f"错误：{errors[-1][:80]}"))
+        return updates
+
+    @classmethod
+    def _cline_event_updates(cls, event: dict, texts: list, errors: list,
+                             counters: dict) -> list:
+        """Cline ``--json`` 事件：hook_event / agent_event / run_result。
+
+        ``agent_event.event.type`` 取值：
+        - ``iteration_start`` / ``iteration_end``（含 toolCallCount）→ 回合进度
+        - ``content_start`` / ``content_end``（contentType: reasoning|text）→ 文本按段收集
+        - ``usage`` → 忽略
+        - ``done``（含完整 ``text`` 与 ``reason``）→ 最终文本 + 成败判定
+        末行 ``run_result``（finishReason）作为收尾确认。
+        """
+        updates: list = []
+        etype = str(event.get("type") or "")
+
+        if etype == "hook_event":
+            if str(event.get("hookEventName") or "") == "agent_start":
+                updates.append((15, "会话已建立"))
+            return updates
+
+        if etype == "run_result":
+            reason = str(event.get("finishReason") or "")
+            if reason and reason != "completed":
+                errors.append(f"会话结束：{reason}")
+                updates.append((90, f"错误：{reason}"))
+            else:
+                updates.append((88, "本轮推理结束"))
+            return updates
+
+        if etype != "agent_event":
+            return updates
+        inner = event.get("event")
+        if not isinstance(inner, dict):
+            return updates
+        itype = str(inner.get("type") or "")
+
+        if itype == "iteration_start":
+            iteration = int(inner.get("iteration") or 0) or (len(texts) + 1)
+            updates.append((20, f"第 {iteration} 轮推理"))
+        elif itype == "content_end":
+            # 文本按「段」收集（content_start 是分块流，拼接会重复）
+            if str(inner.get("contentType") or "") == "text":
+                text = str(inner.get("text") or "")
+                if text.strip() and text not in texts:
+                    texts.append(text)
+                    updates.append((min(85, 30 + len(texts) * 5), f"生成：{text.strip()[-50:]}"))
+            else:
+                updates.append((28, "思考中…"))
+        elif itype == "iteration_end":
+            count = int(inner.get("toolCallCount") or 0)
+            if count:
+                counters["tool_calls"] += count
+                updates.append((min(80, 25 + counters["tool_calls"]), f"调用工具 ×{count}"))
+        elif itype == "done":
+            text = str(inner.get("text") or "").strip()
+            reason = str(inner.get("reason") or "")
+            if text and text not in texts:
+                texts.append(text)
+            if reason and reason != "completed":
+                errors.append(text or f"会话结束：{reason}")
+                updates.append((90, f"错误：{reason}"))
+            else:
+                updates.append((88, "本轮推理结束"))
         return updates
 
     @staticmethod

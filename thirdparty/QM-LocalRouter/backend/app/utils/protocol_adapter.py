@@ -1,10 +1,86 @@
 """
 Protocol adapter: converts OpenAI-format requests to upstream provider formats
-and converts streaming responses back to OpenAI format.
+and converts streaming responses back to OpenAI format. Multimodal message
+content (text / image_url / input_audio) is converted where the target
+protocol supports it.
 """
 import json
 import uuid
 import time
+
+
+def _iter_content_blocks(content) -> list[dict]:
+    """Normalize OpenAI message content into a list of content blocks.
+
+    Plain strings become a single text block; arrays pass through as-is.
+    """
+    if isinstance(content, list):
+        return [b for b in content if isinstance(b, dict)]
+    return [{"type": "text", "text": content}] if content else []
+
+
+def _parse_data_url(url: str) -> tuple[str, str] | None:
+    """data:image/png;base64,xxx -> (mime_type, base64_data)."""
+    if not url.startswith("data:"):
+        return None
+    try:
+        header, data = url.split(",", 1)
+        mime = header[5:].split(";", 1)[0] or "application/octet-stream"
+        return mime, data
+    except ValueError:
+        return None
+
+
+def _convert_openai_content_to_claude(content) -> list[dict]:
+    """OpenAI content blocks -> Claude content blocks.
+
+    image_url -> type:image source (base64 for data URLs, url source for remote).
+    input_audio is not supported by Claude and is skipped.
+    """
+    blocks = []
+    for b in _iter_content_blocks(content):
+        btype = b.get("type", "text")
+        if btype == "text":
+            blocks.append({"type": "text", "text": b.get("text", "")})
+        elif btype == "image_url":
+            url = (b.get("image_url") or {}).get("url", "")
+            data = _parse_data_url(url)
+            if data:
+                blocks.append({"type": "image", "source": {"type": "base64", "media_type": data[0], "data": data[1]}})
+            elif url.startswith("http"):
+                blocks.append({"type": "image", "source": {"type": "url", "url": url}})
+        elif btype == "image":
+            # already Anthropic-shaped (e.g. re-sent history); keep it
+            blocks.append(b)
+        # input_audio / file / unknown types: Claude cannot accept them -> skip
+    return blocks
+
+
+def _convert_openai_content_to_gemini_parts(content) -> list[dict]:
+    """OpenAI content blocks -> Gemini parts.
+
+    image_url -> inline_data (data URLs) or file_data (remote, best effort).
+    input_audio -> inline_data with its audio mime type.
+    """
+    parts = []
+    for b in _iter_content_blocks(content):
+        btype = b.get("type", "text")
+        if btype == "text":
+            if b.get("text"):
+                parts.append({"text": b.get("text", "")})
+        elif btype == "image_url":
+            url = (b.get("image_url") or {}).get("url", "")
+            data = _parse_data_url(url)
+            if data:
+                parts.append({"inline_data": {"mime_type": data[0], "data": data[1]}})
+            elif url.startswith("http"):
+                parts.append({"file_data": {"file_uri": url, "mime_type": "image/*"}})
+        elif btype == "input_audio":
+            audio = b.get("input_audio") or {}
+            fmt = audio.get("format", "wav")
+            parts.append({"inline_data": {"mime_type": f"audio/{fmt}", "data": audio.get("data", "")}})
+        # unknown types: skip
+    return parts
 
 
 def openai_to_claude(body: dict) -> tuple[dict, dict]:
@@ -17,11 +93,12 @@ def openai_to_claude(body: dict) -> tuple[dict, dict]:
         role = msg.get("role", "user")
         content = msg.get("content", "")
         if role == "system":
-            system_parts.append(content)
+            blocks = _convert_openai_content_to_claude(content)
+            system_parts.append("\n".join(b["text"] for b in blocks if b["type"] == "text"))
         elif role == "assistant":
             claude_messages.append({"role": "assistant", "content": content})
         else:
-            claude_messages.append({"role": "user", "content": content})
+            claude_messages.append({"role": "user", "content": _convert_openai_content_to_claude(content)})
 
     claude_body = {
         "model": body.get("model", ""),
@@ -50,11 +127,14 @@ def openai_to_gemini(body: dict) -> tuple[dict, dict]:
         role = msg.get("role", "user")
         content = msg.get("content", "")
         if role == "system":
-            system_instruction = {"parts": [{"text": content}]}
+            parts = _convert_openai_content_to_gemini_parts(content) or [{"text": ""}]
+            system_instruction = {"parts": parts}
         elif role == "assistant":
-            contents.append({"role": "model", "parts": [{"text": content}]})
+            parts = _convert_openai_content_to_gemini_parts(content) or [{"text": ""}]
+            contents.append({"role": "model", "parts": parts})
         else:
-            contents.append({"role": "user", "parts": [{"text": content}]})
+            parts = _convert_openai_content_to_gemini_parts(content) or [{"text": ""}]
+            contents.append({"role": "user", "parts": parts})
 
     gemini_body = {"contents": contents}
     if system_instruction:
@@ -117,7 +197,7 @@ def gemini_stream_chunk_to_openai(chunk_data: dict, model: str, completion_id: s
     candidate = candidates[0]
     content = candidate.get("content", {})
     parts = content.get("parts", [])
-    text = "".join(p.get("text", "") for p in parts) if parts else ""
+    text = _gemini_parts_to_text(parts) if parts else ""
     finish_reason = candidate.get("finishReason")
 
     if text:
@@ -181,13 +261,26 @@ def claude_response_to_openai(data: dict, model: str) -> dict:
     }
 
 
+def _gemini_parts_to_text(parts: list) -> str:
+    """Flatten Gemini parts to text; inline images become markdown data-URI images."""
+    chunks = []
+    for p in parts:
+        if p.get("text"):
+            chunks.append(p["text"])
+        inline = p.get("inline_data") or p.get("inlineData")
+        if inline and inline.get("data"):
+            mime = inline.get("mime_type") or inline.get("mimeType") or "image/png"
+            chunks.append(f"![image](data:{mime};base64,{inline['data']})")
+    return "".join(chunks)
+
+
 def gemini_response_to_openai(data: dict, model: str) -> dict:
     """Convert a complete Gemini response to OpenAI format."""
     candidates = data.get("candidates", [])
     content = ""
     if candidates:
         parts = candidates[0].get("content", {}).get("parts", [])
-        content = "".join(p.get("text", "") for p in parts)
+        content = _gemini_parts_to_text(parts)
 
     usage = data.get("usageMetadata", {})
     return {
@@ -508,3 +601,85 @@ def video_response_to_openai(data: dict, task_id: str = "") -> dict:
         "raw": data,
         "created": int(time.time()),
     }
+
+# ============================================================
+# OpenAI Responses API (Codex OAuth upstream) conversions
+# ============================================================
+
+def chat_to_responses_request(body: dict, model_id: str) -> dict:
+    """Convert an OpenAI chat/completions body into a Codex Responses API request."""
+    instructions = ""
+    input_items = []
+    for msg in body.get("messages", []):
+        role = msg.get("role", "user")
+        blocks = _iter_content_blocks(msg.get("content", ""))
+        if role == "system":
+            instructions += "\n".join(b.get("text", "") for b in blocks if b.get("type") == "text")
+            continue
+        content_items = []
+        for b in blocks:
+            if b.get("type") == "text":
+                content_items.append({"type": "input_text", "text": b.get("text", "")})
+            elif b.get("type") == "image_url":
+                content_items.append({"type": "input_image", "image_url": (b.get("image_url") or {}).get("url", "")})
+        if not content_items:
+            continue
+        input_items.append({"role": "assistant" if role == "assistant" else "user", "content": content_items})
+
+    req = {
+        "model": model_id,
+        "instructions": instructions,
+        "input": input_items,
+        "stream": bool(body.get("stream")),
+        "store": False,
+    }
+    if "temperature" in body:
+        req["temperature"] = body["temperature"]
+    if "top_p" in body:
+        req["top_p"] = body["top_p"]
+    return req
+
+
+def responses_to_chat(data: dict, model_id: str) -> dict:
+    """Convert a Responses API result into an OpenAI chat.completion response."""
+    text = ""
+    for out in data.get("output", []):
+        if out.get("type") == "message":
+            for c in out.get("content", []):
+                if c.get("type") == "output_text":
+                    text += c.get("text", "")
+    usage = data.get("usage") or {}
+    return {
+        "id": data.get("id") or f"chatcmpl-{uuid.uuid4().hex[:12]}",
+        "object": "chat.completion",
+        "created": int(time.time()),
+        "model": model_id,
+        "choices": [{"index": 0, "message": {"role": "assistant", "content": text}, "finish_reason": "stop"}],
+        "usage": {
+            "prompt_tokens": usage.get("input_tokens", 0),
+            "completion_tokens": usage.get("output_tokens", 0),
+            "total_tokens": usage.get("total_tokens", usage.get("input_tokens", 0) + usage.get("output_tokens", 0)),
+        },
+    }
+
+
+def responses_stream_chunk_to_chat(chunk_data: dict, model_id: str, completion_id: str) -> dict | None:
+    """Convert one Responses API SSE event into an OpenAI chat chunk (or None)."""
+    event_type = chunk_data.get("type", "")
+    if event_type == "response.output_text.delta":
+        return {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model_id,
+            "choices": [{"index": 0, "delta": {"content": chunk_data.get("delta", "")}, "finish_reason": None}],
+        }
+    if event_type == "response.completed":
+        return {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model_id,
+            "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+        }
+    return None

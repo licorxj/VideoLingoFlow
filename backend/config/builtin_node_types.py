@@ -4161,9 +4161,10 @@ BUILTIN_NODE_TYPES = [
     {
         "id": "opencode_agent",
         "name": "本地CLI智能体",
+        "legacyNames": ["OpenCode 智能体"],
         "execution_domain": "process",
         "category": "agent",
-        "description": "以本机已安装的 CLI 智能体（opencode / mimo / Claude Code / Codex）非交互执行一次会话，解析事件流并按输出契约收拢产物到任务 cache 目录；各 CLI 的命令与事件协议差异已自动适配",
+        "description": "以本机已安装的 CLI 智能体（opencode / mimo / Claude Code / Codex / Cline）非交互执行一次会话，解析事件流并按输出契约收拢产物到任务 cache 目录；各 CLI 的命令与事件协议差异已自动适配",
         "icon": "Terminal",
         "color": "#0ea5e9",
         "inputs": [

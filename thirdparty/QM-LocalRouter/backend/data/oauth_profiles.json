@@ -1,0 +1,210 @@
+{
+  "_README": "OAuth 平台配置（平台名单与端点对齐 OmniRoute Provider Reference v3.8.50）。flow: authorization_code | device | codebuddy(腾讯自定义设备码)。token_request_style: form(Anthropic/Auth0 要求 form-urlencoded) 或 json。requires_client_id=true 的平台需按官方 CLI 的公开凭据补填 client_id。upstream 定义转发时的默认 API 地址与鉴权头；exchange_url 表示拿到平台凭证后还需兑换真正的 API 令牌（如 Copilot）。",
+  "claude": {
+    "label": "Claude Code (Pro/Max 订阅)",
+    "flow": "authorization_code",
+    "authorize_url": "https://claude.ai/oauth/authorize",
+    "token_url": "https://api.anthropic.com/v1/oauth/token",
+    "client_id": "9d1c250a-e61b-44d9-88ed-5944d1962f5e",
+    "scopes": "org:create_api_key user:profile user:inference user:sessions:claude_code user:mcp_servers",
+    "pkce": true,
+    "token_request_style": "form",
+    "refresh_headers": {
+      "anthropic-beta": "oauth-2025-04-20"
+    },
+    "upstream": {
+      "api_base": "https://api.anthropic.com",
+      "auth": "bearer",
+      "extra_headers": {
+        "anthropic-beta": "oauth-2025-04-20"
+      },
+      "protocols": [
+        "claude"
+      ]
+    },
+    "match_keywords": [
+      "claude",
+      "anthropic"
+    ]
+  },
+  "codex": {
+    "label": "OpenAI Codex (ChatGPT 订阅)",
+    "flow": "authorization_code",
+    "authorize_url": "https://auth.openai.com/oauth/authorize",
+    "token_url": "https://auth.openai.com/oauth/token",
+    "client_id": "app_EMoamEEZ73f0CkXaXp7hrann",
+    "scopes": "openid profile email offline_access",
+    "pkce": true,
+    "token_request_style": "form",
+    "extra_params": {
+      "id_token_add_organizations": "true",
+      "codex_cli_simplified_flow": "true",
+      "originator": "codex_cli_rs",
+      "prompt": "login"
+    },
+    "upstream": {
+      "api_base": "https://chatgpt.com/backend-api/codex",
+      "auth": "bearer",
+      "upstream_style": "responses",
+      "protocols": [
+        "openai",
+        "custom"
+      ]
+    },
+    "match_keywords": [
+      "codex",
+      "chatgpt",
+      "backend-api/codex"
+    ]
+  },
+  "github-copilot": {
+    "label": "GitHub Copilot",
+    "flow": "device",
+    "device_code_url": "https://github.com/login/device/code",
+    "device_code_headers": {
+      "Accept": "application/json"
+    },
+    "device_code_params": {
+      "client_id": "Iv1.b507a08c87ecfe98",
+      "scope": "read:user"
+    },
+    "token_url": "https://github.com/login/oauth/access_token",
+    "token_headers": {
+      "Accept": "application/json"
+    },
+    "token_params": {
+      "client_id": "Iv1.b507a08c87ecfe98"
+    },
+    "device_grant": "urn:ietf:params:oauth:grant-type:device_code",
+    "poll_interval": 5,
+    "exchange_url": "https://api.github.com/copilot_internal/v2/token",
+    "exchange_auth_style": "token",
+    "exchange_token_field": "token",
+    "expires_field": "expires_at",
+    "upstream": {
+      "api_base": "https://api.githubcopilot.com",
+      "auth": "bearer",
+      "protocols": [
+        "openai",
+        "custom"
+      ]
+    },
+    "match_keywords": [
+      "copilot",
+      "api.githubcopilot.com"
+    ]
+  },
+  "kimi-coding": {
+    "label": "Kimi Code CLI (Kimi Coding Plan)",
+    "flow": "device",
+    "requires_client_id": true,
+    "client_id": "",
+    "device_code_url": "https://auth.kimi.com/api/oauth/device_authorization",
+    "token_url": "https://auth.kimi.com/api/oauth/token",
+    "token_request_style": "form",
+    "device_grant": "urn:ietf:params:oauth:grant-type:device_code",
+    "poll_interval": 5,
+    "upstream": {
+      "api_base": "https://api.kimi.com/coding",
+      "auth": "bearer",
+      "protocols": [
+        "openai",
+        "custom"
+      ]
+    },
+    "match_keywords": [
+      "kimi",
+      "api.kimi.com"
+    ]
+  },
+  "codebuddy-cn": {
+    "label": "CodeBuddy CN (腾讯)",
+    "flow": "codebuddy",
+    "state_url": "https://copilot.tencent.com/v2/plugin/auth/state",
+    "token_url": "https://copilot.tencent.com/v2/plugin/auth/token",
+    "refresh_url": "https://copilot.tencent.com/v2/plugin/auth/token/refresh",
+    "refresh_style": "header",
+    "poll_interval": 5,
+    "user_agent": "CLI/2.63.2 CodeBuddy/2.63.2",
+    "upstream": {
+      "api_base": "https://copilot.tencent.com",
+      "auth": "bearer",
+      "protocols": [
+        "openai",
+        "custom"
+      ]
+    },
+    "match_keywords": [
+      "codebuddy",
+      "copilot.tencent.com"
+    ]
+  },
+  "xai-oauth": {
+    "label": "xAI OAuth (Grok)",
+    "flow": "authorization_code",
+    "requires_client_id": true,
+    "client_id": "",
+    "authorize_url": "https://auth.x.ai/oauth2/authorize",
+    "token_url": "https://auth.x.ai/oauth2/token",
+    "scopes": "openid profile email offline_access grok-cli:access api:access",
+    "pkce": true,
+    "token_request_style": "form",
+    "upstream": {
+      "api_base": "https://api.x.ai",
+      "auth": "bearer",
+      "protocols": [
+        "openai",
+        "custom"
+      ]
+    },
+    "match_keywords": [
+      "x.ai",
+      "grok",
+      "xai"
+    ]
+  },
+  "openference": {
+    "label": "Openference",
+    "flow": "authorization_code",
+    "requires_client_id": true,
+    "client_id": "",
+    "authorize_url": "https://openference.com/app/oauth/authorize",
+    "token_url": "https://openference.com/oauth/token",
+    "scopes": "openid profile email model:invoke offline_access",
+    "pkce": true,
+    "token_request_style": "form",
+    "upstream": {
+      "api_base": "https://api.openference.com",
+      "auth": "bearer",
+      "protocols": [
+        "openai",
+        "custom"
+      ]
+    },
+    "match_keywords": [
+      "openference"
+    ]
+  },
+  "gitlab-duo": {
+    "label": "GitLab Duo (需自建 OAuth 应用)",
+    "flow": "authorization_code",
+    "requires_client_id": true,
+    "client_id": "",
+    "authorize_url": "https://gitlab.com/oauth/authorize",
+    "token_url": "https://gitlab.com/oauth/token",
+    "scopes": "ai_features read_user",
+    "pkce": true,
+    "token_request_style": "form",
+    "upstream": {
+      "api_base": "https://gitlab.com",
+      "auth": "bearer",
+      "protocols": [
+        "openai",
+        "custom"
+      ]
+    },
+    "match_keywords": [
+      "gitlab"
+    ]
+  }
+}

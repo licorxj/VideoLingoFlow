@@ -32,7 +32,7 @@ _ASR_PARAM_KEYS = {
     # WhisperX params
     "compute_type", "batch_size",
     "word_timestamps",
-    "vad_onset", "vad_offset",
+    "vad_onset", "vad_offset", "vad_method",
     "temperatures", "initial_prompt",
     "align_model_name",
     # Qwen3-ASR params

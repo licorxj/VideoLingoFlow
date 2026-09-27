@@ -61,7 +61,6 @@ def _extract_assets_job(script_id: int) -> None:
         project_id = script.projectId
         script_text = script.scriptData or ""
         project = session.get(TfProject, project_id)
-        style_prefix = common.art_style_prefix(project) if project else ""
         template = common.prompt_by_type(session, "scriptAssetExtraction")
         script.extractState = 2  # 提取中（沿用源"进行中"语义：非0非1）
 
@@ -89,9 +88,8 @@ def _extract_assets_job(script_id: int) -> None:
             if not name or atype not in _VALID_TYPES or (name, atype) in existing:
                 continue
             prompt_txt = str(item.get("prompt") or "").strip()
-            if atype == "scene" or atype == "tool":
-                # 场景/道具：英文提示词，画风前缀以注释形态并入（源 generateAssets.buildPrompt 语义）
-                prompt_txt = (style_prefix + "\n" + prompt_txt).strip() if style_prefix else prompt_txt
+            # 对齐源：提取阶段不做画风注入，画风统一由「资产提示词润色」阶段
+            # （art_skills 视觉手册，assets.polish_asset_prompts）语义级注入
             row = TfAsset(projectId=project_id, name=name, type=atype,
                           describe=str(item.get("desc") or ""), prompt=prompt_txt)
             session.add(row)
