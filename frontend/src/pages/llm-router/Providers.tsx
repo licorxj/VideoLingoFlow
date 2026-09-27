@@ -1,18 +1,19 @@
 // @ts-nocheck
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   getProviders, createProvider, updateProvider, deleteProvider,
-  searchIcons, saveIcon, getHotProviders,
-  getKeys, createKey, deleteKey, testKey, testAllKeys, deleteInvalidKeys,
-  getModels, createModel, updateModel, deleteModel, fetchModels, syncModels, testAllModels, deleteInvalidModels, clearAllModels,
-  LLM_ROUTER_BASE,
+  searchIcons, saveIcon, getHotProviders, getOnlineProviders, refreshOnlineProviders, getOauthProfiles,
+  getKeys, createKey, createKeysBatch, deleteKey, testKey, testAllKeys, deleteInvalidKeys,
+  startOauthLogin, getOauthStatus, getCliPlatforms, cliDetect, cliImport, cliBrowserStart, cliStatus,
+  getModels, createModel, updateModel, deleteModel, fetchModels, syncModels, testAllModels, deleteInvalidModels, clearModels,
 } from './api';
 import { useI18n } from './i18n';
 import { toast } from './toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -21,15 +22,15 @@ import { Switch } from '@/components/ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import {
-  Plus, Pencil, Trash2, Trash, Server, Wand2, KeyRound, Zap, Loader2, RefreshCw, Play, Layers, Cpu,
+  Plus, Pencil, Trash2, Trash, Server, Wand2, KeyRound, Zap, Loader2, RefreshCw, Play, Layers, Cpu, Terminal,
   Video, Mic, Box, ChevronRight, ImageIcon, Search, X, Flame, Copy, Globe,
 } from 'lucide-react';
 
 const protocolColors: Record<string, string> = {
-  openai: 'bg-success/10 text-success border-success/25',
-  claude: 'bg-warning/10 text-warning border-warning/25',
-  gemini: 'bg-info/10 text-info border-info/25',
-  custom: 'bg-ai/10 text-ai border-ai/25',
+  openai: 'bg-green-500/10 text-green-400 border-green-500/20',
+  claude: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+  gemini: 'bg-blue-500/10 text-blue-400 border-blue-500/20',
+  custom: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
 };
 
 const knownPaths: Record<string, string> = {
@@ -59,7 +60,7 @@ const contextPresets = [
 function iconUrl(icon: string | undefined): string {
   if (!icon) return "";
   if (icon.startsWith("http")) return icon;
-  if (icon.startsWith("icons/")) return LLM_ROUTER_BASE + "/api/icons/file/" + icon.replace("icons/", "");
+  if (icon.startsWith("icons/")) return "/api/icons/file/" + icon.replace("icons/", "");
   return icon;
 }
 
@@ -109,17 +110,17 @@ export default function Providers() {
   ];
 
   const modelTypeOpts = [
-    { value: 'text', label: t('providers.textModel'), icon: Layers, color: 'bg-info/10 text-info border-info/25' },
-    { value: 'image', label: t('providers.imageModel'), icon: ImageIcon, color: 'bg-ai/10 text-ai border-ai/25' },
-    { value: 'video', label: t('providers.videoModel'), icon: Video, color: 'bg-warning/10 text-warning border-warning/25' },
-    { value: 'tts', label: t('providers.ttsModel'), icon: Mic, color: 'bg-success/10 text-success border-success/25' },
-    { value: 'embedding', label: t('providers.embeddingModel'), icon: Box, color: 'bg-ai/10 text-ai border-ai/25' },
+    { value: 'text', label: t('providers.textModel'), icon: Layers, color: 'bg-sky-500/10 text-sky-400 border-sky-500/20' },
+    { value: 'image', label: t('providers.imageModel'), icon: ImageIcon, color: 'bg-pink-500/10 text-pink-400 border-pink-500/20' },
+    { value: 'video', label: t('providers.videoModel'), icon: Video, color: 'bg-amber-500/10 text-amber-400 border-amber-500/20' },
+    { value: 'tts', label: t('providers.ttsModel'), icon: Mic, color: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' },
+    { value: 'embedding', label: t('providers.embeddingModel'), icon: Box, color: 'bg-violet-500/10 text-violet-400 border-violet-500/20' },
   ];
 
   const [selectedProvider, setSelectedProvider] = useState<any>(null);
   const [providerDialogOpen, setProviderDialogOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<any>(null);
-  const [providerForm, setProviderForm] = useState({ name: '', protocol: 'openai', base_url: '', description: '', icon: '', homepage: '', is_active: true });
+  const [providerForm, setProviderForm] = useState({ name: '', protocol: 'openai', base_url: '', auth_type: 'api_key', description: '', icon: '', homepage: '', is_active: true });
   const [autoComplete, setAutoComplete] = useState(true);
   const [urlPreview, setUrlPreview] = useState('');
 
@@ -130,6 +131,7 @@ export default function Providers() {
   const [deletingInvalid, setDeletingInvalid] = useState(false);
 const [testingAllModels, setTestingAllModels] = useState(false);
 const [deletingInvalidModels, setDeletingInvalidModels] = useState(false);
+const [clearingModels, setClearingModels] = useState(false);
 
   const [modelDialogOpen, setModelDialogOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<any>(null);
@@ -139,11 +141,10 @@ const [deletingInvalidModels, setDeletingInvalidModels] = useState(false);
   });
   const [syncDialogOpen, setSyncDialogOpen] = useState(false);
   const [fetchedModels, setFetchedModels] = useState<any[]>([]);
-  const [syncSearch, setSyncSearch] = useState('');
   const [selectedSyncIds, setSelectedSyncIds] = useState<Set<string>>(new Set());
   const [syncFetching, setSyncFetching] = useState(false);
-  const [clearingModels, setClearingModels] = useState(false);
   const [addSingleModelLoading, setAddSingleModelLoading] = useState<Map<string, boolean>>(new Map());
+  const [syncModelSearch, setSyncModelSearch] = useState('');
 
   const [iconSearchOpen, setIconSearchOpen] = useState(false);
   const [iconKeyword, setIconKeyword] = useState('');
@@ -159,14 +160,23 @@ const [deletingInvalidModels, setDeletingInvalidModels] = useState(false);
   const [hotLoading, setHotLoading] = useState(false);
   const [hotSearch, setHotSearch] = useState('');
 
+  const [onlineDialogOpen, setOnlineDialogOpen] = useState(false);
+  const [onlineProviders, setOnlineProviders] = useState<any[]>([]);
+  const [onlineUpdatedAt, setOnlineUpdatedAt] = useState('');
+  const [onlineLoading, setOnlineLoading] = useState(false);
+  const [onlineRefreshing, setOnlineRefreshing] = useState(false);
+  const [onlineSearch, setOnlineSearch] = useState('');
+  const [onlineProtocolFilter, setOnlineProtocolFilter] = useState('all');
+  const [onlineAuthFilter, setOnlineAuthFilter] = useState('all');
+
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
   const [confirmDeleteKeyId, setConfirmDeleteKeyId] = useState<number | null>(null);
-  const [confirmClearModels, setConfirmClearModels] = useState(false);
   // --- Queries ---
   const { data: providers = [] } = useQuery({
     queryKey: ['providers'],
     queryFn: () => getProviders().then(r => r.data),
   });
+  const { data: oauthProfiles = {} } = useQuery({ queryKey: ['oauthProfiles'], queryFn: () => getOauthProfiles().then(r => r.data) });
   const { data: keys = [] } = useQuery({
     queryKey: ['keys', selectedProvider?.id],
     queryFn: () => selectedProvider ? getKeys(selectedProvider.id).then(r => r.data) : Promise.resolve([]),
@@ -219,6 +229,18 @@ const [deletingInvalidModels, setDeletingInvalidModels] = useState(false);
       setKeyForm({ key_value: '', alias: '', weight: 1 });
     },
     onError: () => toast({ title: t('providers.addFailed'), variant: 'destructive' }),
+  });
+
+  const createBatchKeyMut = useMutation({
+    mutationFn: (d: any) => createKeysBatch(d.provider_id, d),
+    onSuccess: (res: any) => {
+      qc.invalidateQueries({ queryKey: ['keys'] }); setKeyDialogOpen(false);
+      const created = res.data?.created?.length ?? 0;
+      const dup = res.data?.duplicates ?? 0;
+      toast({ title: t('providers.keysAdded') + ' ' + created + ' ' + t('providers.keysAddedSuffix'),
+              description: dup > 0 ? t('providers.duplicatesSkipped') + ': ' + dup : undefined, variant: 'success' });
+    },
+    onError: (e: any) => toast({ title: t('providers.oauthFailed'), description: e?.response?.data?.detail, variant: 'destructive' }),
   });
 
   const deleteKeyMut = useMutation({
@@ -317,17 +339,16 @@ const [deletingInvalidModels, setDeletingInvalidModels] = useState(false);
     },
   });
 
-  const clearAllModelsMut = useMutation({
-    mutationFn: async () => {
+  const clearModelsMut = useMutation({
+    mutationFn: () => {
       if (!selectedProvider) throw new Error('No provider selected');
-      return clearAllModels(selectedProvider.id);
+      return clearModels(selectedProvider.id);
     },
     onMutate: () => setClearingModels(true),
     onSettled: () => setClearingModels(false),
     onSuccess: (res: any) => {
       qc.invalidateQueries({ queryKey: ['models', selectedProvider?.id] });
-      const deleted = res.data?.deleted ?? 0;
-      toast({ title: t('providers.modelsCleared') || '已清空模型', description: `${t('common.success')}: ${deleted}`, variant: 'success' });
+      toast({ title: t('providers.modelsCleared') + ': ' + (res.data?.deleted ?? ''), variant: 'success' });
     },
     onError: () => {
       toast({ title: t('providers.deleteFailed'), variant: 'destructive' });
@@ -368,7 +389,7 @@ const createModelMut = useMutation({
     mutationFn: async (m: any) => {
       setTestingModelId(m.id);
       try {
-        const res = await fetch(LLM_ROUTER_BASE + '/v1/chat/completions', {
+        const res = await fetch('/v1/chat/completions', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -484,7 +505,7 @@ const createModelMut = useMutation({
   // --- Handlers ---
   function openCreateProvider() {
     setEditingProvider(null);
-    setProviderForm({ name: '', protocol: 'openai', base_url: '', description: '', icon: '', homepage: '', is_active: true });
+    setProviderForm({ name: '', protocol: 'openai', base_url: '', auth_type: 'api_key', description: '', icon: '', homepage: '', is_active: true });
     setAutoComplete(true);
     setUrlPreview('');
     setProviderDialogOpen(true);
@@ -492,7 +513,7 @@ const createModelMut = useMutation({
 
   function openEditProvider(p: any) {
     setEditingProvider(p);
-    setProviderForm({ name: p.name, protocol: p.protocol, base_url: p.base_url, description: p.description || '', icon: p.icon || '', homepage: p.homepage || '', is_active: p.is_active });
+    setProviderForm({ name: p.name, protocol: p.protocol, base_url: p.base_url, auth_type: p.auth_type || 'api_key', description: p.description || '', icon: p.icon || '', homepage: p.homepage || '', is_active: p.is_active });
     setAutoComplete(false);
     setUrlPreview(p.base_url);
     setProviderDialogOpen(true);
@@ -527,9 +548,159 @@ const createModelMut = useMutation({
     setKeyDialogOpen(true);
   }
 
+  // Multi-line: one key per line, trimmed, empty lines and duplicates removed
+  const keyLines = Array.from(new Set(keyForm.key_value.split(/\r?\n/).map(x => x.trim()).filter(Boolean)));
+
+  // OAuth profile for the selected provider (explicit auth_type, else keyword match)
+  const oauthProfileForSelected = (() => {
+    const p: any = selectedProvider;
+    if (!p) return null;
+    if (p.auth_type && p.auth_type !== 'api_key') return p.auth_type;
+    const base = (p.base_url || '').toLowerCase();
+    const name = (p.name || '').toLowerCase();
+    for (const [id, prof] of Object.entries(oauthProfiles as any)) {
+      if (id.startsWith('_')) continue;
+      const kws: string[] = (prof as any).match_keywords || [];
+      if (kws.some((k: string) => base.includes(k.toLowerCase()) || name.includes(k.toLowerCase()))) return id;
+    }
+    return null;
+  })();
+  const [keyOauthWaiting, setKeyOauthWaiting] = useState(false);
+  const [keyDeviceCode, setKeyDeviceCode] = useState('');
+  const keyPollTimer = useRef<any>(null);
+
+  // --- CLI browser auth (OmniRoute-style): cline auth-code / amazon-q device / antigravity google ---
+  const [cliPlatform, setCliPlatform] = useState('');
+  const [cliBrowserBusy, setCliBrowserBusy] = useState(false);
+  const [cliBrowserCode, setCliBrowserCode] = useState('');
+  const cliBrowserTimer = useRef<any>(null);
+
+  async function startCliBrowser() {
+    if (!cliPlatform) return;
+    setCliBrowserBusy(true);
+    setCliBrowserCode('');
+    try {
+      const res = await cliBrowserStart({ platform: cliPlatform, provider_id: 0,
+                                           client_id: cliPaste.client_id, client_secret: cliPaste.client_secret });
+      const openUrl = res.data.verification_uri || res.data.authorize_url;
+      if (openUrl) window.open(openUrl, '_blank');
+      if ((res.data.flow || '').includes('device')) setCliBrowserCode(res.data.user_code || '');
+      const sessionId = res.data.session_id;
+      const isPollingFlow = ['cli-aws-device'].includes(res.data.flow || '');
+      const startedAt = Date.now();
+      const poll = async () => {
+        try {
+          const st = await cliStatus(sessionId);
+          if (st.data.status === 'success') {
+            setCliBrowserBusy(false);
+            qc.invalidateQueries({ queryKey: ['providers'] });
+            qc.invalidateQueries({ queryKey: ['keys'] });
+            setCliDialogOpen(false);
+            toast({ title: t('providers.cliAuthDone'), variant: 'success' });
+            return;
+          }
+          if (st.data.status === 'failed') { setCliBrowserBusy(false); toast({ title: t('providers.oauthFailed'), description: st.data.error, variant: 'destructive' }); return; }
+          if (st.data.status === 'expired' || Date.now() - startedAt > 300000) { setCliBrowserBusy(false); toast({ title: t('providers.oauthTimeout'), variant: 'destructive' }); return; }
+          if (st.data.user_code) setCliBrowserCode(st.data.user_code);
+          cliBrowserTimer.current = setTimeout(poll, isPollingFlow ? 2000 : 3000);
+        } catch { setCliBrowserBusy(false); }
+      };
+      if (isPollingFlow) cliBrowserTimer.current = setTimeout(poll, 2000);
+      else { setCliBrowserBusy(false); }
+    } catch (e: any) {
+      setCliBrowserBusy(false);
+      toast({ title: t('providers.oauthFailed'), description: e?.response?.data?.detail, variant: 'destructive' });
+    }
+  }
+
+  const cliBrowserSupported = ['cline', 'amazon-q', 'antigravity'].includes(cliPlatform);
+
+  // --- Local CLI credential import ---
+  const [cliDialogOpen, setCliDialogOpen] = useState(false);
+  const [cliPlatforms, setCliPlatforms] = useState<any[]>([]);
+  const [cliDetecting, setCliDetecting] = useState(false);
+  const [cliCandidates, setCliCandidates] = useState<any[]>([]);
+  const [cliImporting, setCliImporting] = useState(false);
+  const [cliPaste, setCliPaste] = useState({ token: '', code: '', refresh_token: '', client_id: '', client_secret: '', region: '' });
+
+  async function openCliImport() {
+    setCliDialogOpen(true);
+    setCliCandidates([]); setCliBrowserBusy(false); setCliBrowserCode(''); setCliPaste({ token: '', code: '', refresh_token: '', client_id: '', client_secret: '', region: '' });
+    try {
+      const res = await getCliPlatforms();
+      const list = res.data || [];
+      setCliPlatforms(list);
+      if (list.length && !cliPlatform) setCliPlatform(list[0].id);
+    } catch { toast({ title: t('providers.loadFailed'), variant: 'destructive' }); }
+  }
+
+  async function runCliDetect() {
+    if (!cliPlatform) return;
+    setCliDetecting(true);
+    try {
+      const res = await cliDetect({ platform: cliPlatform });
+      setCliCandidates(res.data?.candidates || []);
+    } catch { toast({ title: t('providers.loadFailed'), variant: 'destructive' }); }
+    setCliDetecting(false);
+  }
+
+  async function runCliImport(payload: Record<string, any>) {
+    if (!cliPlatform) return;
+    setCliImporting(true);
+    try {
+      const res = await cliImport({ platform: cliPlatform, provider_id: 0, ...payload });
+      qc.invalidateQueries({ queryKey: ['providers'] });
+      qc.invalidateQueries({ queryKey: ['keys'] });
+      setCliDialogOpen(false);
+      toast({ title: t('providers.cliImported'), description: (res.data?.alias || '') + ' · ' + t('providers.providerAutoCreated'), variant: 'success' });
+    } catch (e: any) {
+      toast({ title: t('providers.cliImportFailed'), description: e?.response?.data?.detail, variant: 'destructive' });
+    }
+    setCliImporting(false);
+  }
+
+  async function startKeyOauth() {
+    if (!selectedProvider) return;
+    setKeyOauthWaiting(true);
+    setKeyDeviceCode('');
+    try {
+      const res = await startOauthLogin({ provider_id: selectedProvider.id, profile_id: oauthProfileForSelected });
+      const openUrl = res.data.verification_uri || res.data.authorize_url;
+      if (openUrl) window.open(openUrl, '_blank');
+      if ((res.data.flow || '') !== 'authorization_code') setKeyDeviceCode(res.data.user_code || '');
+      const sessionId = res.data.session_id;
+      const startedAt = Date.now();
+      const poll = async () => {
+        try {
+          const st = await getOauthStatus(sessionId);
+          if (st.data.status === 'success') {
+            setKeyOauthWaiting(false);
+            qc.invalidateQueries({ queryKey: ['keys'] });
+            setKeyDialogOpen(false);
+            toast({ title: t('providers.oauthSuccess'), variant: 'success' });
+            return;
+          }
+          if (st.data.status === 'failed') { setKeyOauthWaiting(false); toast({ title: t('providers.oauthFailed'), description: st.data.error, variant: 'destructive' }); return; }
+          if (st.data.status === 'expired' || Date.now() - startedAt > 300000) { setKeyOauthWaiting(false); toast({ title: t('providers.oauthTimeout'), variant: 'destructive' }); return; }
+          if (st.data.user_code) setKeyDeviceCode(st.data.user_code);
+          keyPollTimer.current = setTimeout(poll, 2000);
+        } catch { setKeyOauthWaiting(false); }
+      };
+      keyPollTimer.current = setTimeout(poll, 2000);
+    } catch (e: any) {
+      setKeyOauthWaiting(false);
+      toast({ title: t('providers.oauthFailed'), description: e?.response?.data?.detail, variant: 'destructive' });
+    }
+  }
+
   function saveKey() {
     if (!selectedProvider) return;
-    createKeyMut.mutate({ ...keyForm, provider_id: selectedProvider.id });
+    if (keyLines.length > 1) {
+      createBatchKeyMut.mutate({ provider_id: selectedProvider.id, keys: keyLines,
+                                 alias_prefix: keyForm.alias.trim() || 'Key', weight: keyForm.weight });
+      return;
+    }
+    createKeyMut.mutate({ ...keyForm, key_value: keyLines[0] || '', provider_id: selectedProvider.id });
   }
 
   function openCreateModel() {
@@ -604,7 +775,7 @@ const createModelMut = useMutation({
 
   function selectHotProvider(p: any) {
     setEditingProvider(null);
-    setProviderForm({ name: p.name, protocol: p.protocol || 'openai', base_url: p.base_url || '', description: p.description || '', icon: p.icon || '', homepage: p.homepage || '', is_active: true });
+    setProviderForm({ name: p.name, protocol: p.protocol || 'openai', base_url: p.base_url || '', auth_type: p.auth_type || 'api_key', description: p.description || '', icon: p.icon || '', homepage: p.homepage || '', is_active: true });
     setAutoComplete(true);
     setUrlPreview(autoCompleteUrl(p.base_url || ''));
     setHotDialogOpen(false);
@@ -617,10 +788,60 @@ const createModelMut = useMutation({
     return (p.name || '').toLowerCase().includes(q) || (p.protocol || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q);
   });
 
+  async function openOnlineProviders() {
+    setOnlineDialogOpen(true);
+    setOnlineLoading(true);
+    try {
+      const res = await getOnlineProviders();
+      setOnlineProviders(res.data?.providers || []);
+      setOnlineUpdatedAt(res.data?.updated_at || '');
+    } catch (_e) { toast({ title: t('providers.loadFailed'), variant: 'destructive' }); }
+    setOnlineLoading(false);
+  }
+
+  async function refreshOnlineList() {
+    setOnlineRefreshing(true);
+    try {
+      const res = await refreshOnlineProviders();
+      setOnlineProviders(res.data?.providers || []);
+      setOnlineUpdatedAt(res.data?.updated_at || '');
+      toast({ title: `${t('providers.onlineUpdated')} (${res.data?.count ?? 0})`, variant: 'success' });
+    } catch (e: any) {
+      toast({ title: t('providers.onlineUpdateFailed'), description: e?.response?.data?.detail, variant: 'destructive' });
+    }
+    setOnlineRefreshing(false);
+  }
+
+  function selectOnlineProvider(p: any) {
+    selectHotProvider(p);
+    setOnlineDialogOpen(false);
+  }
+
+  // Subsequence fuzzy match: "oi" hits "OpenAI", "ds" hits "DeepSeek"
+  function fuzzyMatch(text: string, q: string): boolean {
+    const t = text.toLowerCase();
+    let i = 0;
+    for (const ch of q.toLowerCase()) {
+      i = t.indexOf(ch, i);
+      if (i === -1) return false;
+      i++;
+    }
+    return true;
+  }
+
+  const filteredOnline = onlineProviders.filter((p: any) => {
+    if (onlineProtocolFilter !== 'all' && (p.protocol || '') !== onlineProtocolFilter) return false;
+    if (onlineAuthFilter !== 'all' && (p.auth_type || 'api_key') !== onlineAuthFilter) return false;
+    if (!onlineSearch) return true;
+    return fuzzyMatch(p.name || '', onlineSearch)
+      || fuzzyMatch(p.id || '', onlineSearch)
+      || fuzzyMatch(p.base_url || '', onlineSearch);
+  });
+
   function getKeyStatusBadge(status: string) {
-    if (status === 'active') return <Badge className='bg-success/10 text-success border border-success/25 text-xs'>{t('providers.keyStatusActive')}</Badge>;
-    if (status === 'inactive' || status === 'expired' || status === 'rate_limited') return <Badge className='bg-destructive/10 text-destructive border border-destructive/25 text-xs'>{t('providers.keyStatusInactive')}</Badge>;
-    return <Badge className='bg-warning/10 text-warning border border-warning/25 text-xs'>{t('providers.keyStatusUntested')}</Badge>;
+    if (status === 'active') return <Badge className='bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs'>{t('providers.keyStatusActive')}</Badge>;
+    if (status === 'inactive' || status === 'expired' || status === 'rate_limited') return <Badge className='bg-red-500/10 text-red-400 border border-red-500/20 text-xs'>{t('providers.keyStatusInactive')}</Badge>;
+    return <Badge className='bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 text-xs'>{t('providers.keyStatusUntested')}</Badge>;
   }
 
   function getModelTypeBadge(type: string) {
@@ -631,9 +852,9 @@ const createModelMut = useMutation({
   }
 
   function getModelTestStatusBadge(status: string) {
-    if (status === 'active') return <Badge className='bg-success/10 text-success border border-success/25 text-xs'>{t('common.active')}</Badge>;
-    if (status === 'inactive') return <Badge className='bg-destructive/10 text-destructive border border-destructive/25 text-xs'>{t('common.inactive')}</Badge>;
-    return <Badge className='bg-muted text-muted-foreground border border-border/40 text-xs'>{t('providers.keyStatusUntested')}</Badge>;
+    if (status === 'active') return <Badge className='bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs'>{t('common.active')}</Badge>;
+    if (status === 'inactive') return <Badge className='bg-red-500/10 text-red-400 border border-red-500/20 text-xs'>{t('common.inactive')}</Badge>;
+    return <Badge className='bg-gray-500/10 text-gray-400 border border-gray-500/20 text-xs'>{t('providers.keyStatusUntested')}</Badge>;
   }
 
   const activeProviders = providers.filter((p: any) => p.is_active);
@@ -642,14 +863,20 @@ const createModelMut = useMutation({
 
   return (
     <>
-    <div className='flex h-full gap-4 p-4'>
+    <div className='flex h-[calc(100vh-4rem)] gap-4 p-4'>
       <div className='w-72 flex-shrink-0 flex flex-col gap-2'>
-        <div className='flex items-center justify-between mb-2'>
-          <h2 className='text-lg font-semibold'>{t('providers.title')}</h2>
-          <div className='flex gap-1'>
-            <Button variant='outline' size='sm' onClick={openHotProviders}><Flame className='w-4 h-4 mr-1' />{t('providers.hotPlatforms')}</Button>
-            <Button size='sm' onClick={openCreateProvider}><Plus className='w-4 h-4' /></Button>
-          </div>
+        <h2 className='text-lg font-semibold mb-2'>{t('providers.title')}</h2>
+        <div className='flex gap-1 mb-2'>
+          <Button variant='outline' size='sm' onClick={openOnlineProviders} title={t('providers.onlinePlatformsTitle')}>
+            <Globe className='w-4 h-4 mr-1' />{t('providers.onlinePlatforms')}
+          </Button>
+          <Button variant='outline' size='sm' onClick={openHotProviders}><Flame className='w-4 h-4 mr-1' />{t('providers.hotPlatforms')}</Button>
+          <Button size='sm' onClick={openCreateProvider}><Plus className='w-4 h-4' /></Button>
+        </div>
+        <div className='flex gap-1 mb-2'>
+          <Button variant='outline' size='sm' onClick={openCliImport} title={t('providers.localCliTitle')}>
+            <Terminal className='w-4 h-4 mr-1' />{t('providers.localCli')}
+          </Button>
         </div>
         <div className='relative'>
           <Search className='absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground' />
@@ -690,10 +917,10 @@ const createModelMut = useMutation({
             <div className='flex items-center justify-between'>
               <div className='flex items-center gap-3'>
                 {selectedProvider.icon ? <img src={iconUrl(selectedProvider.icon)} alt='' className='w-10 h-10 rounded-lg' /> : <Server className='w-8 h-8 text-muted-foreground' />}
-                <div>
+                <div className='min-w-0'>
                   <h3 className='text-lg font-semibold'>{selectedProvider.name}</h3>
-                  <p className='text-sm text-muted-foreground'>{selectedProvider.base_url}</p>
-                  {selectedProvider.description && <p className='text-sm text-muted-foreground mt-0.5 max-w-2xl'>{selectedProvider.description}</p>}
+                  <p className='text-sm text-muted-foreground break-all'>{selectedProvider.base_url}</p>
+                  {selectedProvider.description && <p className='mt-1 text-sm text-muted-foreground'>{selectedProvider.description}</p>}
                 </div>
               </div>
               <Button
@@ -760,7 +987,7 @@ const createModelMut = useMutation({
                   </div>
                   <Button variant='outline' size='sm' onClick={() => testAllModelsMut.mutate()} disabled={testingAllModels}>{testingAllModels ? <Loader2 className='w-3 h-3 animate-spin mr-1' /> : <Zap className='w-3 h-3 mr-1' />}{t('providers.testAllModels')}</Button>
                   <Button variant='outline' size='sm' onClick={() => deleteInvalidModelsMut.mutate()} disabled={deletingInvalidModels}>{deletingInvalidModels ? <Loader2 className='w-3 h-3 animate-spin mr-1' /> : <Trash className='w-3 h-3 mr-1' />}{t('providers.deleteInvalidModels')}</Button>
-                  <Button variant='outline' size='sm' onClick={() => setConfirmClearModels(true)} disabled={clearingModels || !models || models.length === 0}>{clearingModels ? <Loader2 className='w-3 h-3 animate-spin mr-1' /> : <Trash className='w-3 h-3 mr-1' />}{t('providers.clearModels') || '清空模型'}</Button>
+                  <Button variant='outline' size='sm' onClick={() => { if (window.confirm(t('providers.confirmClearModels'))) clearModelsMut.mutate(); }} disabled={clearingModels}>{clearingModels ? <Loader2 className='w-3 h-3 animate-spin mr-1' /> : <Trash2 className='w-3 h-3 mr-1' />}{t('providers.clearModels')}</Button>
                   <Button variant='outline' size='sm' onClick={async () => {
                   setSyncFetching(true);
                   try {
@@ -853,6 +1080,19 @@ const createModelMut = useMutation({
             </Select>
           </div>
 
+          <div><Label>{t('providers.authType')}</Label>
+            <Select value={providerForm.auth_type || 'api_key'} onValueChange={v => setProviderForm(f => ({ ...f, auth_type: v }))}>
+              <SelectTrigger className='mt-1'><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value='api_key'>{t('providers.authTypeApiKey')}</SelectItem>
+                {Object.entries(oauthProfiles).filter(([id]) => !id.startsWith('_')).map(([id, prof]: any) => (
+                  <SelectItem key={id} value={id}>{prof.label || id}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className='text-xs text-muted-foreground mt-1'>{t('providers.authTypeDesc')}</p>
+          </div>
+
           <div><Label>{t('providers.baseUrl')}</Label><Input value={autoComplete ? urlPreview : providerForm.base_url} onChange={e => handleProviderUrlChange(e.target.value)} className='mt-1' placeholder='https://api.openai.com/v1' /></div>
 
           <div className='flex items-center gap-3'>
@@ -877,18 +1117,161 @@ const createModelMut = useMutation({
       </DialogContent>
     </Dialog>
 
+    {/* Local CLI Import Dialog */}
+    <Dialog open={cliDialogOpen} onOpenChange={setCliDialogOpen}>
+      <DialogContent className='max-w-lg max-h-[80vh] overflow-y-auto'>
+        <DialogHeader><DialogTitle>{t('providers.localCliTitle')}</DialogTitle></DialogHeader>
+        <div className='space-y-3'>
+          <div>
+            <Label>{t('providers.cliPlatform')}</Label>
+            <Select value={cliPlatform} onValueChange={(v) => { setCliPlatform(v); setCliCandidates([]); }}>
+              <SelectTrigger className='mt-1'><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {cliPlatforms.map((p: any) => <SelectItem key={p.id} value={p.id}>{p.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {cliPlatforms.find((p: any) => p.id === cliPlatform)?.upstream?.pending && (
+              <p className='text-xs text-amber-500 mt-1'>{t('providers.cliPendingNote')}</p>
+            )}
+          </div>
+          {cliPlatform && cliBrowserSupported && (
+            <div className='rounded-lg border border-dashed p-3 text-center space-y-2'>
+              <Button onClick={startCliBrowser} disabled={cliBrowserBusy} className='gap-2'>
+                {cliBrowserBusy ? <Loader2 className='w-4 h-4 animate-spin' /> : <Globe className='w-4 h-4' />}
+                {cliBrowserBusy ? t('providers.oauthWaiting') : t('providers.cliBrowserBtn')}
+              </Button>
+              {cliBrowserBusy && cliBrowserCode && (
+                <div className='text-xs text-muted-foreground flex items-center justify-center gap-1.5 flex-wrap'>
+                  {t('providers.oauthDeviceCode')}
+                  <code className='font-mono text-sm font-bold text-foreground select-all tracking-wider'>{cliBrowserCode}</code>
+                  <button className='inline-flex items-center gap-0.5 text-[11px] text-cyan-600 hover:underline'
+                          onClick={() => { navigator.clipboard.writeText(cliBrowserCode.trim().toUpperCase()); toast({ title: t('providers.oauthCopied'), variant: 'success' }); }}>
+                    <Copy className='h-3 w-3' />{t('common.copy')}
+                  </button>
+                </div>
+              )}
+              {cliPlatform === 'antigravity' && !cliBrowserBusy && (
+                <p className='text-[11px] text-muted-foreground'>{t('providers.cliAntigravityNeedSecret')}</p>
+              )}
+            </div>
+          )}
+          {cliPlatform && (
+            <>
+              <div>
+                <Button variant='outline' size='sm' className='gap-1' onClick={runCliDetect} disabled={cliDetecting}>
+                  {cliDetecting ? <Loader2 className='w-3.5 h-3.5 animate-spin' /> : <Search className='w-3.5 h-3.5' />}
+                  {t('providers.cliDetectBtn')}
+                </Button>
+              </div>
+              {cliCandidates.length > 0 && (
+                <div className='space-y-1.5'>
+                  {cliCandidates.map((cand: any, i: number) => (
+                    <button key={i} type='button' onClick={() => runCliImport({ detected_path: cand.path })}
+                            className='w-full text-left p-2.5 rounded-lg border hover:border-primary/50 transition-all flex items-center gap-2'>
+                      <Terminal className='w-4 h-4 text-muted-foreground shrink-0' />
+                      <div className='flex-1 min-w-0'>
+                        <p className='text-xs font-mono truncate'>{cand.path}</p>
+                        <p className='text-[10px] text-muted-foreground truncate'>{cand.source} · {cand.fields?.join(', ')}</p>
+                      </div>
+                      <Badge variant='outline' className='text-[10px] shrink-0'>{t('providers.cliImportBtn')}</Badge>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {cliCandidates.length === 0 && !cliDetecting && (
+                <p className='text-xs text-muted-foreground'>{t('providers.cliNoCandidates')}</p>
+              )}
+              <Separator />
+              <div>
+                <Label className='text-xs text-muted-foreground'>{t('providers.cliPasteTitle')}</Label>
+                <div className='space-y-2 mt-2'>
+                  {(cliPlatform === 'cline' || cliPlatform === 'antigravity') && (
+                    <Input value={cliPaste.code} onChange={e => setCliPaste(f => ({ ...f, code: e.target.value }))}
+                           placeholder={t('providers.cliCodePaste')} className='font-mono text-xs' />
+                  )}
+                  {cliPlatform === 'opencode' && (
+                    <p className='text-xs text-emerald-500'>{t('providers.cliOpencodeNote')}</p>
+                  )}
+                  {(cliPlatform === 'trae' || cliPlatform === 'amazon-q') && (
+                    <Input value={cliPaste.token} onChange={e => setCliPaste(f => ({ ...f, token: e.target.value }))}
+                           placeholder={cliPlatform === 'trae' ? t('providers.cliTokenPlaceholderTrae') : t('providers.cliTokenPlaceholderQ')}
+                           className='font-mono text-xs' />
+                  )}
+                  {cliPlatform !== 'trae' && cliPlatform !== 'opencode' && (
+                    <Input value={cliPaste.refresh_token} onChange={e => setCliPaste(f => ({ ...f, refresh_token: e.target.value }))}
+                           placeholder='refresh token' className='font-mono text-xs' />
+                  )}
+                  {(cliPlatform === 'amazon-q' || cliPlatform === 'antigravity') && (
+                    <>
+                      <Input value={cliPaste.client_id} onChange={e => setCliPaste(f => ({ ...f, client_id: e.target.value }))} placeholder='client_id' className='font-mono text-xs' />
+                      <Input type='password' value={cliPaste.client_secret} onChange={e => setCliPaste(f => ({ ...f, client_secret: e.target.value }))} placeholder='client_secret' className='font-mono text-xs' />
+                    </>
+                  )}
+                  {cliPlatform === 'amazon-q' && (
+                    <Input value={cliPaste.region} onChange={e => setCliPaste(f => ({ ...f, region: e.target.value }))} placeholder='region (us-east-1)' className='font-mono text-xs' />
+                  )}
+                  <Button size='sm' className='gap-1' onClick={() => runCliImport(cliPaste)}
+                          disabled={cliImporting || (cliPlatform !== 'opencode' && !cliPaste.token && !cliPaste.refresh_token && !cliPaste.code)}>
+                    {cliImporting ? <Loader2 className='w-3.5 h-3.5 animate-spin' /> : <KeyRound className='w-3.5 h-3.5' />}
+                    {t('providers.cliImportBtn')}
+                  </Button>
+                  <p className='text-[11px] text-muted-foreground'>{t('providers.cliAutoProviderHint')}</p>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+
     {/* Key Dialog */}
     <Dialog open={keyDialogOpen} onOpenChange={setKeyDialogOpen}>
       <DialogContent className='max-w-md'>
         <DialogHeader><DialogTitle>{t('providers.addApiKeyTitle')}</DialogTitle></DialogHeader>
         <div className='space-y-4'>
-          <div><Label>{t('providers.keyValue')}</Label><Input value={keyForm.key_value} onChange={e => setKeyForm(f => ({ ...f, key_value: e.target.value }))} className='mt-1' placeholder='sk-...' /></div>
-          <div><Label>{t('providers.alias')}</Label><Input value={keyForm.alias} onChange={e => setKeyForm(f => ({ ...f, alias: e.target.value }))} className='mt-1' placeholder='My Key' /></div>
+          {oauthProfileForSelected ? (
+            <div className='rounded-lg border border-dashed p-4 text-center space-y-2'>
+              <p className='text-sm text-muted-foreground'>{t('providers.oauthKeyHint')}</p>
+              <Button onClick={startKeyOauth} disabled={keyOauthWaiting} className='gap-2'>
+                {keyOauthWaiting ? <Loader2 className='w-4 h-4 animate-spin' /> : <Globe className='w-4 h-4' />}
+                {keyOauthWaiting ? t('providers.oauthWaiting') : t('providers.oauthLoginBtn')}
+              </Button>
+              {keyOauthWaiting && keyDeviceCode && (
+                <div className='text-xs text-muted-foreground flex items-center justify-center gap-1.5 flex-wrap'>
+                  {t('providers.oauthDeviceCode')}
+                  <code className='font-mono text-sm font-bold text-foreground select-all tracking-wider'>{keyDeviceCode}</code>
+                  <button
+                    className='inline-flex items-center gap-0.5 text-[11px] text-cyan-600 hover:underline'
+                    onClick={() => { navigator.clipboard.writeText(keyDeviceCode.trim().toUpperCase()); toast({ title: t('providers.oauthCopied'), variant: 'success' }); }}
+                  >
+                    <Copy className='h-3 w-3' />{t('common.copy')}
+                  </button>
+                  <span className='text-[11px] opacity-70'>{t('providers.oauthPasteHint')}</span>
+                </div>
+              )}
+              {keyOauthWaiting && <p className='text-xs text-muted-foreground'>{t('providers.oauthWaitingHint')}</p>}
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label>{t('providers.keyValue')}{keyLines.length > 1 ? ' (' + keyLines.length + ')' : ''}</Label>
+                <Textarea value={keyForm.key_value} onChange={e => setKeyForm(f => ({ ...f, key_value: e.target.value }))}
+                          className='mt-1 font-mono text-xs min-h-[100px]' placeholder='sk-...' />
+                {keyLines.length > 1 && <p className='text-xs text-muted-foreground mt-1'>{t('providers.multiLineHint')}</p>}
+              </div>
+              <div><Label>{t('providers.alias')}</Label><Input value={keyForm.alias} onChange={e => setKeyForm(f => ({ ...f, alias: e.target.value }))} className='mt-1' placeholder={keyLines.length > 1 ? 'Key' : 'My Key'} /></div>
+            </>
+          )}
           <div><Label>{t('providers.weight')} ({t('providers.weightHint')})</Label><Input type='number' value={keyForm.weight} onChange={e => setKeyForm(f => ({ ...f, weight: Number(e.target.value) }))} className='mt-1' min={1} /></div>
         </div>
         <DialogFooter>
           <Button variant='outline' onClick={() => setKeyDialogOpen(false)}>{t('providers.cancel')}</Button>
-          <Button onClick={saveKey} disabled={createKeyMut.isPending}>{createKeyMut.isPending ? <Loader2 className='w-4 h-4 animate-spin mr-1' /> : null}{t('providers.saveBtn')}</Button>
+          {!oauthProfileForSelected && (
+            <Button onClick={saveKey} disabled={createKeyMut.isPending || createBatchKeyMut.isPending || !keyLines.length}>
+              {createKeyMut.isPending || createBatchKeyMut.isPending ? <Loader2 className='w-4 h-4 animate-spin mr-1' /> : null}
+              {t('providers.saveBtn')}{keyLines.length > 1 ? ' (' + keyLines.length + ')' : ''}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1002,6 +1385,76 @@ const createModelMut = useMutation({
       </DialogContent>
     </Dialog>
 
+    {/* Online Providers Dialog (list from models.dev, icons from lobe-icons) */}
+    <Dialog open={onlineDialogOpen} onOpenChange={setOnlineDialogOpen}>
+      <DialogContent className='max-w-2xl max-h-[80vh] flex flex-col'>
+        <DialogHeader>
+          <DialogTitle className='flex items-center justify-between gap-2 pr-6'>
+            <span>{t('providers.onlineProvidersTitle')}</span>
+            <div className='flex items-center gap-2'>
+              {onlineUpdatedAt && (
+                <span className='text-xs text-muted-foreground font-normal'>
+                  {t('providers.onlineUpdatedAt')}: {onlineUpdatedAt.replace('T', ' ')}
+                </span>
+              )}
+              <Button variant='outline' size='sm' onClick={refreshOnlineList} disabled={onlineRefreshing}>
+                {onlineRefreshing ? <Loader2 className='w-4 h-4 mr-1 animate-spin' /> : <RefreshCw className='w-4 h-4 mr-1' />}
+                {t('providers.onlineUpdate')}
+              </Button>
+            </div>
+          </DialogTitle>
+        </DialogHeader>
+        <div className='flex-1 overflow-hidden flex flex-col'>
+          <Input value={onlineSearch} onChange={e => setOnlineSearch(e.target.value)} placeholder={t('providers.onlineSearchHint')} className='mb-2' />
+          <div className='flex gap-2 mb-3'>
+            <Select value={onlineProtocolFilter} onValueChange={setOnlineProtocolFilter}>
+              <SelectTrigger className='h-8 text-xs flex-1'><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>{t('providers.filterProtocolAll')}</SelectItem>
+                <SelectItem value='openai'>OpenAI</SelectItem>
+                <SelectItem value='claude'>Claude</SelectItem>
+                <SelectItem value='gemini'>Gemini</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={onlineAuthFilter} onValueChange={setOnlineAuthFilter}>
+              <SelectTrigger className='h-8 text-xs flex-1'><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value='all'>{t('providers.filterAuthAll')}</SelectItem>
+                <SelectItem value='api_key'>{t('providers.authTypeApiKey')}</SelectItem>
+                <SelectItem value='oauth'>{t('providers.authTypeOauth')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {onlineLoading ? (
+            <div className='text-center py-8 text-muted-foreground'><Loader2 className='w-6 h-6 animate-spin mx-auto mb-2' />{t('providers.loading')}</div>
+          ) : (
+            <div className='flex-1 overflow-y-auto space-y-1'>
+              {filteredOnline.length === 0 && (
+                <p className='text-center text-muted-foreground py-4'>
+                  {onlineProviders.length === 0 ? t('providers.onlineEmpty') : t('providers.noMatchProviders')}
+                </p>
+              )}
+              {filteredOnline.map((p: any) => (
+                <button key={p.id} type='button' onClick={() => selectOnlineProvider(p)} className='w-full text-left p-3 rounded-lg border hover:border-primary/50 transition-all flex items-center gap-3'>
+                  <div className='w-8 h-8 rounded bg-muted flex items-center justify-center flex-shrink-0'>
+                    {p.icon ? <img src={p.icon} alt='' className='w-6 h-6 rounded' onError={(e: any) => { e.currentTarget.style.visibility = 'hidden'; }} /> : <Server className='w-4 h-4 text-muted-foreground' />}
+                  </div>
+                  <div className='flex-1 min-w-0'>
+                    <p className='font-medium text-sm truncate'>{p.name}</p>
+                    <p className='text-xs text-muted-foreground truncate'>{p.base_url}</p>
+                  </div>
+                  <Badge variant='outline' className='text-[10px] whitespace-nowrap'>{p.models_count} {t('providers.modelsCount')}</Badge>
+                  {p.auth_type === 'oauth' && <Badge className='bg-emerald-500/10 text-emerald-500 border-emerald-500/30 text-[10px]'>OAuth</Badge>}
+                  <Badge className={`${protocolColors[p.protocol] || ''} text-[10px] border`}>{p.protocol?.toUpperCase()}</Badge>
+                  <ChevronRight className='w-4 h-4 text-muted-foreground' />
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+
     {/* Confirm Delete Provider */}
     <Dialog open={confirmDeleteId !== null} onOpenChange={v => { if (!v) setConfirmDeleteId(null); }}>
       <DialogContent className='max-w-sm'>
@@ -1027,37 +1480,55 @@ const createModelMut = useMutation({
     </Dialog>
 
     {/* Sync Models Dialog */}
-    <Dialog open={syncDialogOpen} onOpenChange={v => { if (!v) { setSyncDialogOpen(false); setFetchedModels([]); setSelectedSyncIds(new Set()); setSyncSearch(''); } }}>
+    <Dialog open={syncDialogOpen} onOpenChange={v => { if (!v) { setSyncDialogOpen(false); setFetchedModels([]); setSelectedSyncIds(new Set()); setSyncModelSearch(''); } }}>
       <DialogContent className='max-w-[90vw] max-h-[85vh] flex flex-col'>
         <DialogHeader>
           <DialogTitle>{t('providers.syncModelsTitle') || '同步平台模型 - ' + selectedProvider?.name}</DialogTitle>
         </DialogHeader>
         <div className='flex-1 flex flex-col min-h-0'>
-          <div className='flex items-center justify-between mb-3 gap-2 flex-wrap'>
+          <div className='relative mb-3'>
+            <Search className='absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground' />
+            <Input value={syncModelSearch} onChange={e => setSyncModelSearch(e.target.value)} placeholder={t('common.search') + '...'} className='pl-8 h-9 text-sm' />
+          </div>
+          {(() => {
+            const filteredModels = fetchedModels.filter((m: any) =>
+              !syncModelSearch || m.model_id.toLowerCase().includes(syncModelSearch.toLowerCase()) ||
+              (m.display_name || '').toLowerCase().includes(syncModelSearch.toLowerCase()) ||
+              (m.model_type || '').toLowerCase().includes(syncModelSearch.toLowerCase())
+            );
+            const addableCount = filteredModels.filter((m: any) => !m.already_added).length;
+            const selectedInFilter = filteredModels.filter((m: any) => selectedSyncIds.has(m.model_id));
+            return (<>
+            <div className='flex items-center justify-between mb-3 gap-2 flex-wrap'>
             <div className='flex items-center gap-2'>
               <label className='flex items-center gap-1.5 text-sm cursor-pointer select-none'>
-                <input type='checkbox' checked={fetchedModels.length > 0 && selectedSyncIds.size === fetchedModels.filter((m: any) => !m.already_added).length} onChange={handleSyncSelectAll} className='w-4 h-4 rounded border-border accent-primary' />
+                <input type='checkbox' checked={filteredModels.length > 0 && selectedInFilter.length === addableCount && addableCount > 0}
+                  onChange={() => {
+                    const addable = filteredModels.filter((m: any) => !m.already_added);
+                    if (selectedInFilter.length === addable.length && addable.length > 0) {
+                      setSelectedSyncIds(new Set([...selectedSyncIds].filter(id => !addable.some((m: any) => m.model_id === id))));
+                    } else {
+                      setSelectedSyncIds(new Set([...selectedSyncIds, ...addable.map((m: any) => m.model_id)]));
+                    }
+                  }} className='w-4 h-4 rounded border-border accent-primary' />
                 {t('strategies.selectAll')}
               </label>
-              <Button variant='ghost' size='sm' onClick={handleSyncInvert}>{t('providers.invertSelection') || '反选'}</Button>
+              <Button variant='ghost' size='sm' onClick={() => {
+                const newSelected = new Set(selectedSyncIds);
+                for (const m of filteredModels) {
+                  if (m.already_added) continue;
+                  if (newSelected.has(m.model_id)) newSelected.delete(m.model_id);
+                  else newSelected.add(m.model_id);
+                }
+                setSelectedSyncIds(newSelected);
+              }}>{t('providers.invertSelection') || '反选'}</Button>
             </div>
             <div className='flex items-center gap-2'>
-              <span className='text-sm text-muted-foreground'>{t('providers.syncFetchedCount', { count: fetchedModels.length }) || '获取到 ' + fetchedModels.length + ' 个模型'}</span>
+              <span className='text-sm text-muted-foreground'>{t('providers.syncFetchedCount', { count: filteredModels.length }) || '获取到 ' + filteredModels.length + ' 个模型'}</span>
               {selectedSyncIds.size > 0 && <span className='text-sm text-primary'>{t('providers.selectedCount', { count: selectedSyncIds.size }) || '已选 ' + selectedSyncIds.size + ' 个'}</span>}
               <Button size='sm' disabled={selectedSyncIds.size === 0} onClick={handleBatchAddModels}>
                 <Plus className='w-3 h-3 mr-1' />{t('providers.batchAdd') || '批量添加'} ({selectedSyncIds.size})
               </Button>
-            </div>
-          </div>
-          <div className='mb-2'>
-            <div className='relative'>
-              <Search className='absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground' />
-              <Input
-                value={syncSearch}
-                onChange={e => setSyncSearch(e.target.value)}
-                placeholder={t('providers.searchModels') || '搜索模型名称或ID...'}
-                className='pl-8 h-8 text-sm'
-              />
             </div>
           </div>
           <div className='flex-1 overflow-y-auto border rounded-lg'>
@@ -1075,17 +1546,12 @@ const createModelMut = useMutation({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {fetchedModels.length === 0 ? (
+                {filteredModels.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className='text-center text-muted-foreground py-8'>{syncFetching ? <Loader2 className='w-4 h-4 animate-spin mx-auto' /> : t('common.noData')}</TableCell>
                   </TableRow>
-                ) : (() => {
-                  const q = syncSearch.toLowerCase();
-                  const filtered = q ? fetchedModels.filter((m: any) => m.model_id.toLowerCase().includes(q) || (m.display_name || '').toLowerCase().includes(q)) : fetchedModels;
-                  if (filtered.length === 0) {
-                    return <TableRow><TableCell colSpan={8} className='text-center text-muted-foreground py-8'>{t('common.noData')}</TableCell></TableRow>;
-                  }
-                  return filtered.map((m: any) => {
+                ) : (
+                  filteredModels.map((m: any) => {
                     const isSelected = selectedSyncIds.has(m.model_id);
                     const isAlreadyAdded = m.already_added;
                     return (
@@ -1118,25 +1584,14 @@ const createModelMut = useMutation({
                         </TableCell>
                       </TableRow>
                     );
-                  });
-                })()
-              }
+                  })
+                )}
               </TableBody>
             </Table>
           </div>
+          </>);
+          })()}
         </div>
-      </DialogContent>
-    </Dialog>
-
-    {/* Confirm Clear Models */}
-    <Dialog open={confirmClearModels} onOpenChange={v => { if (!v) setConfirmClearModels(false); }}>
-      <DialogContent className='max-w-sm'>
-        <DialogHeader><DialogTitle>{t('providers.clearModels') || '清空模型'}</DialogTitle></DialogHeader>
-        <p className='text-sm text-muted-foreground'>{t('providers.confirmClearModels') || '确定清空当前平台的所有模型？此操作不可撤销。'}</p>
-        <DialogFooter>
-          <Button variant='outline' onClick={() => setConfirmClearModels(false)}>{t('providers.cancel')}</Button>
-          <Button variant='destructive' onClick={() => { clearAllModelsMut.mutate(); setConfirmClearModels(false); }}>{t('providers.clearModels') || '清空模型'}</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
 

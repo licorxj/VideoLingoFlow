@@ -6,6 +6,9 @@ import {
   MessageSquare,
   ScrollText,
   Settings,
+  KeyRound,
+  Cpu,
+  ShieldCheck,
 } from "lucide-react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { I18nProvider } from "./i18n";
@@ -17,6 +20,9 @@ import Strategies from "./Strategies";
 import Chat from "./Chat";
 import Logs from "./Logs";
 import LLMSettings from "./Settings";
+import ApiKeys from "./ApiKeys";
+import Models from "./Models";
+import Endpoints from "./Endpoints";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -34,6 +40,9 @@ const subTabs = [
   { id: "chat", label: "AI 对话", icon: MessageSquare },
   { id: "logs", label: "请求日志", icon: ScrollText },
   { id: "settings", label: "系统设置", icon: Settings },
+  { id: "apikeys", label: "平台密钥", icon: KeyRound },
+  { id: "models", label: "模型管理", icon: Cpu },
+  { id: "endpoints", label: "端点与鉴权", icon: ShieldCheck },
 ];
 
 function LLMRouterContent() {
@@ -53,6 +62,12 @@ function LLMRouterContent() {
         return <Logs />;
       case "settings":
         return <LLMSettings />;
+      case "apikeys":
+        return <ApiKeys />;
+      case "models":
+        return <Models />;
+      case "endpoints":
+        return <Endpoints />;
       default:
         return <Dashboard />;
     }
