@@ -390,7 +390,7 @@ const createModelMut = useMutation({
     mutationFn: async (m: any) => {
       setTestingModelId(m.id);
       try {
-        const res = await fetch('/v1/chat/completions', {
+        const res = await fetch(`${LLM_ROUTER_BASE}/v1/chat/completions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
