@@ -396,6 +396,44 @@ def cmd_start():
         pass
 
 
+def _git_pull(third_party: Path) -> bool:
+    """安全拉取第三方仓库更新。
+
+    策略:
+      1. 优先 rebase + autostash: 自动暂存未提交改动, 将本地提交变基到上游之上;
+         冲突时自动中止并还原暂存, 不会把仓库留在半合并/冲突状态。
+      2. 回退普通 merge pull, 以兼容无 rebase 的场景。
+    返回 True 表示拉取成功 (含 up-to-date), False 表示失败。
+    """
+    # 1. rebase + 自动暂存未提交改动 (含未跟踪文件)
+    try:
+        subprocess.run(
+            ["git", "-C", str(third_party), "pull", "--rebase", "--autostash"],
+            check=True,
+        )
+        return True
+    except subprocess.CalledProcessError:
+        log("rebase 式拉取失败 (本地提交可能与上游冲突), 尝试中止并回退...")
+
+    # 2. 中止 rebase 并还原自动暂存, 避免仓库停留在冲突/未合并状态
+    subprocess.run(
+        ["git", "-C", str(third_party), "rebase", "--abort"],
+        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
+    )
+    subprocess.run(
+        ["git", "-C", str(third_party), "stash", "pop"],
+        check=False, stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT,
+    )
+
+    # 3. 回退普通 merge 式 pull
+    try:
+        subprocess.run(["git", "-C", str(third_party), "pull"], check=True)
+        return True
+    except subprocess.CalledProcessError:
+        log("git pull 失败: 本地改动与上游冲突。请手动处理冲突后重试。")
+        return False
+
+
 def cmd_update():
     step("更新第三方项目 (QM-LocalRouter)")
     if not THIRD_PARTY.exists():
@@ -409,13 +447,10 @@ def cmd_update():
         except Exception as e:
             log(f"git 元数据释放失败（继续走全新初始化）: {e}")
 
-    # 1. git 拉取 (保留本地数据, 因为 app.db 在 data/ 下通常不被 git 跟踪)
-    log("执行 git pull (保留本地数据)...")
-    try:
-        subprocess.run(["git", "-C", str(THIRD_PARTY), "pull", "--ff-only"], check=True)
-    except subprocess.CalledProcessError:
-        log("git pull 失败 (可能是本地改动冲突), 尝试普通 pull...")
-        subprocess.run(["git", "-C", str(THIRD_PARTY), "pull"], check=True)
+    # 1. git 拉取 (保留本地数据与改动, 冲突时自动中止并还原)
+    log("执行 git pull (保留本地数据与改动)...")
+    if not _git_pull(THIRD_PARTY):
+        sys.exit(1)
 
     # 2. 确保环境/依赖最新
     if not check_venv_and_deps():
