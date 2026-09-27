@@ -7,6 +7,7 @@ import {
   getKeys, createKey, createKeysBatch, deleteKey, testKey, testAllKeys, deleteInvalidKeys,
   startOauthLogin, getOauthStatus, getCliPlatforms, cliDetect, cliImport, cliBrowserStart, cliStatus,
   getModels, createModel, updateModel, deleteModel, fetchModels, syncModels, testAllModels, deleteInvalidModels, clearModels,
+  LLM_ROUTER_BASE,
 } from './api';
 import { useI18n } from './i18n';
 import { toast } from './toast';
@@ -60,7 +61,7 @@ const contextPresets = [
 function iconUrl(icon: string | undefined): string {
   if (!icon) return "";
   if (icon.startsWith("http")) return icon;
-  if (icon.startsWith("icons/")) return "/api/icons/file/" + icon.replace("icons/", "");
+  if (icon.startsWith("icons/")) return LLM_ROUTER_BASE + "/api/icons/file/" + icon.replace("icons/", "");
   return icon;
 }
 
