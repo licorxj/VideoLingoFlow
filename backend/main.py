@@ -43,8 +43,14 @@ class SPAStaticFiles(WebSocketSafeStaticFiles):
         response = await super().get_response(path, scope)
         headers = dict(scope.get("headers", []))
         accepts_html = b"text/html" in headers.get(b"accept", b"")
+        is_html = response.headers.get("content-type", "").startswith("text/html")
         if response.status_code == 404 and accepts_html and not os.path.splitext(path)[1]:
-            return await super().get_response("index.html", scope)
+            response = await super().get_response("index.html", scope)
+        # index.html 等未哈希文档不缓存：前端重建后 chunk 哈希会变化，
+        # 若浏览器沿用旧 index.html 会引用已删除的旧 chunk 导致 404。
+        # 内容哈希的 assets 仍由 StaticFiles 默认长期缓存，安全。
+        if path in ("", "/", "index.html") or is_html:
+            response.headers["Cache-Control"] = "no-cache"
         return response
 
 
