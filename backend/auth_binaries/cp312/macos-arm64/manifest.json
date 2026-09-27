@@ -1,5 +1,5 @@
 {
-  "commit_sha": "7de2c259264752213396573047f04e22264079cb",
+  "commit_sha": "1cc1c672e96835ed14d1d98092dbc6b098c2428a",
   "files": {
     "backend/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
     "backend/auth/__init__.py": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
@@ -11,7 +11,7 @@
     "backend/control_plane/__init__.py": "3f0d1f765c1fe0b086d5ef89d8829822699327e824a96877f7b261cadfbe281e",
     "backend/control_plane/custom_node_runtime.cpython-312-darwin.so": "79bb2528fa245ac395092e5ba534f692b3c11a72c0e3e03fbc77ace55c594c85",
     "backend/control_plane/runtime.cpython-312-darwin.so": "edddea4dd6546794c931c5feaf26be0e61c74f38cdfca7c4531b2df876db8680",
-    "backend/control_plane/workflow_runtime.cpython-312-darwin.so": "2fc72de3c642d6704f72ae5353fa6bcd0a53cfca1513d8688e58da2a3cc99902"
+    "backend/control_plane/workflow_runtime.cpython-312-darwin.so": "f3b2e797c90a2bc904c297d28aff0192efb872710b255c0683a16264967e9759"
   },
   "python_abi": "cp312",
   "source_files": [
@@ -24,7 +24,7 @@
     "backend/control_plane/runtime.py",
     "backend/control_plane/custom_node_runtime.py"
   ],
-  "source_sha": "e0fe2b0d8edfd11679ca33c57bf98fa7ed88eb4250c078896e20ea00d57caaac",
+  "source_sha": "c68f58307570a11131cf0c0c81065bf461d9560ac9f90cca7ab293f0ea5c1d69",
   "target": "macos-arm64",
-  "version": "v2.0.17"
+  "version": "v2.0.19"
 }
