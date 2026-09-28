@@ -1,0 +1,520 @@
+{
+  "id": "c95b4816f3b7",
+  "name": "测试ASR",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1790530495807",
+      "type": "workflow",
+      "position": {
+        "x": 5295,
+        "y": 990
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "M:/视频下载/有趣的概念科学/020 - Why Ships Don't Sink Even Though They're Ridiculously Heavy.mp4",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "text": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\8d3ceec2bbad47829af471f7379d850b\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 500
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1790530513253",
+      "type": "workflow",
+      "position": {
+        "x": 5820,
+        "y": 930
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "extract_audio",
+        "label": "音频分离",
+        "config": {
+          "format": "auto"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/extracted_audio_node_2_1790530513253.opus"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 276
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1790530551749",
+      "type": "workflow",
+      "position": {
+        "x": 5925,
+        "y": 1290
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "audio_transcode",
+        "label": "音频质量转码",
+        "config": {
+          "format": "wav",
+          "sample_rate": "16000",
+          "bit_depth": "16",
+          "channels": "1",
+          "bitrate": "192"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/transcoded_audio_node_3_1790530551749.wav"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 391
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1790530569093",
+      "type": "workflow",
+      "position": {
+        "x": 6690,
+        "y": 1020
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "whisperx_local",
+          "language": "auto",
+          "model": "large-v3",
+          "compute_type": "",
+          "batch_size": 0,
+          "word_timestamps": true,
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": "",
+          "post_vad": true,
+          "post_alignment": true,
+          "post_diarization": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_4_1790530569093.json"
+        },
+        "error": "",
+        "logLines": [
+          "[ASR PostProcess] alignment_enabled=True, alignment_engine=whisperx",
+          "[ASR PostProcess] diarization_enabled=True, diarization_engine=pyannote",
+          "[ASR PostProcess] VAD was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Alignment was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
+          "[ASR PostProcess] No post-processing needed, returning original result",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\8d3ceec2bbad47829af471f7379d850b\\cache\\.step_node_4_1790530569093_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 493
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1790530782106",
+      "type": "workflow",
+      "position": {
+        "x": 6705,
+        "y": 1560
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "qwen3_asr",
+          "language": "auto",
+          "model": "Qwen/Qwen3-ASR-1.7B",
+          "compute_type": "",
+          "batch_size": 0,
+          "word_timestamps": true,
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": "",
+          "post_vad": true,
+          "post_alignment": true,
+          "post_diarization": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_5_1790530782106.json"
+        },
+        "error": "",
+        "logLines": [
+          "[Diarization] Trying model: pyannote/speaker-diarization-community-1 (cache_dir=C:\\Users\\Administrator\\.cache\\torch\\pyannote)",
+          "2026-09-28 01:43:28 - whisperx.diarize - INFO - Loading diarization model: pyannote/speaker-diarization-community-1",
+          "[Diarization] Completed with pyannote/speaker-diarization-community-1: 1 speaker(s)",
+          "[Pipeline.DIAR] <<< END",
+          "[Pipeline] all stages done",
+          "[ASR PostProcess] Post-processing complete, segments=81",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\d3a53795437245dcbecbb9ba1ebd69b1\\cache\\.step_node_5_1790530782106_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 493
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_6_1790530836647",
+      "type": "workflow",
+      "position": {
+        "x": 7230,
+        "y": 1050
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "funasr_nano",
+          "language": "auto",
+          "model": "FunAudioLLM/Fun-ASR-MLT-Nano-2512",
+          "compute_type": "",
+          "batch_size": "10",
+          "word_timestamps": true,
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": "",
+          "post_vad": true,
+          "post_alignment": true,
+          "post_diarization": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_6_1790530836647.json"
+        },
+        "error": "",
+        "logLines": [
+          "[ASR] Using ASR audio: Y:\\VideoLingoLc\\control_plane_workspaces\\8d3ceec2bbad47829af471f7379d850b\\output/transcoded_audio_node_3_1790530551749.wav",
+          "[ASR] Post-processing will use ASR audio: Y:\\VideoLingoLc\\control_plane_workspaces\\8d3ceec2bbad47829af471f7379d850b\\output/transcoded_audio_node_3_1790530551749.wav",
+          "[ASR] engine=funasr_nano, max_duration=1200s, params={'language': 'auto', 'word_timestamps': True, 'vad_model': 'fsmn-vad', 'vad_max_segment_time': 30000, 'model': 'FunAudioLLM/Fun-ASR-Nano-2512', 'use_itn': True, 'batch_size': 10, 'sentence_timestamp': True, 'diarize': True, 'vad_options': {'vad_onset': 0.5, 'vad_offset': 0.363}}",
+          "[ASR] Audio duration: 260.5s",
+          "[ASR] 引擎 'funasr_nano' 已加载（空闲 120s 自动卸载）",
+          "[FunASRNano] device resolved: cuda (torch.cuda.is_available=True, lane_cuda=False)",
+          "[FunASRNano] Building model: Y:\\VideoLingoLc\\_model_cache\\models\\FunAudioLLM\\Fun-ASR-Nano-2512 (diarize=True, device=cuda)",
+          "funasr version: 1.3.9."
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 493
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_7_1790531259881",
+      "type": "workflow",
+      "position": {
+        "x": 5685,
+        "y": 1725
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 443
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_8_1790531396636",
+      "type": "workflow",
+      "position": {
+        "x": 7245,
+        "y": 1560
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "moss",
+          "language": "auto",
+          "model": "openmoss/MOSS-Transcribe-Diarize",
+          "compute_type": "",
+          "batch_size": 0,
+          "word_timestamps": true,
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": "",
+          "post_vad": true,
+          "post_alignment": true,
+          "post_diarization": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_8_1790531396636.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[ASR PostProcess] diarization_enabled=False, diarization_engine=pyannote",
+          "[ASR PostProcess] VAD was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Alignment was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] Diarization was executed internally by ASR engine, skipping",
+          "[ASR PostProcess] apply_vad=False, apply_alignment=False, apply_diarization=False",
+          "[ASR PostProcess] No post-processing needed, returning original result",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\8d3ceec2bbad47829af471f7379d850b\\cache\\.step_node_8_1790531396636_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 507
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1790546743218",
+      "type": "workflow",
+      "position": {
+        "x": 6705,
+        "y": 495
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "sherpa_onnx",
+          "language": "auto",
+          "model": "sense-voice-zh-en-ja-ko-yue",
+          "compute_type": "",
+          "batch_size": 0,
+          "word_timestamps": true,
+          "vad_onset": "0.35",
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": "",
+          "post_vad": true,
+          "post_alignment": true,
+          "post_diarization": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_4_1790546743218.json"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 507
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1790530495807",
+      "sourceHandle": "out-video",
+      "target": "node_2_1790530513253",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1790530495807out-video-node_2_1790530513253in-video"
+    },
+    {
+      "source": "node_2_1790530513253",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1790530551749",
+      "targetHandle": "in-audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1790530513253out-audio-node_3_1790530551749in-audio"
+    },
+    {
+      "source": "node_3_1790530551749",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1790530569093",
+      "targetHandle": "in-asr_audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1790530551749out-audio-node_4_1790530569093in-asr_audio"
+    },
+    {
+      "source": "node_3_1790530551749",
+      "sourceHandle": "out-audio",
+      "target": "node_5_1790530782106",
+      "targetHandle": "in-asr_audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1790530551749out-audio-node_5_1790530782106in-asr_audio"
+    },
+    {
+      "source": "node_3_1790530551749",
+      "sourceHandle": "out-audio",
+      "target": "node_6_1790530836647",
+      "targetHandle": "in-asr_audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1790530551749out-audio-node_6_1790530836647in-asr_audio"
+    },
+    {
+      "source": "node_1_1790530495807",
+      "sourceHandle": "out-video",
+      "target": "node_7_1790531259881",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1790530495807out-video-node_7_1790531259881in-video"
+    },
+    {
+      "source": "node_3_1790530551749",
+      "sourceHandle": "out-audio",
+      "target": "node_8_1790531396636",
+      "targetHandle": "in-asr_audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1790530551749out-audio-node_8_1790531396636in-asr_audio"
+    },
+    {
+      "source": "node_3_1790530551749",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1790546743218",
+      "targetHandle": "in-asr_audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1790530551749out-audio-node_4_1790546743218in-asr_audio"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-09-28T01:35:37",
+  "updatedAt": "2026-09-28T07:11:52",
+  "revision": 10
+}

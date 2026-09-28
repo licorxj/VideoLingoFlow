@@ -266,11 +266,12 @@ class ASRBase(ABC):
             WebRTCVADProcessor
         )
         
-        # 依次尝试的VAD引擎：配置的引擎 → fsmn（本地模型）→ webrtc（如果已安装）
+        # 依次尝试的VAD引擎：配置的引擎 → sherpa（本地 2MB onnx）→ fsmn（本地模型）
+        # → webrtc（如果已安装）
         candidates: list = []
         if vad_engine:
             candidates.append(vad_engine)
-        for fallback in ("fsmn", "webrtc"):
+        for fallback in ("sherpa", "fsmn", "webrtc"):
             if fallback not in candidates:
                 candidates.append(fallback)
         
@@ -283,6 +284,9 @@ class ASRBase(ABC):
                     processor = FSMNVADProcessor(**options)
                 elif engine == "webrtc":
                     processor = WebRTCVADProcessor(**options)
+                elif engine == "sherpa":
+                    from backend.asr.sherpa_postprocess import SherpaVADProcessor
+                    processor = SherpaVADProcessor(**options)
                 else:
                     print(f"[VAD] Unknown VAD engine: {engine}, trying next", flush=True)
                     continue
@@ -327,6 +331,9 @@ class ASRBase(ABC):
             processor = CamPlusDiarizationProcessor(**options)
         elif diarize_engine == "diarize":
             processor = DiarizeLibProcessor(**options)
+        elif diarize_engine == "sherpa":
+            from backend.asr.sherpa_postprocess import SherpaDiarizationProcessor
+            processor = SherpaDiarizationProcessor(**options)
         else:
             raise ValueError(f"Unknown diarization engine: {diarize_engine}")
         
@@ -352,6 +359,9 @@ class ASRBase(ABC):
 
         if punctuation_engine == "ct_punc":
             processor = CtPuncPunctuationProcessor(**options)
+        elif punctuation_engine == "sherpa":
+            from backend.asr.sherpa_postprocess import SherpaPunctuationProcessor
+            processor = SherpaPunctuationProcessor(**options)
         else:
             raise ValueError(f"Unknown punctuation engine: {punctuation_engine}")
 

@@ -20,12 +20,14 @@ import {
   Volume2,
   AlignLeft,
   UserCircle,
+  Quote,
 } from "lucide-react";
 
 interface PostProcessConfig {
   vad: { enabled: boolean; engine: string };
   alignment: { enabled: boolean; engine: string };
   diarization: { enabled: boolean; engine: string };
+  punctuation: { enabled: boolean; engine: string };
 }
 
 const TYPE_LABELS: Record<string, string> = {
@@ -70,10 +72,11 @@ export default function ASRSettings() {
     vad: { enabled: false, engine: "fsmn" },
     alignment: { enabled: false, engine: "whisperx" },
     diarization: { enabled: false, engine: "pyannote" },
+    punctuation: { enabled: false, engine: "ct_punc" },
   });
 
   const load = async () => {
-    const [ifaceRes, engineRes, vadEnabled, vadEngine, alignEnabled, alignEngine, diarizeEnabled, diarizeEngine] = await Promise.all([
+    const [ifaceRes, engineRes, vadEnabled, vadEngine, alignEnabled, alignEngine, diarizeEnabled, diarizeEngine, punctEnabled, punctEngine] = await Promise.all([
       asrInterfacesApi.list(),
       settingsApi.get("asr.engine"),
       settingsApi.get("asr.post_process.vad.enabled"),
@@ -82,21 +85,27 @@ export default function ASRSettings() {
       settingsApi.get("asr.post_process.alignment.engine"),
       settingsApi.get("asr.post_process.diarization.enabled"),
       settingsApi.get("asr.post_process.diarization.engine"),
+      settingsApi.get("asr.post_process.punctuation.enabled"),
+      settingsApi.get("asr.post_process.punctuation.engine"),
     ]);
     setInterfaces(ifaceRes.data.interfaces || []);
     setActiveEngine(engineRes.data.value || "whisperx_local");
     setPostProcessConfig({
-      vad: { 
-        enabled: vadEnabled.data.value === true || vadEnabled.data.value === "true", 
-        engine: vadEngine.data.value || "silero" 
+      vad: {
+        enabled: vadEnabled.data.value === true || vadEnabled.data.value === "true",
+        engine: vadEngine.data.value || "silero"
       },
-      alignment: { 
-        enabled: alignEnabled.data.value === true || alignEnabled.data.value === "true", 
-        engine: alignEngine.data.value || "whisperx" 
+      alignment: {
+        enabled: alignEnabled.data.value === true || alignEnabled.data.value === "true",
+        engine: alignEngine.data.value || "whisperx"
       },
-      diarization: { 
-        enabled: diarizeEnabled.data.value === true || diarizeEnabled.data.value === "true", 
-        engine: diarizeEngine.data.value || "pyannote" 
+      diarization: {
+        enabled: diarizeEnabled.data.value === true || diarizeEnabled.data.value === "true",
+        engine: diarizeEngine.data.value || "pyannote"
+      },
+      punctuation: {
+        enabled: punctEnabled.data.value === true || punctEnabled.data.value === "true",
+        engine: punctEngine.data.value || "ct_punc"
       },
     });
   };
@@ -142,7 +151,7 @@ export default function ASRSettings() {
     load();
   };
 
-  const handlePostProcessChange = async (type: "vad" | "alignment" | "diarization", field: "enabled" | "engine", value: boolean | string) => {
+  const handlePostProcessChange = async (type: "vad" | "alignment" | "diarization" | "punctuation", field: "enabled" | "engine", value: boolean | string) => {
     const newConfig = { ...postProcessConfig };
     newConfig[type] = { ...newConfig[type], [field]: value };
     setPostProcessConfig(newConfig);
@@ -202,6 +211,7 @@ export default function ASRSettings() {
               <option value="silero">Silero VAD</option>
               <option value="fsmn">FSMN VAD</option>
               <option value="webrtc">WebRTC VAD</option>
+              <option value="sherpa">sherpa-onnx VAD (本地)</option>
             </select>
             <label className="relative cursor-pointer flex items-center">
               <input
@@ -265,12 +275,44 @@ export default function ASRSettings() {
             >
               <option value="pyannote">Pyannote</option>
               <option value="cam++">Cam++</option>
+              <option value="sherpa">sherpa-onnx (本地)</option>
             </select>
             <label className="relative cursor-pointer flex items-center">
               <input
                 type="checkbox"
                 checked={postProcessConfig.diarization.enabled}
                 onChange={(e) => handlePostProcessChange("diarization", "enabled", e.target.checked)}
+                className="peer sr-only"
+              />
+              <div className="w-9 h-5 bg-muted rounded-full peer-checked:bg-primary transition-colors duration-200" />
+              <div className="absolute left-0.5 top-0.5 w-4 h-4 bg-background rounded-full shadow-sm peer-checked:translate-x-4 transition-transform duration-200" />
+            </label>
+          </div>
+        </div>
+
+        {/* Punctuation Fallback */}
+        <div className="flex items-center justify-between p-3 rounded-xl border border-border/40 hover:border-border/60 transition-all duration-200">
+          <div className="flex items-center gap-3">
+            <Quote className="w-4 h-4 text-pink-500" />
+            <div>
+              <label className="text-sm font-medium">备用标点恢复模型</label>
+              <p className="text-xs text-muted-foreground">标点符号补全</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <select
+              className="px-3 py-1.5 border border-border/60 rounded-lg bg-background/50 text-xs focus:border-primary/50 focus:ring-2 focus:ring-primary/10 transition-all duration-200 outline-none appearance-none"
+              value={postProcessConfig.punctuation.engine}
+              onChange={(e) => handlePostProcessChange("punctuation", "engine", e.target.value)}
+            >
+              <option value="ct_punc">CT-Punc (FunASR)</option>
+              <option value="sherpa">sherpa-onnx (本地)</option>
+            </select>
+            <label className="relative cursor-pointer flex items-center">
+              <input
+                type="checkbox"
+                checked={postProcessConfig.punctuation.enabled}
+                onChange={(e) => handlePostProcessChange("punctuation", "enabled", e.target.checked)}
                 className="peer sr-only"
               />
               <div className="w-9 h-5 bg-muted rounded-full peer-checked:bg-primary transition-colors duration-200" />

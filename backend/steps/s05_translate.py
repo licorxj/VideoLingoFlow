@@ -9,6 +9,29 @@ from backend.steps.base_step import BaseStep, find_artifact
 from backend.config.config_manager import config
 from backend.llm.llm_client import get_llm_client
 
+# 上游术语项字段名不统一（不同 LLM 可能用 explanation/definition/desc/description/meaning，
+# 名称键也可能用 term/name/word/source）。翻译节点仅需把术语作为提示词上下文，字段缺失时
+# 容错处理，不应让整批翻译因单条术语缺键而崩溃（KeyError: 'explanation'）。
+_TERM_NAME_KEYS = ("term", "name", "word", "source", "src")
+_TERM_EXPLAIN_KEYS = ("explanation", "definition", "desc", "description", "meaning", "gloss")
+
+
+def _term_to_line(t: Any) -> str:
+    """把一条术语规范成 '- 名称: 释义' 文本；字段缺失或非字典时返回空串（调用处过滤）。"""
+    if isinstance(t, str):
+        return f"- {t}"
+    if not isinstance(t, dict):
+        return ""
+    name = next((str(t[k]) for k in _TERM_NAME_KEYS if t.get(k)), "")
+    explain = next((str(t[k]) for k in _TERM_EXPLAIN_KEYS if t.get(k)), "")
+    if name and explain:
+        return f"- {name}: {explain}"
+    if name:
+        return f"- {name}"
+    if explain:
+        return f"- {explain}"
+    return ""
+
 
 class S05Translate(BaseStep):
     step_id = "s05_translate"
@@ -117,7 +140,7 @@ class S05Translate(BaseStep):
         context_sentences: List[Dict[str, Any]],
     ) -> dict:
         term_lines = "\n".join(
-            f"- {t['term']}: {t['explanation']}" for t in (terminology or [])
+            line for line in (_term_to_line(t) for t in (terminology or [])) if line
         )
         context_block = ""
         if context_sentences:
@@ -194,7 +217,7 @@ class S05Translate(BaseStep):
         context_sentences: List[Dict[str, Any]],
     ) -> dict:
         term_lines = "\n".join(
-            f"- {t['term']}: {t['explanation']}" for t in (terminology or [])
+            line for line in (_term_to_line(t) for t in (terminology or [])) if line
         )
         context_block = ""
         if context_sentences:
@@ -285,7 +308,7 @@ class S05Translate(BaseStep):
         输出结构兼容原两步流程：{id: {"origin", "direct", "free"}}。
         """
         term_lines = "\n".join(
-            f"- {t['term']}: {t['explanation']}" for t in (terminology or [])
+            line for line in (_term_to_line(t) for t in (terminology or [])) if line
         )
         context_block = ""
         if context_sentences:

@@ -336,7 +336,7 @@
       "builtin": true,
       "description": "【五星全能-较贵】知名服务商ElevenLabs cloud ASR (Scribe v1/v2). 高质量语音识别在线服务，支持大部分语音，请到ElevenLabs官网获取api后填入方可使用",
       "type": "sdk",
-      "enabled": true
+      "enabled": false
     },
     {
       "id": "mimo_asr",
@@ -568,6 +568,67 @@
       "description": "【示例-默认禁用】兼容 OpenAI 音频转录接口的通用 ASR（OpenAI / Groq / DeepInfra / 本地 Whisper 服务等）。启用后填写 api_url 与 api_key 即可使用；返回自动归一为标准结果。",
       "type": "openai",
       "enabled": false
+    },
+    {
+      "id": "sherpa_onnx",
+      "name": "sherpa-onnx SenseVoice (Local)",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "【轻量本地-CPU 可跑-无 torch 依赖】k2-fsa/sherpa-onnx（C++ / onnxruntime）离线识别，内置 Silero VAD 分段与字级时间戳；模型自动下载到 _model_cache/sherpa-onnx（默认 hf-mirror 镜像）。支持中/英/日/韩/粤自动语种检测。provider 选 cuda 时若无 GPU 版会自动回退 cpu。",
+      "capabilities": {
+        "vad": true,
+        "word_timestamps": true,
+        "language_detection": true,
+        "timestamps": true,
+        "speaker_diarization": false,
+        "punctuation": true
+      },
+      "config": {
+        "sdk_package": "sherpa_onnx",
+        "sdk_module": "backend.asr.asr_sherpa_onnx",
+        "sdk_function": "transcribe",
+        "sdk_language_list_function": "",
+        "sdk_api_key": "",
+        "model": "sense-voice-zh-en-ja-ko-yue",
+        "model_file": "model.int8.onnx",
+        "model_options": [
+          "sense-voice-zh-en-ja-ko-yue",
+          "sense-voice-funasr-nano",
+          "paraformer-zh",
+          "paraformer-zh-small",
+          "dolphin-base-multi-lang",
+          "whisper-small"
+        ],
+        "language": "auto",
+        "voice_options": [
+          "auto",
+          "zh",
+          "en",
+          "ja",
+          "ko",
+          "yue"
+        ],
+        "use_itn": true,
+        "word_timestamps": true,
+        "vad": true,
+        "vad_model": "silero_vad_v5",
+        "vad_threshold": 0.5,
+        "vad_min_silence_duration": 0.4,
+        "vad_min_speech_duration": 0.25,
+        "vad_max_speech_duration": 15,
+        "provider": "cpu",
+        "compute_type_options": [
+          "cpu",
+          "cuda"
+        ],
+        "num_threads": 0,
+        "max_duration": 0,
+        "max_concurrent": 1,
+        "timeout": 1800,
+        "custom_params": [],
+        "diarize": false
+      }
     }
   ]
 }

@@ -2219,6 +2219,10 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "webrtc",
             "label": "WebRTC"
+          },
+          {
+            "value": "sherpa",
+            "label": "sherpa-onnx (Silero/本地)"
           }
         ]
       },
@@ -2333,6 +2337,10 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "cam++",
             "label": "CAM++ (FunASR)"
+          },
+          {
+            "value": "sherpa",
+            "label": "sherpa-onnx (本地/无需Key)"
           }
         ]
       },
@@ -2390,6 +2398,10 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "ct_punc",
             "label": "CT-Punc (FunASR)"
+          },
+          {
+            "value": "sherpa",
+            "label": "sherpa-onnx (本地)"
           }
         ]
       },

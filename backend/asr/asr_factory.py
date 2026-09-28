@@ -10,6 +10,7 @@ import shutil
 from typing import Optional, Dict, Any
 from backend.asr.asr_base import ASRBase
 from backend.asr.asr_whisperx import WhisperXLocal
+from backend.asr.asr_sherpa_onnx import SherpaOnnxASR
 from backend.utils.engine_lifecycle import IdleEngineRegistry, release_gpu_cache
 
 _ENGINES = {}
@@ -89,6 +90,9 @@ def _load_engines():
     except ImportError as e:
         # 依赖缺失（transformers>=5.6 / torch>=2.8 等）时静默跳过，避免影响其他引擎
         print(f"[ASR Factory] moss engine unavailable: {e}")
+    # sherpa-onnx（C++/onnxruntime，无 torch 依赖）。构造不导入 sherpa_onnx，
+    # 缺失依赖时延迟到 transcribe 才报错，避免影响其它引擎注册。
+    _ENGINES["sherpa_onnx"] = SherpaOnnxASR()
 
 def get_asr_engine(name: str) -> ASRBase:
     _load_engines()
@@ -638,6 +642,8 @@ def apply_post_processing(
     vad_options: Optional[Dict[str, Any]] = None,
     alignment_options: Optional[Dict[str, Any]] = None,
     diarize_options: Optional[Dict[str, Any]] = None,
+    punctuation_engine: Optional[str] = None,
+    punctuation_options: Optional[Dict[str, Any]] = None,
     alignment_audio_path: Optional[str] = None,
 ) -> dict:
     """Apply post-processing to an existing ASR result.
@@ -694,6 +700,8 @@ def apply_post_processing(
         vad_options=vad_options,
         alignment_options=alignment_options,
         diarize_options=diarize_options,
+        punctuation_engine=punctuation_engine,
+        punctuation_options=punctuation_options,
         alignment_audio_path=alignment_audio_path,
         language=language,
         callback=callback,
@@ -705,7 +713,7 @@ def list_asr_engines() -> list:
 
 def list_vad_engines() -> list:
     """List available VAD engines."""
-    return ["silero", "fsmn", "webrtc"]
+    return ["sherpa", "silero", "fsmn", "webrtc"]
 
 def list_alignment_engines() -> list:
     """List available word-level alignment engines."""
@@ -713,4 +721,8 @@ def list_alignment_engines() -> list:
 
 def list_diarize_engines() -> list:
     """List available speaker diarization engines."""
-    return ["pyannote", "cam++"]
+    return ["sherpa", "pyannote", "cam++", "diarize"]
+
+def list_punctuation_engines() -> list:
+    """List available punctuation restoration engines."""
+    return ["sherpa", "ct_punc"]

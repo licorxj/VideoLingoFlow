@@ -24,6 +24,21 @@ from backend.steps.base_step import BaseStep
 
 logger = logging.getLogger(__name__)
 
+# 平台内容/版权策略拒绝的错误码特征：命中即为确定性拒绝，重试无意义，需改提示词或参考图
+_SEEDREAM_POLICY_HINTS = ("SensitiveContent", "PolicyViolation", "Copyright", "IPInfringement")
+
+
+def _describe_seedream_api_error(exc) -> str:
+    """把 Seedream 接口错误翻译成可操作提示（内容策略类拒绝单独说明成因与处理办法）。"""
+    code = getattr(exc, "code", "") or ""
+    if any(hint.lower() in code.lower() for hint in _SEEDREAM_POLICY_HINTS):
+        stage = "提示词或参考图" if code.lower().startswith("input") else "输出图"
+        return (
+            f"Seedream 内容策略拒绝（{code}）：{stage}命中平台版权/敏感内容限制。"
+            "请改写描述（避开具体 IP 形象、品牌、真人明星与受版权保护的元素），或更换参考图后重新执行该节点。"
+        )
+    return f"Seedream 生成失败: {exc}"
+
 
 def _get_seedream_interface_default_model() -> str:
     """当节点未显式选择模型时，回退到「字节 Seedream」图像生成接口的默认模型设置。
@@ -172,6 +187,7 @@ class S_SeedreamBase(BaseStep):
     def run(self, task_dir: str, callback: Optional[Callable] = None,
             cancel_callback: Optional[Callable] = None) -> dict:
         from backend.imagegen.sdk import seedream_wrapper
+        from backend.imagegen.sdk.seedream_sdk import SeedreamAPIError
 
         node_id = getattr(self, "_node_id", "unknown")
         config = getattr(self, "_node_config", {}) or {}
@@ -281,6 +297,8 @@ class S_SeedreamBase(BaseStep):
                         raise_on_error=True, **kwargs)
                     if part:
                         result_paths.extend(part if isinstance(part, list) else [])
+        except SeedreamAPIError as e:
+            raise RuntimeError(_describe_seedream_api_error(e)) from e
         except Exception as e:
             raise RuntimeError(f"Seedream 生成失败: {e}") from e
 

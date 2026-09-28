@@ -17,6 +17,7 @@ import {
   type WorkflowNode as WFNode, type ConfigField, type PortType,
 } from "@/lib/workflowTypes";
 import { STATUS_CONFIG } from "./nodeStatus";
+import { NodeElapsedText } from "./NodeElapsedText";
 import LoopContainerCard from "./LoopContainerCard";
 import VoiceSelectPanel from "../VoiceSelectPanel";
 import AudioSelectorDialog from "@/components/AudioSelectorDialog";
@@ -270,9 +271,12 @@ function GroupWorkflowNodeCard({
             </button>
           )}
         </div>
-        <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold nodrag", statusCfg.badgeBg, statusCfg.badgeText)} title={nd.message || statusCfg.label}>
-          <StatusIcon className={cn("w-3 h-3", status === "running" && "animate-spin")} />
-          {statusCfg.label}
+        <div className="flex flex-col items-end gap-0.5 nodrag">
+          <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold", statusCfg.badgeBg, statusCfg.badgeText)} title={nd.message || statusCfg.label}>
+            <StatusIcon className={cn("w-3 h-3", status === "running" && "animate-spin")} />
+            {statusCfg.label}
+          </div>
+          {status === "completed" && <NodeElapsedText seconds={nd.duration} />}
         </div>
         <div className="flex items-center gap-1 nodrag">
           {nd.onExecuteNode && (
@@ -3053,9 +3057,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
               ? <ChevronDown className="w-3 h-3 text-muted-foreground/70" />
               : <ChevronRight className="w-3 h-3 text-muted-foreground/70" />
           )}
-          <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium", statusCfg.badgeBg, statusCfg.badgeText)}>
-            <StatusIcon className={cn("w-2.5 h-2.5", status === "running" && "animate-spin")} />
-            <span>{statusCfg.label}</span>
+          <div className="flex flex-col items-end gap-0.5">
+            <div className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium", statusCfg.badgeBg, statusCfg.badgeText)}>
+              <StatusIcon className={cn("w-2.5 h-2.5", status === "running" && "animate-spin")} />
+              <span>{statusCfg.label}</span>
+            </div>
+            {status === "completed" && <NodeElapsedText seconds={nd.duration} />}
           </div>
         </div>
       </div>

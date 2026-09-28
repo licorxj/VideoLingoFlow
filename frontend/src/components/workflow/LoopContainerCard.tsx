@@ -6,6 +6,7 @@ import {
   type NodeTypeDef, type PortType,
 } from "@/lib/workflowTypes";
 import { STATUS_CONFIG } from "./nodeStatus";
+import { NodeElapsedText } from "./NodeElapsedText";
 import { Repeat, ChevronDown, ChevronUp, LayoutList, Settings2 } from "lucide-react";
 import LoopResultDialog from "./LoopResultDialog";
 
@@ -151,12 +152,15 @@ export default function LoopContainerCard({
             </button>
           )}
         </div>
-        <div
-          className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold nodrag", statusCfg.badgeBg, statusCfg.badgeText)}
-          title={nd.message || statusCfg.label}
-        >
-          <StatusIcon className={cn("w-3 h-3", status === "running" && "animate-spin")} />
-          {statusCfg.label}
+        <div className="flex flex-col items-end gap-0.5 nodrag">
+          <div
+            className={cn("flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[10px] font-semibold", statusCfg.badgeBg, statusCfg.badgeText)}
+            title={nd.message || statusCfg.label}
+          >
+            <StatusIcon className={cn("w-3 h-3", status === "running" && "animate-spin")} />
+            {statusCfg.label}
+          </div>
+          {status === "completed" && <NodeElapsedText seconds={nd.duration} />}
         </div>
       </div>
 

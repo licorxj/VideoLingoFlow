@@ -78,16 +78,19 @@ asr:
 
   post_process:
     diarization:
-      engine: pyannote
+      engine: sherpa
       enabled: true
     vad:
-      engine: silero
+      engine: sherpa
       enabled: true
     alignment:
       enabled: true
       engine: whisperx
 
 # ============ Subtitle Style ============
+    punctuation:
+      enabled: true
+      engine: sherpa
 subtitle:
   font: "Arial"
   font_size: 24

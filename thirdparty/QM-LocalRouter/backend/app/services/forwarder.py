@@ -62,7 +62,7 @@ class Forwarder:
     def _opencode_keyless_gate(self, upstream: dict, real_key: str, model_id: str):
         """Keyless opencode connections may only call free-tier models (no auth header);
         premium models get a clear error instead of an upstream 401."""
-        if upstream.get("profile_id") != "opencode" or real_key != "KEYLESS":
+        if upstream.get("profile_id") != "opencode" or real_key not in ("KEYLESS", "opencode-free"):
             return None
         if model_id.endswith("-free") or model_id in self.OPENCODE_FREE_MODELS:
             return {"skip_auth": True}

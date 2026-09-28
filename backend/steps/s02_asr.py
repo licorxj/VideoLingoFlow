@@ -49,6 +49,10 @@ _ASR_PARAM_KEYS = {
     # FunASR Nano params
     "hotwords", "hotwords_enabled", "use_itn", "vad_model",
     "vad_max_segment_time", "sentence_timestamp",
+    # sherpa-onnx params
+    "model_file", "variant", "provider", "num_threads", "vad", "task",
+    "vad_threshold", "vad_min_silence_duration", "vad_min_speech_duration",
+    "vad_max_speech_duration",
 }
 
 # Fallback engine when neither task config nor interface config specifies one.
@@ -712,6 +716,10 @@ class S02ASR(BaseStep):
         diarization_enabled = diarization_enabled_raw is True or str(diarization_enabled_raw).lower() == "true"
         diarization_engine = config.get("asr.post_process.diarization.engine", "pyannote")
 
+        punctuation_enabled_raw = config.get("asr.post_process.punctuation.enabled", False)
+        punctuation_enabled = punctuation_enabled_raw is True or str(punctuation_enabled_raw).lower() == "true"
+        punctuation_engine = config.get("asr.post_process.punctuation.engine", "ct_punc")
+
         # 2.1 节点级后处理勾选：复选框直接决定执行哪些阶段，不勾选的不执行；
         # 各阶段处理引擎均读取全局设置（ASR 引擎不具备该能力时由全局引擎补执行）。
         # 旧配置兼容：post_process_mode="global" 的历史节点仍完全沿用全局开关；
@@ -727,6 +735,7 @@ class S02ASR(BaseStep):
             vad_enabled = _flag("post_vad", vad_enabled)
             alignment_enabled = _flag("post_alignment", alignment_enabled)
             diarization_enabled = _flag("post_diarization", diarization_enabled)
+            punctuation_enabled = _flag("post_punctuation", punctuation_enabled)
             print(f"[ASR PostProcess] node checkboxes: vad={vad_enabled}, alignment={alignment_enabled}, diarization={diarization_enabled}")
         else:
             print("[ASR PostProcess] legacy global mode: following global post-process switches")
@@ -734,6 +743,7 @@ class S02ASR(BaseStep):
         print(f"[ASR PostProcess] vad_enabled={vad_enabled}, vad_engine={vad_engine}")
         print(f"[ASR PostProcess] alignment_enabled={alignment_enabled}, alignment_engine={alignment_engine}")
         print(f"[ASR PostProcess] diarization_enabled={diarization_enabled}, diarization_engine={diarization_engine}")
+        print(f"[ASR PostProcess] punctuation_enabled={punctuation_enabled}, punctuation_engine={punctuation_engine}")
 
         # 3. Determine which post-processing to apply
         # Check both interface capabilities AND internal execution flags
@@ -756,8 +766,20 @@ class S02ASR(BaseStep):
         # `_vad_required` 是拼装/健康检查给出的强制信号：即使全局 VAD 开关关闭，
         # 也必须跑一次 VAD，否则巨段会原样流向下游（上一道漏网时这是唯一补救）。
         apply_vad = (vad_enabled or vad_required) and not engine_vad_done
-        apply_alignment = alignment_enabled and not capabilities.get("word_timestamps", False) and not alignment_internally_executed
+        # 结果级判定：即使接口声明具备词级时间戳能力，若本次结果实际没有任何 words
+        # （paraformer-zh int8 / whisper 等模型不返回 token 时间戳），仍需补跑对齐，
+        # 否则断句与字幕对齐会静默退化为按段估算。
+        result_has_words = any(
+            (seg.get("words") or []) for seg in (result.get("segments") or [])
+        )
+        apply_alignment = (
+            alignment_enabled
+            and not alignment_internally_executed
+            and (not result_has_words or not capabilities.get("word_timestamps", False))
+        )
         apply_diarization = diarization_enabled and not capabilities.get("speaker_diarization", False) and not diarization_internally_executed
+        # 标点恢复：接口声明具备 punctuation 能力（如 sherpa-onnx 自带标点）时跳过
+        apply_punctuation = punctuation_enabled and not capabilities.get("punctuation", False)
 
         if vad_internally_executed:
             print("[ASR PostProcess] VAD was executed internally by ASR engine, skipping")
@@ -768,7 +790,7 @@ class S02ASR(BaseStep):
 
         print(f"[ASR PostProcess] apply_vad={apply_vad}, apply_alignment={apply_alignment}, apply_diarization={apply_diarization}")
 
-        if not (apply_vad or apply_alignment or apply_diarization):
+        if not (apply_vad or apply_alignment or apply_diarization or apply_punctuation):
             print("[ASR PostProcess] No post-processing needed, returning original result")
             return result
 
@@ -822,6 +844,7 @@ class S02ASR(BaseStep):
                 vad_engine=vad_engine if apply_vad else None,
                 alignment_engine=alignment_engine if apply_alignment else None,
                 diarize_engine=diarization_engine if apply_diarization else None,
+                punctuation_engine=punctuation_engine if apply_punctuation else None,
                 alignment_audio_path=alignment_audio_path,
             )
             print(f"[ASR PostProcess] Post-processing complete, segments={len(result.get('segments', []))}")

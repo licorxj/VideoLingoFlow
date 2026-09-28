@@ -97,6 +97,12 @@ function runtimeStatus(status: string | undefined) {
   return status === "succeeded" ? "completed" : status || "pending";
 }
 
+/** 读取节点执行耗时（秒）：后端任务节点状态 / WS 事件均放在 duration（timings.duration 兜底）。 */
+function readNodeDuration(source: any): number | undefined {
+  const value = source?.duration ?? source?.timings?.duration;
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
+}
+
 function projectGroupRuntimeState(node: any, taskNodes: Record<string, any>) {
   const meta = node.data?.groupMeta;
   if (!meta?.internalWorkflow?.nodes) return node;
@@ -113,6 +119,7 @@ function projectGroupRuntimeState(node: any, taskNodes: Record<string, any>) {
         message: runtime.message || "",
         outputs: runtime.outputs || {},
         error: runtime.error || "",
+        duration: readNodeDuration(runtime),
       },
     };
   });
@@ -129,6 +136,13 @@ function projectGroupRuntimeState(node: any, taskNodes: Record<string, any>) {
   });
   const progress = members.length ? Math.round(members.reduce((sum: number, member: any) => sum + (Number(member.data?.progress) || 0), 0) / members.length) : 0;
   const activeMember = failedMember || runningMember;
+  // 组合卡片耗时：成员依次执行，取已完成成员用时之和（部分成员无耗时数据时按已有值累计）
+  const memberDurations = members
+    .map((member: any) => member.data?.duration)
+    .filter((value: any): value is number => typeof value === "number" && Number.isFinite(value));
+  const duration = status === "completed" && memberDurations.length
+    ? memberDurations.reduce((sum: number, value: number) => sum + value, 0)
+    : undefined;
   return {
     ...node,
     data: {
@@ -138,6 +152,7 @@ function projectGroupRuntimeState(node: any, taskNodes: Record<string, any>) {
       message: activeMember?.data?.message || "",
       outputs,
       error: failedMember?.data?.error || "",
+      duration,
       groupMeta: { ...meta, internalWorkflow: { ...meta.internalWorkflow, nodes: members } },
     },
   };
@@ -564,6 +579,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                       outputs: tn.outputs || {},
                       error: tn.error || "",
                       workbench_url: tn.workbench_url || "",
+                      duration: readNodeDuration(tn),
                     },
                   };
                 }
@@ -580,7 +596,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               const wfNodes = Object.entries(task.nodes).map(([nid, info]: any) => ({
                 id: nid,
                 type: "workflow",
-                data: { nodeType: info.nodeType, label: info.label, config: {}, status: info.status, outputs: info.outputs || {}, error: info.error || "" },
+                data: { nodeType: info.nodeType, label: info.label, config: {}, status: info.status, outputs: info.outputs || {}, error: info.error || "", duration: readNodeDuration(info) },
               }));
               setNodes(ensureNodePositions(wfNodes));
             }
@@ -1253,6 +1269,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           message: ninfo.message || "",
           outputs: ninfo.outputs || {},
           error: ninfo.error || "",
+          // 节点执行耗时（秒）：卡片在「已完成」状态下方展示
+          duration: readNodeDuration(ninfo),
         },
       };
     }));
@@ -1440,6 +1458,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               message: progress === -1 && message.startsWith("ERROR: ") ? message.slice(7) : message,
               outputs: data.outputs?.outputs || data.outputs || {},
               error: typeof data.error === "string" ? data.error : progress === -1 ? message : "",
+              duration: readNodeDuration(data),
             },
           };
           return nds.map((node: any) => {
@@ -1453,7 +1472,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             const nextOutputs = hasOutputs || !isLoopNodeData(node.data)
               ? ninfo.outputs
               : ((node.data as any)?.outputs || {});
-            return { ...node, data: { ...node.data, status: runtimeStatus(ninfo.status), progress: ninfo.progress, message: keepMessage, outputs: nextOutputs, error: ninfo.error } };
+            return { ...node, data: { ...node.data, status: runtimeStatus(ninfo.status), progress: ninfo.progress, message: keepMessage, outputs: nextOutputs, error: ninfo.error, duration: ninfo.duration } };
           });
         });
       },
@@ -1762,31 +1781,37 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
               <Plus className="w-3 h-3" />
             </button>
           </div>
-          {/* 模糊搜索：按名称/描述筛选当前分组下的工作流 */}
-          <div className="relative ml-auto flex-shrink-0">
-            <Search className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/60 pointer-events-none" />
-            <input
-              value={wfSearch}
-              onChange={(e) => setWfSearch(e.target.value)}
-              placeholder="搜索工作流"
-              className="w-36 h-5 pl-6 pr-5 text-xs rounded-md border border-border bg-background/60 focus:bg-background focus:border-primary/50 focus:outline-none text-foreground placeholder:text-muted-foreground/50 transition-colors"
-            />
-            {wfSearch && (
-              <button
-                onClick={() => setWfSearch("")}
-                className="absolute right-1 top-1/2 -translate-y-1/2 p-0.5 rounded-full text-muted-foreground/60 hover:text-foreground transition-colors"
-                title="清除搜索"
-              >
-                <X className="w-2.5 h-2.5" />
-              </button>
+          {/* 模糊搜索：按名称/描述筛选当前分组下的工作流（紧跟分组标签尾部；渐变描边 + 呼吸光晕） */}
+          <div className="relative ml-3 flex-shrink-0 group/wfsearch">
+            {!wfSearch && (
+              <span className="pointer-events-none absolute -inset-[3px] rounded-full bg-gradient-to-r from-primary/50 via-fuchsia-500/40 to-sky-500/50 blur-[6px] animate-pulse" />
             )}
+            <div className="relative flex items-center rounded-full p-[2px] bg-gradient-to-r from-primary via-fuchsia-500 to-sky-500 shadow-md shadow-primary/30 transition-all group-hover/wfsearch:shadow-lg group-hover/wfsearch:shadow-primary/50 group-focus-within/wfsearch:shadow-lg group-focus-within/wfsearch:shadow-primary/60">
+              <Search className="absolute left-3 z-10 w-4 h-4 text-primary pointer-events-none" strokeWidth={2.6} />
+              <input
+                value={wfSearch}
+                onChange={(e) => setWfSearch(e.target.value)}
+                placeholder="搜索工作流名称 / 描述"
+                className="w-48 md:w-60 h-8 pl-9 pr-8 text-sm font-medium rounded-full border-0 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              />
+              {wfSearch && (
+                <button
+                  onClick={() => setWfSearch("")}
+                  className="absolute right-2.5 z-10 flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground hover:bg-primary/80 shadow-sm transition-colors"
+                  title="清除搜索"
+                >
+                  <X className="w-3 h-3" strokeWidth={3} />
+                </button>
+              )}
+            </div>
           </div>
           <button
             onClick={() => setWfGridOpen(true)}
-            className="flex items-center justify-center w-5 h-5 rounded-md border border-border text-muted-foreground hover:text-primary hover:border-primary/40 hover:bg-primary/5 transition-all flex-shrink-0"
+            className="flex items-center gap-1 h-8 px-3 rounded-full flex-shrink-0 text-sm font-semibold text-primary-foreground bg-primary shadow-md shadow-primary/30 hover:shadow-lg hover:shadow-primary/50 hover:brightness-110 active:scale-95 transition-all"
             title="宫格查看当前分组工作流"
           >
-            <LayoutGrid className="w-3 h-3" />
+            <LayoutGrid className="w-4 h-4" strokeWidth={2.4} />
+            展开
           </button>
           <button
             onClick={() => setWfListCollapsed((p) => !p)}

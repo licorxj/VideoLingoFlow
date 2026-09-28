@@ -183,6 +183,8 @@ export interface WorkflowNode extends Node {
     status?: "pending" | "running" | "waiting" | "completed" | "failed" | "skipped" | "cancelled";
     progress?: number;
     message?: string;
+    /** 节点本次执行耗时（秒）：来自后端 payload.timings.duration，卡片在「已完成」状态下方展示 */
+    duration?: number;
     [key: string]: any;
   };
 }

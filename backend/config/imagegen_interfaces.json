@@ -1766,7 +1766,10 @@
         "model_options": [
           "doubao-seedream-5-0-pro-260128",
           "doubao-seedream-5-0-lite-260128",
-          "doubao-seedream-4-5-251128"
+          "doubao-seedream-4-5-251128",
+          "doubao-seedream-5-0-pro-260628",
+          "doubao-seedream-5-0-260128",
+          "doubao-seedream-5-0-flash-260915"
         ],
         "model_metadata": {
           "doubao-seedream-5-0-pro-260128": {
@@ -1827,6 +1830,69 @@
               "i2i"
             ],
             "price": "0.1",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "doubao-seedream-5-0-pro-260628": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "0.3",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "doubao-seedream-5-0-260128": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "0.22",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3"
+            ]
+          },
+          "doubao-seedream-5-0-flash-260915": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "0.12",
             "resolutions": [
               "1K",
               "2K",
@@ -1905,10 +1971,11 @@
             "description": "是否添加“AI 生成”水印（默认关闭）"
           }
         ],
-        "max_concurrent": 1,
+        "max_concurrent": 4,
         "timeout": 600,
         "sdk_extra_args": {}
-      }
+      },
+      "cloud": false
     }
   ]
 }

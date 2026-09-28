@@ -147,6 +147,15 @@ class WhisperXLocal(ASRBase):
 
         # --- Step 2: Build VAD & ASR options ---
         vad_opts = {**DEFAULT_VAD_OPTIONS, **(vad_options or {})}
+        # whisperx 的 Silero 在 __init__ 里执行 `0 < vad_onset < 1`，若传入的是
+        # 字符串（来自 UI / 节点配置 JSON 常为 str）会与 int 比较抛 TypeError。
+        # 这里在引擎边界统一 coerce 成 float，避免把类型问题漏到 whisperx 内部。
+        for _vad_key in ("vad_onset", "vad_offset"):
+            if _vad_key in vad_opts and isinstance(vad_opts[_vad_key], str):
+                try:
+                    vad_opts[_vad_key] = float(vad_opts[_vad_key])
+                except (TypeError, ValueError):
+                    pass
         asr_opts = {**DEFAULT_ASR_OPTIONS, **(asr_options or {})}
         whisper_language = None if (not language or language == "auto") else language
 
@@ -329,11 +338,14 @@ class WhisperXLocal(ASRBase):
         from whisperx.diarize import DiarizationPipeline
 
         cache_dir = self._model_dir
-        # Check for locally-cached model (HF Hub cache structure)
-        local_model = os.path.join(
-            cache_dir, "hub", "models--pyannote--speaker-diarization-community"
-        )
-        if os.path.isdir(local_model) and os.path.isfile(os.path.join(local_model, "config.yaml")):
+        # 优先从项目模型目录（<cache_dir>/hub，标准 HF 布局）定位已缓存的 pyannote，
+        # 不从用户 home 目录加载，保证分发版本行为一致。
+        # 旧实现硬编码 "models--pyannote--speaker-diarization-community"（漏了 -1
+        # 后缀）且指向缓存外壳目录而非快照目录，与实际缓存布局不符，导致本地命中
+        # 永远失败、静默退回联网下载。这里改为扫描 models--pyannote--* 并解析到
+        # 真正包含 config.yaml 的快照目录。
+        local_model = self._find_local_pyannote(cache_dir)
+        if local_model:
             diarize_model_name = local_model
             hf_token = None  # no token needed for local files
         else:
@@ -360,6 +372,38 @@ class WhisperXLocal(ASRBase):
 
         diarize_df = diarize_pipeline(audio, **diarize_kwargs)
         return diarize_df
+
+    @staticmethod
+    def _find_local_pyannote(cache_dir: str) -> Optional[str]:
+        """在 <cache_dir>/hub 下扫描已缓存的 pyannote 模型，返回快照目录绝对路径。
+
+        HF 缓存布局为
+        ``models--pyannote--<name>/snapshots/<hash>/config.yaml``，
+        把快照目录直接交给 pyannote 即可离线加载（无需 HF token）。
+        未找到时返回 None，由调用方退回联网兜底。
+        """
+        hub_root = os.path.join(cache_dir, "hub")
+        if not os.path.isdir(hub_root):
+            return None
+        try:
+            names = sorted(os.listdir(hub_root))
+        except OSError:
+            return None
+        for name in names:
+            if not name.startswith("models--pyannote--"):
+                continue
+            snapshots = os.path.join(hub_root, name, "snapshots")
+            if not os.path.isdir(snapshots):
+                continue
+            try:
+                revisions = sorted(os.listdir(snapshots))
+            except OSError:
+                continue
+            for rev in revisions:
+                snap = os.path.join(snapshots, rev)
+                if os.path.isdir(snap) and os.path.isfile(os.path.join(snap, "config.yaml")):
+                    return os.path.abspath(snap)
+        return None
 
     @staticmethod
     def _clear_cuda_cache():

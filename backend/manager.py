@@ -1480,16 +1480,30 @@ def start_voiceforge_worker():
 
 
 def _celery_warm_shutdown(timeout: int = 30) -> bool:
-    """通过 Celery control 协议请求 worker 暖停机（完成在途任务后退出）。
+    """通过 Celery control 协议请求 control-plane worker 暖停机（完成在途任务后退出）。
 
-    返回 True 表示指令已成功下发；失败（如 broker 不可达、app 加载异常）返回 False。
+    必须定向广播（destination）：control-plane 与 voiceforge worker 共用同一 broker，
+    无差别的 `celery control shutdown` 会把 voiceforge worker 也一并杀掉（表现为
+    一键重启后 voiceforge 掉线、被看门狗重新拉起）。
+    另外 shutdown 是"收到即退"，worker 不会回复，因此不走会等回复的 CLI（其必然
+    报 "No nodes replied within time constraint"），直接用 broadcast API 下发。
+
+    返回 True 表示指令已成功下发；失败（broker 不可达、无存活节点等）返回 False。
     """
     try:
         python_exe = _get_python()
         env = _setup_env()
+        warm_shutdown_code = (
+            "from backend.control_plane.celery_runtime import celery_app as app\n"
+            "ping = app.control.inspect(timeout=10).ping() or {}\n"
+            "targets = [n for n in ping if str(n).startswith('control-plane@')]\n"
+            "print('warm-shutdown targets:', targets)\n"
+            "if not targets:\n"
+            "    raise SystemExit(2)\n"
+            "app.control.broadcast('shutdown', destination=targets)\n"
+        )
         result = subprocess.run(
-            [python_exe, "-m", "celery", "-A", "backend.control_plane.celery_runtime:celery_app",
-             "control", "shutdown"],
+            [python_exe, "-c", warm_shutdown_code],
             cwd=_project_root(),
             env=env,
             capture_output=True,
@@ -1497,7 +1511,7 @@ def _celery_warm_shutdown(timeout: int = 30) -> bool:
             timeout=timeout,
         )
         if result.returncode != 0:
-            print(f"[Manager] Celery 暖停机指令返回非零: {result.stderr.strip()[:200]}")
+            print(f"[Manager] Celery 暖停机指令返回非零: {(result.stderr or result.stdout).strip()[:200]}")
             return False
         return True
     except Exception as exc:

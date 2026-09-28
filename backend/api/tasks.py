@@ -46,6 +46,8 @@ def _task_node_state(node) -> dict:
 
     outputs 仅为 result.outputs 端口映射（result 存在 outputs 键时），不回传整个 result 字典。
     """
+    from backend.control_plane.workflow_runtime import _node_timings_event
+
     payload = node.payload or {}
     data = payload.get("data", {}) or {}
     result = payload.get("result", {}) or {}
@@ -65,6 +67,8 @@ def _task_node_state(node) -> dict:
         "error": node_error,
         "error_class": node.error_class or "",
         "workbench_url": _node_workbench_url(node),
+        # 节点执行计时（duration 秒）：画布节点卡片在「已完成」状态下方展示用时
+        **_node_timings_event(node),
     }
 
 

@@ -6,7 +6,7 @@
       "name": "Edge TTS",
       "type": "sdk",
       "builtin": true,
-      "enabled": true,
+      "enabled": false,
       "description": "【推荐值：*】在线-微软免费 TTS，支持多语言预置音色，无需 GPU",
       "config": {
         "sdk_package": "edge-tts",
@@ -112,7 +112,7 @@
       "name": "OpenAI TTS",
       "type": "online",
       "builtin": true,
-      "enabled": true,
+      "enabled": false,
       "description": "【推荐值：***】在线-OpenAI TTS API，或者openAI格式的TTS端口请求，请自行配置url和apikey",
       "config": {
         "api_url": "https://api.openai.com/v1/audio/speech",
@@ -158,7 +158,7 @@
       "name": "Azure TTS",
       "type": "online",
       "builtin": true,
-      "enabled": true,
+      "enabled": false,
       "description": "【推荐值：***】在线-微软 Azure 语音服务，请注册并申请api使用",
       "config": {
         "api_url": "https://api.302.ai/cognitiveservices/v1",
@@ -532,7 +532,7 @@
       "name": "DotTTS",
       "type": "local",
       "builtin": false,
-      "enabled": true,
+      "enabled": false,
       "description": "【推荐值：****】小红书开源2B参数全连续自回归TTS，48kHz采样率，支持续写克隆和指令控制",
       "config": {
         "api_url": "http://localhost:8856",
@@ -615,7 +615,7 @@
       "name": "MiniMax TTS",
       "type": "sdk",
       "builtin": false,
-      "enabled": true,
+      "enabled": false,
       "description": "【推荐值：****】MiniMax 云端 TTS，支持多语言多音色，需要自己到官网申请api后使用，角色名可以自行添加",
       "config": {
         "sdk_package": "minimax",
@@ -723,7 +723,7 @@
       "name": "ElevenLabs TTS",
       "type": "online",
       "builtin": false,
-      "enabled": true,
+      "enabled": false,
       "description": "【推荐值：****】ElevenLabs 云端 TTS，业界领先的语音合成服务，支持 29 种语言、音色克隆和声音设计，音质极佳",
       "config": {
         "api_url": "https://api.elevenlabs.io/v1",

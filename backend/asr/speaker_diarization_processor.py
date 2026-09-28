@@ -132,17 +132,31 @@ class PyannoteDiarizationProcessor(SpeakerDiarizationProcessor):
             raise RuntimeError(f"All diarization models failed, last error: {last_error}")
         return SpeakerDiarizationResult(segments=[], speakers=[])
     
+    @staticmethod
+    def _project_model_cache() -> str:
+        """项目自带模型目录（<repo>/_model_cache），与 asr_moss / whisperx 约定一致。
+
+        分发版本的 pyannote 等模型统一预置在此目录下（标准 HF 布局：
+        <repo>/_model_cache/hub/models--pyannote--speaker-diarization-community-1），
+        不从用户 home（~/.cache/torch/pyannote）加载，以保证不同机器上的行为一致。
+        """
+        root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+        return os.environ.get("MODEL_CACHE_DIR") or os.path.join(root, "_model_cache")
+
     def _candidate_models(self) -> List[Tuple[str, Optional[str]]]:
         """返回 (model_name, cache_dir) 候选列表。
-        
-        优先本地已缓存的 pyannote 模型（~/.cache/torch/pyannote、HF_HOME/hub），
-        最后追加配置的模型名作为联网兜底。
+
+        优先从项目自带模型目录（<repo>/_model_cache/hub，标准 HF 布局）加载
+        pyannote，以保证分发版本行为一致；随后兼容显式设置的 HF_HOME/hub；
+        最后追加配置的模型名作为联网兜底。不再默认扫描用户 home 目录
+        ~/.cache/torch/pyannote。
         """
         candidates: List[Tuple[str, Optional[str]]] = []
         seen = set()
+        project_cache = self._project_model_cache()
         cache_dirs = [
-            os.path.join(os.path.expanduser("~"), ".cache", "torch", "pyannote"),
-            os.path.join(os.environ.get("HF_HOME", ""), "hub"),
+            os.path.join(project_cache, "hub"),                 # 项目模型目录（标准 HF 布局）
+            os.path.join(os.environ.get("HF_HOME", ""), "hub"),  # 兼容显式设置的 HF_HOME
         ]
         for cd in cache_dirs:
             if not cd or not os.path.isdir(cd):

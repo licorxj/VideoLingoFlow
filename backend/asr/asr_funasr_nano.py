@@ -14,6 +14,8 @@ Speaker diarization requires spk_model="cam++" at construction time.
 import os
 import gc
 import json
+import logging
+import contextlib
 import subprocess
 import sys
 import threading
@@ -30,6 +32,37 @@ from backend.asr.asr_base import ASRBase
 # `sys.executable -m pip`（venv 内 pip，必然可执行）。
 # ---------------------------------------------------------------------------
 _pip_patched = False
+_version_check_patched = False
+
+
+def _patch_funasr_version_check() -> None:
+    """关闭 funasr 的版本更新检查（联网）。
+
+    funasr.utils.version_checker.get_pypi_version 用 requests.get 访问
+    pypi.org 且**未设置 timeout**，网络不通/被墙时会无限阻塞；而 AutoModel
+    在 __init__ 里就会调用 check_for_update。虽然本项目调用 AutoModel 时已传
+    disable_update=True，但其它调用方（或未来新增路径）可能漏传，这里直接在
+    模块级把检查函数替换掉：只打印版本号，绝不做任何网络请求。
+    """
+    global _version_check_patched
+    if _version_check_patched:
+        return
+    try:
+        from funasr.utils import version_checker as _vc
+        if not getattr(_vc, "_videoLingo_patched", False):
+            def check_for_update_offline(disable=True):
+                # 保留版本号打印（便于排障），但不访问 pypi
+                try:
+                    from funasr import __version__
+                    print(f"funasr version: {__version__}.", flush=True)
+                except Exception:
+                    pass
+            _vc.check_for_update = check_for_update_offline
+            _vc.get_pypi_version = lambda package_name: None
+            _vc._videoLingo_patched = True
+        _version_check_patched = True
+    except Exception:
+        pass
 
 
 def _patch_funasr_pip_install() -> None:
@@ -52,6 +85,50 @@ def _patch_funasr_pip_install() -> None:
         _pip_patched = True
     except Exception:
         pass
+
+# ---------------------------------------------------------------------------
+# 抑制 Fun-ASR-Nano 系列加载时的 ctc_decoder 缺失告警
+# ---------------------------------------------------------------------------
+# Fun-ASR-Nano / MLT-Nano 不含 CTC 解码分支（使用注意力解码器），加载时缺失
+# ctc_decoder.* 属预期行为、不影响推理，但会刷屏上百行，淹没真正的错误。
+# 这里只丢弃同时命中 "miss key in ckpt" 与 "ctc_decoder" 的记录，其余告警
+# （含其它参数的 miss key）照常输出，避免掩盖真实问题。
+
+
+class _CtcMissKeyFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        try:
+            msg = record.getMessage()
+        except Exception:
+            return True
+        return not ("miss key in ckpt" in msg and "ctc_decoder" in msg)
+
+
+@contextlib.contextmanager
+def _suppress_ctc_miss_key_warnings():
+    filt = _CtcMissKeyFilter()
+    root = logging.getLogger()
+    # 同时挂到 root/funasr logger 与 root 的 handler 上：前者拦截直接打到这些
+    # logger 的记录，后者拦截由子 logger 冒泡上来的记录。
+    loggers = [root, logging.getLogger("funasr")]
+    handlers = list(root.handlers)
+    for lg in loggers:
+        lg.addFilter(filt)
+    for h in handlers:
+        h.addFilter(filt)
+    try:
+        yield
+    finally:
+        for lg in loggers:
+            try:
+                lg.removeFilter(filt)
+            except Exception:
+                pass
+        for h in handlers:
+            try:
+                h.removeFilter(filt)
+            except Exception:
+                pass
 
 # ---------------------------------------------------------------------------
 # Defaults
@@ -203,6 +280,63 @@ class FunASRNanoLocal(ASRBase):
                 return os.path.abspath(p)
         return None
 
+    def _resolve_local_llm_paths(self, model_dir: str) -> Dict[str, Any]:
+        """把 config.yaml 里 LLM / tokenizer 的相对 init_param_path 改成绝对路径。
+
+        Fun-ASR-Nano / MLT-Nano 的 config.yaml 中：
+          llm_conf.init_param_path: Qwen3-0.6B          （相对路径）
+          tokenizer_conf.init_param_path: ${llm_conf.init_param_path}
+        funasr 不会把它拼接成模型目录下的绝对路径，而是原样交给
+        transformers（AutoConfig.from_pretrained）。HF 在当前工作目录下找不到
+        该目录时，会把 "Qwen3-0.6B" 当作 hub repo id 去 huggingface.co 拉取，
+        网络不通/很慢时会长时间重试，表现为 AutoModel() 卡死且无任何日志。
+        这里把已存在于模型目录下的相对路径改写为绝对路径，强制走本地加载。
+        """
+        if not model_dir or not os.path.isdir(model_dir):
+            return {}
+        cfg_path = os.path.join(model_dir, "config.yaml")
+        if not os.path.isfile(cfg_path):
+            return {}
+        try:
+            import yaml
+            with open(cfg_path, "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f) or {}
+        except Exception:
+            return {}
+
+        out: Dict[str, Any] = {}
+        abs_llm = ""
+
+        llm_conf = cfg.get("llm_conf") or {}
+        rel = llm_conf.get("init_param_path")
+        if isinstance(rel, str) and rel and not os.path.isabs(rel):
+            local = os.path.join(model_dir, rel)
+            if os.path.isdir(local):
+                abs_llm = os.path.abspath(local)
+                new_llm = dict(llm_conf)
+                new_llm["init_param_path"] = abs_llm
+                out["llm_conf"] = new_llm
+
+        tok_conf = cfg.get("tokenizer_conf") or {}
+        rel_t = tok_conf.get("init_param_path")
+        if isinstance(rel_t, str) and rel_t:
+            if rel_t.startswith("${"):
+                # 引用 llm_conf 的值，跟随上面的改写
+                if abs_llm:
+                    new_tok = dict(tok_conf)
+                    new_tok["init_param_path"] = abs_llm
+                    out["tokenizer_conf"] = new_tok
+            elif not os.path.isabs(rel_t):
+                local_t = os.path.join(model_dir, rel_t)
+                if os.path.isdir(local_t):
+                    new_tok = dict(tok_conf)
+                    new_tok["init_param_path"] = os.path.abspath(local_t)
+                    out["tokenizer_conf"] = new_tok
+
+        if out:
+            print(f"[FunASRNano] Local LLM path override: {out}", flush=True)
+        return out
+
     def _get_model(self, model_id: str, diarize: bool = False, device: str = "cpu"):
         """Get or create a cached FunASR AutoModel instance.
 
@@ -214,6 +348,8 @@ class FunASRNanoLocal(ASRBase):
         if cache_key not in self._models:
             # Windows 兼容：先替换 funasr 的裸 pip 安装逻辑，避免 WinError 5
             _patch_funasr_pip_install()
+            # 关闭 funasr 的联网版本检查（requests.get 无 timeout，网络不通会卡死）
+            _patch_funasr_version_check()
             from funasr import AutoModel
 
             # Resolve local model path from cache (check multiple locations)
@@ -223,19 +359,41 @@ class FunASRNanoLocal(ASRBase):
             else:
                 model_id_or_path = model_id
 
+            vad_path = self._local_submodel("speech_fsmn_vad_zh-cn-16k-common-pytorch")
+            punc_path = self._local_submodel("punc_ct-transformer_cn-en-common-vocab471067-large")
+            spk_path = self._local_submodel("speech_campplus_sv_zh-cn_16k-common") if diarize else None
+
             model_kwargs = dict(
                 model=model_id_or_path,
                 device=device,
-                vad_model=self._local_submodel("speech_fsmn_vad_zh-cn-16k-common-pytorch") or "fsmn-vad",
-                punc_model=self._local_submodel("punc_ct-transformer_cn-en-common-vocab471067-large") or "ct-punc",
+                vad_model=vad_path or "fsmn-vad",
+                punc_model=punc_path or "ct-punc",
                 disable_update=True,
             )
             if diarize:
-                model_kwargs["spk_model"] = self._local_submodel("speech_campplus_sv_zh-cn_16k-common") or "cam++"
+                model_kwargs["spk_model"] = spk_path or "cam++"
                 model_kwargs["spk_mode"] = "punc_segment"
 
+            # 把 config.yaml 里 LLM/tokenizer 的相对 init_param_path 改写为模型
+            # 目录下的绝对路径，避免 HF 把它当 repo id 联网拉取而卡死。
+            # AutoModel.build_model 允许用 kwargs 覆盖 config.yaml 字段。
+            model_kwargs.update(self._resolve_local_llm_paths(model_id_or_path))
+
+            def _desc(local_path: Optional[str], fallback: str) -> str:
+                return f"local({local_path})" if local_path else f"DOWNLOAD({fallback})"
+
             print(f"[FunASRNano] Building model: {model_id_or_path} (diarize={diarize}, device={device})")
-            model = AutoModel(**model_kwargs)
+            # AutoModel 会依次构建 vad / punc / spk 三个子模型；未命中本地缓存时会联网
+            # 下载，离线或慢网环境下表现为日志长时间停在某一行。打印来源便于定位卡点。
+            sub_desc = (
+                f"vad={_desc(vad_path, 'fsmn-vad')}, punc={_desc(punc_path, 'ct-punc')}"
+                + (f", spk={_desc(spk_path, 'cam++')}" if diarize else "")
+            )
+            print(f"[FunASRNano] Sub-models: {sub_desc}", flush=True)
+
+            with _suppress_ctc_miss_key_warnings():
+                model = AutoModel(**model_kwargs)
+            print("[FunASRNano] AutoModel built", flush=True)
             
             # Handle BFloat16 dtype compatibility
             # If device doesn't support BFloat16, convert model to Float32
@@ -390,26 +548,56 @@ class FunASRNanoLocal(ASRBase):
         # FunASR Nano does NOT support batch decoding; force single-segment inference
         gen_kwargs["batch_size_s"] = 0
 
-        # GPU memory-aware VAD max segment time: larger segments = fewer calls = faster
+        # VAD 最大分段时长（ms）。
+        # 说明：此前 vad_max_segment_time 参数完全未被使用（只在签名/文档里出现），
+        # 且显存充足时会被强制放大到 300s。配合 batch_size_s=0（禁用动态切分），
+        # 长音频会被 VAD 合并成单个超长段，Nano 模型一次性推理整段，表现为
+        # generate() 长时间无进展（卡在推理阶段）。
+        # 这里以用户配置的 vad_max_segment_time 为准（funasr 默认 60000），
+        # GPU 自适应只做收紧（显存不足时进一步缩短），不再放大。
+        try:
+            max_seg_ms = int(vad_max_segment_time)
+        except (TypeError, ValueError):
+            max_seg_ms = 30000
+        if max_seg_ms <= 0:
+            max_seg_ms = 30000
+
         if device == "cuda":
             try:
                 free_mem_gb = torch.cuda.mem_get_info()[0] / (1024 ** 3)
                 # ~4GB overhead for model, remaining for audio segments
-                if free_mem_gb > 10:
-                    max_seg_ms = 300000  # 300s -> ~2 segments for 10min audio
-                elif free_mem_gb > 6:
-                    max_seg_ms = 180000  # 180s
-                elif free_mem_gb > 4:
-                    max_seg_ms = 120000  # 120s
-                else:
-                    max_seg_ms = 60000   # 60s
-                gen_kwargs["max_single_segment_time"] = max_seg_ms
+                if free_mem_gb <= 4:
+                    max_seg_ms = min(max_seg_ms, 60000)
+                elif free_mem_gb <= 6:
+                    max_seg_ms = min(max_seg_ms, 120000)
+                elif free_mem_gb <= 10:
+                    max_seg_ms = min(max_seg_ms, 180000)
                 print(f"[FunASRNano] VAD max segment: {max_seg_ms//1000}s (GPU free={free_mem_gb:.1f}GB)", flush=True)
             except Exception:
                 pass
 
+        gen_kwargs["max_single_segment_time"] = max_seg_ms
+        # 进度改由 progress_callback 上报到 UI，关闭 funasr 自带 tqdm，避免重复输出
+        gen_kwargs["disable_pbar"] = True
+
         if callback:
             callback(20, f"Transcribing with {model_id} (diarize={diarize})...")
+
+        # funasr 的 progress_callback(current, total) 会在每个 VAD 分段处理完后回调。
+        # Fun-ASR-Nano 用 LLM 自回归逐段解码，单步计算量小、GPU 占用低但总耗时长，
+        # 接到项目回调后 UI 能看到 45%→80% 的推进，而不是长时间停在 45% 像卡死。
+        _prog = {"last": -1}
+
+        def _on_progress(current, total):
+            if not callback or not total:
+                return
+            try:
+                pct = 25 + int(55 * float(current) / float(total))
+            except Exception:
+                return
+            if pct > _prog["last"]:
+                _prog["last"] = pct
+                callback(pct, f"Transcribing... {current}/{total} segments")
 
         start_time = time.time()
         # 使用类级别锁确保同一时间只有一个任务使用本地模型进行推理
@@ -418,7 +606,9 @@ class FunASRNanoLocal(ASRBase):
             if callback:
                 callback(25, "Local model acquired, starting inference...")
             try:
-                results = asr_model.generate(input=input_path, **gen_kwargs)
+                results = asr_model.generate(
+                    input=input_path, progress_callback=_on_progress, **gen_kwargs
+                )
             except Exception as e:
                 raise RuntimeError(f"FunASR Nano failed: {e}")
         elapsed = time.time() - start_time

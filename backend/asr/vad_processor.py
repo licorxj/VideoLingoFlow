@@ -388,10 +388,13 @@ def get_vad_processor(engine: str = "fsmn", **kwargs) -> VADProcessor:
         return WebRTCVADProcessor(**kwargs)
     elif engine == "silero":
         return SileroVADProcessor(**kwargs)
+    elif engine == "sherpa":
+        from backend.asr.sherpa_postprocess import SherpaVADProcessor
+        return SherpaVADProcessor(**kwargs)
     else:
         raise ValueError(f"Unknown VAD engine: {engine}")
 
 
 def list_vad_engines() -> List[str]:
     """列出可用的VAD引擎"""
-    return ["fsmn", "webrtc", "silero"]
+    return ["sherpa", "fsmn", "webrtc", "silero"]

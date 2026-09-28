@@ -35,6 +35,43 @@ SEEDREAM_MODELS = [
 DEFAULT_MODEL = "doubao-seedream-5-0-lite-260128"
 
 
+class SeedreamAPIError(RuntimeError):
+    """Seedream / 火山方舟接口错误：保留 HTTP 状态与平台错误码。
+
+    平台会以错误码表达确定性拒绝（如 OutputImageSensitiveContentDetected.PolicyViolation
+    表示输出图涉版权/敏感内容），节点层据此给出可操作提示，而非把原始 400 JSON 抛给用户。
+    """
+
+    def __init__(self, status: int, code: str = "", message: str = "", raw: str = ""):
+        self.status = status
+        self.code = (code or "").strip()
+        self.message = (message or "").strip()
+        self.raw = raw or ""
+        super().__init__(
+            f"Seedream HTTP {status}"
+            + (f" [{self.code}]" if self.code else "")
+            + (f": {self.message}" if self.message else (f": {self.raw[:300]}" if self.raw else ""))
+        )
+
+
+def _parse_error_payload(text) -> tuple[str, str]:
+    """从错误响应体提取 (code, message)；非 JSON 或无 error 字段时返回空串。"""
+    try:
+        data = json.loads(text) if isinstance(text, str) else text
+    except Exception:
+        return "", ""
+    if isinstance(data, dict):
+        err = data.get("error") or {}
+        if isinstance(err, dict):
+            return str(err.get("code") or ""), str(err.get("message") or "")
+    return "", ""
+
+
+def _api_error(status: int, text: str) -> SeedreamAPIError:
+    code, message = _parse_error_payload(text)
+    return SeedreamAPIError(status, code=code, message=message, raw=text or "")
+
+
 def _get_api_key(api_key: str = "") -> str:
     """API Key 取值优先级: 函数参数（接口配置解析值）> 环境变量 ARK_API_KEY 兜底。
 
@@ -228,7 +265,7 @@ def _parse_stream(resp, save_dir, on_progress=None):
             break
         elif "error" in evt and evt.get("error"):
             err = evt["error"]
-            raise RuntimeError(f"Seedream 流式错误 [{err.get('code')}]: {err.get('message')}")
+            raise SeedreamAPIError(200, code=str(err.get("code") or ""), message=str(err.get("message") or ""))
     if not items:
         raise RuntimeError("Seedream: 流式响应中未解析到任何图片")
     return _save_items(items, save_dir)
@@ -283,8 +320,7 @@ def generate_image(body: dict, api_key: str = "", stream: bool = False,
             stream=stream,
         )
         if resp.status_code != 200:
-            snip = resp.text[:500]
-            raise RuntimeError(f"Seedream HTTP {resp.status_code}: {snip}")
+            raise _api_error(resp.status_code, resp.text or "")
         if stream:
             return _parse_stream(resp, save_dir, on_progress=on_progress)
         # 图层拆分：解析并落盘 底图 + 多图层 + 坐标，返回结构化结果
