@@ -299,6 +299,39 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const [nodes, setNodes, onNodesChange] = useNodesState<any>(store.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>(store.edges);
 
+  // ── 运行态（执行中标志 / 任务绑定 / 实时订阅）──────────────────────────────
+  // 提前声明：加载工作流、新建工作流时都需要在同一作用域内解绑上一个工作流的运行态。
+  const [executing, setExecuting] = useState(false);
+  const [executingNode, setExecutingNode] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState(false);
+  const [taskOutputs, setTaskOutputs] = useState<Record<string, any>>({});
+  const [activeTaskId, setActiveTaskId] = useState<string | undefined>(taskId);
+  const [trackEnabled, setTrackEnabled] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const taskMonitorRef = useRef<TaskMonitor<any> | null>(null);
+  const workflowRevisionRef = useRef<number | null>(null);
+  // 任务实时订阅器（monitorWorkflowTask 定义在后面，用 ref 让「加载工作流」也能续订）
+  const monitorWorkflowTaskRef = useRef<((targetTaskId: string) => void) | null>(null);
+
+  /**
+   * 解绑当前工作流/任务的运行态。
+   *
+   * 切换或新建工作流时必须调用：否则上一个任务的 TaskMonitor 会继续轮询，
+   * 其回调会把旧 taskId 写回 activeTaskId、并把旧节点状态刷到新画布上，
+   * 表现为「切换工作流后工具栏仍停在上一工作流的执行中状态」。
+   */
+  const detachTaskRuntime = useCallback(() => {
+    taskMonitorRef.current?.stop();
+    taskMonitorRef.current = null;
+    wsRef.current?.close();
+    wsRef.current = null;
+    setExecuting(false);
+    setCancelling(false);
+    setExecutingNode(null);
+    setTaskOutputs({});
+    setActiveTaskId(undefined);
+  }, [setExecuting, setCancelling, setExecutingNode, setTaskOutputs, setActiveTaskId]);
+
   // Sync nodes/edges back to store using refs to avoid infinite loops
   const nodesRef = useRef(nodes);
   const edgesRef = useRef(edges);
@@ -527,6 +560,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         store.setCurrentWfId(undefined);
         store.setWorkflowName("");
         store.setWorkflowDesc("");
+        // 当前工作流被删除：一并解绑其运行态，避免工具栏残留「运行中」
+        detachTaskRuntime();
         saveCurrentId(undefined);
         setNodes([]);
         setEdges([]);
@@ -534,13 +569,16 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     } catch (err) {
       console.error("Failed to delete workflow:", err);
     }
-  }, [fetchWorkflows, saveCurrentId, store, setNodes, setEdges]);
+  }, [fetchWorkflows, saveCurrentId, store, setNodes, setEdges, detachTaskRuntime]);
 
   useEffect(() => { fetchWorkflows(); }, [fetchWorkflows]);
 
   // Load task workflow from task folder
   useEffect(() => {
     if (taskId) {
+      // 切换任务前先解绑上一个任务的运行态：旧 TaskMonitor 会持续把旧 taskId /
+      // 节点状态写回画布，导致工具栏停留在上一个任务的执行中状态。
+      detachTaskRuntime();
       store.setTaskMode(true);
       store.setTaskMode(true, taskId);
       setActiveTaskId(taskId);
@@ -552,6 +590,12 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           // 不显示为"一般任务"；activeTaskId 仍指向该调试任务，执行/节点执行写回同一任务。
           if (task.is_debug) {
             store.setTaskMode(false);
+          }
+          // 任务仍在执行：恢复「运行中」并续订实时订阅
+          if (!RUN_END_TASK_STATUSES.includes(task.status)) {
+            setExecuting(true);
+            setCancelling(false);
+            monitorWorkflowTaskRef.current?.(taskId);
           }
           // Load workflow from task folder
           const wfPath = "/api/tasks/" + taskId + "/workflow";
@@ -612,7 +656,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         loadWorkflow(savedId);
       }
     }
-  }, [taskId]);
+  }, [taskId, detachTaskRuntime]);
 
   // Load a saved workflow
   const loadWorkflow = useCallback(async (wfId: string) => {
@@ -624,8 +668,9 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         store.setWorkflowName(wf.name || "\u672a\u547d\u540d");
         store.setWorkflowDesc(wf.description || "");
         store.setCurrentWfId(wf.id);
-        setActiveTaskId(undefined);
-        setTaskOutputs({});
+        // 切换工作流前先解绑上一个工作流的运行态（停掉旧轮询/WS、清执行中标志），
+        // 否则工具栏会停留在上一个工作流的「运行中」状态。
+        detachTaskRuntime();
         saveCurrentId(wf.id);
         setNodes(wf.nodes || []);
         setEdges(wf.edges || []);
@@ -674,12 +719,20 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                         outputs: ns.outputs || n.data?.outputs || {},
                         error: ns.error || n.data?.error || "",
                         workbench_url: ns.workbench_url || n.data?.workbench_url || "",
+                        duration: readNodeDuration(ns),
                       },
                     };
                   }
                   return n;
                 })
               );
+              // 当前工作流绑定的任务仍在执行：恢复「运行中」并续订实时订阅，
+              // 使工具栏状态跟当前工作流绑定任务的真实状态一致。
+              if (!RUN_END_TASK_STATUSES.includes(taskInfo.status)) {
+                setExecuting(true);
+                setCancelling(false);
+                monitorWorkflowTaskRef.current?.(debugTaskId);
+              }
             }
           }
         } catch (e) {
@@ -689,7 +742,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     } catch (err) {
       console.error("Failed to load workflow:", err);
     }
-  }, [setNodes, setEdges, saveCurrentId, fitViewToAll]);
+  }, [setNodes, setEdges, saveCurrentId, fitViewToAll, detachTaskRuntime]);
 
   // 新建工作流时默认放入的输入节点：落在当前视口中央，便于从它向右继续连线
   const createDefaultInputNode = useCallback((): WorkflowNode | null => {
@@ -716,14 +769,14 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     store.setCurrentWfId(undefined);
     store.setTaskMode(false);
     store.setTaskMode(false);
-    setActiveTaskId(undefined);
-    setTaskOutputs({});
+    // 新建空白工作流：同样解绑上一个工作流的运行态，避免工具栏残留「运行中」
+    detachTaskRuntime();
     saveCurrentId(undefined);
     nodeIdCounter = 0;
     const inputNode = createDefaultInputNode();
     setNodes(inputNode ? [inputNode] : []);
     setEdges([]);
-  }, [setNodes, setEdges, createDefaultInputNode]);
+  }, [setNodes, setEdges, createDefaultInputNode, detachTaskRuntime]);
 
   const onConnect = useCallback((connection: Connection) => {
     if (!connection.source || !connection.target) return;
@@ -1192,15 +1245,9 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     setSaving(false);
   };
 
-  const [executing, setExecuting] = useState(false);
-  const [executingNode, setExecutingNode] = useState<string | null>(null);
-  const [cancelling, setCancelling] = useState(false);
-  const [taskOutputs, setTaskOutputs] = useState<Record<string, any>>({});
-  const [activeTaskId, setActiveTaskId] = useState<string | undefined>(taskId);
-  const [trackEnabled, setTrackEnabled] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const taskMonitorRef = useRef<TaskMonitor<any> | null>(null);
-  const workflowRevisionRef = useRef<number | null>(null);
+  // 注：executing / executingNode / cancelling / taskOutputs / activeTaskId /
+  // wsRef / taskMonitorRef 等运行态声明已上移到组件顶部（见 detachTaskRuntime 附近），
+  // 以便加载/新建工作流时可以直接解绑上一个工作流的运行态。
 
   // 运行跟踪：开启时把画布聚焦到目标节点（运行中 > 报错 > 最后一个已完成）
   useEffect(() => {
@@ -1399,6 +1446,9 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       fetchTask: async (id, signal) => (await client.get(`/api/tasks/${id}`, { signal })).data?.task,
       isTerminal: (task) => RUN_END_TASK_STATUSES.includes(task.status),
       onTask: (task) => {
+        // 已被切换工作流/任务解绑（detachTaskRuntime 会把 current 置空）：
+        // 此时 in-flight 请求可能仍返回，必须丢弃，否则会把旧 taskId 写回工具栏。
+        if (taskMonitorRef.current !== monitor) return;
         setActiveTaskId(taskId);
         syncTaskStateToNodesRef.current(task);
         if (RUN_END_TASK_STATUSES.includes(task.status)) {
@@ -1408,6 +1458,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         }
       },
       onEvent: (data: any) => {
+        // 同 onTask：订阅已被解绑时丢弃迟到事件
+        if (taskMonitorRef.current !== monitor) return;
         const stepId = typeof data.node_id === "string"
           ? data.node_id
           : typeof data.step_id === "string"
@@ -1480,6 +1532,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     taskMonitorRef.current = monitor;
     monitor.start();
   }, [setNodes]);
+  // 暴露给「加载工作流 / 切换任务」提前使用（其定义顺序在本组件中靠后）
+  monitorWorkflowTaskRef.current = monitorWorkflowTask;
 
   const handleExecuteNode = async (nodeId: string) => {
     const node = nodes.find((n: any) => n.id === nodeId);

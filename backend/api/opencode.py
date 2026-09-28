@@ -18,7 +18,13 @@ from pathlib import Path
 
 from fastapi import APIRouter, Query
 
-from backend.steps.s_opencode_agent import cli_spec, normalize_cli, resolve_agent_exe, subprocess_env
+from backend.steps.s_opencode_agent import (
+    cli_spec,
+    exec_argv,
+    normalize_cli,
+    resolve_agent_exe,
+    subprocess_env,
+)
 
 router = APIRouter()
 
@@ -71,7 +77,8 @@ def list_models(
 
     try:
         proc = subprocess.run(
-            [resolved, "models"],
+            # 展开 npm 垫片：避免经 cmd.exe 启动（也更省一层开销）
+            [*exec_argv(resolved), "models"],
             capture_output=True,
             text=True,
             encoding="utf-8",

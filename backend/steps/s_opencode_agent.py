@@ -4,9 +4,9 @@
 事件协议差异集中声明在 CLI_SPECS 中，并分别由对应的事件解析分支处理：
 
 - 组装任务指令（节点指令 + 任务背景 + 输入端口数据 + 输出产物契约）
-- 按 CLI 规格非交互执行一次任务（opencode/mimo 为
-  ``run <prompt> --format json --dir <work_dir>``，Claude Code 为 ``-p``，
-  Codex 为 ``exec --json``）
+- 按 CLI 规格非交互执行一次任务（opencode/mimo 为 ``run <prompt> --format json``，
+  Claude Code 为 ``-p``，Codex 为 ``exec --json``）；工作目录由子进程 cwd 指定，
+  命令行会按 CLI 版本实际支持的 flag 裁剪（见 ``_cli_help_flags``）
 - 逐行解析 stdout 的 JSON 事件流（各协议见 ``_event_updates`` 的分布分支）：
     * 文本块   → 汇总为最终回答
     * 工具调用 → 映射为进度
@@ -61,6 +61,9 @@ DEFAULT_TIMEOUT = 1800
 # 提示词超过该长度时改为落盘引用，规避 Windows 命令行长度上限
 PROMPT_INLINE_LIMIT = 20000
 
+# 失败诊断时保留的非 JSON 输出行数上限（避免刷屏）
+RAW_OUTPUT_LIMIT = 20
+
 
 def _safe_output_path(task_dir: str, relative: str) -> Path:
     """将 agent 报告的相对路径解析为任务目录内绝对路径，防止路径穿越。"""
@@ -72,14 +75,71 @@ def _safe_output_path(task_dir: str, relative: str) -> Path:
     return resolved
 
 
+# stderr / 事件里可能带 ANSI 色码，报错前先剥掉
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+
+# 额度 / 限流类错误的关键词：命中时给出可操作提示
+_LIMIT_HINTS = (
+    "429", "rate limit", "ratelimit", "too many requests", "daily free limit",
+    "inference_cap_error", "quota",
+)
+_LIMIT_TIP = "（提示：该模型的免费额度或限流已用尽，可更换模型、配置兜底模型，或稍后重试）"
+
+
+def _strip_ansi(text: str) -> str:
+    """去掉 ANSI 色码，便于把 CLI 输出直接写进错误信息。"""
+    return _ANSI_RE.sub("", str(text or ""))
+
+
+def _oneline(text: Any) -> str:
+    """折叠为单行：按行汇总的失败信息只取首行，多行内容会被截断丢失。"""
+    return " ".join(str(text or "").split())
+
+
+def _classify_error(raw: Any) -> str:
+    """把 CLI 的错误载荷转成可读文案。
+
+    各 CLI 会把结构化错误塞进文本字段（如 Cline 的
+    ``{"error":{"code":"...","message":"..."}}``），直接展示会是难读的 JSON，
+    这里统一抽取出 ``message (CODE)``；无法解析时按原文（剥色码）返回。
+    """
+    text = _oneline(_strip_ansi(raw))
+    if not text:
+        return ""
+    payload = None
+    if text.startswith("{"):
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError:
+            payload = None
+    if isinstance(payload, dict):
+        err = payload.get("error")
+        code = ""
+        if isinstance(err, dict):
+            code = str(err.get("code") or err.get("name") or "")
+            message = str(err.get("message") or "")
+        elif isinstance(err, str):
+            message = err
+        else:
+            message = str(payload.get("message") or payload.get("reason") or "")
+        if message:
+            return f"{message}（{code}）" if code else message
+        if code:
+            return code
+    return text
+
+
 # ---------------------------------------------------------------------------
 # CLI 规格表：节点可在 opencode / mimo / claude / codex 四种 CLI 间切换。
 #
 # opencode 与 mimo（@mimo-ai/cli，即 "mimocode"）同源：
-#   run <message> --format json --dir <dir> [-m model] [--agent] [--variant]
-#       [--thinking] [--pure]
+#   run <message> --format json [-m provider/model] [--agent] [--thinking]
+#       [--dir <dir>] [--variant <v>] [--pure]  # 后三者仅旧版本支持
 #   事件流同构（step_start / text / tool_use / step_finish / error），仅
 #   「自动放行权限」flag 名与 `models` 输出格式不同（后者在 API 侧适配）。
+#   注意：opencode v2 起移除了 --dir / --variant / --pure，variant 改为写入模型名
+#   （provider/model#variant），工作目录则由子进程 cwd 决定；这些差异在运行时按
+#   `_cli_help_flags` 的探测结果自动适配，故规格表里仍保留旧写法。
 #
 # Claude Code（protocol="claude"）：
 #   claude -p <message> --output-format stream-json --verbose
@@ -104,7 +164,11 @@ CLI_SPECS: dict = {
         "protocol": "opencode",
         "run_style": "run",
         "json_output_args": ("--format", "json"),
+        # 注意：opencode v2 起移除了 --dir（改用进程 cwd）、--variant
+        # （改为 provider/model#variant）与 --pure；这里保留旧写法供老版本使用，
+        # 运行时会按 ``_cli_help_flags`` 探测结果自动裁剪不支持的 flag。
         "dir_flag": "--dir",
+        "variant_sep": "#",
         "model_flag": "-m",
         "supports": ("variant", "thinking", "pure"),
         "list_models": True,
@@ -191,6 +255,9 @@ CLI_SPECS: dict = {
 }
 
 DEFAULT_CLI = "opencode"
+
+# 定位可执行文件时，最多用 --help 验证前几个候选（每个候选一次冷启动）
+_EXE_PROBE_LIMIT = 4
 
 
 def normalize_cli(config: Optional[dict] = None) -> str:
@@ -358,6 +425,126 @@ def subprocess_env() -> dict:
     return env
 
 
+# 各 run_style 调用 ``--help`` 的方式（用于探测 CLI 实际支持的 flag）
+_HELP_ARGS = {
+    "run": ("run", "--help"),
+    "exec": ("exec", "--help"),
+    "print": ("--help",),
+    "plain": ("--help",),
+}
+
+
+@functools.lru_cache(maxsize=16)
+def _cli_help_flags(exe: str, run_style: str) -> Optional[frozenset]:
+    """探测某个可执行文件支持哪些 flag（结果按进程缓存）。
+
+    第三方 CLI 升级会移除或改名 flag（如 opencode v2 移除了 ``--dir``、
+    ``--variant``、``--pure``），而传入未知 flag 时 CLI 只会打印 usage 并以非
+    0 退出——每个模型都会以同样的方式失败。故这里读一次 ``--help`` 输出、
+    抽取其中的 flag 名作为白名单，由 ``_build_command`` 按需裁剪命令行。
+
+    返回 ``None`` 表示无法判定（CLI 不可用或 --help 无输出），此时按规格表
+    原样传参，保持既有行为。同一返回值也用于判断某个候选可执行文件是否真的
+    可用（失效的垫片会在 --help 阶段就报错退出）。
+    """
+    try:
+        proc = subprocess.run(
+            [*exec_argv(exe), *_HELP_ARGS.get(run_style, ("--help",))],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=20,
+            stdin=subprocess.DEVNULL,
+            env=subprocess_env(),
+        )
+    except Exception:
+        return None
+    blob = "\n".join([proc.stdout or "", proc.stderr or ""])
+    names = set(re.findall(r"--[a-zA-Z][\w-]*", blob))
+    return frozenset(names) if names else None
+
+
+def _flag_supported(flags: Optional[frozenset], flag: Optional[str]) -> bool:
+    """flag 是否可用：无法判定时保守地认为可用（维持旧行为）。
+
+    单字母短 flag（``-m`` / ``-C`` 等）不参与裁剪：help 里常以 ``--long, -x``
+    的别名形式出现，难以稳定匹配，误裁的代价比多传更大。
+    """
+    if not flag:
+        return False
+    if not flag.startswith("--") or flags is None:
+        return True
+    return flag in flags
+
+
+# npm 垫片里的真实入口路径形如 "%dp0%\node_modules\<pkg>\bin\<name>"
+_NPM_SHIM_PATH_RE = re.compile(r'"?%dp0%\\([^"\s]+)"?')
+# 垫片里会顺带提到这些名字，但它们不是 CLI 入口
+_NON_TARGET_NAMES = frozenset({"node", "node.exe", "npm", "npm.cmd", "npx", "npx.cmd"})
+
+
+def _node_exe(shim_dir: Path) -> str:
+    """垫片所需的 node 可执行文件：垫片同目录 > NODE_DIR/PATH 推导 > PATH。"""
+    for directory in (shim_dir, *(Path(d) for d in _node_dirs())):
+        candidate = directory / "node.exe"
+        if candidate.is_file():
+            return str(candidate)
+    return shutil.which("node") or ""
+
+
+@functools.lru_cache(maxsize=16)
+def _unwrap_npm_shim(exe: str) -> Optional[list]:
+    """展开 npm 生成的 .cmd/.bat 垫片，返回可直接执行的命令前缀。
+
+    Windows 下运行 .cmd/.bat 必须经由 cmd.exe，而 cmd 会自行解析命令行中的
+    换行、``|``、``^``、``%`` 等字符（工作流节点的任务说明几乎必然包含 ``|``），
+    参数一旦被破坏，CLI 就会表现为：输出退回交互式渲染、flag 丢失、乃至挂起
+    等待根本不存在的输入。垫片内容形如：
+
+    - ``"%dp0%\\node_modules\\@opencode\\cli\\bin\\opencode.exe" %*``（原生二进制）
+    - ``"%_prog%" "%dp0%\\node_modules\\@mimo-ai\\cli\\bin\\mimo" %*``（node 脚本）
+
+    据此还原真实入口：原生可执行文件直接调用，node 脚本补上 node 前缀。
+    返回 None 表示无法展开（非垫片或目标缺失），调用方按原样使用。
+    """
+    path = Path(exe)
+    if path.suffix.lower() not in (".cmd", ".bat") or not path.is_file():
+        return None
+    try:
+        text = path.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+
+    # 垫片真正的调用行是含 %* 的那行（其它行只是探测 node/dp0）
+    lines = [ln for ln in text.splitlines() if "%*" in ln] or text.splitlines()
+    target = ""
+    for line in lines:
+        for match in _NPM_SHIM_PATH_RE.finditer(line):
+            relative = match.group(1)
+            if not relative:
+                continue
+            candidate = path.parent / relative
+            if candidate.is_file() and candidate.name.lower() not in _NON_TARGET_NAMES:
+                target = str(candidate)
+                break
+        if target:
+            break
+    if not target:
+        return None
+    if Path(target).suffix.lower() in (".exe", ".com"):
+        return [target]
+    node = _node_exe(path.parent)
+    return [node, target] if node else None
+
+
+@functools.lru_cache(maxsize=16)
+def exec_argv(exe: str) -> tuple:
+    """CLI 的命令前缀：优先展开 npm 垫片，失败则原样使用可执行文件。"""
+    unwrapped = _unwrap_npm_shim(exe)
+    return tuple(unwrapped) if unwrapped else (exe,)
+
+
 def _iter_cli_candidates(spec: dict, config: dict, home: Path) -> list:
     """候选可执行文件路径：设置 > 环境变量 > PATH > npm 全局目录 > 常见安装位置。"""
     candidates: list = []
@@ -384,9 +571,17 @@ def resolve_agent_exe(config: Optional[dict] = None) -> str:
     config = config or {}
     spec = cli_spec(config)
     home = Path.home()
-    for candidate in _iter_cli_candidates(spec, config, home):
-        if candidate and Path(candidate).is_file():
+    existing = [
+        item for item in _iter_cli_candidates(spec, config, home)
+        if item and Path(item).is_file()
+    ]
+    # 同一命令名下可能并存多个版本（如重装后残留的旧垫片），有效性以能否响应
+    # --help 为准；全部无法响应时退化为第一个存在的文件（保持旧行为）
+    for candidate in existing[:_EXE_PROBE_LIMIT]:
+        if _cli_help_flags(candidate, spec["run_style"]) is not None:
             return candidate
+    if existing:
+        return existing[0]
 
     tried = _npm_global_dirs()
     hint = f"（已尝试这些目录：{'、'.join(str(d) for d in tried[:2])}）" if tried else ""
@@ -496,7 +691,8 @@ class S_OpenCodeAgent(BaseStep):
                 events = self._stream_events(proc, config, cancel_callback, progress, label)
                 break
             except _ModelAttemptError as exc:
-                failures.append(f"{label}: {str(exc).splitlines()[0]}")
+                # 折叠为单行：多行内容在按行汇总时会被截断
+                failures.append(f"{label}: {_oneline(exc)[:400]}")
                 continue
 
         if events is None:
@@ -575,45 +771,64 @@ class S_OpenCodeAgent(BaseStep):
             )
 
         run_style = spec["run_style"]
+        # 绕过 cmd.exe：npm 垫片（.cmd）会被 cmd 重新解析命令行，吃掉 prompt 里的
+        # 换行 / | / ^ / % 等字符，导致参数被破坏
+        prefix = list(exec_argv(exe))
+        # 按 CLI 实际支持的 flag 裁剪命令行：第三方 CLI 升级会移除 flag，
+        # 传入未知 flag 会让每个模型都以退出码非 0 的同样方式失败
+        supported = _cli_help_flags(exe, run_style)
         # Cline 需把 message 放到最后：实测输出类 flag 位于 prompt 之后时不生效
         message_last = run_style == "plain"
         if run_style == "run":
-            cmd = [exe, "run", message, *spec["json_output_args"]]
+            cmd = [*prefix, "run", message, *spec["json_output_args"]]
         elif run_style == "exec":
             # Codex：codex exec <message> --json ...；-o 把最后一条消息写入文件，
             # 作为与事件协议无关的最终文本兜底
-            cmd = [exe, "exec", message, *spec["json_output_args"], *spec.get("always_args", ())]
+            always = [a for a in spec.get("always_args", ()) if _flag_supported(supported, a)]
+            cmd = [*prefix, "exec", message, *spec["json_output_args"], *always]
             cmd += ["-o", str(S_OpenCodeAgent._last_message_path(cache_dir, node_id))]
         elif run_style == "print":
             # Claude Code：-p/--print 非交互，prompt 紧随其后
-            cmd = [exe, "-p", message, *spec["json_output_args"]]
+            cmd = [*prefix, "-p", message, *spec["json_output_args"]]
         else:
             # Cline：没有子命令，prompt 作为位置参数（最后追加）
-            cmd = [exe, *spec["json_output_args"]]
+            cmd = [*prefix, *spec["json_output_args"]]
         dir_flag = spec.get("dir_flag")
-        if dir_flag:
+        if _flag_supported(supported, dir_flag):
+            # CLI 不支持时由进程 cwd 承担工作目录（Popen 已设置 cwd=work_dir）
             cmd += [dir_flag, str(work_dir)]
-        if model:
-            cmd += [spec["model_flag"], model]
+
         agent = str(config.get("agent") or "").strip()
-        if agent:
-            cmd += ["--agent", agent]
         variant = str(config.get("variant") or "").strip()
+        model_arg = model
+        variant_args: list = []
         if variant and "variant" in spec["supports"]:
-            cmd += ["--variant", variant]
+            if _flag_supported(supported, "--variant"):
+                variant_args = ["--variant", variant]
+            elif spec.get("variant_sep") and model_arg:
+                # 新版 opencode：variant 并入模型名（provider/model#variant）
+                model_arg = f"{model_arg}{spec['variant_sep']}{variant}"
+        if model_arg:
+            cmd += [spec["model_flag"], model_arg]
+        if agent and _flag_supported(supported, "--agent"):
+            cmd += ["--agent", agent]
+        cmd += variant_args
         # 非交互模式下未预授权的工具权限会被自动拒绝，故默认自动放行
         # （flag 名/取值随 CLI 而变，见 CLI_SPECS.auto_flag / auto_value / auto_off_args）
         if config.get("auto_approve", True):
-            cmd.append(spec["auto_flag"])
-            auto_value = spec.get("auto_value")
-            if auto_value:
-                cmd.append(auto_value)
+            if _flag_supported(supported, spec["auto_flag"]):
+                cmd.append(spec["auto_flag"])
+                auto_value = spec.get("auto_value")
+                if auto_value:
+                    cmd.append(auto_value)
         elif spec.get("auto_off_args"):
             # 某些 CLI 默认就放行（如 Cline），关闭时必须显式传 false
             cmd += list(spec["auto_off_args"])
-        if config.get("thinking") and "thinking" in spec["supports"]:
+        if config.get("thinking") and "thinking" in spec["supports"] \
+                and _flag_supported(supported, "--thinking"):
             cmd.append("--thinking")
-        if config.get("pure") and "pure" in spec["supports"]:
+        if config.get("pure") and "pure" in spec["supports"] \
+                and _flag_supported(supported, "--pure"):
             cmd.append("--pure")
         if message_last:
             cmd.append(message)
@@ -671,6 +886,8 @@ class S_OpenCodeAgent(BaseStep):
         texts: list = []
         errors: list = []
         counters = {"tool_calls": 0}
+        # 非 JSON 输出行（usage / 报错文案等）：诊断失败原因的关键线索
+        raw_output: list = []
         stream_done = False
         cancelled = False
 
@@ -693,6 +910,9 @@ class S_OpenCodeAgent(BaseStep):
             try:
                 event = json.loads(line)
             except json.JSONDecodeError:
+                # 非事件行：多为 CLI 的 usage / 参数错误提示（传了未知 flag 时会打到这里）
+                if len(raw_output) < RAW_OUTPUT_LIMIT:
+                    raw_output.append(line[:300])
                 continue
             if not isinstance(event, dict):
                 continue
@@ -720,22 +940,35 @@ class S_OpenCodeAgent(BaseStep):
 
         t_out.join(timeout=3)
         t_err.join(timeout=3)
-        stderr_tail = "".join(err_lines)[-800:].strip()
+        stderr_tail = _strip_ansi("".join(err_lines))[-800:].strip()
+        stdout_tail = "\n".join(raw_output)[-600:].strip()
+        # 部分 CLI（如 Cline）把可读原因只写在 stderr 的 error 事件里
+        stderr_messages = self._stderr_messages(err_lines)
+        # stderr 里的 JSON 事件已被结构化提取，这里只补非 JSON 的原始日志，避免重复
+        stderr_plain = "\n".join(
+            line for line in (_strip_ansi(raw).strip() for raw in err_lines)
+            if line and not line.startswith("{")
+        )[-600:].strip()
+        extra = (f"\nstderr: {stderr_plain}" if stderr_plain else "") \
+            + (f"\nstdout: {stdout_tail}" if stdout_tail else "")
 
         if returncode != 0 or errors:
-            detail = "；".join(m for m in errors[:3] if m) or f"退出码 {returncode}"
-            raise _ModelAttemptError(
-                f"模型 {model_label} 调用失败：{detail}"
-                + (f"\nstderr: {stderr_tail}" if stderr_tail else "")
-            )
+            detail = "；".join(
+                dict.fromkeys(m for m in [*errors, *stderr_messages[-1:]] if m)
+            )[:600] or f"退出码 {returncode}"
+            # CLI 打印 usage 通常意味着命令行参数不被该版本支持
+            if stdout_tail and re.search(r"^\s*(USAGE|FLAGS)\b", stdout_tail, re.MULTILINE):
+                detail = f"{detail}（命令行参数不被该版本支持，请检查 CLI 版本与节点设置）"
+            elif any(h in detail.lower() for h in _LIMIT_HINTS):
+                detail += _LIMIT_TIP
+            raise _ModelAttemptError(f"模型 {model_label} 调用失败：{detail}{extra}")
 
         if not texts and not counters["tool_calls"]:
             # 进程正常退出但零产出：CLI 实际什么都没做（多为模型不可用、鉴权或网络问题）。
             # 判为本次尝试失败 → 触发兜底模型；全部失败则明确报错，
             # 避免出现「节点成功但产物为空」的假成功。
             raise _ModelAttemptError(
-                f"模型 {model_label} 未产生任何输出（退出码 {returncode}）"
-                + (f"\nstderr: {stderr_tail}" if stderr_tail else "")
+                f"模型 {model_label} 未产生任何输出（退出码 {returncode}）{extra}"
             )
 
         return {
@@ -894,9 +1127,15 @@ class S_OpenCodeAgent(BaseStep):
 
         if etype == "run_result":
             reason = str(event.get("finishReason") or "")
+            model_info = event.get("model")
+            if isinstance(model_info, dict):
+                # 记录实际使用的模型，失败提示里能指明是哪个模型受限
+                counters["model"] = str(model_info.get("id") or counters.get("model") or "")
             if reason and reason != "completed":
-                errors.append(f"会话结束：{reason}")
-                updates.append((90, f"错误：{reason}"))
+                if not errors:
+                    # done 事件通常已给出具体原因，这里仅作兜底
+                    errors.append(_classify_error(event.get("text")) or f"会话结束：{reason}")
+                updates.append((88, "会话结束"))
             else:
                 updates.append((88, "本轮推理结束"))
             return updates
@@ -926,14 +1165,16 @@ class S_OpenCodeAgent(BaseStep):
                 counters["tool_calls"] += count
                 updates.append((min(80, 25 + counters["tool_calls"]), f"调用工具 ×{count}"))
         elif itype == "done":
-            text = str(inner.get("text") or "").strip()
             reason = str(inner.get("reason") or "")
-            if text and text not in texts:
-                texts.append(text)
             if reason and reason != "completed":
-                errors.append(text or f"会话结束：{reason}")
-                updates.append((90, f"错误：{reason}"))
+                # 失败时 text 是结构化错误载荷（如 429 JSON），不能当正文收集
+                message = _classify_error(inner.get("text")) or f"会话结束：{reason}"
+                errors.append(message)
+                updates.append((90, f"错误：{message[:80]}"))
             else:
+                text = str(inner.get("text") or "").strip()
+                if text and text not in texts:
+                    texts.append(text)
                 updates.append((88, "本轮推理结束"))
         return updates
 
@@ -942,16 +1183,39 @@ class S_OpenCodeAgent(BaseStep):
         """从 error 事件中提取可读信息（兼容 error.name / error.data.message 等形态）。"""
         err = event.get("error")
         if isinstance(err, str):
-            return err
+            return _classify_error(err) or "CLI 会话错误"
         if isinstance(err, dict):
             data = err.get("data")
             if isinstance(data, dict) and data.get("message"):
                 return str(data["message"])
-            if err.get("message"):
-                return str(err["message"])
-            if err.get("name"):
-                return str(err["name"])
-        return "CLI 会话错误"
+            message = _classify_error(json.dumps(err, ensure_ascii=False))
+            if message:
+                return message
+        return _classify_error(json.dumps(event, ensure_ascii=False)) or "CLI 会话错误"
+
+    @staticmethod
+    def _stderr_messages(err_lines: list) -> list:
+        """从 stderr 的 JSON 事件里提取可读错误文案。
+
+        部分 CLI（如 Cline）会把真正的失败原因只写到 stderr 的 ``type=error``
+        事件里，失败提示带上它用户才知道该怎么办。
+        """
+        messages: list = []
+        for raw in err_lines:
+            line = _strip_ansi(raw).strip()
+            if not line.startswith("{"):
+                continue
+            try:
+                payload = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if not isinstance(payload, dict):
+                continue
+            message = _classify_error(json.dumps(payload, ensure_ascii=False))
+            # 无法结构化解析时会回吐原始 JSON，这种就不要了
+            if message and not message.startswith("{") and message not in messages:
+                messages.append(message)
+        return messages
 
     @staticmethod
     def _terminate(proc: subprocess.Popen) -> None:
@@ -1058,8 +1322,9 @@ class S_OpenCodeAgent(BaseStep):
                 "3. 任务完成后，在最终回复的最后单独输出一行结束标识：\n"
                 f"   {DONE_MARKER}\n"
                 "   并在其后输出验收 JSON（不要用代码块包裹）：\n"
-                '   {"status": "success" | "failed", "message": "简要说明", '
+                '   {"status": "success", "message": "简要说明", '
                 '"outputs": {"1": "相对路径或文本值", "2": "..."}}\n'
+                "   （任务失败时把 status 填为 \"failed\"）\n"
                 "   其中 outputs 的键为输出序号（1 开始），值可以是相对任务目录的文件路径，"
                 "或字符串类型产物的直接文本值。\n"
                 "4. 若执行失败，同样输出结束标识并置 status 为 failed。"
