@@ -209,3 +209,93 @@ def is_short_sentence(text: str, language: str = "") -> bool:
 def detect_language(text: str, hint: str = "") -> str:
     """对外暴露的语言探测（主要语言），便于调用方记录日志。"""
     return _detect_primary_language(text, hint)
+
+
+# ══════════════════════════════════════════════════════════════════
+# 逆向推算：由时间槽时长反推「期望字数」（供字幕丰富/缩减共用）
+# ══════════════════════════════════════════════════════════════════
+
+# 语言提示 -> 文字系统
+_HINT_TO_SCRIPT = {
+    "zh": "han",
+    "ja": "kana",
+    "ko": "hangul",
+    "en": "latin",
+    "ru": "cyrillic",
+    "ar": "arabic",
+    "th": "thai",
+}
+
+# 文字系统 -> 朗读单元名称（用于提示词里的「期望字数」单位）
+_UNIT_LABEL_BY_SCRIPT = {
+    "han": "汉字",
+    "kana": "假名",
+    "hangul": "韩文字符",
+    "thai": "泰文字符",
+    "latin": "英文单词",
+    "cyrillic": "西里尔字母单词",
+    "arabic": "阿拉伯语单词",
+}
+
+
+def count_speak_units(text: str) -> int:
+    """统计文本的可朗读单元数（口径与 ``estimate_tts_duration`` 一致）。
+
+    表意/音节文字（汉字/假名/谚文/泰文）按字符计数，词类语言（拉丁/西里尔/
+    阿拉伯）按单词数计数（含数字串折算）。
+    """
+    if not text or not str(text).strip():
+        return 0
+    counts, word_count = count_language_units(str(text))
+    ideographic = sum(counts.get(k, 0) for k in ("han", "kana", "hangul", "thai"))
+    return ideographic + word_count
+
+
+def _dominant_script(text: str) -> str:
+    """返回文本占比最高的文字系统（无内容时返回空串）。"""
+    counts = _count_script_chars(str(text or ""))
+    if not counts:
+        return ""
+    return max(counts, key=counts.get)
+
+
+def estimate_speaking_rate(text: str = "", language: str = "") -> Tuple[float, str]:
+    """估算该语种在 speed=1.0 时每秒可朗读的单元数与单元名称。
+
+    优先采用 ``language`` 提示（取前两位，如 "zh"/"en"），否则按文本中占比
+    最高的文字系统判定。
+
+    Returns:
+        (units_per_second, unit_label)，如中文返回 (4.17, "汉字")
+    """
+    hint = str(language or "").strip().lower()[:2]
+    script = _HINT_TO_SCRIPT.get(hint) or _dominant_script(text)
+    rate = _UNIT_RATES.get(script) if script else None
+    if not rate or rate <= 0:
+        return 1.0 / _FALLBACK_CHAR_RATE, "字符"
+    label = _UNIT_LABEL_BY_SCRIPT.get(script, "字符")
+    return 1.0 / rate, label
+
+
+def estimate_target_units(duration: float, text: str = "", language: str = "",
+                          fill_ratio: float = 0.92) -> Tuple[int, str]:
+    """由时间槽时长反推「期望字数」（填满该槽所需的朗读单元数）。
+
+    Args:
+        duration: 目标时间槽时长（秒）
+        text: 参考文本（用于判定语种/文字系统）
+        language: 语言提示（可选，如 "zh"/"en"）
+        fill_ratio: 填充系数，默认 0.92，预留标点停顿余量，
+            避免丰富后朗读时长反而超出时间槽
+
+    Returns:
+        (期望字数, 单元名称)，如 (26, "汉字")
+    """
+    try:
+        duration = float(duration or 0)
+    except (TypeError, ValueError):
+        duration = 0.0
+    if duration <= 0:
+        return 0, "字符"
+    units_per_second, label = estimate_speaking_rate(text, language)
+    return max(1, int(round(duration * units_per_second * fill_ratio))), label

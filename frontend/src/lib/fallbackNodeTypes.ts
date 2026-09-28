@@ -3313,6 +3313,8 @@ export const FALLBACK_NODE_TYPES = [
       "speed_rounds": 1,
       "ai_subtitle_reduction": true,
       "ai_rounds": 1,
+      "speed_max": 1.8,
+      "speed_min": 0.7,
       "overwrite_generate": false
     },
     "configFields": [
@@ -3576,6 +3578,28 @@ export const FALLBACK_NODE_TYPES = [
         "step": 1,
         "inline": true,
         "description": "AI缩减字幕的执行轮次，每轮都会重新检查并缩减超出时间槽的文本"
+      },
+      {
+        "key": "speed_max",
+        "label": "调速阈值最快值",
+        "type": "number",
+        "defaultValue": 1.8,
+        "min": 1,
+        "max": 5,
+        "step": 0.1,
+        "colSpan": "half",
+        "description": "允许的最大加速倍率（上限）。超速片段所需倍率超过此值即为溢出，交给 AI 缩减字幕兜底"
+      },
+      {
+        "key": "speed_min",
+        "label": "调速阈值最慢值",
+        "type": "number",
+        "defaultValue": 0.7,
+        "min": 0.1,
+        "max": 1,
+        "step": 0.1,
+        "colSpan": "half",
+        "description": "允许的最大减速倍率（下限）。偏短片段减速填充不慢于此值；槽空档超过 0.3 秒即判定需要变速"
       },
       {
         "key": "overwrite_generate",

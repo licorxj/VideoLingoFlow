@@ -190,6 +190,12 @@ class WhisperXLocal(ASRBase):
                     asr_options=asr_opts,
                     download_root=self._model_dir,
                 )
+
+                # whisperx 的 Silero.__call__ 只把 vad_onset 作为 threshold，
+                # vad_offset 被透传给 merge_chunks 但后者并不使用 -> 结束阈值无效。
+                # 这里在**实例层**包装 get_speech_timestamps 注入 neg_threshold
+                # （silero 原生的退出语音门限），不动 site-packages。
+                self._inject_vad_offset(asr_model, vad_opts)
             except Exception as e:
                 raise RuntimeError(f"Failed to load WhisperX model '{model_name}': {e}")
 
@@ -404,6 +410,37 @@ class WhisperXLocal(ASRBase):
                 if os.path.isdir(snap) and os.path.isfile(os.path.join(snap, "config.yaml")):
                     return os.path.abspath(snap)
         return None
+
+    @staticmethod
+    def _inject_vad_offset(asr_model, vad_opts: dict) -> None:
+        """让 whisperx 内置 VAD 的"结束阈值(vad_offset)"真正生效。
+
+        whisperx 的 Silero.__call__ 只用 vad_onset 作为 threshold，vad_offset 虽被
+        传进 merge_chunks，但该函数体并未使用，导致结束阈值形同虚设。
+        silero 原生支持 neg_threshold（退出语音门限，缺省为 threshold-0.15），
+        这里在实例层包装 get_speech_timestamps 注入它，等价于开启迟滞。
+        """
+        offset = (vad_opts or {}).get("vad_offset")
+        try:
+            offset = float(offset)
+        except (TypeError, ValueError):
+            return
+        if not (0.0 < offset < 1.0):
+            return
+        try:
+            vad = getattr(asr_model, "vad_model", None)
+            orig = getattr(vad, "get_speech_timestamps", None)
+            if vad is None or orig is None:
+                return
+
+            def _with_neg_threshold(audio, *args, **kwargs):
+                kwargs.setdefault("neg_threshold", offset)
+                return orig(audio, *args, **kwargs)
+
+            vad.get_speech_timestamps = _with_neg_threshold
+            print(f"[WhisperX] VAD offset applied via neg_threshold={offset}", flush=True)
+        except Exception as e:
+            print(f"[WhisperX] Failed to apply VAD offset: {e}", flush=True)
 
     @staticmethod
     def _clear_cuda_cache():

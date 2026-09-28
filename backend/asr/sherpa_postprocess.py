@@ -69,19 +69,33 @@ class SherpaVADProcessor(VADProcessor):
     def __init__(
         self,
         vad_model: str = sherpa_models.DEFAULT_VAD_MODEL,
-        threshold: float = 0.5,
-        min_silence_duration: float = 0.4,
+        threshold: Optional[float] = None,
+        min_silence_duration: Optional[float] = None,
         min_speech_duration: float = 0.25,
         max_speech_duration: float = 20.0,
         window_size: int = 512,
         num_threads: int = 1,
         provider: str = "cpu",
+        vad_onset: float = 0.500,
+        vad_offset: float = 0.363,
         **kwargs,
     ):
         super().__init__(**kwargs)
+        from backend.asr.vad_processor import (
+            _coerce_unit_float,
+            offset_to_silence_seconds,
+        )
         self.vad_model = vad_model
-        self.threshold = threshold
-        self.min_silence_duration = min_silence_duration
+        # 起始阈值 -> sherpa 的 threshold（原生概率门限）
+        self.threshold = (
+            float(threshold) if threshold is not None
+            else _coerce_unit_float(vad_onset, 0.500)
+        )
+        # sherpa 无原生"退出语音"概率门限，用结束阈值换算静音容忍时长
+        self.min_silence_duration = (
+            float(min_silence_duration) if min_silence_duration is not None
+            else offset_to_silence_seconds(_coerce_unit_float(vad_offset, 0.363))
+        )
         self.min_speech_duration = min_speech_duration
         self.max_speech_duration = max_speech_duration
         self.window_size = window_size

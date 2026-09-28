@@ -901,31 +901,41 @@ class S09TTS(BaseStep):
                     f"（段落索引: {missing}），请检查 TTS 引擎配置、参考音频与网络后重试。"
                 )
 
-        # ═══════════ 调速重生成 + AI缩减字幕 ═══════════
+        # ═══════════ 调速重生成 + AI字幕长度调整 ═══════════
         node_cfg = getattr(self, "_node_config", {}) or {}
         speed_regenerate = node_cfg.get("speed_regenerate", True)
         ai_subtitle_reduction = node_cfg.get("ai_subtitle_reduction", True)
         speed_rounds = node_cfg.get("speed_rounds", 1)
         ai_rounds = node_cfg.get("ai_rounds", 1)
 
-        # 无时间戳模式不存在时间槽约束：跳过调速重生成与字幕缩减，并强制关闭相关选项
+        # 无时间戳模式不存在时间槽约束：跳过调速重生成与字幕长度调整，并强制关闭相关选项
         if untimed:
             speed_regenerate = False
             ai_subtitle_reduction = False
 
         if speed_regenerate or ai_subtitle_reduction:
             speed_cfg = config.get("video.speed", {}) or {}
-            speed_max = speed_cfg.get("max", 1.5)
-            speed_min = speed_cfg.get("min", 1.0)
+            # 变速阈值只取节点设置（前端卡片「调速阈值最快值/最慢值」），
+            # 未配置时用内置默认 1.8 / 0.7；不再读取全局 video.speed.max/min，
+            # 以保证「卡片上显示的值」与「实际执行判定用的值」一致。
+            speed_max = self._to_float(node_cfg.get("speed_max"), 1.8)
+            speed_min = self._to_float(node_cfg.get("speed_min"), 0.7)
+            # 最快值需 >=1（加速上限），最慢值需 <=1（减速下限），并保证 max >= min
+            speed_max = min(5.0, max(1.0, speed_max))
+            speed_min = max(0.1, min(1.0, speed_min))
+            if speed_max < speed_min:
+                speed_max = speed_min
             gap_threshold = speed_cfg.get("gap_threshold", 0.1)
-            slow_limit = speed_cfg.get("slow_limit", 1.0)
+
+            print(f"[S09] 变速阈值: 最快 {speed_max:g} / 最慢 {speed_min:g}"
+                  f"（节点设置优先，全局 gap_threshold={gap_threshold}）")
 
             try:
                 self._speed_and_reduce_loop(
                     segments, tts_config, task_dir, dub_data, dub_task_path,
                     speed_regenerate, ai_subtitle_reduction,
                     speed_max, speed_min, gap_threshold,
-                    speed_rounds, ai_rounds, slow_limit, ref_map, callback
+                    speed_rounds, ai_rounds, ref_map, callback
                 )
             except Exception as e:
                 print(f"[S09] 调速重生成/缩减字幕异常: {e}")
@@ -1001,17 +1011,17 @@ class S09TTS(BaseStep):
 
     @staticmethod
     def _analyze_speed_factors(segments: List[Dict], speed_min: float,
-                               speed_max: float, gap_threshold: float,
-                               slow_limit: float = 1.0) -> None:
+                               speed_max: float, gap_threshold: float) -> None:
         """遍历所有 segment，计算每个的变速倍数。
 
-        两类时间槽不匹配会被检出：
-        - 超速（音频比时间槽长）：需加速，标记 ``need_speed``
-        - 语速偏慢（音频比时间槽短很多）：需减速填充，标记 ``need_slow``
-          ``slow_limit`` 为允许的减速下限（<1，如 0.8）；置 1.0 则不做减速。
+        两类时间槽不匹配会被检出（阈值均取节点设置，不再读取全局 video.speed.slow_limit）：
+        - 超速（音频比时间槽长）：需加速，标记 ``need_speed``；所需倍率超过
+          节点「最快值」``speed_max`` 的记为溢出，交给字幕缩减兜底。
+        - 偏慢/偏短（音频短于时间槽）：需减速填充，标记 ``need_slow``。
+          仅按「槽空档 > SLOW_FILL_MIN_GAP(0.3s)」判定，减速下限为节点「最慢值」
+          ``speed_min``（恰好填满所需的倍率被钳制在 [speed_min, 1.0]）。
         """
-        # 减速填充的触发门槛：音频短于时间槽的该比例、且绝对空档超过下限时才值得重合成
-        SLOW_FILL_RATIO = 0.9
+        # 减速填充的触发门槛：绝对空档超过该秒数才值得重合成
         SLOW_FILL_MIN_GAP = 0.3
         print("\n[S09] 分析变速倍数")
         for seg in segments:
@@ -1027,7 +1037,7 @@ class S09TTS(BaseStep):
                 seg["need_slow"] = False
                 continue
 
-            # 超速：音频比时间槽长，需要加速
+            # 超速：音频比时间槽长，需要加速（上限为节点「最快值」）
             if real_dur > duration:
                 available = duration + gap * gap_threshold
                 if available > 0:
@@ -1041,17 +1051,17 @@ class S09TTS(BaseStep):
                 seg["speed_factor"] = round(capped_factor, 4)
                 seg["need_speed"] = capped_factor > 1.01
                 seg["need_slow"] = False
-            # 语速偏慢：音频明显短于时间槽，通过减速填充空档（避免留下长静音）
-            elif (real_dur < duration * SLOW_FILL_RATIO
-                  and (duration - real_dur) > SLOW_FILL_MIN_GAP
-                  and slow_limit < 1.0):
+                seg["raw_slow_factor"] = 1.0
+            # 偏慢/偏短：音频短于时间槽且空档超过 0.3s，减速填充（下限为节点「最慢值」）
+            elif (duration - real_dur) > SLOW_FILL_MIN_GAP:
                 raw_slow = real_dur / duration if duration > 0 else 1.0
                 seg["raw_slow_factor"] = round(raw_slow, 4)
-                # 想要 speed=raw_slow 恰好填满；但不慢于 slow_limit，也不快于 1.0
-                capped = min(1.0, max(raw_slow, slow_limit))
+                # 恰好填满需 speed=raw_slow；但不慢于节点「最慢值」，也不快于 1.0
+                capped = min(1.0, max(raw_slow, speed_min))
                 seg["speed_factor"] = round(capped, 4)
                 seg["need_slow"] = capped < 0.99
                 seg["need_speed"] = False
+                seg["raw_speed_factor"] = 1.0
             else:
                 seg["speed_factor"] = 1.0
                 seg["raw_speed_factor"] = 1.0
@@ -1072,18 +1082,17 @@ class S09TTS(BaseStep):
                                gap_threshold: float,
                                speed_rounds: int = 1,
                                ai_rounds: int = 1,
-                               slow_limit: float = 1.0,
                                ref_map: Dict[int, str] = None,
                                callback: Optional[Callable] = None) -> None:
-        """调速重生成 + AI缩减字幕主循环。"""
+        """调速重生成 + AI字幕长度调整主循环。"""
         print("\n" + "=" * 60)
-        print("[S09] 调速重生成 + AI缩减字幕")
+        print("[S09] 调速重生成 + AI字幕长度调整")
         print("=" * 60)
 
         # Step 1: 分析变速倍数
-        self._analyze_speed_factors(segments, speed_min, speed_max, gap_threshold, slow_limit)
+        self._analyze_speed_factors(segments, speed_min, speed_max, gap_threshold)
 
-        # Step 2: 调速重生成（最多 speed_rounds 轮；同时覆盖加速溢出与减速填充）
+        # Step 2: 调速重生成（最多 speed_rounds 轮；加速溢出与偏慢/偏短合并重配）
         if speed_regenerate and speed_rounds > 0:
             for sr in range(1, speed_rounds + 1):
                 overflow_segs = [s for s in segments
@@ -1101,36 +1110,55 @@ class S09TTS(BaseStep):
                     print(f"  ⚠ 调速重生成异常: {e}")
                     import traceback
                     traceback.print_exc()
-                self._analyze_speed_factors(segments, speed_min, speed_max, gap_threshold, slow_limit)
+                self._analyze_speed_factors(segments, speed_min, speed_max, gap_threshold)
 
-        # Step 3: AI缩减字幕（最多 ai_rounds 轮）
+        # Step 3: AI 字幕长度调整（超速与偏慢分开处理，最多 ai_rounds 轮）
+        #  - 超速溢出：LLM 缩减朗读文本 → 重新配音
+        #  - 偏慢偏短：LLM 无损丰富字数（带期望字数）→ 重新配音
         if ai_subtitle_reduction and ai_rounds > 0:
             for round_num in range(1, ai_rounds + 1):
                 overflow_segs = [s for s in segments
                                  if s.get("need_speed") and s.get("raw_speed_factor", 1.0) > speed_max]
-                if not overflow_segs:
-                    print(f"  - AI缩减第{round_num}轮: 无需缩减")
+                slow_segs = [s for s in segments if s.get("need_slow")]
+                if not overflow_segs and not slow_segs:
+                    print(f"  - AI字幕调整第{round_num}轮: 无需调整")
                     break
 
-                if callback:
-                    callback(94, f"AI缩减字幕 第{round_num}轮 ({len(overflow_segs)} 段)...")
-                print(f"  - AI缩减第{round_num}轮: {len(overflow_segs)} 段需要缩减")
+                if overflow_segs:
+                    if callback:
+                        callback(94, f"AI缩减字幕 第{round_num}轮 ({len(overflow_segs)} 段)...")
+                    print(f"  - AI缩减第{round_num}轮: {len(overflow_segs)} 段需要缩减")
+                    try:
+                        self._llm_reduce_subtitles(overflow_segs)
+                    except Exception as e:
+                        print(f"  ⚠ LLM缩减字幕异常: {e}")
+                        import traceback
+                        traceback.print_exc()
+                    try:
+                        self._retts_reduced(segments, task_dir, tts_config, overflow_segs, ref_map)
+                    except Exception as e:
+                        print(f"  ⚠ 重新配音异常: {e}")
+                        import traceback
+                        traceback.print_exc()
 
-                try:
-                    self._llm_reduce_subtitles(overflow_segs)
-                except Exception as e:
-                    print(f"  ⚠ LLM缩减字幕异常: {e}")
-                    import traceback
-                    traceback.print_exc()
+                if slow_segs:
+                    if callback:
+                        callback(95, f"AI丰富字数 第{round_num}轮 ({len(slow_segs)} 段)...")
+                    print(f"  - AI丰富字数第{round_num}轮: {len(slow_segs)} 段偏短需要丰富")
+                    try:
+                        self._llm_expand_subtitles(slow_segs)
+                    except Exception as e:
+                        print(f"  ⚠ LLM丰富字数异常: {e}")
+                        import traceback
+                        traceback.print_exc()
+                    try:
+                        self._retts_expanded(segments, task_dir, tts_config, slow_segs, ref_map)
+                    except Exception as e:
+                        print(f"  ⚠ 重新配音异常: {e}")
+                        import traceback
+                        traceback.print_exc()
 
-                try:
-                    self._retts_reduced(segments, task_dir, tts_config, overflow_segs, ref_map)
-                except Exception as e:
-                    print(f"  ⚠ 重新配音异常: {e}")
-                    import traceback
-                    traceback.print_exc()
-
-                self._analyze_speed_factors(segments, speed_min, speed_max, gap_threshold, slow_limit)
+                self._analyze_speed_factors(segments, speed_min, speed_max, gap_threshold)
 
         # 标记最终仍 overflow 的段
         for seg in segments:
@@ -1141,7 +1169,11 @@ class S09TTS(BaseStep):
 
     def _speed_regenerate_tts(self, overflow_segs: List[Dict], tts_config: dict,
                               task_dir: str, ref_map: Dict[int, str] = None) -> None:
-        """对超出时间槽的 segment 尝试用更高 speed 参数重新生成 TTS，完全复用原始TTS执行逻辑。"""
+        """对时间槽不匹配的 segment 带 speed 参数重新生成 TTS，完全复用原始TTS执行逻辑。
+
+        传入的列表已包含两类：超速溢出（speed_factor>1 加速）与偏慢/偏短
+        （speed_factor<1 减速填充），统一按各自 ``speed_factor`` 重配。
+        """
         import math
         print(f"\n[S09] 调速重生成: {len(overflow_segs)} 段")
 
@@ -1190,6 +1222,16 @@ class S09TTS(BaseStep):
         from backend.utils.subtitle_reduction import reduce_overflow_texts
         reduce_overflow_texts(overflow_segs, step_name="s09_subtitle_reduction")
 
+    @staticmethod
+    def _llm_expand_subtitles(slow_segs: List[Dict]) -> None:
+        """调用 LLM 无损丰富偏短句子的朗读文本（委托共享丰富模块 backend/utils/subtitle_expansion）。
+
+        与缩减分开处理：超速溢出走「缩减字数」，偏慢偏短走「丰富字数」，
+        提示词包含按时间槽估算的期望字数（target_units）。
+        """
+        from backend.utils.subtitle_expansion import expand_short_texts
+        expand_short_texts(slow_segs, step_name="s09_subtitle_expansion")
+
     def _retts_reduced(self, segments: List[Dict], task_dir: str,
                        tts_config: dict, overflow_segs: List[Dict],
                        ref_map: Dict[int, str] = None) -> None:
@@ -1210,6 +1252,41 @@ class S09TTS(BaseStep):
                     os.remove(audio_file)
 
                 # 缩减后重配保持原模式（不切换），变速容差交由服务层处理
+                success = self._try_real_tts(seg, tts_config, audio_file, task_dir, ref_map)
+                if success:
+                    real_dur = self._get_audio_duration(audio_file)
+                    if real_dur > 0:
+                        seg["real_duration"] = round(real_dur, 4)
+                        print(f"    [{idx}] 重配完成: {real_dur:.2f}s")
+                else:
+                    print(f"    [{idx}] 重配失败")
+            except Exception as e:
+                print(f"    [{idx}] 重配失败: {e}")
+
+    def _retts_expanded(self, segments: List[Dict], task_dir: str,
+                        tts_config: dict, slow_segs: List[Dict],
+                        ref_map: Dict[int, str] = None) -> None:
+        """对丰富字数后的句子重新调用 TTS 配音。
+
+        与缩减重配不同：丰富是为了让朗读更长，因此按**正常语速**（不传 speed）
+        重新合成，避免边加字边减速导致过头。
+        """
+        expanded_segs = [s for s in slow_segs if s.get("read_text_expanded")]
+        if not expanded_segs:
+            return
+
+        print(f"  - 丰富字数后重新 TTS 配音: {len(expanded_segs)} 段")
+
+        for seg in expanded_segs:
+            idx = seg.get("index", "?")
+            audio_file = os.path.join(task_dir, seg.get("audio_file", ""))
+
+            try:
+                # 删除旧文件
+                if os.path.exists(audio_file):
+                    os.remove(audio_file)
+
+                # 丰富后按正常语速重配，变速容差交由服务层处理
                 success = self._try_real_tts(seg, tts_config, audio_file, task_dir, ref_map)
                 if success:
                     real_dur = self._get_audio_duration(audio_file)

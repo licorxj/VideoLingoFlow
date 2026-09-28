@@ -22,6 +22,69 @@ class VADSegment:
     confidence: float = 1.0  # 置信度（0-1）
 
 
+# ---------------------------------------------------------------------------
+# 统一 VAD 阈值（vad_onset / vad_offset）映射
+# ---------------------------------------------------------------------------
+# 节点上暴露的是两个 0~1 的语义阈值：
+#   vad_onset  = 起始阈值：语音概率超过它才判定"进入语音"
+#   vad_offset = 结束阈值：低于它判定"退出语音"（与 onset 构成迟滞）
+#
+# 各 VAD 引擎原生参数并不统一，这里做集中映射，保证两个设置对所有引擎都真正
+# 生效（而不是被 **kwargs 吞掉）：
+#   silero(torch) : onset -> threshold      , offset -> neg_threshold（原生迟滞）
+#   sherpa        : onset -> threshold      , offset -> min_silence_duration（换算）
+#   fsmn(funasr)  : onset -> speech_noise_thres, offset -> speech_to_sil_time_thres（换算）
+#   webrtc        : onset -> aggressiveness（离散 0~3）  , offset 无对应（忽略）
+# ---------------------------------------------------------------------------
+
+DEFAULT_VAD_ONSET = 0.500
+DEFAULT_VAD_OFFSET = 0.363
+
+
+def _coerce_unit_float(value, default: float) -> float:
+    """把可能是字符串/None 的阈值转成 (0,1) 内的 float（节点配置常为 str）。"""
+    try:
+        v = float(value)
+    except (TypeError, ValueError):
+        return default
+    if not (0.0 < v < 1.0):
+        return default
+    return v
+
+
+def onset_to_webrtc_aggressiveness(vad_onset: float) -> int:
+    """起始阈值 -> WebRTC aggressiveness(0~3)。
+
+    WebRTC 没有连续门限，只有 4 档激进程度；档位越高越难判为语音。
+    起始阈值越高 => 越难进入语音 => 越激进，故单调递增映射。
+    """
+    if vad_onset < 0.30:
+        return 0
+    if vad_onset < 0.45:
+        return 1
+    if vad_onset < 0.60:
+        return 2
+    return 3
+
+
+def offset_to_silence_seconds(vad_offset: float) -> float:
+    """结束阈值 -> 结束前允许的静音时长（秒）。
+
+    供无原生概率迟滞的引擎（sherpa）使用：阈值越低越早结束语音。
+    默认 0.363 -> ~0.40s（对齐 sherpa 原默认 min_silence_duration=0.4）。
+    """
+    return round(min(max(vad_offset * 1.1, 0.1), 1.5), 3)
+
+
+def offset_to_speech_to_sil_ms(vad_offset: float) -> int:
+    """结束阈值 -> fsmn-vad 的 speech_to_sil_time_thres（毫秒）。
+
+    含义：连续判为静音多少 ms 后才结束语音段，越小越早结束。
+    默认 0.363 -> ~145ms（对齐 funasr 默认 150ms）。
+    """
+    return int(min(max(vad_offset * 400, 50), 400))
+
+
 class VADProcessor:
     """VAD处理器基类"""
     
@@ -58,10 +121,14 @@ class FSMNVADProcessor(VADProcessor):
     def __init__(self, 
                  max_segment_time: int = 30000,
                  model: Optional[str] = None,
+                 vad_onset: float = DEFAULT_VAD_ONSET,
+                 vad_offset: float = DEFAULT_VAD_OFFSET,
                  **kwargs):
         super().__init__(**kwargs)
         self.max_segment_time = max_segment_time
         self.model = model or self._resolve_local_model()
+        self.vad_onset = _coerce_unit_float(vad_onset, DEFAULT_VAD_ONSET)
+        self.vad_offset = _coerce_unit_float(vad_offset, DEFAULT_VAD_OFFSET)
     
     @classmethod
     def _resolve_local_model(cls) -> str:
@@ -88,12 +155,20 @@ class FSMNVADProcessor(VADProcessor):
         
         print(f"[VAD] Loading FSMN VAD model ({self.model})...", flush=True)
         
+        # 起始阈值 -> 语音/噪声后验差门限（funasr 原生 speech_noise_thres，默认 0.6）
+        # 结束阈值 -> 连续静音多少 ms 后结束语音段（speech_to_sil_time_thres）
+        speech_to_sil_ms = offset_to_speech_to_sil_ms(self.vad_offset)
+        print(f"[VAD] FSMN thresholds: onset={self.vad_onset} -> speech_noise_thres, "
+              f"offset={self.vad_offset} -> speech_to_sil_time_thres={speech_to_sil_ms}ms", flush=True)
+
         # 加载VAD模型（优先使用本地缓存，避免联网下载）
         print(f"[VAD]   calling AutoModel(model={self.model})...", flush=True)
         model = AutoModel(
             model=self.model,
             max_single_segment_time=self.max_segment_time,
-            disable_update=True
+            disable_update=True,
+            speech_noise_thres=self.vad_onset,
+            speech_to_sil_time_thres=speech_to_sil_ms,
         )
         print(f"[VAD]   AutoModel loaded OK", flush=True)
         
@@ -155,12 +230,20 @@ class WebRTCVADProcessor(VADProcessor):
     """
     
     def __init__(self, 
-                 aggressiveness: int = 2,
+                 aggressiveness: Optional[int] = None,
                  frame_duration_ms: int = 30,
+                 vad_onset: float = DEFAULT_VAD_ONSET,
+                 vad_offset: float = DEFAULT_VAD_OFFSET,
                  **kwargs):
         super().__init__(**kwargs)
-        self.aggressiveness = aggressiveness
+        self.vad_onset = _coerce_unit_float(vad_onset, DEFAULT_VAD_ONSET)
+        self.vad_offset = _coerce_unit_float(vad_offset, DEFAULT_VAD_OFFSET)
         self.frame_duration_ms = frame_duration_ms
+        # WebRTC 无连续门限：由起始阈值推导激进档位（未显式指定 aggressiveness 时）
+        self.aggressiveness = (
+            int(aggressiveness) if aggressiveness is not None
+            else onset_to_webrtc_aggressiveness(self.vad_onset)
+        )
     
     def detect(self, audio_path: str) -> List[VADSegment]:
         """使用WebRTC VAD检测语音活动"""
@@ -350,12 +433,23 @@ class SileroVADProcessor(VADProcessor):
         """运行Silero VAD"""
         (get_speech_timestamps, _, read_audio, _, _) = utils
         
-        # 获取语音时间戳
-        speech_timestamps = get_speech_timestamps(
-            audio_tensor,
-            model,
-            threshold=self.vad_onset,
-        )
+        # 获取语音时间戳：onset 作为进入语音门限，offset 作为退出语音门限（迟滞）
+        # neg_threshold 由 silero 原生支持；老版本 hub 仓库不支持时回退为仅传 threshold
+        try:
+            speech_timestamps = get_speech_timestamps(
+                audio_tensor,
+                model,
+                threshold=self.vad_onset,
+                neg_threshold=self.vad_offset,
+            )
+        except TypeError:
+            print("[VAD] silero get_speech_timestamps 不支持 neg_threshold，"
+                  "仅应用起始阈值", flush=True)
+            speech_timestamps = get_speech_timestamps(
+                audio_tensor,
+                model,
+                threshold=self.vad_onset,
+            )
         
         # 转换结果
         segments = []
