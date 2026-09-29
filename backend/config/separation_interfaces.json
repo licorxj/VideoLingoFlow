@@ -1,4 +1,4 @@
-{
+﻿{
   "version": 1,
   "interfaces": [
     {
@@ -847,6 +847,34 @@
         "custom_params": [],
         "segment": 12,
         "two_stems": "vocals"
+      }
+    },
+    {
+      "id": "sherpa_spleeter",
+      "name": "Spleeter 2stems (sherpa-onnx 本地)",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "【轻量本地-无 torch 依赖】k2-fsa/sherpa-onnx 版 Spleeter 2stems（人声/伴奏两轨），int8 双模型约 46MB，首次使用自动下载到 _model_cache/sherpa-onnx/separation。速度与质量适合批量预处理；追求极致音质请用 Demucs / BS-RoFormer。",
+      "config": {
+        "sdk_module": "backend.separation.sep_sherpa",
+        "sdk_class": "SherpaSpleeterSeparation",
+        "model": "spleeter-2stems",
+        "model_options": [
+          "spleeter-2stems"
+        ],
+        "model_details": {
+          "Spleeter 2stems": {
+            "name": "Spleeter 2stems",
+            "description": "人声 + 伴奏两轨分离，int8 约 46MB，CPU 友好、速度快"
+          }
+        },
+        "format": "wav",
+        "provider": "cpu",
+        "num_threads": 2,
+        "max_concurrent": 1,
+        "timeout": 1800,
+        "custom_params": []
       }
     }
   ]

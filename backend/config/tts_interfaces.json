@@ -1134,6 +1134,103 @@
         "max_concurrent": 3,
         "timeout": 600
       }
+    },
+    {
+      "id": "lctts_hub",
+      "name": "LCTTS管家",
+      "type": "sdk",
+      "builtin": false,
+      "enabled": true,
+      "description": "【推荐值：****】本地 TTS 管家（LcTTS Hub）统一聚合服务，默认端口 5199，调度各本地 TTS 引擎（voxcpm / omnivoice / index25 / dots / confucius4 / audio8 / auk 等），支持声音克隆与声音设计；本地自托管，不占云端配额，首次调用由管家自动拉起对应引擎（含模型下载，可能数分钟）。",
+      "config": {
+        "sdk_package": "",
+        "sdk_module": "backend.tts.sdk.lctts_hub_wrapper",
+        "sdk_function": "synthesize",
+        "sdk_voice_list_function": "list_voices",
+        "text_param": "text",
+        "ref_audio_param": "ref_audio_path",
+        "speed_param": "speed",
+        "voice": "",
+        "model": "voxcpm",
+        "modes": {
+          "clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "voice_design": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "controllable_clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "preset_voice": {
+            "enabled": false,
+            "endpoint": ""
+          }
+        },
+        "model_list_url": "",
+        "voice_list_url": "",
+        "model_list_key": "",
+        "voice_list_key": "",
+        "model_options": [
+          "voxcpm",
+          "omnivoice",
+          "omnivoice_story",
+          "indextts2",
+          "indextts25",
+          "dots",
+          "confucius4",
+          "audio8",
+          "auk"
+        ],
+        "sdk_extra_args": {
+          "api_url": "http://127.0.0.1:5199",
+          "poll_interval": 2.0
+        },
+        "custom_params": [
+          {
+            "key": "language",
+            "default": "zh",
+            "description": "语言代码（如 zh, en, ja, ko）"
+          },
+          {
+            "key": "cfg_value",
+            "default": "3.5",
+            "description": "CFG 引导强度（1.0-5.0），影响克隆/设计强度"
+          },
+          {
+            "key": "instruct",
+            "default": "",
+            "description": "声音设计/可控克隆的风格指令（如 '温柔地'、'Excited and fast-paced'）"
+          },
+          {
+            "key": "num_steps",
+            "default": "",
+            "description": "扩散/采样步数（1-100），影响音质与速度"
+          },
+          {
+            "key": "guidance_scale",
+            "default": "",
+            "description": "引导尺度（0.0-10.0）"
+          },
+          {
+            "key": "speed",
+            "default": "1.0",
+            "description": "语速因子（引擎原生支持时生效，建议 0.5~2.0）"
+          },
+          {
+            "key": "prompt_text",
+            "default": "",
+            "description": "参考音频对应的文本（极致克隆/续写克隆时提供效果更佳）"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 600,
+        "voice_options": [],
+        "startup_script": ""
+      }
     }
   ]
 }

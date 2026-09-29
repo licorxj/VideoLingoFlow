@@ -104,8 +104,12 @@ demucs>=4.0,<5
 # 本地轻量 ASR（sherpa-onnx：C++ / onnxruntime，无 torch 依赖）
 # 官方 PyPI wheel 仅含 CPU EP；provider=cuda 在无 GPU 版时会自动回退 cpu。
 # 需要 GPU 时改用官方 GPU 版 SDK（见 docs/依赖清单.md）。
+# zhconv：sherpa whisper 模型中文输出为繁体，用于繁转简（纯 Python，无依赖）。
 # ============================================================
 sherpa-onnx>=1.12,<2
+zhconv>=1.4,<2
+# pypinyin：同音字修复节点（backend/utils/homophone_fixer.py）按拼音匹配术语，纯 Python
+pypinyin>=0.53,<1
 
 # ============================================================
 # 数据处理与科学计算

@@ -52,6 +52,23 @@ def _strip_tag(value: Optional[str]) -> str:
     return (value or "").strip().strip("<>|")
 
 
+def _simplify_chinese(text: str) -> str:
+    """繁体转简体（whisper 中文输出为繁体）。
+
+    zhconv 缺失时原样返回，绝不因转换失败影响识别结果。
+    """
+    if not text:
+        return text
+    try:
+        import zhconv
+    except ImportError:
+        return text
+    try:
+        return zhconv.convert(text, "zh-cn")
+    except Exception:
+        return text
+
+
 class SherpaOnnxASR(ASRBase):
     """sherpa-onnx offline recognizer 引擎。"""
 
@@ -137,7 +154,10 @@ class SherpaOnnxASR(ASRBase):
                 decoder=info["decoder"],
                 language="" if language in ("", "auto") else language,
                 task=task,
-                enable_token_timestamps=bool(word_timestamps),
+                # 官方 whisper decoder 未导出 cross-attention，开启 token 时间戳只会
+                # 触发 C++ 告警且拿不到结果 → 由注册表的 token_timestamps 决定。
+                enable_token_timestamps=bool(word_timestamps)
+                and bool(info.get("token_timestamps", False)),
                 enable_segment_timestamps=bool(word_timestamps),
                 **common,
             )
@@ -247,6 +267,7 @@ class SherpaOnnxASR(ASRBase):
         language: Optional[str] = None,
         use_itn: bool = True,
         task: str = "transcribe",
+        simplify_chinese: bool = True,
         provider: str = "cpu",
         num_threads: int = 0,
         vad: bool = True,
@@ -277,6 +298,9 @@ class SherpaOnnxASR(ASRBase):
             model_id, model_file=model_file, variant=variant,
             callback=_cb, progress_range=(8, 45),
         )
+
+        # whisper 中文输出为繁体，需要转简体（其它模型输出本身已是简体）
+        simplify = bool(simplify_chinese) and info.get("kind") == "whisper"
 
         if num_threads <= 0:
             num_threads = min(4, os.cpu_count() or 2)
@@ -341,10 +365,15 @@ class SherpaOnnxASR(ASRBase):
                 end_t = en / 16000.0
                 if not text:
                     continue
+                if simplify:
+                    text = _simplify_chinese(text)
 
                 words = []
                 if word_timestamps:
                     words = _build_words(result, base, end_t)
+                    if words and simplify:
+                        for w in words:
+                            w["word"] = _simplify_chinese(w["word"])
 
                 seg = {
                     "id": len(segments) + 1,

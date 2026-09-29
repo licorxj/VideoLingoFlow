@@ -321,6 +321,46 @@ BUILTIN_NODE_TYPES = [
         },
     },
     {
+        "id": "homophone_fix",
+        "name": "同音字修复",
+        "execution_domain": "thread",
+        "category": "translation",
+        "description": "对字幕（SRT）或 ASR JSON 做中文同音字修复：按术语表的拼音匹配，把 ASR 常见同音错字替换为正确写法（如「比例比例」→「哔哩哔哩」）。等长替换、不改变时间戳；术语来源为项目根 自定义术语表.json、指定术语文件或节点内自填。",
+        "icon": "SpellCheck",
+        "color": "#0ea5e9",
+        "inputs": [
+            {"id": "json", "label": "字幕/ASR JSON", "type": "json", "required": True, "color": "#6366f1"},
+        ],
+        "outputs": [
+            {"id": "output", "label": "修复后 JSON", "type": "json", "color": "#6366f1"},
+            {"id": "text", "label": "修复报告", "type": "text", "color": "#8b5cf6"},
+        ],
+        "defaultConfig": {
+            "include_project_glossary": True,
+            "terms_file": "",
+            "extra_terms": "",
+            "fuzzy": "strict",
+            "min_len": 2,
+            "output_format": "json",
+        },
+        "configFields": [
+            {"key": "include_project_glossary", "label": "使用项目术语表", "type": "checkbox", "colSpan": "half"},
+            {"key": "output_format", "label": "输出格式", "type": "select", "colSpan": "half", "options": [
+                {"value": "json", "label": "JSON"},
+                {"value": "srt", "label": "JSON + SRT"},
+            ]},
+            {"key": "terms_file", "label": "术语表文件", "type": "file", "colSpan": "full",
+             "placeholder": "留空则使用项目根 自定义术语表.json", "fileFilter": ["json", "txt"]},
+            {"key": "extra_terms", "label": "额外术语（逗号或换行分隔）", "type": "textarea", "colSpan": "full",
+             "placeholder": "例如：哔哩哔哩, 玄戒, 黑神话悟空"},
+            {"key": "fuzzy", "label": "匹配模式", "type": "select", "colSpan": "half", "options": [
+                {"value": "strict", "label": "严格同音（拼音完全相同）"},
+                {"value": "fuzzy", "label": "模糊音（zh/z、ch/c、sh/s、n/l、前后鼻音）"},
+            ]},
+            {"key": "min_len", "label": "术语最短字数", "type": "number", "colSpan": "half", "min": 1, "max": 8, "step": 1},
+        ],
+    },
+    {
         "id": "platform_download",
         "name": "平台视频下载",
         "execution_domain": "process",
@@ -4295,6 +4335,7 @@ BUILTIN_NODE_TYPES = [
             "lowpass_freq": 0,
             "output_format": "wav",
             "custom_command": "",
+            "sherpa_model": "gtcrn_simple",
         },
         "configFields": [
             {
@@ -4304,7 +4345,23 @@ BUILTIN_NODE_TYPES = [
                 "colSpan": "full",
                 "options": [
                     {"value": "ffmpeg", "label": "FFmpeg 内置滤镜（快速，无需额外依赖）"},
+                    {"value": "sherpa", "label": "sherpa-onnx 模型降噪（人声更清晰，模型自动下载）"},
                     {"value": "custom", "label": "自定义 ffmpeg 命令"},
+                ],
+            },
+            {
+                "key": "sherpa_model",
+                "label": "sherpa 降噪模型",
+                "type": "select",
+                "colSpan": "full",
+                "dependsOn": "method",
+                "description": "GTCRN 仅 0.5MB（极轻）；DPDFNet 质量更好，首次使用自动下载",
+                "options": [
+                    {"value": "gtcrn_simple", "label": "GTCRN Simple（0.5MB ★推荐）"},
+                    {"value": "dpdfnet_baseline", "label": "DPDFNet Baseline（8.4MB）"},
+                    {"value": "dpdfnet2", "label": "DPDFNet 2（9.8MB）"},
+                    {"value": "dpdfnet4", "label": "DPDFNet 4（11.2MB）"},
+                    {"value": "dpdfnet8", "label": "DPDFNet 8（13.9MB，质量最好）"},
                 ],
             },
             {

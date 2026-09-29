@@ -595,10 +595,9 @@
         "model_options": [
           "sense-voice-zh-en-ja-ko-yue",
           "sense-voice-funasr-nano",
-          "paraformer-zh",
-          "paraformer-zh-small",
           "dolphin-base-multi-lang",
-          "whisper-small"
+          "whisper-small",
+          "fire-red-asr-large-zh_en"
         ],
         "language": "auto",
         "voice_options": [

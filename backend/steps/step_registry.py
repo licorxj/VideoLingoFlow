@@ -91,6 +91,7 @@ from backend.steps.passthrough_step import PassthroughStep
 from backend.steps.s_archive import S_ArchiveArtifacts
 from backend.steps.s_ai_punctuate import S_AiPunctuate
 from backend.steps.s_ai_subtitle_correct import S_AiSubtitleCorrect
+from backend.steps.s_homophone_fix import SHomophoneFix
 from backend.steps.s_text_input import StepTextInput
 from backend.steps.s_file_load import StepFileLoad
 from backend.steps.s_image_mask import S_ImageMask
@@ -203,6 +204,8 @@ _STEPS = {
     "vocal_separation": StepVocalSeparation(),
     "s19_audio_enhance": S19AudioEnhance(),
     "audio_enhance": S19AudioEnhance(),
+    "s_homophone_fix": SHomophoneFix(),
+    "homophone_fix": SHomophoneFix(),
     "s_llm_request": S_LLMRequest(),
     "llm_request": S_LLMRequest(),
     "s_http_request": S_HttpRequest(),

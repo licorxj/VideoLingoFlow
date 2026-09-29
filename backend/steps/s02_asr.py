@@ -51,6 +51,7 @@ _ASR_PARAM_KEYS = {
     "vad_max_segment_time", "sentence_timestamp",
     # sherpa-onnx params
     "model_file", "variant", "provider", "num_threads", "vad", "task",
+    "simplify_chinese",
     "vad_threshold", "vad_min_silence_duration", "vad_min_speech_duration",
     "vad_max_speech_duration",
 }

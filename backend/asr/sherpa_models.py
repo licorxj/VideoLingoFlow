@@ -10,6 +10,7 @@
 下载带断点续传（``.part`` 续传）与进度回调，失败不留半成品。
 """
 import os
+import shutil
 import sys
 import time
 import urllib.request
@@ -63,27 +64,6 @@ MODEL_REGISTRY: Dict[str, dict] = {
         "sample_rate": 16000,
         "feature_dim": 80,
     },
-    "paraformer-zh": {
-        "name": "Paraformer 中文(大, 字级时间戳)",
-        "repo": "csukuangfj/sherpa-onnx-paraformer-zh-2024-03-09",
-        "kind": "paraformer",
-        "weights": {
-            "int8": {"model": "model.int8.onnx"},
-            "fp32": {"model": "model.onnx"},
-        },
-        "languages": ["zh"],
-        "sample_rate": 16000,
-        "feature_dim": 80,
-    },
-    "paraformer-zh-small": {
-        "name": "Paraformer 中文(小, 字级时间戳)",
-        "repo": "csukuangfj/sherpa-onnx-paraformer-zh-small-2024-03-09",
-        "kind": "paraformer",
-        "weights": {"int8": {"model": "model.int8.onnx"}},
-        "languages": ["zh"],
-        "sample_rate": 16000,
-        "feature_dim": 80,
-    },
     "dolphin-base-multi-lang": {
         "name": "Dolphin Base (多语种 CTC, 轻量)",
         "repo": "csukuangfj/sherpa-onnx-dolphin-base-ctc-multi-lang-int8-2025-04-02",
@@ -93,11 +73,33 @@ MODEL_REGISTRY: Dict[str, dict] = {
         "sample_rate": 16000,
         "feature_dim": 80,
     },
+    "fire-red-asr-large-zh_en": {
+        "name": "FireRedASR Large (中文最强, 1.66GB)",
+        "kind": "fire_red_asr",
+        # 走 GitHub release 归档：hf-mirror 对 GB 级 LFS 文件限速严重（实测 60KB/s
+        # vs GitHub 直连 3MB/s），归档内含 int8 encoder/decoder 与词表。
+        "archive": {
+            "url": f"{_GH_RELEASE}/sherpa-onnx-fire-red-asr-large-zh_en-2025-02-16.tar.bz2",
+            "members": {
+                "encoder": "encoder.int8.onnx",
+                "decoder": "decoder.int8.onnx",
+                "tokens": "tokens.txt",
+            },
+        },
+        "languages": ["zh", "en"],
+        "sample_rate": 16000,
+        "feature_dim": 80,
+        # 体积大：仅在用户显式选择时才下载（不做默认/预热下载）
+        "optional": True,
+        "size_hint": "约 1.66GB（归档 1.4GB，下载后解压）",
+    },
     "whisper-small": {
         "name": "Whisper Small (多语种, 支持直接翻译成英文)",
         "repo": "csukuangfj/sherpa-onnx-whisper-small",
         "kind": "whisper",
         "tokens": "small-tokens.txt",
+        # 官方导出未含 cross-attention，无法产出 token 级时间戳
+        "token_timestamps": False,
         "weights": {
             "int8": {"encoder": "small-encoder.int8.onnx",
                      "decoder": "small-decoder.int8.onnx"},
@@ -146,14 +148,11 @@ def _emit(callback: Optional[Callable], percent: int, message: str) -> None:
             pass
 
 
-def _download(url: str, dest: str, callback: Optional[Callable] = None,
-              label: str = "") -> str:
-    """流式下载到 dest（先写 .part）。支持续传；返回最终路径。"""
-    os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
-    part = dest + ".part"
-    resume = 0
-    if os.path.exists(part):
-        resume = os.path.getsize(part)
+def _download_once(url: str, dest: str, part: str,
+                   callback: Optional[Callable] = None,
+                   label: str = "", timeout: float = 180) -> str:
+    """单次下载尝试（内部使用，由 _download 负责重试）。"""
+    resume = os.path.getsize(part) if os.path.exists(part) else 0
 
     # 部分镜像/CDN 会拒绝无 User-Agent 的请求（实测 hf-mirror 返回 403）
     headers = {"User-Agent": "VideoLingoFlow/sherpa-onnx-downloader"}
@@ -162,13 +161,16 @@ def _download(url: str, dest: str, callback: Optional[Callable] = None,
     req = urllib.request.Request(url, headers=headers)
 
     try:
-        resp = urllib.request.urlopen(req, timeout=60)
-    except urllib.error.HTTPError as exc:  # noqa: F821
+        resp = urllib.request.urlopen(req, timeout=timeout)
+    except urllib.error.HTTPError as exc:
         # 服务器不支持续传时从头重下
         if resume > 0 and exc.code in (416, 501):
             resume = 0
-            os.remove(part)
-            resp = urllib.request.urlopen(urllib.request.Request(url), timeout=60)
+            if os.path.exists(part):
+                os.remove(part)
+            resp = urllib.request.urlopen(
+                urllib.request.Request(url, headers={"User-Agent": headers["User-Agent"]}),
+                timeout=timeout)
         else:
             raise
 
@@ -199,9 +201,39 @@ def _download(url: str, dest: str, callback: Optional[Callable] = None,
             resp.close()
         except Exception:
             pass
+    return part
 
-    if os.path.getsize(part) == 0:
-        os.remove(part)
+
+def _download(url: str, dest: str, callback: Optional[Callable] = None,
+              label: str = "", retries: int = 4, timeout: float = 180) -> str:
+    """流式下载到 dest（先写 .part），支持续传与自动重试，返回最终路径。
+
+    慢速镜像（hf-mirror 对 LFS 大文件限速）常在读取阶段触发 socket 超时，
+    因此读超时放宽到 180s，并在中断后利用 .part 续传重试。
+    """
+    os.makedirs(os.path.dirname(dest) or ".", exist_ok=True)
+    part = dest + ".part"
+    last_err: Optional[Exception] = None
+
+    for attempt in range(max(1, retries)):
+        try:
+            _download_once(url, dest, part, callback, label, timeout)
+            last_err = None
+            break
+        except Exception as exc:  # noqa: BLE001 网络类异常统一重试
+            last_err = exc
+            got = os.path.getsize(part) / 1048576 if os.path.exists(part) else 0
+            if attempt + 1 < retries:
+                _emit(callback, 0,
+                      f"下载中断（已 {got:.1f}MB），重试 {attempt + 2}/{retries} ...")
+                time.sleep(1.5)
+
+    if last_err is not None:
+        raise RuntimeError(f"下载失败: {url} ({last_err})")
+
+    if not os.path.exists(part) or os.path.getsize(part) == 0:
+        if os.path.exists(part):
+            os.remove(part)
         raise RuntimeError(f"下载失败（空文件）: {url}")
     os.replace(part, dest)
     return dest
@@ -259,6 +291,16 @@ def ensure_model(model_id: str, model_file: Optional[str] = None,
     os.makedirs(model_dir, exist_ok=True)
 
     lo, hi = progress_range
+    # 大体积"可选"模型：首次使用前明确提示体积（不做默认/预热下载）
+    if entry.get("optional"):
+        pending = [
+            f for f in list(weights.values()) + [tokens_name]
+            if not (os.path.exists(os.path.join(model_dir, f))
+                    and os.path.getsize(os.path.join(model_dir, f)) > 0)
+        ]
+        if pending:
+            _emit(callback, int(lo),
+                  f"首次使用 {model_id}，需下载 {entry.get('size_hint', '较大体积')}（{len(pending)} 个文件）")
     # 进度按"权重文件 + 词表"平均切分
     slots = list(weights.items()) + [("__tokens__", tokens_name)]
     n = len(slots)
@@ -274,6 +316,27 @@ def ensure_model(model_id: str, model_file: Optional[str] = None,
         "model_file": next(iter(weights.values()), ""),
         "supports_translate": bool(entry.get("supports_translate", False)),
     }
+
+    # 归档源（GB 级大模型走 GitHub release 的 tar.bz2，比 hf-mirror 快很多）
+    archive = entry.get("archive")
+    if archive:
+        members: Dict[str, str] = dict(archive.get("members") or {})
+        archive_missing = {
+            r: s for r, s in members.items()
+            if not (os.path.exists(os.path.join(model_dir, os.path.basename(s)))
+                    and os.path.getsize(os.path.join(model_dir, os.path.basename(s))) > 0)
+        }
+        if archive_missing:
+            extracted = _download_archive(archive, model_dir, callback, (lo, hi))
+            out.update(extracted)
+        else:
+            for role, suffix in members.items():
+                out[role] = os.path.join(model_dir, os.path.basename(suffix))
+        still_missing = [r for r in members if not out.get(r)]
+        if still_missing:
+            raise RuntimeError(f"模型文件不完整: {model_dir} (缺失: {still_missing})")
+        out.setdefault("model", "")
+        return out
 
     for i, (role, fname) in enumerate(slots):
         dest = os.path.join(model_dir, fname)
@@ -323,12 +386,14 @@ def is_cached(model_id: str, model_file: Optional[str] = None) -> bool:
     entry = MODEL_REGISTRY.get(model_id)
     if not entry:
         return False
-    weights = _resolve_weights(entry, model_file=model_file)
+    members = (entry.get("archive") or {}).get("members")
+    if members:
+        files = [os.path.basename(s) for s in members.values()]
+    else:
+        files = list(_resolve_weights(entry, model_file=model_file).values())
+        files.append(entry.get("tokens", "tokens.txt"))
     model_dir = os.path.join(SHERPA_MODEL_DIR, model_id)
-    tokens_name = entry.get("tokens", "tokens.txt")
-    if not os.path.exists(os.path.join(model_dir, tokens_name)):
-        return False
-    for fname in weights.values():
+    for fname in files:
         if not (os.path.exists(os.path.join(model_dir, fname))
                 and os.path.getsize(os.path.join(model_dir, fname)) > 0):
             return False
@@ -348,6 +413,53 @@ PUNCT_FILE = "model.onnx"
 SPEAKER_SEG_URL = f"{_GH_SPEAKER_SEG}/sherpa-onnx-pyannote-segmentation-3-0.tar.bz2"
 SPEAKER_SEG_MEMBER = "model.int8.onnx"
 SPEAKER_EMB_URL = f"{_GH_SPEAKER_EMB}/3dspeaker_speech_eres2net_base_sv_zh-cn_3dspeaker_16k.onnx"
+
+
+def _download_archive(archive: dict, model_dir: str,
+                      callback: Optional[Callable] = None,
+                      progress_range: tuple = (0, 100)) -> Dict[str, str]:
+    """从 tar.bz2 归档提取所需成员（用于 GitHub release 上的大模型）。
+
+    archive = {"url": <tar.bz2 地址>, "members": {role: "成员名后缀"}}
+    先流式下载归档到 `_archive.tar.bz2`（.part 续传，避免占内存），
+    解压所需成员后删除归档。返回 {role: 本地路径}。
+
+    实测：GitHub release 直连约 3MB/s，明显快于 hf-mirror 对 GB 级 LFS
+    文件的限速，故大模型优先走归档源。
+    """
+    import tarfile
+
+    members: Dict[str, str] = dict(archive.get("members") or {})
+    lo, hi = progress_range
+    tmp = os.path.join(model_dir, "_archive.tar.bz2")
+
+    _download(_gh_url(archive["url"]), tmp,
+              lambda p, m: _emit(callback, int(lo + (hi - lo) * 0.85 * p / 100), m),
+              label=os.path.basename(archive["url"]))
+
+    out: Dict[str, str] = {}
+    try:
+        with tarfile.open(tmp, "r:bz2") as tf:
+            files = {m.name: m for m in tf.getmembers() if m.isfile()}
+            for i, (role, suffix) in enumerate(members.items()):
+                name = next((n for n in files if n.endswith(suffix)), None)
+                if name is None:
+                    raise RuntimeError(f"归档中未找到 {suffix}: {archive['url']}")
+                dest = os.path.join(model_dir, os.path.basename(name))
+                src = tf.extractfile(files[name])
+                with open(dest + ".part", "wb") as f:
+                    shutil.copyfileobj(src, f, 1024 * 512)
+                os.replace(dest + ".part", dest)
+                out[role] = dest
+                _emit(callback,
+                      int(lo + (hi - lo) * 0.85 + (hi - lo) * 0.15 * (i + 1) / max(len(members), 1)),
+                      f"解压 {os.path.basename(name)}")
+    finally:
+        try:
+            os.remove(tmp)
+        except OSError:
+            pass
+    return out
 
 
 def _download_tar_member(url: str, dest: str, member_hint: str,
@@ -431,6 +543,106 @@ def ensure_speaker_models(callback: Optional[Callable] = None,
                       callback, int(_lo + (_hi - _lo) * p / 100), m),
                   label="声纹模型 3dspeaker")
     return {"segmentation": seg_path, "embedding": emb_path}
+
+
+# ---------------------------------------------------------------------------
+# 语音降噪 / 音源分离模型
+# ---------------------------------------------------------------------------
+_GH_ENHANCE = "https://github.com/k2-fsa/sherpa-onnx/releases/download/speech-enhancement-models"
+
+# 降噪（GTCRN 0.5MB 起；DPDFNet 8~14MB，质量更高）
+DENOISE_REGISTRY: Dict[str, dict] = {
+    "gtcrn_simple": {
+        "file": "gtcrn_simple.onnx",
+        "url": f"{_GH_ENHANCE}/gtcrn_simple.onnx",
+        "kind": "gtcrn",
+        "name": "GTCRN (轻量 0.5MB)",
+    },
+    "dpdfnet_baseline": {
+        "file": "dpdfnet_baseline.onnx",
+        "url": f"{_GH_ENHANCE}/dpdfnet_baseline.onnx",
+        "kind": "dpdfnet",
+        "name": "DPDFNet Baseline (8.4MB)",
+    },
+    "dpdfnet2": {
+        "file": "dpdfnet2.onnx",
+        "url": f"{_GH_ENHANCE}/dpdfnet2.onnx",
+        "kind": "dpdfnet",
+        "name": "DPDFNet 2 (9.8MB, 质量更好)",
+    },
+    "dpdfnet4": {
+        "file": "dpdfnet4.onnx",
+        "url": f"{_GH_ENHANCE}/dpdfnet4.onnx",
+        "kind": "dpdfnet",
+        "name": "DPDFNet 4 (11.2MB)",
+    },
+    "dpdfnet8": {
+        "file": "dpdfnet8.onnx",
+        "url": f"{_GH_ENHANCE}/dpdfnet8.onnx",
+        "kind": "dpdfnet",
+        "name": "DPDFNet 8 (13.9MB, 质量最好)",
+    },
+}
+DEFAULT_DENOISE_MODEL = "gtcrn_simple"
+
+# 音源分离（Spleeter 2stems：人声 + 伴奏，两个 onnx 分别推理）
+SEPARATION_REGISTRY: Dict[str, dict] = {
+    "spleeter-2stems": {
+        "repo": "csukuangfj/sherpa-onnx-spleeter-2stems-int8",
+        "files": {"vocals": "vocals.int8.onnx",
+                  "accompaniment": "accompaniment.int8.onnx"},
+        "name": "Spleeter 2stems (人声/伴奏, int8 ~46MB)",
+    },
+}
+DEFAULT_SEPARATION_MODEL = "spleeter-2stems"
+
+
+def ensure_denoise_model(model: str = DEFAULT_DENOISE_MODEL,
+                         callback: Optional[Callable] = None,
+                         progress_range: tuple = (0, 100)) -> dict:
+    """确保降噪模型就绪，返回 {"path", "kind", "file"}。"""
+    entry = DENOISE_REGISTRY.get(model)
+    if not entry:
+        raise ValueError(
+            f"未知的降噪模型: {model}，可选: {', '.join(DENOISE_REGISTRY)}")
+    dest = os.path.join(SHERPA_MODEL_DIR, "denoise", entry["file"])
+    if not (os.path.exists(dest) and os.path.getsize(dest) > 0):
+        lo, hi = progress_range
+        _download(_gh_url(entry["url"]), dest,
+                  lambda p, m, _lo=lo, _hi=hi: _emit(
+                      callback, int(_lo + (_hi - _lo) * p / 100), m),
+                  label=entry["file"])
+    return {"path": dest, "kind": entry["kind"], "file": entry["file"],
+            "model_id": model}
+
+
+def ensure_separation_model(model: str = DEFAULT_SEPARATION_MODEL,
+                            callback: Optional[Callable] = None,
+                            progress_range: tuple = (0, 100)) -> Dict[str, str]:
+    """确保音源分离模型就绪，返回 {角色: 本地路径}（如 vocals / accompaniment）。"""
+    entry = SEPARATION_REGISTRY.get(model)
+    if not entry:
+        raise ValueError(
+            f"未知的分离模型: {model}，可选: {', '.join(SEPARATION_REGISTRY)}")
+    model_dir = os.path.join(SHERPA_MODEL_DIR, "separation", model)
+    os.makedirs(model_dir, exist_ok=True)
+
+    lo, hi = progress_range
+    files = list(entry["files"].items())
+    out: Dict[str, str] = {}
+    for i, (role, fname) in enumerate(files):
+        dest = os.path.join(model_dir, fname)
+        if not (os.path.exists(dest) and os.path.getsize(dest) > 0):
+            sub_lo = lo + (hi - lo) * i / max(len(files), 1)
+            sub_hi = lo + (hi - lo) * (i + 1) / max(len(files), 1)
+            _emit(callback, int(sub_lo), f"准备下载 {fname} ...")
+            _download(_hf_url(entry["repo"], fname), dest,
+                      lambda p, m, _l=sub_lo, _h=sub_hi: _emit(
+                          callback, int(_l + (_h - _l) * p / 100), m),
+                      label=fname)
+        out[role] = dest
+    out["model_id"] = model
+    return out
 
 
 if __name__ == "__main__":

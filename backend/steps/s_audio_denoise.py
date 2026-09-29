@@ -90,6 +90,22 @@ class StepAudioDenoise(BaseStep):
         if callback:
             callback(10, f"Running denoise via {method}...")
 
+        # --- sherpa-onnx 降噪（GTCRN / DPDFNet，人声保真更好）---
+        if method == "sherpa":
+            self._run_sherpa_denoise(
+                audio_path, output_path, target_fmt, node_config,
+                callback, cancel_callback,
+            )
+            if callback:
+                callback(100, "Audio denoise completed")
+            return {
+                "artifacts": [f"output/denoised_audio{node_suffix}.{target_fmt}"],
+                "outputs": {
+                    "audio": f"output/denoised_audio{node_suffix}.{target_fmt}",
+                },
+                "output_path": output_path,
+            }
+
         # --- build and execute ffmpeg command ---
         cmd = self._build_ffmpeg_cmd(
             audio_path, output_path, method, noise_level,
@@ -174,6 +190,42 @@ class StepAudioDenoise(BaseStep):
         if ext in ("wav", "mp3", "flac", "m4a", "ogg", "opus"):
             return ext
         return ""
+
+    def _run_sherpa_denoise(self, audio_path: str, output_path: str, target_fmt: str,
+                            node_config: dict, callback, cancel_callback) -> None:
+        """sherpa-onnx 降噪分支：模型输出 wav，非 wav 目标格式再转码。"""
+        import tempfile
+        from backend.asr.sherpa_denoise import denoise_audio_file
+
+        model = str(node_config.get("sherpa_model", "gtcrn_simple") or "gtcrn_simple").strip()
+        if callback:
+            callback(15, f"Running sherpa denoise ({model})...")
+
+        if target_fmt == "wav":
+            denoise_audio_file(audio_path, output_path, model=model,
+                               callback=callback, progress_range=(15, 95))
+        else:
+            tmp_wav = os.path.join(tempfile.mkdtemp(prefix="sherpa_dn_"), "denoised.wav")
+            try:
+                denoise_audio_file(audio_path, tmp_wav, model=model,
+                                   callback=callback, progress_range=(15, 85))
+                self._transcode(tmp_wav, output_path, target_fmt)
+            finally:
+                import shutil as _shutil
+                _shutil.rmtree(os.path.dirname(tmp_wav), ignore_errors=True)
+
+        if cancel_callback and cancel_callback():
+            from backend.control_plane.runtime import TaskCancelledError
+            raise TaskCancelledError("Cancelled by user")
+
+    def _transcode(self, src: str, dst: str, target_fmt: str) -> None:
+        """把降噪产物转成目标容器格式（sherpa 只输出 wav）。"""
+        from backend.utils.ffmpeg_guard import apply_resource_args
+        encode_args = self.FORMAT_ENCODE_ARGS.get(target_fmt, ["-acodec", "pcm_s16le"])
+        cmd = apply_resource_args(["ffmpeg", "-y", "-i", src, *encode_args, dst])
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        if proc.returncode != 0:
+            raise Exception(f"转码失败 ({target_fmt}): {proc.stderr[-300:]}")
 
     def _build_ffmpeg_cmd(
         self,
