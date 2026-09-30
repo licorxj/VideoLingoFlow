@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { ttsInterfacesApi, TTSInterface } from "@/api/ttsInterfaces";
+import { ttsInterfacesApi, TTSInterface, inferTTSInterfaceModes } from "@/api/ttsInterfaces";
 import { cn } from "@/lib/utils";
 import { X, Play, Upload, FileAudio } from "lucide-react";
 
@@ -20,6 +20,7 @@ export default function TTSInterfaceTestModal({ iface, onClose }: Props) {
   const [mode, setMode] = useState("");
   const [speed, setSpeed] = useState<number | "">("");
   const [voice, setVoice] = useState("");
+  const [model, setModel] = useState("");
   const [refAudio, setRefAudio] = useState("");
   const [voiceDesign, setVoiceDesign] = useState("");
   const [controllableClone, setControllableClone] = useState("");
@@ -31,8 +32,8 @@ export default function TTSInterfaceTestModal({ iface, onClose }: Props) {
   const refInputRef = useRef<HTMLInputElement>(null);
 
   const cfg = iface.config || {}; const voiceList = cfg.voice_options || [];
-  const modes = cfg.modes || {};
-  const enabledModes = Object.entries(modes).filter(([, v]) => v.enabled).map(([k]) => k);
+  const modelList = cfg.model_options || [];
+  const enabledModes = inferTTSInterfaceModes(cfg);
   const needsRefAudio = mode === "clone" || mode === "controllable_clone";
   const needsVoiceDesign = mode === "voice_design";
   const needsControllableClone = mode === "controllable_clone";
@@ -55,6 +56,7 @@ export default function TTSInterfaceTestModal({ iface, onClose }: Props) {
         mode: mode || undefined,
         speed: speed !== "" ? speed : undefined,
         voice: voice || undefined,
+        model: model || undefined,
         ref_audio: refAudio || undefined,
         voice_design: voiceDesign || undefined,
         controllable_clone: controllableClone || undefined,
@@ -124,6 +126,17 @@ export default function TTSInterfaceTestModal({ iface, onClose }: Props) {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {/* Model */}
+          {modelList.length > 0 && (
+            <div>
+              <label className={labelCls}>模型</label>
+              <select className={inputCls + " mt-2"} value={model} onChange={(e) => setModel(e.target.value)}>
+                <option value="">默认模型{cfg.model ? `（${cfg.model}）` : ""}</option>
+                {modelList.map((m) => <option key={m} value={m}>{m}</option>)}
+              </select>
             </div>
           )}
 

@@ -16,6 +16,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   onSelect: (path: string) => void;
+  taskId?: string;
 }
 
 const RECENT_FOLDERS_KEY = "audioSelector.recentFolders";
@@ -35,7 +36,7 @@ function saveRecentFolder(path: string): string[] {
   return trimmed;
 }
 
-export default function AudioSelectorDialog({ open, onClose, onSelect }: Props) {
+export default function AudioSelectorDialog({ open, onClose, onSelect, taskId }: Props) {
   const [folderPath, setFolderPath] = useState("");
   const [recursive, setRecursive] = useState(false);
   const [recentFolders, setRecentFolders] = useState<string[]>(loadRecentFolders);
@@ -51,6 +52,7 @@ export default function AudioSelectorDialog({ open, onClose, onSelect }: Props) 
   const [trimmedPlaying, setTrimmedPlaying] = useState(false);
   const [trimmedCurrentTime, setTrimmedCurrentTime] = useState(0);
   const [trimmedDuration, setTrimmedDuration] = useState(0);
+  const [loadingTaskDir, setLoadingTaskDir] = useState(false);
 
   const waveformRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WaveSurfer | null>(null);
@@ -169,6 +171,23 @@ export default function AudioSelectorDialog({ open, onClose, onSelect }: Props) 
     scanFolder(path, recursive);
   };
 
+  // 快捷选择当前任务文件夹
+  const selectTaskFolder = async () => {
+    if (!taskId) return;
+    setLoadingTaskDir(true);
+    try {
+      const res = await axios.get("/api/files/task-dir", { params: { task_id: taskId } });
+      if (res.data.path) {
+        setFolderPath(res.data.path);
+        setRecentFolders(saveRecentFolder(res.data.path));
+        scanFolder(res.data.path, recursive);
+      }
+    } catch {
+      // 获取失败时保持现状
+    }
+    setLoadingTaskDir(false);
+  };
+
   // 移除最近文件夹
   const removeRecentFolder = (path: string) => {
     const list = recentFolders.filter((p) => p !== path);
@@ -268,10 +287,23 @@ export default function AudioSelectorDialog({ open, onClose, onSelect }: Props) 
       <div className="bg-card border border-border/50 rounded-xl shadow-2xl w-[900px] max-h-[85vh] flex flex-col" onMouseDown={(e) => e.stopPropagation()}>
         {/* 头部 */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-border/30">
-          <h3 className="text-sm font-semibold flex items-center gap-2">
-            <Music className="w-4 h-4 text-primary" />
-            音频选择器
-          </h3>
+          <div className="flex items-center gap-2.5">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <Music className="w-4 h-4 text-primary" />
+              音频选择器
+            </h3>
+            {taskId && (
+              <button
+                onClick={selectTaskFolder}
+                disabled={loadingTaskDir}
+                title="快速定位到当前任务文件夹并扫描音频"
+                className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-md border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/50 transition-all disabled:opacity-50"
+              >
+                {loadingTaskDir ? <Loader2 className="w-3 h-3 animate-spin" /> : <FolderOpen className="w-3 h-3" />}
+                选择当前任务文件夹
+              </button>
+            )}
+          </div>
           <button onClick={onClose} className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/60 transition-colors">
             <X className="w-4 h-4" />
           </button>

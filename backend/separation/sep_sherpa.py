@@ -21,8 +21,20 @@ SAMPLE_RATE = 44100
 class SherpaSpleeterSeparation(SeparationBase):
     """sherpa-onnx Spleeter 2stems 分离引擎。"""
 
-    def __init__(self, **kwargs):
+    def __init__(self, iface_id: str = "sherpa_spleeter", **kwargs):
+        self.iface_id = iface_id or "sherpa_spleeter"
         self.options = kwargs or {}
+        # 接口配置里的默认值（前端未传时使用）
+        self._config: dict = {}
+        try:
+            from backend.separation.separation_interface_manager import (
+                get_separation_interface_manager,
+            )
+            mgr = get_separation_interface_manager()
+            iface = mgr.get(self.iface_id) or {}
+            self._config = iface.get("config", {}) or {}
+        except Exception:
+            self._config = {}
 
     # ------------------------------------------------------------------
     def _load_stereo(self, input_path: str) -> tuple:
@@ -88,10 +100,11 @@ class SherpaSpleeterSeparation(SeparationBase):
                 except Exception:
                     pass
 
-        model = str(kwargs.get("model") or sherpa_models.DEFAULT_SEPARATION_MODEL).strip()
-        fmt = str(kwargs.get("format") or "wav").strip().lower()
-        num_threads = int(kwargs.get("num_threads") or 2)
-        provider = str(kwargs.get("provider") or "cpu")
+        model = str(kwargs.get("model") or self._config.get("model")
+                    or sherpa_models.DEFAULT_SEPARATION_MODEL).strip()
+        fmt = str(kwargs.get("format") or self._config.get("format") or "wav").strip().lower()
+        num_threads = int(kwargs.get("num_threads") or self._config.get("num_threads") or 2)
+        provider = str(kwargs.get("provider") or self._config.get("provider") or "cpu")
 
         _cb(5, "准备 sherpa Spleeter 模型 ...")
         info = sherpa_models.ensure_separation_model(

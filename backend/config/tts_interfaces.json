@@ -1187,7 +1187,7 @@
         ],
         "sdk_extra_args": {
           "api_url": "http://127.0.0.1:5199",
-          "poll_interval": 2.0
+          "poll_interval": 2
         },
         "custom_params": [
           {

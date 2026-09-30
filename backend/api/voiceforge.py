@@ -16,7 +16,7 @@ from urllib.parse import quote
 
 from backend.llm.llm_client import LLMClient
 from backend.tts.tts_factory import get_tts_engine
-from backend.tts.tts_interface_manager import get_tts_interface_manager
+from backend.tts.tts_interface_manager import get_tts_interface_manager, infer_tts_interface_modes
 from backend.voiceforge import asset_service
 from backend.voiceforge.database import database_path, initialize_database, load_config, row_to_dict, session, storage_root
 from backend.voiceforge.prompting import (
@@ -404,8 +404,7 @@ def _emotion_suggestions(value, requested):
 def _emotion_interface(interface_id):
     for item in get_tts_interface_manager().get_enabled():
         if item.get("id") == interface_id:
-            modes = item.get("config", {}).get("modes", {})
-            if modes.get("controllable_clone", {}).get("enabled"):
+            if "controllable_clone" in infer_tts_interface_modes(item):
                 return item
             break
     raise HTTPException(400, "请选择支持可控克隆的已启用 TTS 接口")
@@ -1393,7 +1392,17 @@ def tts_capabilities():
     interfaces = []
     for item in manager.get_enabled():
         config = item.get("config", {})
-        interfaces.append({"id": item.get("id"), "name": item.get("name"), "type": item.get("type"), "modes": config.get("modes", {}), "voice_options": config.get("voice_options", []), "default_voice": config.get("voice")})
+        interfaces.append({
+            "id": item.get("id"),
+            "name": item.get("name"),
+            "type": item.get("type"),
+            "modes": config.get("modes", {}),
+            "supported_modes": infer_tts_interface_modes(item),
+            "voice_options": config.get("voice_options", []),
+            "model_options": config.get("model_options", []),
+            "default_voice": config.get("voice"),
+            "default_model": config.get("model"),
+        })
     return {"capabilities": interfaces}
 
 

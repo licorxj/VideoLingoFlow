@@ -96,9 +96,12 @@ export default function DubCheckDialog({ open, taskId, dubPath, onClose }: Props
   const [interfaces, setInterfaces] = useState<TtsInterface[]>([]);
   const [modes, setModes] = useState<string[]>([]);
   const [voices, setVoices] = useState<string[]>([]);
+  const [voiceOptions, setVoiceOptions] = useState<string[]>([]);
+  const [modelOptions, setModelOptions] = useState<string[]>([]);
   const [engine, setEngine] = useState("");
   const [mode, setMode] = useState("");
   const [voice, setVoice] = useState("");
+  const [model, setModel] = useState("");
   const [refAudio, setRefAudio] = useState("");
   const [batchSpeed, setBatchSpeed] = useState(1);
   const [showTts, setShowTts] = useState(true);
@@ -162,17 +165,28 @@ export default function DubCheckDialog({ open, taskId, dubPath, onClose }: Props
       .catch(() => setInterfaces([]));
   }, [open, load]);
 
-  // 切换引擎：拉取该引擎支持的模式与音色
+  // 切换引擎：拉取该引擎支持的模式、模型与音色
   useEffect(() => {
     if (!engine) {
       setModes([]);
       setVoices([]);
+      setVoiceOptions([]);
+      setModelOptions([]);
       return;
     }
     client
       .get(`/api/tts-interfaces/capabilities/${encodeURIComponent(engine)}`)
-      .then((res) => setModes(res.data?.supported_modes || []))
-      .catch(() => setModes([]));
+      .then((res) => {
+        const data = res.data || {};
+        setModes(data.supported_modes || []);
+        setVoiceOptions(data.voice_options || []);
+        setModelOptions(data.model_options || []);
+      })
+      .catch(() => {
+        setModes([]);
+        setVoiceOptions([]);
+        setModelOptions([]);
+      });
     client
       .get(`/api/tts-interfaces/${encodeURIComponent(engine)}/voices`)
       .then((res) => setVoices(res.data?.voices || []))
@@ -419,6 +433,7 @@ export default function DubCheckDialog({ open, taskId, dubPath, onClose }: Props
         engine,
         mode,
         voice,
+        model,
         ref_audio: refAudio,
       });
       const data = res.data || {};
@@ -523,7 +538,7 @@ export default function DubCheckDialog({ open, taskId, dubPath, onClose }: Props
               <span className="text-[15px] text-muted-foreground">TTS 接口</span>
               <select
                 value={engine}
-                onChange={(e) => { setEngine(e.target.value); setMode(""); setVoice(""); }}
+                onChange={(e) => { setEngine(e.target.value); setMode(""); setVoice(""); setModel(""); }}
                 className="h-9 min-w-[150px] rounded-lg border border-border/70 bg-background px-2.5 text-[16px] shadow-sm outline-none focus:border-primary/60"
               >
                 <option value="">未选择（沿用任务配置）</option>
@@ -545,18 +560,35 @@ export default function DubCheckDialog({ open, taskId, dubPath, onClose }: Props
                 ))}
               </select>
             </label>
+            {mode === "preset_voice" && (
+              <label className="flex flex-col gap-1">
+                <span className="text-[15px] text-muted-foreground">音色</span>
+                <select
+                  value={voice}
+                  onChange={(e) => setVoice(e.target.value)}
+                  className="h-9 min-w-[150px] rounded-lg border border-border/70 bg-background px-2.5 text-[16px] shadow-sm outline-none focus:border-primary/60"
+                >
+                  <option value="">默认</option>
+                  {Array.from(new Set([...voices, ...voiceOptions])).map((v) => (
+                    <option key={v} value={v}>{v}</option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="flex flex-col gap-1">
-              <span className="text-[15px] text-muted-foreground">音色</span>
-              <select
-                value={voice}
-                onChange={(e) => setVoice(e.target.value)}
+              <span className="text-[15px] text-muted-foreground">模型</span>
+              <input
+                list="tts-model-options"
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="默认"
                 className="h-9 min-w-[150px] rounded-lg border border-border/70 bg-background px-2.5 text-[16px] shadow-sm outline-none focus:border-primary/60"
-              >
-                <option value="">默认</option>
-                {voices.map((v) => (
-                  <option key={v} value={v}>{v}</option>
-                ))}
-              </select>
+              />
+              {modelOptions.length > 0 && (
+                <datalist id="tts-model-options">
+                  {modelOptions.map((m) => <option key={m} value={m} />)}
+                </datalist>
+              )}
             </label>
             <div className="flex flex-col gap-1">
               <span className="text-[15px] text-muted-foreground">全局参考音频</span>
@@ -975,6 +1007,7 @@ export default function DubCheckDialog({ open, taskId, dubPath, onClose }: Props
         <AudioSelectorDialog
           open
           onClose={() => setRefPickerIndex(null)}
+          taskId={taskId}
           onSelect={(path) => {
             const idx = refPickerIndex;
             setRefPickerIndex(null);
@@ -1007,6 +1040,7 @@ export default function DubCheckDialog({ open, taskId, dubPath, onClose }: Props
         <AudioSelectorDialog
           open
           onClose={() => setShowGlobalRefPicker(false)}
+          taskId={taskId}
           onSelect={(path) => {
             setRefAudio(path);
             setShowGlobalRefPicker(false);

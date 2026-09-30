@@ -1285,6 +1285,7 @@ BUILTIN_NODE_TYPES = [
         "defaultConfig": {
             "tts_mode": ["preset_voice"],
             "tts_engine": "",
+            "tts_model": "",
             "clone_source": "fixed",
             "cc_colloquial_desc": "",
             "ref_audio_path": "",
@@ -1316,6 +1317,7 @@ BUILTIN_NODE_TYPES = [
                 {"value": "voice_design", "label": "音色设计"},
             ]},
             {"key": "tts_engine", "label": "配音引擎", "type": "api-select", "dependsOn": "tts_mode", "apiEndpoint": "/api/tts-interfaces/by-mode/{tts_mode}", "placeholder": "跟随全局配置", "optionLabel": "name", "optionValue": "id"},
+            {"key": "tts_model", "label": "TTS 模型", "type": "api-select", "dependsOn": "tts_engine", "apiEndpoint": "/api/tts-interfaces/{tts_engine}/models-for-node", "placeholder": "跟随接口默认模型", "colSpan": "half"},
             {"key": "clone_source", "label": "克隆音频来源", "type": "select", "dependsOn": "tts_mode", "dependsAnyValues": ["clone", "controllable_clone"], "options": [
                 {"value": "fixed", "label": "固定克隆音频"},
                 {"value": "multi_role", "label": "多角色模式"},

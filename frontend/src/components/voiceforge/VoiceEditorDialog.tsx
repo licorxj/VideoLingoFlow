@@ -67,7 +67,9 @@ export function VoiceEditorDialog({ open, voice, initialMode = "preset_voice", c
   const [aiBusy, setAiBusy] = useState(false);
 
   const capability = capabilities.find((item) => item.id === interfaceId);
-  const enabledModes = Object.entries(capability?.modes || {}).filter(([, config]) => config.enabled).map(([value]) => value);
+  const enabledModes = capability?.supported_modes?.length
+    ? capability.supported_modes
+    : Object.entries(capability?.modes || {}).filter(([, config]) => config.enabled).map(([value]) => value);
   const cloneMode = mode === "clone" || mode === "controllable_clone";
   const attributeTags = [gender, age, pitchLabel, dialect].filter(Boolean);
 

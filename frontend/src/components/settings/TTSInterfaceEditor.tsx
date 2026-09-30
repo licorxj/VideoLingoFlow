@@ -220,8 +220,22 @@ export default function TTSInterfaceEditor({ iface, onSaved, onCancel }: Props) 
     setShowKeyPicker(null);
   };
 
-  const ucModel = (val: string) => uc("model", val);
   const ucVoice = (val: string) => uc("voice", val);
+
+  const addModel = () => {
+    if (!manualModel.trim()) return;
+    const newModels = [...modelList, manualModel.trim()];
+    setModelList(newModels);
+    uc("model_options", newModels);
+    setManualModel("");
+  };
+
+  const removeModel = (m: string) => {
+    const newModels = modelList.filter((x) => x !== m);
+    setModelList(newModels);
+    uc("model_options", newModels);
+    if (config.model === m) uc("model", "");
+  };
 
   const handleSave = async () => {
     if (!name.trim()) { alert("请填写接口名称"); return; }
@@ -339,29 +353,102 @@ export default function TTSInterfaceEditor({ iface, onSaved, onCancel }: Props) 
           </div>
         </div>
 
-        {/* Model & Voice Selection (Online) */}
+        {/* Model list & default model (all types, mirrors ASR factory) */}
+        <div className="rounded-2xl border border-border/50 bg-card/70 p-5 space-y-4">
+          <div>
+            <h4 className="text-sm font-semibold">模型</h4>
+            <p className="text-[11px] text-muted-foreground mt-0.5">管理本接口可用模型列表，并指定默认模型</p>
+          </div>
+
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1.5 block">默认模型</label>
+            <input className={inputCls} value={config.model || ""} onChange={(e) => uc("model", e.target.value)} placeholder="如 voxcpm / tts-1" />
+          </div>
+
+          {/* Per-mode default model */}
+          <div className="pt-4 border-t border-border/40 space-y-3">
+            <div>
+              <h5 className="text-xs font-semibold">各模式默认模型</h5>
+              <p className="text-[11px] text-muted-foreground mt-0.5">为克隆 / 可控克隆 / 设计 / 预置音色 分别指定默认模型，留空则使用上方接口默认模型</p>
+            </div>
+            {(["clone", "voice_design", "controllable_clone", "preset_voice"] as const).some((m) => config.modes?.[m]?.enabled) ? (
+              (["clone", "voice_design", "controllable_clone", "preset_voice"] as const).map((m) => {
+                if (!config.modes?.[m]?.enabled) return null;
+                const modeModel = config.modes?.[m]?.model || "";
+                const label = m === "clone" ? "声音克隆" : m === "voice_design" ? "声音设计" : m === "controllable_clone" ? "可控克隆" : "预置音色";
+                const opts = !modeModel || modelList.includes(modeModel) ? modelList : [modeModel, ...modelList];
+                return (
+                  <div key={m}>
+                    <label className="text-xs font-medium text-muted-foreground mb-1.5 block">{label} 默认模型</label>
+                    <input
+                      list={`mode-model-${m}`}
+                      className={inputCls}
+                      value={modeModel}
+                      onChange={(e) => updateMode(m, "model", e.target.value)}
+                      placeholder={`使用接口默认${config.model ? `（${config.model}）` : ""}`}
+                    />
+                    {opts.length > 0 && (
+                      <datalist id={`mode-model-${m}`}>
+                        {opts.map((o) => <option key={o} value={o} />)}
+                      </datalist>
+                    )}
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-[11px] text-muted-foreground">在「支持的模式」中启用模式后，可在此分别指定各模式的默认模型。</p>
+            )}
+          </div>
+
+          {type === "online" && (
+            <div className="flex gap-2">
+              <input className={inputCls + " flex-1"} value={config.model_list_url || ""} onChange={(e) => uc("model_list_url", e.target.value)} placeholder="模型列表 URL" />
+              <button onClick={() => fetchListData(config.model_list_url || "", "model")} className="px-3 py-2 text-xs font-medium border border-border/60 rounded-lg hover:bg-accent/60 transition-colors whitespace-nowrap">获取模型</button>
+            </div>
+          )}
+
+          {modelList.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {modelList.map((m) => (
+                <span key={m} className={cn("text-xs px-2.5 py-1 rounded-lg border cursor-pointer transition-colors", config.model === m ? "border-primary bg-primary/10 text-primary font-medium" : "border-border/40 bg-muted/30 text-muted-foreground hover:border-primary/40")} onClick={() => uc("model", m)}>
+                  {m}
+                </span>
+              ))}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <input className={inputCls + " flex-1"} value={manualModel} onChange={(e) => setManualModel(e.target.value)} placeholder="手动添加模型名称" onKeyDown={(e) => { if (e.key === "Enter") addModel(); }} />
+            <button onClick={addModel} className="px-3 py-1.5 text-xs font-medium border border-border/60 rounded-lg hover:bg-accent/60 transition-colors whitespace-nowrap">+ 添加</button>
+          </div>
+
+          {modelList.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {modelList.map((m) => (
+                <span key={m} className="text-xs px-2 py-1 rounded-md bg-muted/40 text-muted-foreground flex items-center gap-1">
+                  {m}
+                  <button onClick={() => removeModel(m)} className="text-red-400/60 hover:text-red-400">&times;</button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Voice (online) */}
         {type === "online" && (
           <div className="rounded-2xl border border-border/50 bg-card/70 p-5 space-y-4">
-            <h4 className="text-sm font-semibold">模型与音色</h4>
-            <p className="text-[11px] text-muted-foreground">通过 API 请求获取可用模型和音色列表</p>
+            <h4 className="text-sm font-semibold">音色</h4>
+            <p className="text-[11px] text-muted-foreground">管理在线 API 的预置音色</p>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input className={inputCls + " flex-1"} value={config.model_list_url || ""} onChange={(e) => uc("model_list_url", e.target.value)} placeholder="模型列表 URL" />
-                  <button onClick={() => fetchListData(config.model_list_url || "", "model")} className="px-3 py-2 text-xs font-medium border border-border/60 rounded-lg hover:bg-accent/60 transition-colors whitespace-nowrap">获取模型</button>
-                </div>
-                <select className={inputCls} value={config.model || ""} onChange={(e) => ucModel(e.target.value)}>
-                  <option value="">选择模型</option>
-                  {modelList.map((m) => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <input className={inputCls} value={manualModel} onChange={(e) => setManualModel(e.target.value)} placeholder="手动输入模型名" onKeyDown={(e) => { if (e.key === "Enter" && manualModel.trim()) { setModelList([...modelList, manualModel.trim()]); uc("model_options", [...modelList, manualModel.trim()]); setManualModel(""); } }} />
-              </div>
               <div className="space-y-2">
                 {iface?.id && (
                   <button onClick={() => setShowVoiceManage(true)} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium border border-border/60 rounded-lg hover:bg-accent/60 transition-colors w-full">
                     <Settings2 className="w-3.5 h-3.5" /> 音色管理面板
                   </button>
                 )}
+                <input className={inputCls} value={config.voice_list_url || ""} onChange={(e) => uc("voice_list_url", e.target.value)} placeholder="音色列表 URL" />
+              </div>
+              <div className="space-y-2">
                 <select className={inputCls} value={config.voice || ""} onChange={(e) => ucVoice(e.target.value)}>
                   <option value="">选择音色</option>
                   {voiceListVoices.map((v) => <option key={v.voice_id} value={v.voice_id}>{v.voice_name || v.voice_id}</option>)}

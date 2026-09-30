@@ -417,6 +417,20 @@ async def video_info(path: str, task_id: Optional[str] = None):
         width, height = 0, 0
     return {"duration": duration, "fps": fps, "width": width, "height": height, "path": safe}
 
+@router.get("/task-dir")
+async def get_task_dir(task_id: str):
+    """返回指定任务的工作区目录（优先控制平面工作区，其次旧 backend/tasks）。"""
+    if not task_id:
+        raise HTTPException(status_code=400, detail="task_id 为空")
+    control_root = Path(os.getenv("CONTROL_PLANE_WORKSPACE_ROOT", Path.cwd() / "control_plane_workspaces"))
+    legacy_root = Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))) / "tasks"
+    for root in (control_root, legacy_root):
+        candidate = (root / task_id)
+        if candidate.is_dir():
+            return {"path": str(candidate)}
+    raise HTTPException(status_code=404, detail=f"任务工作区不存在: {task_id}")
+
+
 @router.post("/scan-audio")
 async def scan_audio(body: dict):
     """Scan a directory for audio files."""

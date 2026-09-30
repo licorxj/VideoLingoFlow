@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 from typing import Optional, List, Any
 
-from backend.tts.tts_interface_manager import get_tts_interface_manager
+from backend.tts.tts_interface_manager import get_tts_interface_manager, infer_tts_interface_modes
 
 from backend.config.credential_store import mask_deep
 
@@ -102,24 +102,16 @@ async def list_enabled(mode: str = ""):
     interfaces = mgr.get_enabled()
     modes = [m.strip() for m in (mode or "").split(",") if m.strip()]
     if modes:
-        def _supports(iface: dict, name: str) -> bool:
-            cfg = (iface.get("config") or {}).get("modes") or {}
-            return bool(((cfg.get(name) or {}) or {}).get("enabled"))
-
-        interfaces = [i for i in interfaces if any(_supports(i, m) for m in modes)]
+        interfaces = [i for i in interfaces if any(m in infer_tts_interface_modes(i) for m in modes)]
     return {"interfaces": interfaces}
 
 
 @router.get("/by-mode/{mode}")
 async def list_by_mode(mode: str):
-    """获取支持指定TTS模式的已启用接口"""
+    """获取支持指定TTS模式的已启用接口（兼容无 modes 配置的旧接口）。"""
     mgr = get_tts_interface_manager()
     enabled = mgr.get_enabled()
-    filtered = []
-    for iface in enabled:
-        modes = iface.get("config", {}).get("modes", {})
-        if mode in modes and modes[mode].get("enabled", False):
-            filtered.append(iface)
+    filtered = [i for i in enabled if mode in infer_tts_interface_modes(i)]
     return {"interfaces": filtered, "mode": mode}
 
 
@@ -263,19 +255,16 @@ async def get_test_audio(filename: str):
 
 @router.get("/capabilities/{engine_id}")
 async def get_engine_capabilities(engine_id: str):
-    """获取指定TTS引擎支持的模式和能力"""
+    """获取指定TTS引擎支持的模式和能力（兼容旧接口）。"""
     mgr = get_tts_interface_manager()
     iface = mgr.get(engine_id)
     if not iface:
         raise HTTPException(404, f"TTS引擎 '{engine_id}' 不存在")
 
-    modes = iface.get("config", {}).get("modes", {})
-    supported_modes = [mode for mode, cfg in modes.items() if cfg.get("enabled")]
-
     return {
         "engine_id": engine_id,
         "name": iface.get("name"),
-        "supported_modes": supported_modes,
+        "supported_modes": infer_tts_interface_modes(iface),
         "voice_options": iface.get("config", {}).get("voice_options", []),
         "model_options": iface.get("config", {}).get("model_options", []),
     }

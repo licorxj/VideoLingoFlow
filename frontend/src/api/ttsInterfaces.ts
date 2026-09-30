@@ -2,7 +2,11 @@ import client from "./client";
 
 export interface TTSModeConfig {
   enabled: boolean;
-  endpoint: string;
+  endpoint?: string;
+  model?: string;
+  voice?: string;
+  speed?: number;
+  extra?: Record<string, any>;
 }
 
 export interface TTSModesMap {
@@ -11,6 +15,8 @@ export interface TTSModesMap {
   controllable_clone?: TTSModeConfig;
   preset_voice?: TTSModeConfig;
 }
+
+export type TTSModeKey = keyof TTSModesMap;
 
 export interface TTSInterfaceConfig {
   api_url?: string;
@@ -51,6 +57,26 @@ export interface TTSInterface {
   description: string;
   api_source_url?: string;
   config: TTSInterfaceConfig;
+}
+
+export function inferTTSInterfaceModes(config?: TTSInterfaceConfig): TTSModeKey[] {
+  if (!config) return [];
+  const modes = config.modes || {};
+  const explicit = (Object.entries(modes) as [TTSModeKey, TTSModeConfig][]) 
+    .filter(([, c]) => c?.enabled)
+    .map(([k]) => k);
+  if (explicit.length) return explicit;
+
+  const supported: TTSModeKey[] = [];
+  if (config.voice_options?.length || config.voice) supported.push("preset_voice");
+  if (config.ref_audio_param) {
+    supported.push("clone");
+    supported.push("controllable_clone");
+  }
+  if (config.voice_design_param) supported.push("voice_design");
+  if (config.controllable_clone_param) supported.push("controllable_clone");
+  if (!supported.length) supported.push("preset_voice");
+  return Array.from(new Set(supported));
 }
 
 export interface TTSTestResult {

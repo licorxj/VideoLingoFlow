@@ -284,6 +284,7 @@ class RegenerateRequest(BaseModel):
     engine: str = ""
     mode: str = ""
     voice: str = ""
+    model: str = ""
     ref_audio: str = ""
     voice_design: str = ""
     controllable_clone: str = ""
@@ -334,6 +335,7 @@ async def regenerate_segments(req: RegenerateRequest):
     engine = (req.engine or "").strip()
     mode = (req.mode or "").strip()
     voice = (req.voice or "").strip()
+    model = (req.model or "").strip()
     ref_audio_global = (req.ref_audio or "").strip()
     voice_design = (req.voice_design or "").strip()
     cc_instruction = (req.controllable_clone or "").strip()
@@ -401,6 +403,7 @@ async def regenerate_segments(req: RegenerateRequest):
             "ref_audio_roles": [],
             "voice_roles": [voice] if voice else [],
             "voice_design_roles": [voice_design] if voice_design else [],
+            "model": model,
         }
 
         try:

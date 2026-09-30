@@ -3402,6 +3402,7 @@ export const FALLBACK_NODE_TYPES = [
         "preset_voice"
       ],
       "tts_engine": "",
+      "tts_model": "",
       "clone_source": "fixed",
       "cc_colloquial_desc": "",
       "ref_audio_path": "",
@@ -3460,6 +3461,15 @@ export const FALLBACK_NODE_TYPES = [
         "placeholder": "跟随全局配置",
         "optionLabel": "name",
         "optionValue": "id"
+      },
+      {
+        "key": "tts_model",
+        "label": "TTS 模型",
+        "type": "api-select",
+        "dependsOn": "tts_engine",
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/models-for-node",
+        "placeholder": "跟随接口默认模型",
+        "colSpan": "half"
       },
       {
         "key": "clone_source",

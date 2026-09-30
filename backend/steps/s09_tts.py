@@ -228,6 +228,7 @@ class S09TTS(BaseStep):
         tts_config = {
             "mode": tts_mode,
             "engine": node_cfg.get("tts_engine") or config.get("tts.method") or "edge_tts",
+            "model": node_cfg.get("tts_model") or "",
             "clone_source": node_cfg.get("clone_source", "fixed"),
             "cc_colloquial_desc": str(node_cfg.get("cc_colloquial_desc") or "").strip(),
             "ref_audio_path": node_cfg.get("ref_audio_path", ""),
@@ -666,6 +667,7 @@ class S09TTS(BaseStep):
             ref_audio = self._resolve_reference_audio(seg, tts_config, task_dir, ref_map)
             voice = self._resolve_voice(seg, tts_config)
             voice_design = self._build_voice_design_instruction(seg, tts_config)
+            model = tts_config.get("model", "") or ""
 
             # 根据模式决定是否传递克隆指令
             cc_instruction = voice_design if mode == "controllable_clone" else ""
@@ -697,6 +699,7 @@ class S09TTS(BaseStep):
                 voice_design=voice_design,
                 controllable_clone=cc_instruction,
                 voice=voice,
+                model=model,
                 ref_text=ref_text
             )
 
@@ -710,6 +713,7 @@ class S09TTS(BaseStep):
                         voice_design=voice_design,
                         controllable_clone=cc_instruction,
                         voice=voice,
+                        model=model,
                         ref_text=ref_text,
                         speed=speed,
                     )
@@ -722,6 +726,7 @@ class S09TTS(BaseStep):
                         voice_design=voice_design,
                         controllable_clone=cc_instruction,
                         voice=voice,
+                        model=model,
                         ref_text=ref_text,
                     )
             else:

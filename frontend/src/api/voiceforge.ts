@@ -116,8 +116,11 @@ export type VoiceForgeCapability = {
   name: string;
   type: string;
   modes: Record<string, { enabled?: boolean }>;
+  supported_modes?: string[];
   voice_options: string[];
+  model_options?: string[];
   default_voice?: string;
+  default_model?: string;
 };
 
 export type VoiceForgeEmotionTag = { id: string; name: string; description: string; color?: string; sort_order: number };

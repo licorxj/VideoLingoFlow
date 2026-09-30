@@ -110,6 +110,38 @@ def _speed_ref_audio(ref_audio: str, speed: float) -> str:
         return ref_audio
 
 
+def infer_tts_interface_modes(iface: dict) -> list:
+    """推断 TTS 接口支持的合成模式，兼容旧配置。
+
+    规则：
+    1. config.modes 中显式 enabled=true 的模式优先。
+    2. 旧接口按能力推断：
+       - 有 voice_options / 默认 voice → preset_voice
+       - 有 ref_audio_param → clone / controllable_clone
+       - 有 voice_design_param → voice_design
+       - 有 controllable_clone_param → controllable_clone
+    3. 兜底至少支持 preset_voice，避免旧接口在按模式筛选时消失。
+    """
+    cfg = iface.get("config") or {}
+    modes_cfg = cfg.get("modes") or {}
+    explicit = [m for m, c in modes_cfg.items() if isinstance(c, dict) and c.get("enabled")]
+    if explicit:
+        return explicit
+
+    supported = []
+    if cfg.get("voice_options") or cfg.get("voice"):
+        supported.append("preset_voice")
+    if cfg.get("ref_audio_param"):
+        supported.extend(["clone", "controllable_clone"])
+    if cfg.get("voice_design_param"):
+        supported.append("voice_design")
+    if cfg.get("controllable_clone_param"):
+        supported.append("controllable_clone")
+    if not supported:
+        supported.append("preset_voice")
+    return supported
+
+
 class TTSInterfaceManager:
     """Manages TTS interface definitions loaded from JSON."""
 
@@ -248,7 +280,7 @@ class TTSInterfaceManager:
         else:
             return self._build_local_params(cfg, text, output_path, ref_audio,
                                             mode, voice_design, controllable_clone, speed,
-                                            ref_text)
+                                            model, ref_text)
 
     def _resolve_endpoint(self, cfg, mode=None):
         """Resolve the request endpoint from modes config."""
@@ -271,6 +303,22 @@ class TTSInterfaceManager:
                 if ep:
                     return ep
         return ""
+
+    @staticmethod
+    def _resolve_model(cfg, mode=None, explicit_model=None):
+        """按优先级解析实际使用的模型名称：
+
+        显式传入(explicit_model) > 该模式专属默认(modes[mode].model) > 接口级默认(config.model)。
+        留空则返回接口级默认（若接口级也未配置则空串）。
+        """
+        if explicit_model:
+            return explicit_model
+        modes_cfg = cfg.get("modes", {}) or {}
+        if mode and mode in modes_cfg:
+            mdl = (modes_cfg[mode] or {}).get("model")
+            if mdl:
+                return mdl
+        return cfg.get("model", "")
 
     def _build_online_params(self, cfg, text, output_path,
                              ref_audio=None, mode=None, voice_design=None,
@@ -300,8 +348,9 @@ class TTSInterfaceManager:
             return {"method": "POST", "url": url, "headers": headers, "body": ssml_text, "body_type": "data", "is_file_response": True}
 
         text_key = cfg.get("text_param", "input")
+        resolved_model = self._resolve_model(cfg, mode, model)
         body = {
-            "model": model or cfg.get("model", "tts-1"),
+            "model": resolved_model or cfg.get("model", "tts-1"),
             text_key: text,
             "voice": voice or cfg.get("voice", "alloy"),
             "response_format": cfg.get("response_format", "wav"),
@@ -351,6 +400,7 @@ class TTSInterfaceManager:
                           ref_audio=None, mode=None, voice_design=None,
                           controllable_clone=None, speed=None, model=None, voice=None,
                           ref_text=None):
+        resolved_model = self._resolve_model(cfg, mode, model)
         call_args = {
             "type": "sdk",
             "package": cfg.get("sdk_package", ""),
@@ -361,7 +411,7 @@ class TTSInterfaceManager:
             "ref_audio": ref_audio,
             "ref_text": ref_text,
             "speed": speed,
-            "model": model or cfg.get("model", ""),
+            "model": resolved_model,
             "voice": voice or cfg.get("voice", ""),
             "mode": mode,
             "voice_design": voice_design,
@@ -371,13 +421,18 @@ class TTSInterfaceManager:
         }
         return call_args
 
-    def _build_local_params(self, cfg, text, output_path, ref_audio=None, mode=None, voice_design=None, controllable_clone=None, speed=None, ref_text=None):
+    def _build_local_params(self, cfg, text, output_path, ref_audio=None, mode=None, voice_design=None, controllable_clone=None, speed=None, model=None, ref_text=None):
         endpoint = self._resolve_endpoint(cfg, mode)
         base_url = cfg.get("api_url", "http://localhost:8080").rstrip("/")
         url = base_url + (endpoint if endpoint else "/")
 
         text_key = cfg.get("text_param", "text")
         body = {text_key: text}
+
+        # 按模式解析默认模型，透传 model（本地聚合型引擎如 LCTTS 管家据此调度子引擎）
+        resolved_model = self._resolve_model(cfg, mode, model)
+        if resolved_model:
+            body["model"] = resolved_model
 
         # Always send output_path for local APIs to save directly
         if output_path:

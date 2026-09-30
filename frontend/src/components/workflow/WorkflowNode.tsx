@@ -416,6 +416,7 @@ function GroupWorkflowNodeCard({
                         nodeType={memberType}
                         config={memberConfig}
                         onConfigChange={(key, value) => updateMemberConfig(memberId, key, value)}
+                        taskId={taskId}
                       />
                     ) : (
                       <div className="text-xs text-muted-foreground">未找到该节点的配置定义。</div>
@@ -1328,11 +1329,12 @@ interface VoiceTargetRow {
   voice_url?: string;
 }
 
-function VoiceTargetListField({ field, value, config, onConfigChange }: {
+function VoiceTargetListField({ field, value, config, onConfigChange, taskId }: {
   field: ConfigField;
   value: any;
   config: Record<string, any>;
   onConfigChange: (key: string, value: any) => void;
+  taskId?: string;
 }) {
   const [rows, setRows] = useState<VoiceTargetRow[]>(
     Array.isArray(value) ? value.filter((r: any) => r && r.name) : []
@@ -1483,6 +1485,7 @@ function VoiceTargetListField({ field, value, config, onConfigChange }: {
               updateRow(pickerIndex, { ref_audio: path });
               setPickerIndex(null);
             }}
+            taskId={taskId}
           />,
           document.body
         )}
@@ -1490,13 +1493,14 @@ function VoiceTargetListField({ field, value, config, onConfigChange }: {
   );
 }
 
-function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonAction, upstreamOutputs }: {
+function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonAction, upstreamOutputs, taskId }: {
   nodeType: any;
   config: Record<string, any>;
   onConfigChange: (key: string, value: any) => void;
   onVoiceSelect?: (field: ConfigField) => void;
   onButtonAction?: (field: ConfigField) => void;
   upstreamOutputs?: Record<string, any>;
+  taskId?: string;
 }) {
   const [dynamicFields, setDynamicFields] = useState<ConfigField[]>([]);
   const [dynamicLoading, setDynamicLoading] = useState(false);
@@ -2441,7 +2445,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           }
 
           if (field.type === "voice-target-list") {
-            return <div key={field.key} className={fieldSpanClass(field)}><VoiceTargetListField field={field} value={value} config={config} onConfigChange={onConfigChange} /></div>;
+            return <div key={field.key} className={fieldSpanClass(field)}><VoiceTargetListField field={field} value={value} config={config} onConfigChange={onConfigChange} taskId={taskId} /></div>;
           }
 
           if (field.type === "wf-io-mapping") {
@@ -2520,6 +2524,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
             onConfigChange(audioSelectorField.key, path);
             setAudioSelectorField(null);
           }}
+          taskId={taskId}
         />
         , document.body
       )}
@@ -3621,6 +3626,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                 nodeType={nodeType}
                 config={config}
                 upstreamOutputs={upstreamOutputs}
+                taskId={artifactTaskId}
                 onConfigChange={handleConfigChange}
                 onVoiceSelect={setVoiceSelectField}
                 onButtonAction={() => {
@@ -3673,6 +3679,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           nodeType={nodeType}
           config={config}
           upstreamOutputs={upstreamOutputs}
+          taskId={artifactTaskId}
           onConfigChange={handleConfigChange}
           onVoiceSelect={setVoiceSelectField}
           onButtonAction={() => {

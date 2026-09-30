@@ -34,6 +34,12 @@ DEFAULT_API_URL = "http://127.0.0.1:5199"
 DEFAULT_MODEL = "voxcpm"
 DEFAULT_POLL_INTERVAL = 2.0
 
+# Hub 控制开关（对应自检清单 §2.1 / §7.1）
+#  inject_defaults=1 → Hub 对我们已发字段原样透传，仅对"我们未发的可选参数"补默认值（安全网）
+#  strict=1          → Hub 先校验必填，缺真正必填项直接 400，避免注定失败的请求触发引擎冷启动
+_HUB_INJECT_DEFAULTS = 1
+_HUB_STRICT = 1
+
 # 候选的「参考音频 本地路径」参数名（优先用路径，免上传；hub 与本项目同机运行）
 _REF_PATH_CANDIDATES = [
     "ref_audio_path", "speaker_audio_path", "spk_audio_path",
@@ -43,6 +49,62 @@ _REF_PATH_CANDIDATES = [
 _REF_FILE_CANDIDATES = ["ref_audio", "speaker_audio", "spk_audio", "audio"]
 # 候选的「参考音频文本」参数名
 _REF_TEXT_CANDIDATES = ["prompt_text", "ref_text", "ref_text_en"]
+
+# ---- 引擎参数 schema 缓存 ----
+# Hub 的 /params 只读注册表 manifest，单次毫秒级，但批量配音时每句都拉会产生 N 次冗余往返。
+# 按 model 缓存，默认 5 分钟 TTL；若 Hub 返回 ETag 则改用 If-None-Match/304 精确失效
+# （Hub 改完 defaults 后 ETag 变化，下次请求自动拿到新 schema）。
+_SCHEMA_CACHE: dict = {}
+_SCHEMA_TTL = 300.0
+
+
+def clear_schema_cache(model: str = None):
+    """主动清空 schema 缓存。model 为 None 时清空全部。
+
+    建议在通过 PUT /config 修改 defaults / 引擎配置后调用，确保下次合成拉取最新 schema。
+    """
+    if model is None:
+        _SCHEMA_CACHE.clear()
+    else:
+        _SCHEMA_CACHE.pop(model, None)
+
+
+def _fetch_schema(base: str, model: str) -> dict:
+    """拉取（或命中缓存的）引擎参数 schema。
+
+    返回 schema dict；网络异常且无缓存时抛出异常由调用方处理。
+    """
+    now = time.monotonic()
+    cached = _SCHEMA_CACHE.get(model)
+    if cached and now - cached["time"] < _SCHEMA_TTL:
+        return cached["schema"]
+
+    headers = {}
+    if cached and cached.get("etag"):
+        headers["If-None-Match"] = cached["etag"]
+    try:
+        resp = requests.get(
+            f"{base}/api/hub/engines/{model}/params", timeout=15, headers=headers
+        )
+    except requests.exceptions.RequestException:
+        if cached:
+            logger.warning(f"LCTTS hub: params fetch failed, reuse stale schema for '{model}'")
+            return cached["schema"]
+        raise
+
+    # Hub 支持 ETag：配置未变时返回 304，直接复用缓存
+    if resp.status_code == 304 and cached:
+        cached["time"] = now
+        return cached["schema"]
+    resp.raise_for_status()
+    schema = resp.json()
+    _SCHEMA_CACHE[model] = {
+        "schema": schema,
+        "time": now,
+        "etag": resp.headers.get("ETag"),
+        "alias": resp.headers.get("X-Hub-Alias"),
+    }
+    return schema
 
 
 def _coerce(schema_param, value):
@@ -68,8 +130,8 @@ def _load_config():
     """读取 tts_interfaces.json 中 lctts_hub 接口的配置。
 
     返回 dict：
-        - api_url / model / poll_interval：来自 sdk_extra_args
-        - custom_params：来自 custom_params 列表（未解析的 key/default/description）
+    - api_url / model / poll_interval：优先取 sdk_extra_args，model 缺失时回退 config.model
+    - custom_params：来自 custom_params 列表（未解析的 key/default/description）
     不依赖密钥，无需 resolve_deep。
     """
     cfg_path = os.path.normpath(
@@ -84,7 +146,7 @@ def _load_config():
                 extra = cfg.get("sdk_extra_args", {}) or {}
                 return {
                     "api_url": extra.get("api_url", DEFAULT_API_URL),
-                    "model": extra.get("model", DEFAULT_MODEL),
+                    "model": extra.get("model", cfg.get("model", DEFAULT_MODEL)),
                     "poll_interval": float(extra.get("poll_interval", DEFAULT_POLL_INTERVAL)),
                     "custom_params": cfg.get("custom_params", []) or [],
                 }
@@ -205,16 +267,17 @@ def synthesize(
     poll_interval = float(poll_interval or cfg["poll_interval"] or DEFAULT_POLL_INTERVAL)
     timeout = float(timeout or 600)
 
-    # 1) 拉取引擎参数 schema（无需引擎运行即可读取）
+    # 1) 拉取引擎参数 schema（命中缓存则免往返；Hub 支持 ETag 时按 304 精确失效）
     try:
-        schema_resp = requests.get(
-            f"{base}/api/hub/engines/{target_model}/params", timeout=15
-        )
-        schema_resp.raise_for_status()
-        schema = schema_resp.json()
+        schema = _fetch_schema(base, target_model)
     except Exception as e:
         logger.error(f"LCTTS hub: failed to fetch params for model '{target_model}': {e}")
         return False
+
+    # 排错辅助：Hub 回显本次字段翻译（如 text>instruction;ref_audio>audio）
+    _alias = _SCHEMA_CACHE.get(target_model, {}).get("alias")
+    if _alias:
+        logger.debug(f"LCTTS hub: alias mapping for '{target_model}': {_alias}")
 
     body, text_key = _build_body(
         schema, text, ref_audio, ref_text, speed, mode,
@@ -232,7 +295,10 @@ def synthesize(
     if mode in ("voice_design", "controllable_clone") and endpoints.get("design"):
         endpoint = "design"
 
-    tts_url = f"{base}/api/tts?model={target_model}"
+    tts_url = (
+        f"{base}/api/tts?model={target_model}"
+        f"&inject_defaults={_HUB_INJECT_DEFAULTS}&strict={_HUB_STRICT}"
+    )
     if endpoint:
         tts_url += f"&endpoint={endpoint}"
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { AudioLines, Bot, Copy, Loader2, Mic2 } from "lucide-react";
 import client from "@/api/client";
-import { ttsInterfacesApi, TTSInterface } from "@/api/ttsInterfaces";
+import { ttsInterfacesApi, TTSInterface, inferTTSInterfaceModes } from "@/api/ttsInterfaces";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
@@ -157,7 +157,7 @@ export function DubModeDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                 >
                   <option value="">选择支持克隆模式的 TTS 接口</option>
                   {interfaces
-                    .filter((i) => i.config?.modes?.clone?.enabled)
+                    .filter((i) => inferTTSInterfaceModes(i.config).some((m) => m === "clone" || m === "controllable_clone"))
                     .map((i) => (
                       <option key={i.id} value={i.id}>
                         {i.name} ({i.type})
@@ -180,11 +180,13 @@ export function DubModeDialog({ open, onOpenChange }: { open: boolean; onOpenCha
                   className="h-8 min-w-0 flex-1 rounded-md border border-border bg-background px-2 text-xs"
                 >
                   <option value="">选择 TTS 接口</option>
-                  {interfaces.map((i) => (
-                    <option key={i.id} value={i.id}>
-                      {i.name} ({i.type})
-                    </option>
-                  ))}
+                  {interfaces
+                    .filter((i) => inferTTSInterfaceModes(i.config).includes("preset_voice"))
+                    .map((i) => (
+                      <option key={i.id} value={i.id}>
+                        {i.name} ({i.type})
+                      </option>
+                    ))}
                 </select>
               </label>
               {ttsInterfaceId && (

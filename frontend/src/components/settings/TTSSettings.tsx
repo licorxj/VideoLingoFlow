@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import { ttsInterfacesApi, TTSInterface } from "@/api/ttsInterfaces";
+import { ttsInterfacesApi, TTSInterface, inferTTSInterfaceModes } from "@/api/ttsInterfaces";
 import { settingsApi } from "@/api/settings";
 import TTSInterfaceEditor from "./TTSInterfaceEditor";
 import TTSInterfaceTestModal from "./TTSInterfaceTestModal";
@@ -159,6 +159,14 @@ export default function TTSSettings() {
                     <span className="text-[11px] px-2 py-0.5 rounded-md bg-muted text-muted-foreground font-medium">
                       {TYPE_LABELS[iface.type] || iface.type}
                     </span>
+                    {inferTTSInterfaceModes(iface.config).map((m) => (
+                      <span
+                        key={m}
+                        className="text-[11px] px-2 py-0.5 rounded-md bg-violet-500/10 text-violet-600 font-medium"
+                      >
+                        {({ preset_voice: "预置", clone: "克隆", voice_design: "设计", controllable_clone: "可控克隆" } as Record<string, string>)[m] || m}
+                      </span>
+                    ))}
                     {iface.builtin && (
                       <span className="flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-500 font-medium">
                         <Shield className="w-3 h-3" />
