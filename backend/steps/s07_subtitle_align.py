@@ -44,6 +44,7 @@ from typing import Callable, Optional, List, Dict, Any, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 from backend.config.config_manager import config
 from backend.llm.llm_client import get_llm_client
 
@@ -771,35 +772,31 @@ class S07SubtitleAlign(BaseStep):
 
     # ── 输入解析（严格按连线端口，不做文件名扫描）──────────────────────
 
-    def _require_input_path(self, task_dir: str, port: str) -> str:
-        """按输入端口取上游产物绝对路径；缺失/不存在时抛出明确错误。"""
+    def _require_input_data(self, task_dir: str, port: str):
+        """按输入端口取上游 JSON 数据（兼容内存数据 / 文件路径 / 内联 JSON）。"""
         label = INPUT_PORT_LABELS.get(port, port)
         step_inputs = getattr(self, "_step_inputs", {}) or {}
         raw = step_inputs.get(port)
         if isinstance(raw, (list, tuple)):
             raw = next((v for v in raw if str(v or "").strip()), "")
-        raw = str(raw or "").strip()
-        if not raw:
+        if isinstance(raw, (dict, list)):
+            return raw
+        if not isinstance(raw, str) or not raw.strip():
             raise ValueError(
                 f"「{self.step_name}」缺少必需输入「{label}」（端口 {port}）："
                 f"请在画布上把上游节点连到该输入点后重试"
             )
-        path = raw if os.path.isabs(raw) else os.path.join(task_dir, raw)
-        if not os.path.isfile(path):
-            raise FileNotFoundError(
-                f"「{self.step_name}」输入「{label}」指向的文件不存在：{path}"
-            )
-        print(f"[SubtitleAlign] Input {port} ({label}) -> {path}")
-        return path
+        data = resolve_json_input(raw, task_dir)
+        print(f"[SubtitleAlign] Input {port} ({label}) -> resolved")
+        return data
 
     @staticmethod
     def _read_json(path: str) -> Any:
         with open(path, "r", encoding="utf-8") as f:
             return json.load(f)
 
-    def _load_translation_items(self, path: str) -> List[Dict]:
+    def _load_translation_items(self, data) -> List[Dict]:
         """读取翻译结果（列表，或含 segments/sentences/items 的 dict）。"""
-        data = self._read_json(path)
         if isinstance(data, dict):
             for key in ("segments", "sentences", "items", "results"):
                 if isinstance(data.get(key), list):
@@ -809,13 +806,12 @@ class S07SubtitleAlign(BaseStep):
                 data = []
         if not isinstance(data, list):
             raise ValueError(
-                f"「{self.step_name}」翻译结果 JSON 结构无法识别（期望数组）：{path}"
+                f"「{self.step_name}」翻译结果 JSON 结构无法识别（期望数组）"
             )
         return [item for item in data if isinstance(item, dict)]
 
-    def _load_asr_result(self, path: str) -> Tuple[List[Dict], List[Dict], str]:
+    def _load_asr_result(self, data) -> Tuple[List[Dict], List[Dict], str]:
         """读取 ASR 结构化 JSON，返回 (句子级时间戳表 segments, 词级时间戳表 words, language)。"""
-        data = self._read_json(path)
         language = ""
 
         if isinstance(data, dict):
@@ -1691,8 +1687,8 @@ class S07SubtitleAlign(BaseStep):
 
     def validate_inputs(self, task_dir: str) -> bool:
         try:
-            self._require_input_path(task_dir, INPUT_PORT_SUBTITLE)
-            self._require_input_path(task_dir, INPUT_PORT_ASR)
+            self._require_input_data(task_dir, INPUT_PORT_SUBTITLE)
+            self._require_input_data(task_dir, INPUT_PORT_ASR)
         except (ValueError, FileNotFoundError) as exc:
             print(f"[SubtitleAlign] validate_inputs failed: {exc}")
             return False
@@ -1705,17 +1701,17 @@ class S07SubtitleAlign(BaseStep):
             callback(3, "读取输入（翻译结果 + ASR 时间戳表）...")
         node_suffix = f"_{self._node_id}" if self._node_id else ""
 
-        subtitle_path = self._require_input_path(task_dir, INPUT_PORT_SUBTITLE)
-        asr_path = self._require_input_path(task_dir, INPUT_PORT_ASR)
+        subtitle_data = self._require_input_data(task_dir, INPUT_PORT_SUBTITLE)
+        asr_data = self._require_input_data(task_dir, INPUT_PORT_ASR)
 
-        translations = self._load_translation_items(subtitle_path)
+        translations = self._load_translation_items(subtitle_data)
         if not translations:
-            raise ValueError(f"「{self.step_name}」翻译结果为空：{subtitle_path}")
+            raise ValueError(f"「{self.step_name}」翻译结果为空")
 
-        segments, words, asr_language = self._load_asr_result(asr_path)
+        segments, words, asr_language = self._load_asr_result(asr_data)
         if not segments and not words:
             raise ValueError(
-                f"「{self.step_name}」asr格式json 中既没有 segments 也没有 words：{asr_path}"
+                f"「{self.step_name}」asr格式json 中既没有 segments 也没有 words"
             )
 
         word_index = _WordIndex(words)

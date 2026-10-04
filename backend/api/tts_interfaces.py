@@ -493,28 +493,8 @@ def _get_builtin_voices(interface_id: str, cfg: dict) -> list:
     """Return built-in voice lists for known online TTS interfaces."""
     voices = []
 
-    # OpenAI TTS: fixed voice set
-    if interface_id == "openai_tts":
-        openai_voices = [
-            ("alloy", "Alloy", "Balanced, neutral tone"),
-            ("ash", "Ash", "Clear and expressive"),
-            ("ballad", "Ballad", "Warm and melodic"),
-            ("coral", "Coral", "Friendly and natural"),
-            ("echo", "Echo", "Smooth and resonant"),
-            ("fable", "Fable", "Expressive storytelling voice"),
-            ("nova", "Nova", "Bright and energetic"),
-            ("onyx", "Onyx", "Deep and authoritative"),
-            ("sage", "Sage", "Calm and thoughtful"),
-            ("shimmer", "Shimmer", "Soft and gentle"),
-        ]
-        for vid, vname, desc in openai_voices:
-            voices.append({
-                "voice_id": vid, "voice_name": vname, "description": desc,
-                "gender": "", "age": "adult", "language": "en"
-            })
-
     # Azure TTS: common Chinese + English voices
-    elif interface_id == "azure_tts":
+    if interface_id == "azure_tts":
         azure_voices = [
             ("zh-CN-YunjianNeural", "云健", "成熟男声，适合新闻播报", "male", "zh-CN"),
             ("zh-CN-YunxiNeural", "云希", "年轻男声，活泼自然", "male", "zh-CN"),

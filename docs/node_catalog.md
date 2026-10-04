@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-09-27 03:16:06  
-> 节点总数：156　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-02 16:18:01  
+> 节点总数：159　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -11,8 +11,8 @@
 | 预览节点（`preview`） | 4 |
 | 音频处理节点（`audio`） | 10 |
 | 视频处理节点（`video`） | 18 |
-| AI生成类节点（`ai_gen`） | 20 |
-| 翻译相关节点（`translation`） | 15 |
+| AI生成类节点（`ai_gen`） | 21 |
+| 翻译相关节点（`translation`） | 16 |
 | 漫剧·剧本链（`agi_story`） | 4 |
 | 漫剧·资产链（`agi_asset`） | 6 |
 | 漫剧·分镜链（`agi_shot`） | 4 |
@@ -22,7 +22,7 @@
 | 智能体（`agent`） | 3 |
 | 流程控制节点（`flow_control`） | 6 |
 | 网络请求类节点（`network_request`） | 7 |
-| 工具类节点（`utility`） | 11 |
+| 工具类节点（`utility`） | 12 |
 | 文件操作类节点（`file`） | 3 |
 | 组合节点（`group_node`） | 3 |
 | asset（`asset`） | 9 |
@@ -113,6 +113,7 @@
 | 视频高清放大-kie | `kie_video_upscale` | 调用 KIE AI 对视频做高清放大。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。 | process | 待放大视频(`video`*:video) | 放大后视频(`video`:video); 视频列表(`videos`:json); 处理参数JSON(`params`:json) |
 | 语音合成 (TTS) | `tts` | 文本转语音，支持多种TTS模式 | process | TTS任务单JSON(`text`*:json); TTS任务表(`pandas`:pandas); 原始音频(切割参考)(`source_audio`:audio) | TTS任务单JSON(`text`:json); TTS任务表(`pandas`:pandas) |
 | 通用LLM请求 | `llm_request` | 通用 LLM 请求，支持文本/图片输入，可配置 prompt、模型、温度等 | process | 文本输入(`text`:text); 图片输入(`image`:image); JSON输入(`json`:json) | 结果文件(`result`:json); 文本结果(`text`:text) |
+| 长文本TTS | `long_text_tts` | 纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），进程中断也不丢记录，方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。 | process | 长文本(`text`*:text) | 音频路径(`audio`:audio); 记录JSON(`record`:json) |
 
 ### 翻译相关节点（`translation`）
 
@@ -125,6 +126,7 @@
 | ASR识别 | `asr_recognize` | 仅执行语音识别（不执行后处理），输出原始识别结果供下游 ASR后处理 节点继续处理 | process | ASR音源(`asr_audio`*:audio); 人声音源(`vocal_audio`:audio) | ASR识别结果JSON(`subtitle`:json) |
 | 内容总结 | `summarize` | 总结上下文、提取术语表 | process | 句子文本(`text`*:text) | 总结结果JSON(`subtitle`:json) |
 | 句子分割 | `sentence_split` | 将ASR结果按标点和长度分割为独立句子，保留单词级时间戳 | thread | ASR结果JSON(`subtitle`*:json) | 分割结果JSON(`subtitle`:json); 句子文本(`text`:text) |
+| 同音字修复 | `homophone_fix` | 对字幕（SRT）或 ASR JSON 做中文同音字修复：按术语表的拼音匹配，把 ASR 常见同音错字替换为正确写法（如「比例比例」→「哔哩哔哩」）。等长替换、不改变时间戳；术语来源为项目根 自定义术语表.json、指定术语文件或节点内自填。 | thread | 字幕/ASR JSON(`json`*:json) | 修复后 JSON(`output`:json); 修复报告(`text`:text) |
 | 字幕生成 | `subtitle_gen` | 兼容句子分割、逐句翻译、双语对齐结果并生成字幕文件 | thread | 句子/翻译/对齐JSON(`subtitle`*:json) | 译文字幕(`subtitle`:subtitle); 原文字幕(`original`:subtitle); 双语字幕(`bilingual`:subtitle) |
 | 断句预处理 | `sentence_preprocess` | 基于全文文本（ASR JSON 或长文本 TXT）按 ASR分段/标点符号/AI 三种方法重新断句，生成更可靠的初始 segments，可选重建句子级时间戳 | thread | ASR结果JSON(`json`:json); 长文本TXT(`text`:text) | 断句预处理JSON(`subtitle`:json); 词级时间戳表(`word_index`:json) |
 | 生成配音任务 | `dub_task` | 将带时间戳的句子 JSON 包装为可编辑的 TTS 任务单 | thread | 句子时间戳JSON(`subtitle`:json); 文本文件(`text_file`:text) | TTS任务单JSON(`text`:json); TTS任务表(`pandas`:pandas) |
@@ -138,37 +140,37 @@
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| 分镜剧本 | `agi_shot` | AI 漫剧·分镜剧本：为章节生成分镜（出场人物/场景/对话/音效设计）并写入 | thread | 章节ID(`chapter_id`:any); 分镜指引(`text`:text) | 章节ID(`chapter_id`:text); 分镜ID列表(`shot_ids`:json); 分镜内容(`shots`:json) |
-| 剧本深化 | `agi_deepen` | AI 漫剧·剧本深化：把项目骨架深化为严格格式化的设定书并入库——剧本简介、各章节内容规划(建章)、人物设计提炼(同名提炼/新增)、画风元素锁定(写入骨架供下游生图取用) | thread | 创作项目ID(`creation_id`:any); 额外要求(`text`:text) | 创作项目ID(`creation_id`:text); 剧本设定书(`bible`:json); 剧本简介(`synopsis`:text); 画风锁定(`style_bible`:text) |
-| 章节剧本 | `agi_chapter` | AI 漫剧·章节剧本：为创作项目生成若干章节（标题/原文/简述）并写入 | thread | 创作项目ID(`creation_id`:any); 章节指引(`text`:text) | 创作项目ID(`creation_id`:text); 章节ID(`chapter_id`:text); 章节ID列表(`chapter_ids`:json); 章节内容(`chapters`:json) |
-| 项目立项·剧本创作 | `agi_project` | AI 漫剧·起始节点：创建创作项目并用 LLM 打好故事骨架（世界观/大纲/总剧本），产出 creation_id 贯穿下游全部节点 | thread | 创意/要求(`text`:text) | 创作项目ID(`creation_id`:text); 项目骨架(`project`:json) |
+| 分镜剧本 | `agi_shot` | AI 漫剧·第4步·剧本链【分镜链的起点】：为章节生成分镜（出场人物/场景/对话/音效设计）并写入。上游：「章节剧本」（或剧本深化建好的章节）chapter_id 端口。下游：chapter_id 端口 → 「组装分镜提示词/分镜首尾帧/分镜视频制作/分镜配音/分镜导出」的章节ID(批处理)端口；shot_ids → 单分镜处理时接各节点「分镜ID(单个)」 | thread | 章节ID(`chapter_id`:any); 分镜指引(`text`:text) | 章节ID(`chapter_id`:text); 分镜ID列表(`shot_ids`:json); 分镜内容(`shots`:json) |
+| 剧本深化 | `agi_deepen` | AI 漫剧·第2步·剧本链【推荐主路径】：把项目骨架深化为严格格式化的设定书并入库——剧本简介、各章节内容规划(建章)、人物设计提炼(同名提炼/新增)、画风元素锁定(写入骨架供下游生图取用)。上游：「项目立项」creation_id 端口。下游：creation_id 端口 → 「人物资产创作/人物音色生产/场景资产创作/道具资产创作」（并行）与「章节剧本」；用本节点建好章节后，「章节剧本」节点可省略 | thread | 创作项目ID(`creation_id`:any); 额外要求(`text`:text) | 创作项目ID(`creation_id`:text); 剧本设定书(`bible`:json); 剧本简介(`synopsis`:text); 画风锁定(`style_bible`:text) |
+| 章节剧本 | `agi_chapter` | AI 漫剧·第3步·剧本链【「剧本深化」已建章时可省略】：为创作项目生成若干章节（标题/原文/简述）并写入。上游：「项目立项/剧本深化」creation_id 端口。下游：chapter_id 端口 → 「分镜剧本」chapter_id 端口（推荐下一步） | thread | 创作项目ID(`creation_id`:any); 章节指引(`text`:text) | 创作项目ID(`creation_id`:text); 章节ID(`chapter_id`:text); 章节ID列表(`chapter_ids`:json); 章节内容(`chapters`:json) |
+| 项目立项·剧本创作 | `agi_project` | AI 漫剧·第1步·剧本链【链路入口】：创建创作项目并用 LLM 打好故事骨架（世界观/大纲/总剧本），产出 creation_id 贯穿下游全部节点。上游：无（创意可从「输入」节点接 text 端口或在本节点填写）。下游：creation_id 端口 → 接「剧本深化」（推荐下一步）；资产链与章节剧本各节点也都从它接 creation_id | thread | 创意/要求(`text`:text) | 创作项目ID(`creation_id`:text); 项目骨架(`project`:json) |
 
 ### 漫剧·资产链（`agi_asset`）
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| 人物资产创作 | `agi_character` | AI 漫剧·人物资产创作：用 LLM 生成人物设定并写入创作项目，可发布到公共角色库并生成多视角图 | thread | 创作项目ID(`creation_id`:any); 创意简介(`text`:text) | 创作项目ID(`creation_id`:text); 人物设定(`characters`:json); 角色立绘(`images`:any) |
-| 人物音色生产 | `agi_voice` | AI 漫剧·人物音色生产：按「生成对象」为目标人物一次性设计 15~25 字台词，分别调用设计与克隆 TTS 接口合成音色样本，登记到配音谷音色库（vf:voices 引用）并绑定人物 voice_ref，打通分镜配音的音色克隆链路 | process | 创作项目ID(`creation_id`:any) | 创作项目ID(`creation_id`:text); 音色清单(`voices`:json); 样本音频(`audio`:audio); 失败清单(`failed`:json) |
-| 场景资产创作 | `agi_scene` | AI 漫剧·场景资产创作：生成关键场景(地点/时间段/光影)并生成固定视角概念图，写入场景资产表并登记 scene_image 资产 | process | 创作项目ID(`creation_id`:any); 补充描述(`text`:text) | 创作项目ID(`creation_id`:text); 场景ID列表(`scene_ids`:json); 场景清单(`scenes`:json); 场景图(`images`:any) |
-| 生成提示词 | `agi_prompt` | AI 漫剧·生成提示词：把资产描述结合整体画风生成 final_prompt 写入库（可调试/可人工改），供生图节点使用；资产类型选「分镜」时生成 image_prompt/video_prompt 供首尾帧与生视频节点消费 | thread | 创作项目ID(`creation_id`:any); 资产ID列表(可选)(`ids`:json); 章节ID(分镜用)(`chapter_id`:text); 多章节ID列表(分镜用)(`chapter_ids`:json) | 创作项目ID(`creation_id`:text); 资产类型(`asset_type`:text); 资产ID列表(`ids`:json); 提示词结果(`final_prompts`:json) |
-| 资产自动提取 | `agi_extract` | AI 漫剧·资产自动提取：从格式化剧本一次性提取人物/场景/道具，按名去重入库（同名复用更新，新增写入一级资产表），对标 Drama extractor | thread | 创作项目ID(`creation_id`:any); 补充剧本(`text`:text) | 创作项目ID(`creation_id`:text); 人物ID列表(`character_ids`:json); 场景ID列表(`scene_ids`:json); 道具ID列表(`prop_ids`:json); 人物清单(`characters`:json); 场景清单(`scenes`:json); 道具清单(`props`:json) |
-| 道具资产创作 | `agi_prop` | AI 漫剧·道具资产创作：从剧本提取/生成推动剧情的关键道具，生成白底单品图，写入道具资产表并登记 prop_image 资产 | process | 创作项目ID(`creation_id`:any); 补充描述(`text`:text) | 创作项目ID(`creation_id`:text); 道具ID列表(`prop_ids`:json); 道具清单(`props`:json); 道具图(`images`:any) |
+| 人物资产创作 | `agi_character` | AI 漫剧·资产链【与场景/道具并行，无先后】：用 LLM 生成人物设定并写入创作项目，可发布到公共角色库并生成多视角图。上游：「项目立项」或「剧本深化」creation_id 端口。下游：人物多视角图由「分镜首尾帧」自动取用作为角色参考图（无需连线，按项目读库）；creation_id → 后续任意节点 | thread | 创作项目ID(`creation_id`:any); 创意简介(`text`:text) | 创作项目ID(`creation_id`:text); 人物设定(`characters`:json); 角色立绘(`images`:any) |
+| 人物音色生产 | `agi_voice` | AI 漫剧·资产链【依赖人物已入库，须在「剧本深化/人物资产创作」之后】：按「生成对象」为目标人物一次性设计 15~25 字台词，分别调用设计与克隆 TTS 接口合成音色样本，登记到配音谷音色库（vf:voices 引用）并绑定人物 voice_ref。上游：「剧本深化」或「人物资产创作」creation_id 端口（人物必须已存在）。下游：voice_ref 写到人物上，「分镜配音」按对话角色自动取用（无需连线） | process | 创作项目ID(`creation_id`:any) | 创作项目ID(`creation_id`:text); 音色清单(`voices`:json); 样本音频(`audio`:audio); 失败清单(`failed`:json) |
+| 场景资产创作 | `agi_scene` | AI 漫剧·资产链【与人物/道具并行，无先后】：生成关键场景(地点/时间段/光影)并生成固定视角概念图，登记 scene_image 资产。上游：「项目立项」或「剧本深化」creation_id 端口。下游：场景图由「组装分镜提示词」自动收集为【image1】参考图（按项目读库，无需连线）；creation_id → 后续任意节点 | process | 创作项目ID(`creation_id`:any); 补充描述(`text`:text) | 创作项目ID(`creation_id`:text); 场景ID列表(`scene_ids`:json); 场景清单(`scenes`:json); 场景图(`images`:any) |
+| 生成提示词 | `agi_prompt` | AI 漫剧·资产链【可选：提示词精修，不接也能跑】：把资产描述结合整体画风生成 final_prompt 写入库（可调试/可人工改）；资产类型选「分镜」时生成 image_prompt 供「分镜首尾帧」优先取用。上游：资产创作完成后接 creation_id（可选 ids 指定部分资产；分镜用 chapter_id/chapter_ids）。下游：提示词写回资产/分镜记录，生图节点按库自动取用（无需连线） | thread | 创作项目ID(`creation_id`:any); 资产ID列表(可选)(`ids`:json); 章节ID(分镜用)(`chapter_id`:text); 多章节ID列表(分镜用)(`chapter_ids`:json) | 创作项目ID(`creation_id`:text); 资产类型(`asset_type`:text); 资产ID列表(`ids`:json); 提示词结果(`final_prompts`:json) |
+| 资产自动提取 | `agi_extract` | AI 漫剧·资产链【可选捷径：替代「人物/场景/道具」三个节点】：从格式化剧本一次性提取人物/场景/道具，按名去重入库（同名复用更新，新增写入一级资产表）。上游：「剧本深化」creation_id 端口（章节剧本已格式化后提取效果最佳）。下游：与人物/场景/道具节点相同——产物由「分镜首尾帧」「组装分镜提示词」按项目读库自动取用 | thread | 创作项目ID(`creation_id`:any); 补充剧本(`text`:text) | 创作项目ID(`creation_id`:text); 人物ID列表(`character_ids`:json); 场景ID列表(`scene_ids`:json); 道具ID列表(`prop_ids`:json); 人物清单(`characters`:json); 场景清单(`scenes`:json); 道具清单(`props`:json) |
+| 道具资产创作 | `agi_prop` | AI 漫剧·资产链【与人物/场景并行，无先后】：从剧本提取/生成推动剧情的关键道具，生成白底单品图，登记 prop_image 资产。上游：「项目立项」或「剧本深化」creation_id 端口。下游：道具图由「组装分镜提示词」自动合并为【image2】参考图（按项目读库，无需连线）；creation_id → 后续任意节点 | process | 创作项目ID(`creation_id`:any); 补充描述(`text`:text) | 创作项目ID(`creation_id`:text); 道具ID列表(`prop_ids`:json); 道具清单(`props`:json); 道具图(`images`:any) |
 
 ### 漫剧·分镜链（`agi_shot`）
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| 分镜视频制作 | `agi_shot_video` | AI 漫剧·分镜视频制作：以首/尾帧 + 画面描述(场景+运镜)做图生视频（可整章批处理），登记为 shot_video 资产 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json); 首帧(`first_frame`:image); 尾帧(`last_frame`:image); 视频提示词(可选)(`text`:text) | 分镜ID(`shot_id`:text); 分镜视频(`video`:video); 分镜ID列表(`shot_ids`:json); 视频列表(`videos`:json) |
-| 分镜配音 | `agi_shot_dub` | AI 漫剧·分镜配音：按分镜对话逐句 TTS（依人物 voice_ref 音色克隆，可整章批处理），拼接配音并同步产出 SRT 字幕 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json); 分镜视频(可选)(`video`:video); 背景音乐(可选)(`bgm`:audio) | 分镜ID(`shot_id`:text); 配音片段(`audio`:audio); 配音信息(`voiceover`:json); 分镜ID列表(`shot_ids`:json); 配音列表(`audios`:json); SRT字幕列表(`subtitles`:json) |
-| 分镜首尾帧 | `agi_shot_frames` | AI 漫剧·分镜首尾帧：为分镜生成首/尾帧概念图（可整章批处理），注入角色多视角图/场景图作为参考图保证一致性 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json); 首帧(可选)(`first_frame`:image); 尾帧(可选)(`last_frame`:image) | 分镜ID(`shot_id`:text); 首帧(`first_frame`:image); 尾帧(`last_frame`:image); 分镜ID列表(`shot_ids`:json); 首帧列表(`first_frames`:json); 尾帧列表(`last_frames`:json); 帧图(`images`:any) |
-| 组装分镜提示词 | `agi_shot_prompt` | AI 漫剧·组装分镜提示词：把分镜用到的角色图/场景图/道具图按【image1】/【image2】顺序组装，细化为 8 个故事走向关键帧的生图提示词(JSON)，并产出有序参考图供「分镜首尾帧」图生图使用 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json) | 分镜ID(`shot_id`:text); 分镜ID列表(`shot_ids`:json); 组装提示词(`image_prompts`:json); 有序参考图(`image_prompt_refs`:json) |
+| 分镜视频制作 | `agi_shot_video` | AI 漫剧·第7步·分镜链【生视频，耗时最长/最贵】：以首/尾帧 + 画面描述(场景+运镜)做图生视频（可整章批处理），登记 shot_video 资产。上游：「分镜首尾帧」first_frame/last_frame 端口（缺省时自动按库取该分镜最新首尾帧）；shot_id/chapter_id 定位分镜。下游：video 端口 → 「分镜配音」video 端口与「分镜导出」video 端口 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json); 首帧(`first_frame`:image); 尾帧(`last_frame`:image); 视频提示词(可选)(`text`:text) | 分镜ID(`shot_id`:text); 分镜视频(`video`:video); 分镜ID列表(`shot_ids`:json); 视频列表(`videos`:json) |
+| 分镜配音 | `agi_shot_dub` | AI 漫剧·第8步·分镜链【依赖人物音色已生产】：按分镜对话逐句 TTS（依人物 voice_ref 音色克隆，可整章批处理），拼接配音并同步产出 SRT 字幕。上游：「分镜剧本」shot_id/chapter_id 定位分镜；可选接「分镜视频制作」video 端口（用于试听对齐，不影响登记）。下游：audio 端口 → 「分镜导出」audio 端口；subtitles → 「分镜导出」subtitle 端口（烧录字幕用） | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json); 分镜视频(可选)(`video`:video); 背景音乐(可选)(`bgm`:audio) | 分镜ID(`shot_id`:text); 配音片段(`audio`:audio); 配音信息(`voiceover`:json); 分镜ID列表(`shot_ids`:json); 配音列表(`audios`:json); SRT字幕列表(`subtitles`:json) |
+| 分镜首尾帧 | `agi_shot_frames` | AI 漫剧·第6步·分镜链【生图，耗时主要在此】：为分镜生成首/尾帧概念图（可整章批处理），注入角色多视角图/场景图作为参考图保证一致性；img2img 模式优先用「组装分镜提示词」的有序参考图。上游：「分镜剧本/组装分镜提示词」shot_id(单个) 或 chapter_id(整章批处理)。下游：first_frame/last_frame 端口 → 「分镜视频制作」同名端口（不连线时节点也会按库自动取最新首尾帧） | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json); 首帧(可选)(`first_frame`:image); 尾帧(可选)(`last_frame`:image) | 分镜ID(`shot_id`:text); 首帧(`first_frame`:image); 尾帧(`last_frame`:image); 分镜ID列表(`shot_ids`:json); 首帧列表(`first_frames`:json); 尾帧列表(`last_frames`:json); 帧图(`images`:any) |
+| 组装分镜提示词 | `agi_shot_prompt` | AI 漫剧·第5步·分镜链【img2img 一致性链路的关键，文生图可跳过】：把分镜用到的角色图/场景图/道具图按【image1】/【image2】顺序组装，细化为 8 个故事走向关键帧的生图提示词(JSON)。上游：「分镜剧本」chapter_id(整章批处理) 或 shot_id(单个)；场景/道具/角色图按项目读库自动收集。下游：提示词与有序参考图写入分镜记录，「分镜首尾帧」img2img 模式自动取用（无需连线，但先跑本节点） | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json) | 分镜ID(`shot_id`:text); 分镜ID列表(`shot_ids`:json); 组装提示词(`image_prompts`:json); 有序参考图(`image_prompt_refs`:json) |
 
 ### 漫剧·成片链（`agi_render`）
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| 分镜导出 | `agi_shot_export` | AI 漫剧·分镜导出：分镜视频+配音+BGM/音效混流成片，可烧录 SRT 字幕（可整章批处理），登记 shot_render 资产 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json); 分镜视频(`video`:video); 配音(`audio`:audio); 背景音乐(`bgm`:audio); 音效(`sfx`:audio); SRT字幕(可选)(`subtitle`:any) | 分镜ID(`shot_id`:text); 分镜成片(`render`:video); 分镜ID列表(`shot_ids`:json); 成片列表(`renders`:json) |
-| 章节导出 | `agi_chapter_export` | AI 漫剧·章节导出：拼接本章全部分镜成片为一个章节视频，登记 chapter_render 资产 | process | 章节ID(`chapter_id`:any); 多章节ID列表(多章批量)(`chapter_ids`:json); 分镜成片列表(可选)(`renders`:any); 单视频(可选)(`video`:video) | 章节ID(`chapter_id`:text); 章节成片(`render`:video); 章节ID列表(批处理)(`chapter_ids`:json); 章节成片列表(批处理)(`renders`:json) |
+| 分镜导出 | `agi_shot_export` | AI 漫剧·第9步·成片链：分镜视频+配音+BGM/音效混流成片，可烧录 SRT 字幕（可整章批处理），登记 shot_render 资产。上游：「分镜视频制作」video 端口 +「分镜配音」audio/subtitle 端口（不连线时也按库自动取该分镜最新视频/配音）。下游：render/renders 端口 → 「章节导出」renders 端口 | process | 分镜ID(单个)(`shot_id`:any); 章节ID(批处理)(`chapter_id`:any); 多章节ID列表(可选)(`chapter_ids`:json); 分镜视频(`video`:video); 配音(`audio`:audio); 背景音乐(`bgm`:audio); 音效(`sfx`:audio); SRT字幕(可选)(`subtitle`:any) | 分镜ID(`shot_id`:text); 分镜成片(`render`:video); 分镜ID列表(`shot_ids`:json); 成片列表(`renders`:json) |
+| 章节导出 | `agi_chapter_export` | AI 漫剧·第10步·成片链【链路终点】：拼接本章全部分镜成片为一个章节视频，登记 chapter_render 资产。上游：「分镜导出」renders 端口（缺省时按库按 order_no 自动收集本章 shot_render）+「分镜剧本」chapter_id 端口。下游：无——render 即最终章节成片 | process | 章节ID(`chapter_id`:any); 多章节ID列表(多章批量)(`chapter_ids`:json); 分镜成片列表(可选)(`renders`:any); 单视频(可选)(`video`:video) | 章节ID(`chapter_id`:text); 章节成片(`render`:video); 章节ID列表(批处理)(`chapter_ids`:json); 章节成片列表(批处理)(`renders`:json) |
 
 ### 漫剧·数据链（`agi_data`）
 
@@ -215,7 +217,7 @@
 | 媒体转链接 | `media_to_url` | 上传本地视频/图片到腾讯云 VOD，返回 URL 及完整媒体详情（尺寸/时长/码率等）保存为 JSON | thread | 视频(`video`:video); 图片(`image`:image) | 媒体详情(`json`:json) |
 | 平台视频下载 | `platform_download` | 使用 yt-dlp 下载平台视频 | process | URL(`url`*:url) | 视频(`video`:video); 字幕(`subtitle`:subtitle); 封面(`image`:image); 下载文件名(`filename`:text) |
 | 批量视频下载 | `batch_download` | 使用 yt-dlp 的专辑/播放列表批量下载能力，一次下载整张专辑；产物统一保存到新建的专辑目录，并输出下载产物清单 JSON | process | 专辑/播放列表 URL(`url`*:url) | 下载产物清单(`json`:json); 产物目录(`folder`:text); 首个视频(`video`:video) |
-| 文件下载器 | `file_downloader` | 按「下载地址」下载文件到任务目录的 download/ 文件夹；「文件名称」留空时自动命名（Content-Disposition → URL 末段 → 时间戳），缺扩展名按响应类型补全。输出下载后的文件路径 | process | 下载地址(`url`*:url); 文件名称(`filename`:text) | 文件路径(`file`:filepath); 文件名(`filename`:text) |
+| 文件下载器 | `file_downloader` | 按「下载地址」下载文件到任务目录的 download/ 文件夹；「文件名称」留空时自动命名（Content-Disposition → URL 末段 → 时间戳），缺扩展名按响应类型补全。输出下载后的文件路径 | process | 下载地址(`url`*:any); 文件名称(`filename`:text) | 文件路径(`file`:any); 文件名(`filename`:text) |
 | 网络请求 | `http_request` | 执行可配置的 HTTP 网络请求，支持请求体占位符、重试和响应保存 | process | 输入 1(`input_1`:any); 输入 2(`input_2`:any); 输入 3(`input_3`:any); 请求 Data(`request_data`:json) | 结果文件(`result`:any); JSON 结果(`json`:json); 文本结果(`text`:text); 状态码(`status`:text) |
 
 ### 工具类节点（`utility`）
@@ -228,6 +230,7 @@
 | JSON转文本 | `json_to_text` | 将JSON转换为文本文件，支持全量转文本或按key表达式取值 | thread | JSON(`json`:json) | 文本文件(`text`:text) |
 | SRT字幕转json | `srt_to_json` | 将 SRT 字幕转换为 ASR 结果格式 JSON（包含 text 与 segments，不生成词级时间戳 words），可直接接入 ASR 结果校验、预处理等下游节点。输入为「字幕」类型，可连线「字幕生成」等字幕节点的输出（默认输出 .srt）。 | thread | 字幕(`subtitle`*:subtitle) | ASR结果JSON(`json`:json) |
 | SRT转文本 | `srt_to_text` | 将 SRT 字幕直接转换为纯文本：去掉序号与时间轴，提取每条字幕的文本内容，按原顺序拼接为 .txt 文本文件输出。输入为「字幕」类型，可连线「字幕生成」等字幕节点的输出（默认输出 .srt）。 | thread | 字幕(`subtitle`*:subtitle) | 文本(`text`:text) |
+| 图片格式转换 | `image_format_convert` | 将输入的图片转换为指定格式并保存为新文件。输入端口为 any：自动识别上游传入的是图片文件路径还是 base64 图片数据（兼容 data:image/...;base64, 前缀），无法识别时报错。输出转换后的图片路径，可接入预览、剪辑、生图参考等图片类下游节点。 | thread | 图片(`input`*:any) | 图片(`image`:image) |
 | 字幕编辑 | `subtitle_editor` | 逐条编辑字幕（文本/时间/合并/拆分），带视频预览，默认透传，可另存副本 | thread | 字幕(`subtitle`*:subtitle) | 字幕(`subtitle`:subtitle) |
 | 文本拼接 | `text_concat` | 把「输入1 / 输入2 / 输入框文本」三个对象按卡片指定顺序拼接，连接符可选换行符/空格/自定义 | thread | 输入1(`input1`:text); 输入2(`input2`:text) | 拼接文本(`text`:text) |
 | 文本编辑 | `text_editor` | 可视化编辑文本，支持查找删除/替换/正则，默认透传，可另存副本 | thread | 文本(`text`*:text) | 文本(`text`:text) |

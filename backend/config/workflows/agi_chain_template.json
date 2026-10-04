@@ -1,0 +1,746 @@
+{
+  "id": "agi_chain_template",
+  "name": "AI漫剧·全流程模板（含推荐连线）",
+  "description": "AI 漫剧完整生产链路模板：立项→深化→资产(人物/音色/场景/道具并行)→章节→分镜→组装提示词→首尾帧→视频→配音→分镜导出→章节导出。所有节点已按推荐数据流连线，直接从「项目立项」节点开始运行即可；各节点配置项（接口/模型/数量）需自行选择。",
+  "nodes": [
+    {
+      "id": "agi_tpl_project",
+      "type": "workflow",
+      "position": {
+        "x": 0,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_project",
+        "label": "项目立项·剧本创作",
+        "config": {
+          "project_name": "AI漫剧项目",
+          "llm_model": "vlf-create",
+          "style_preset": "",
+          "art_style_custom": "",
+          "genre_tags": "",
+          "art_style_tags": "",
+          "audience_tags": "",
+          "video_aspect_ratio": "16:9",
+          "outline_prompt": ""
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 671
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_deepen",
+      "type": "workflow",
+      "position": {
+        "x": 480,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_deepen",
+        "label": "剧本深化",
+        "config": {
+          "creation_id": "",
+          "llm_model": "vlf-create",
+          "num_chapters": 3,
+          "num_characters": 3,
+          "art_style_input": "",
+          "extra_requirements": "",
+          "require_screenplay": true,
+          "replace_chapters": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 512
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_character",
+      "type": "workflow",
+      "position": {
+        "x": 960,
+        "y": -420
+      },
+      "data": {
+        "nodeType": "agi_character",
+        "label": "人物资产创作",
+        "config": {
+          "creation_id": "",
+          "genre_tags": "",
+          "num_characters": 4,
+          "char_count_mode": "follow",
+          "mode": "auto",
+          "llm_model": "vlf-create",
+          "generate_images": false,
+          "publish_to_library": true,
+          "seed": "",
+          "num_views": 3,
+          "view_prompts": "正面全身,侧面半身,背面全身",
+          "image_interface": "",
+          "image_model": "",
+          "image_resolution": "",
+          "negative_prompt": "",
+          "art_style_prompt": ""
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 715
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_voice",
+      "type": "workflow",
+      "position": {
+        "x": 960,
+        "y": -60
+      },
+      "data": {
+        "nodeType": "agi_voice",
+        "label": "人物音色生产",
+        "config": {
+          "creation_id": "",
+          "llm_model": "vlf-create",
+          "target_mode": "all",
+          "voice_targets": [],
+          "default_mode": "design",
+          "design_interface": "",
+          "design_model": "",
+          "clone_interface": "",
+          "clone_model": "",
+          "tts_speed": 1,
+          "overwrite": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 397
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_scene",
+      "type": "workflow",
+      "position": {
+        "x": 960,
+        "y": 300
+      },
+      "data": {
+        "nodeType": "agi_scene",
+        "label": "场景资产创作",
+        "config": {
+          "creation_id": "",
+          "num_scenes": 6,
+          "mode": "auto",
+          "llm_model": "vlf-create",
+          "generate_images": true,
+          "image_interface": "",
+          "image_model": "",
+          "image_resolution": "",
+          "negative_prompt": "",
+          "art_style_prompt": ""
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 578
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_prop",
+      "type": "workflow",
+      "position": {
+        "x": 960,
+        "y": 660
+      },
+      "data": {
+        "nodeType": "agi_prop",
+        "label": "道具资产创作",
+        "config": {
+          "creation_id": "",
+          "num_props": 6,
+          "mode": "auto",
+          "llm_model": "vlf-create",
+          "generate_images": true,
+          "image_interface": "",
+          "image_model": "",
+          "image_resolution": "",
+          "negative_prompt": "",
+          "art_style_prompt": ""
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 578
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_chapter",
+      "type": "workflow",
+      "position": {
+        "x": 1440,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_chapter",
+        "label": "章节剧本",
+        "config": {
+          "creation_id": "",
+          "num_chapters": 1,
+          "llm_model": "vlf-create",
+          "chapter_title": "",
+          "force": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 318
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_shot",
+      "type": "workflow",
+      "position": {
+        "x": 1920,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_shot",
+        "label": "分镜剧本",
+        "config": {
+          "creation_id": "",
+          "chapter_id": "",
+          "num_shots": 8,
+          "llm_model": "vlf-create",
+          "force": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 319
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_shot_prompt",
+      "type": "workflow",
+      "position": {
+        "x": 2400,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_shot_prompt",
+        "label": "组装分镜提示词",
+        "config": {
+          "creation_id": "",
+          "chapter_id": "",
+          "shot_id": "",
+          "llm_model": "",
+          "force": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 383
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_frames",
+      "type": "workflow",
+      "position": {
+        "x": 2880,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_shot_frames",
+        "label": "分镜首尾帧",
+        "config": {
+          "creation_id": "",
+          "chapter_id": "",
+          "shot_id": "",
+          "generate_first": true,
+          "generate_last": true,
+          "use_char_ref": true,
+          "use_scene_ref": true,
+          "max_ref_images": 4,
+          "gen_mode": "txt2img",
+          "image_interface": "",
+          "image_model": "",
+          "img2img_model": "",
+          "image_resolution": "",
+          "negative_prompt": "",
+          "art_style_prompt": "",
+          "force": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 739
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_video",
+      "type": "workflow",
+      "position": {
+        "x": 3360,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_shot_video",
+        "label": "分镜视频制作",
+        "config": {
+          "creation_id": "",
+          "chapter_id": "",
+          "shot_id": "",
+          "video_interface": "",
+          "video_model": "",
+          "duration": 5,
+          "resolution": "720P",
+          "aspect_ratio": "",
+          "camera_prompt": "",
+          "negative_prompt": "",
+          "num_videos": 1,
+          "force": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 552
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_dub",
+      "type": "workflow",
+      "position": {
+        "x": 3840,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_shot_dub",
+        "label": "分镜配音",
+        "config": {
+          "creation_id": "",
+          "chapter_id": "",
+          "shot_id": "",
+          "tts_interface": "",
+          "tts_mode": "controllable_clone",
+          "tts_model": "",
+          "tts_voice": "",
+          "tts_speed": 1,
+          "tts_voice_design": "",
+          "make_srt": true,
+          "force": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 601
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_export",
+      "type": "workflow",
+      "position": {
+        "x": 4320,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_shot_export",
+        "label": "分镜导出",
+        "config": {
+          "creation_id": "",
+          "chapter_id": "",
+          "shot_id": "",
+          "bgm_vol": 0.3,
+          "dub_vol": 0.9,
+          "fade_in": 0.3,
+          "fade_out": 0.3,
+          "mute_original": false,
+          "burn_subtitle": false,
+          "force": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 502
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "agi_tpl_chapter_export",
+      "type": "workflow",
+      "position": {
+        "x": 4800,
+        "y": 0
+      },
+      "data": {
+        "nodeType": "agi_chapter_export",
+        "label": "章节导出",
+        "config": {
+          "creation_id": "",
+          "chapter_id": "",
+          "reuse_stitch_id": "",
+          "resolution": "original",
+          "aspect_ratio": "original",
+          "transition": "none",
+          "transition_duration": 0.4,
+          "make_cover": false,
+          "cover_duration": 3
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 765
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_project",
+      "sourceHandle": "out-creation_id",
+      "target": "agi_tpl_deepen",
+      "targetHandle": "in-creation_id",
+      "id": "e_project_deepen",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_deepen",
+      "sourceHandle": "out-creation_id",
+      "target": "agi_tpl_character",
+      "targetHandle": "in-creation_id",
+      "id": "e_deepen_character",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_deepen",
+      "sourceHandle": "out-creation_id",
+      "target": "agi_tpl_voice",
+      "targetHandle": "in-creation_id",
+      "id": "e_deepen_voice",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_deepen",
+      "sourceHandle": "out-creation_id",
+      "target": "agi_tpl_scene",
+      "targetHandle": "in-creation_id",
+      "id": "e_deepen_scene",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_deepen",
+      "sourceHandle": "out-creation_id",
+      "target": "agi_tpl_prop",
+      "targetHandle": "in-creation_id",
+      "id": "e_deepen_prop",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_deepen",
+      "sourceHandle": "out-creation_id",
+      "target": "agi_tpl_chapter",
+      "targetHandle": "in-creation_id",
+      "id": "e_deepen_chapter",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_chapter",
+      "sourceHandle": "out-chapter_id",
+      "target": "agi_tpl_shot",
+      "targetHandle": "in-chapter_id",
+      "id": "e_chapter_shot",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_shot",
+      "sourceHandle": "out-chapter_id",
+      "target": "agi_tpl_shot_prompt",
+      "targetHandle": "in-chapter_id",
+      "id": "e_shot_prompt",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_shot",
+      "sourceHandle": "out-chapter_id",
+      "target": "agi_tpl_chapter_export",
+      "targetHandle": "in-chapter_id",
+      "id": "e_shot_chapterexport",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_shot_prompt",
+      "sourceHandle": "out-shot_id",
+      "target": "agi_tpl_frames",
+      "targetHandle": "in-shot_id",
+      "id": "e_prompt_frames_order",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_shot",
+      "sourceHandle": "out-chapter_id",
+      "target": "agi_tpl_frames",
+      "targetHandle": "in-chapter_id",
+      "id": "e_shot_frames",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_frames",
+      "sourceHandle": "out-shot_id",
+      "target": "agi_tpl_video",
+      "targetHandle": "in-shot_id",
+      "id": "e_frames_video_order",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_shot",
+      "sourceHandle": "out-chapter_id",
+      "target": "agi_tpl_video",
+      "targetHandle": "in-chapter_id",
+      "id": "e_shot_video",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_frames",
+      "sourceHandle": "out-first_frame",
+      "target": "agi_tpl_video",
+      "targetHandle": "in-first_frame",
+      "id": "e_frames_video_first",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_frames",
+      "sourceHandle": "out-last_frame",
+      "target": "agi_tpl_video",
+      "targetHandle": "in-last_frame",
+      "id": "e_frames_video_last",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_video",
+      "sourceHandle": "out-shot_id",
+      "target": "agi_tpl_dub",
+      "targetHandle": "in-shot_id",
+      "id": "e_video_dub_order",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_shot",
+      "sourceHandle": "out-chapter_id",
+      "target": "agi_tpl_dub",
+      "targetHandle": "in-chapter_id",
+      "id": "e_shot_dub",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_video",
+      "sourceHandle": "out-video",
+      "target": "agi_tpl_dub",
+      "targetHandle": "in-video",
+      "id": "e_video_dub",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_dub",
+      "sourceHandle": "out-shot_id",
+      "target": "agi_tpl_export",
+      "targetHandle": "in-shot_id",
+      "id": "e_dub_export_order",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_shot",
+      "sourceHandle": "out-chapter_id",
+      "target": "agi_tpl_export",
+      "targetHandle": "in-chapter_id",
+      "id": "e_shot_export",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_video",
+      "sourceHandle": "out-video",
+      "target": "agi_tpl_export",
+      "targetHandle": "in-video",
+      "id": "e_video_export",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_dub",
+      "sourceHandle": "out-audio",
+      "target": "agi_tpl_export",
+      "targetHandle": "in-audio",
+      "id": "e_dub_export",
+      "style": {
+        "stroke": "#10b981",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_dub",
+      "sourceHandle": "out-subtitles",
+      "target": "agi_tpl_export",
+      "targetHandle": "in-subtitle",
+      "id": "e_dub_export_srt",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeDasharray": "6 3"
+      }
+    },
+    {
+      "type": "smoothstep",
+      "source": "agi_tpl_export",
+      "sourceHandle": "out-renders",
+      "target": "agi_tpl_chapter_export",
+      "targetHandle": "in-renders",
+      "id": "e_export_chapterexport",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeDasharray": "6 3"
+      }
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-01T00:00:00",
+  "updatedAt": "2026-10-02T15:56:17",
+  "revision": 2
+}

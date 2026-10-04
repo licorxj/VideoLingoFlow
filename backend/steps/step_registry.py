@@ -32,6 +32,7 @@ from backend.steps.s07_subtitle_align import S07SubtitleAlign
 from backend.steps.s07_merge_sub_video import S07MergeSubVideo
 from backend.steps.s08_dub_task import S08DubTask
 from backend.steps.s09_tts import S09TTS
+from backend.steps.s_long_text_tts import S_LongTextTTS
 from backend.steps.s10_merge_audio import S10MergeAudio
 from backend.steps.s_merge_dub import S_MergeDub
 from backend.steps.s11_merge_dub_video import S11MergeDubVideo
@@ -131,6 +132,7 @@ from backend.steps.s_hyperframes_agent import S_HyperFramesAgent
 from backend.steps.s_image_grid_split import S_ImageGridSplit
 from backend.steps.s_video_scale import S_VideoScale
 from backend.steps.s_video_concat import S_VideoConcat
+from backend.steps.s_image_format_convert import S_ImageFormatConvert
 
 # Step ID -> instance mapping
 _STEPS = {
@@ -171,6 +173,9 @@ _STEPS = {
     "dub_task": S08DubTask(),
     "s09_tts": S09TTS(),
     "tts": S09TTS(),
+    # 长文本 TTS（ai_gen 分组：输入文本/文本文件，输出音频路径 + 增量记录 JSON）
+    "long_text_tts": S_LongTextTTS(),
+    "s_long_text_tts": S_LongTextTTS(),
     "s10_merge_audio": S10MergeAudio(),
     "merge_audio": S10MergeAudio(),
     "merge_dub": S_MergeDub(),
@@ -408,6 +413,9 @@ _STEPS = {
     # KIE AI 图床网存（免费媒体暂存，直接调用 kieai_sdk 上传接口，置于 网络请求类节点 分组）
     "kie_media_host": S_KieMediaHost(),
     "s_kie_media_host": S_KieMediaHost(),
+    # 图片格式转换（utility 分组：输入 any，输出 image）
+    "image_format_convert": S_ImageFormatConvert(),
+    "s_image_format_convert": S_ImageFormatConvert(),
 }
 
 

@@ -34,10 +34,22 @@ class S_EditorAgent(BaseStep):
         # 单节点重跑防叠加：共享文件若由本节点上次写回（lastWriter==本节点），
         # 则回退到进入本节点前的输入快照（cache），从进入点状态重新执行。
         node_id = getattr(self, "_node_id", "")
-        project_input = str(inputs.get("project") or "")
-        if project_input and os.path.isfile(project_input):
-            with open(project_input, "r", encoding="utf-8") as handle:
-                data = json.load(handle)
+        project_input = inputs.get("project")
+        data = None
+        if isinstance(project_input, (dict, list)):
+            data = project_input
+        elif isinstance(project_input, str) and project_input.strip():
+            p = project_input.strip()
+            candidates = []
+            if os.path.isabs(p) and os.path.isfile(p):
+                candidates.append(p)
+            rel = os.path.join(task_dir, p)
+            if os.path.isfile(rel):
+                candidates.append(rel)
+            if candidates:
+                with open(candidates[0], "r", encoding="utf-8") as handle:
+                    data = json.load(handle)
+        if data is not None:
             input_backup = os.path.join(task_dir, "cache", f"editing_input_{node_id}.json")
             if node_id and data.get("lastWriter") == node_id and os.path.isfile(input_backup):
                 try:

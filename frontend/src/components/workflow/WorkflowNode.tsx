@@ -12,6 +12,7 @@ import CreationBrowserDialog from "./CreationBrowserDialog";
 import { useWorkflowStore } from "@/stores/workflowStore";
 import {
   getNodeTypeDef, PORT_COLORS, getVisibleOutputs, getNodeInputs, isConfigFieldVisible,
+  getAgiChainStep,
   PI_AGENT_OUTPUT_TYPES, buildInlineGroupTypeDef, isGroupNodeData,
   buildInlineLoopTypeDef, isLoopNodeData,
   type WorkflowNode as WFNode, type ConfigField, type PortType,
@@ -941,7 +942,22 @@ function ImageCompare({ config, image1Path, image2Path, taskId, refreshKey }: { 
   );
 }
 
-function ApiSelectField({ field, value, config, onConfigChange, followValue }: { field: ConfigField; value: string; config: Record<string, any>; onConfigChange: (key: string, value: any) => void; followValue?: string }) {
+/** 「浏览项目」小按钮：漫剧节点创作项目字段旁，快捷打开项目浏览页 */
+function BrowseProjectButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onPointerDown={(e) => e.stopPropagation()}
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      title="打开项目浏览页"
+      className="flex-shrink-0 self-center px-2 py-1.5 rounded-md text-[10px] font-medium text-primary bg-primary/10 border border-primary/30 hover:bg-primary/20 transition-colors whitespace-nowrap"
+    >
+      浏览项目
+    </button>
+  );
+}
+
+function ApiSelectField({ field, value, config, onConfigChange, followValue, onBrowseProject }: { field: ConfigField; value: string; config: Record<string, any>; onConfigChange: (key: string, value: any) => void; followValue?: string; onBrowseProject?: () => void }) {
   const [apiOptions, setApiOptions] = useState<{ value: string; label: string; description?: string }[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -1085,9 +1101,12 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
     return (
       <div>
         <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-        <div className="w-full text-xs px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/5 text-foreground/80 flex items-center justify-between gap-2">
-          <span className="truncate" title={followValue}>{followValue}</span>
-          <span className="text-[10px] text-primary flex-shrink-0">跟随上游输入</span>
+        <div className="flex items-center gap-1.5">
+          <div className="min-w-0 flex-1 text-xs px-2.5 py-1.5 rounded-md border border-primary/30 bg-primary/5 text-foreground/80 flex items-center justify-between gap-2">
+            <span className="truncate" title={followValue}>{followValue}</span>
+            <span className="text-[10px] text-primary flex-shrink-0">跟随上游输入</span>
+          </div>
+          {onBrowseProject && <BrowseProjectButton onClick={onBrowseProject} />}
         </div>
         {field.description && (
           <p className="text-[10px] text-muted-foreground mt-1 leading-snug">{field.description}（断开上游连线后可手动选择）</p>
@@ -1101,26 +1120,30 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
     return (
       <div>
         <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
-        <select
-          value={value}
-          onChange={(e) => onConfigChange(field.key, e.target.value)}
-          onPointerDown={(e) => e.stopPropagation()}
-          onWheel={(e) => e.stopPropagation()}
-          className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
-        >
-          <option value="">{apiLoading ? "加载中..." : field.placeholder || "请选择"}</option>
-          {apiOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+        <div className="flex items-center gap-1.5">
+          <select
+            value={value}
+            onChange={(e) => onConfigChange(field.key, e.target.value)}
+            onPointerDown={(e) => e.stopPropagation()}
+            onWheel={(e) => e.stopPropagation()}
+            className="min-w-0 flex-1 text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 outline-none transition-all"
+          >
+            <option value="">{apiLoading ? "加载中..." : field.placeholder || "请选择"}</option>
+            {apiOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>{opt.label}</option>
+            ))}
+          </select>
+          {onBrowseProject && <BrowseProjectButton onClick={onBrowseProject} />}
+        </div>
       </div>
     );
   }
 
   // Custom dropdown with tooltip support
   return (
-    <div className="relative" ref={dropdownRef}>
-      <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+    <div className="flex items-center gap-1.5">
+      <div className="relative min-w-0 flex-1" ref={dropdownRef}>
+        <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -1154,6 +1177,8 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue }: {
           )}
         </div>
       )}
+      </div>
+      {onBrowseProject && <BrowseProjectButton onClick={onBrowseProject} />}
     </div>
   );
 }
@@ -1493,12 +1518,14 @@ function VoiceTargetListField({ field, value, config, onConfigChange, taskId }: 
   );
 }
 
-function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonAction, upstreamOutputs, taskId }: {
+function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonAction, onBrowseProject, upstreamOutputs, taskId }: {
   nodeType: any;
   config: Record<string, any>;
   onConfigChange: (key: string, value: any) => void;
   onVoiceSelect?: (field: ConfigField) => void;
   onButtonAction?: (field: ConfigField) => void;
+  /** 漫剧节点「创作项目」字段旁的「浏览项目」按钮回调 */
+  onBrowseProject?: () => void;
   upstreamOutputs?: Record<string, any>;
   taskId?: string;
 }) {
@@ -2208,7 +2235,11 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           }
 
           if (field.type === "api-select") {
-            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={config} onConfigChange={onConfigChange} followValue={field.followPort ? String((upstreamOutputs as any)?.[field.followPort] ?? "") : ""} /></div>;
+            // 漫剧节点的「创作项目」选择字段：并排「浏览项目」按钮快捷打开项目浏览页
+            const showBrowse = !!onBrowseProject
+              && nodeType.id?.startsWith("agi_")
+              && field.apiEndpoint === "/api/creation/list";
+            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={config} onConfigChange={onConfigChange} followValue={field.followPort ? String((upstreamOutputs as any)?.[field.followPort] ?? "") : ""} onBrowseProject={showBrowse ? onBrowseProject : undefined} /></div>;
           }
 
           if (field.type === "multiselect") {
@@ -2858,6 +2889,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
 
   const hasConfig = nodeType.configFields && nodeType.configFields.length > 0;
   const nodeColor = nodeType.color || "#6b7280";
+  const chainStep = getAgiChainStep(nodeType.id);
 
   const saveNote = (text: string) => {
     setNoteText(text);
@@ -2905,7 +2937,22 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           <IconComp className="w-5 h-5" style={{ color: nodeType.color }} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="text-sm font-bold truncate">{resolveNodeLabel(nodeType, nd.label)}</div>
+          <div className="text-sm font-bold truncate flex items-center gap-1.5">
+            {chainStep && (
+              <span
+                title={chainStep.tip}
+                className={cn(
+                  "text-[10px] font-mono px-1 py-px rounded flex-shrink-0",
+                  chainStep.optional
+                    ? "border border-dashed border-muted-foreground/60 text-muted-foreground"
+                    : "bg-background/70 text-foreground/80",
+                )}
+              >
+                {chainStep.badge}
+              </span>
+            )}
+            {resolveNodeLabel(nodeType, nd.label)}
+          </div>
           <div className="text-xs text-muted-foreground truncate">{(nodeType.description || "").slice(0, 25)}</div>
         </div>
         {nodeType.id !== "input" && (
@@ -3629,6 +3676,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                 taskId={artifactTaskId}
                 onConfigChange={handleConfigChange}
                 onVoiceSelect={setVoiceSelectField}
+                onBrowseProject={nodeType.id?.startsWith("agi_") ? () => setCreationBrowserOpen(true) : undefined}
                 onButtonAction={() => {
                   if (nodeType.id === "agi_project") { setCreationBrowserOpen(true); }
           else if (nodeType.id === "text_editor") openTextEditor();
@@ -3682,6 +3730,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           taskId={artifactTaskId}
           onConfigChange={handleConfigChange}
           onVoiceSelect={setVoiceSelectField}
+          onBrowseProject={nodeType.id?.startsWith("agi_") ? () => setCreationBrowserOpen(true) : undefined}
           onButtonAction={() => {
             if (nodeType.id === "agi_project") { setCreationBrowserOpen(true); }
           else if (nodeType.id === "text_editor") openTextEditor();
@@ -3692,8 +3741,8 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         />
       )}
 
-      {/* 项目浏览（agi_project 浏览项目按钮） */}
-      {nodeType.id === "agi_project" && (
+      {/* 项目浏览（agi_project 浏览项目按钮 + 各漫剧节点创作项目字段旁的浏览按钮） */}
+      {nodeType.id?.startsWith("agi_") && (
         <CreationBrowserDialog
           open={creationBrowserOpen}
           onClose={() => setCreationBrowserOpen(false)}

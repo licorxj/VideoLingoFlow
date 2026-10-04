@@ -74,6 +74,9 @@ class SHomophoneFix(BaseStep):
         step_inputs = getattr(self, "_step_inputs", {}) or {}
         raw = (step_inputs.get("json") or step_inputs.get("subtitle")
                or step_inputs.get("any") or step_inputs.get("file"))
+        # 内存数据（dict / list）直接视为有效输入
+        if isinstance(raw, (dict, list)):
+            return True
         if self._resolve_input_file(raw, task_dir):
             return True
         # 回退：扫描 cache/output 里的 json / srt 产物
@@ -85,6 +88,54 @@ class SHomophoneFix(BaseStep):
                 if name.endswith((".json", ".srt")):
                     return True
         return False
+
+    def _resolve_input_data(self, raw, task_dir: str) -> dict:
+        """把字幕/ASR 输入解析为 {'segments': [...]} 结构。
+
+        兼容：内存 dict / list、.json / .srt 文件路径（绝对或相对 task_dir）、
+        内联 JSON 字符串、内联 SRT 文本。
+        """
+        if raw is None:
+            path = self._scan_fallback_input(task_dir)
+            if not path:
+                raise ValueError("未收到有效的字幕/ASR JSON 输入（支持 .json / .srt）")
+            return self._read_input_path(path)
+        if isinstance(raw, dict):
+            return raw
+        if isinstance(raw, list):
+            return {"segments": raw}
+        if isinstance(raw, str):
+            v = raw.strip()
+            candidates = []
+            if os.path.isabs(v) and os.path.isfile(v):
+                candidates.append(v)
+            if task_dir and os.path.isfile(os.path.join(task_dir, v)):
+                candidates.append(os.path.join(task_dir, v))
+            if candidates:
+                return self._read_input_path(candidates[0])
+            # 内联：先试 JSON，失败再按 SRT 文本解析
+            try:
+                data = json.loads(v)
+            except json.JSONDecodeError:
+                return {"segments": self._parse_srt(v), "language": "zh"}
+            if isinstance(data, list):
+                data = {"segments": data}
+            return data
+        raise ValueError("无法识别的字幕/ASR 输入（需 JSON / SRT 文件或数据）")
+
+    @staticmethod
+    def _read_input_path(path: str) -> dict:
+        with open(path, "r", encoding="utf-8-sig") as f:
+            content = f.read()
+        if path.lower().endswith(".srt"):
+            return {"segments": SHomophoneFix._parse_srt(content), "language": "zh"}
+        try:
+            data = json.loads(content)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"输入 JSON 解析失败：{exc}") from exc
+        if isinstance(data, list):
+            data = {"segments": data}
+        return data
 
     # ------------------------------------------------------------------
     @staticmethod
@@ -128,30 +179,14 @@ class SHomophoneFix(BaseStep):
 
         raw = (step_inputs.get("json") or step_inputs.get("subtitle")
                or step_inputs.get("any") or step_inputs.get("file"))
-        path = self._resolve_input_file(raw, task_dir) or self._scan_fallback_input(task_dir)
-        if not path:
-            raise ValueError("未收到有效的字幕/ASR JSON 输入（支持 .json / .srt）")
+        data = self._resolve_input_data(raw, task_dir)
 
         if callback:
-            callback(5, f"读取输入：{os.path.basename(path)}")
+            callback(5, "读取输入完成")
 
-        is_srt = path.lower().endswith(".srt")
-        with open(path, "r", encoding="utf-8-sig") as f:
-            content = f.read()
-
-        if is_srt:
-            segments = self._parse_srt(content)
-            data = {"segments": segments, "language": "zh"}
-        else:
-            try:
-                data = json.loads(content)
-            except json.JSONDecodeError as exc:
-                raise ValueError(f"输入 JSON 解析失败：{exc}") from exc
-            if isinstance(data, list):
-                data = {"segments": data}
-            segments = data.get("segments") or []
-            if not segments:
-                raise ValueError("输入 JSON 中没有 segments（需要 ASR 结果或字幕 segments 结构）")
+        segments = data.get("segments") or []
+        if not segments:
+            raise ValueError("输入 JSON 中没有 segments（需要 ASR 结果或字幕 segments 结构）")
 
         # ---- 术语表与修复器 ----
         include_project = node_config.get("include_project_glossary", True)

@@ -4,6 +4,7 @@ import {
   type NodeTypeDef,
   PORT_COLORS,
   getAllNodeTypes,
+  getAgiChainStep,
   registerRuntimeNodeTypes,
 } from "@/lib/workflowTypes";
 import { listNodeTypes, type NodeTypeConfig } from "@/api/nodeTypes";
@@ -171,10 +172,18 @@ export default function NodePalette({ onAddNode, collapsed, onToggleCollapse }: 
           {categories.map(([cat, cfg]) => {
             const catNodes = nodeRegistry.filter((n) => n.category === cat);
             if (catNodes.length === 0) return null;
+            // 漫剧分组按链路顺序展示（定义顺序不一定等于调用顺序）
+            const shownNodes = cat.startsWith("agi_")
+              ? [...catNodes].sort(
+                  (a, b) =>
+                    (getAgiChainStep(a.id)?.order ?? 99) - (getAgiChainStep(b.id)?.order ?? 99),
+                )
+              : catNodes;
             return (
               <div key={cat}>
                 <button
                   onClick={() => toggleCategory(cat)}
+                  title={cat.startsWith("agi_") ? `推荐调用顺序：${shownNodes.map((n) => n.name).join(" → ")}` : undefined}
                   className="w-full flex items-center gap-1.5 text-base font-semibold text-muted-foreground hover:text-foreground py-1.5 px-1 rounded-md hover:bg-secondary/50 transition-colors"
                 >
                   {expanded[cat] ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}
@@ -182,9 +191,10 @@ export default function NodePalette({ onAddNode, collapsed, onToggleCollapse }: 
                 </button>
                 {expanded[cat] && (
                   <div className="space-y-1 pb-1">
-                    {catNodes.map((nodeType) => {
+                    {shownNodes.map((nodeType) => {
                       const IconComp = ICON_MAP[nodeType.icon] || Wrench;
                       const isCustom = nodeType.isBuiltIn === false;
+                      const chainStep = getAgiChainStep(nodeType.id);
                       return (
                         <div
                           key={nodeType.id}
@@ -217,6 +227,19 @@ export default function NodePalette({ onAddNode, collapsed, onToggleCollapse }: 
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="text-xs font-semibold truncate leading-tight flex items-center gap-1">
+                              {chainStep && (
+                                <span
+                                  title={chainStep.tip}
+                                  className={cn(
+                                    "text-[9px] font-mono px-1 py-px rounded flex-shrink-0",
+                                    chainStep.optional
+                                      ? "border border-dashed border-muted-foreground/60 text-muted-foreground"
+                                      : "bg-primary/10 text-primary",
+                                  )}
+                                >
+                                  {chainStep.badge}
+                                </span>
+                              )}
                               {nodeType.name}
                               {isCustom && (
                                 <span className="text-[8px] px-1 py-0 rounded bg-primary/10 text-primary">自定义</span>

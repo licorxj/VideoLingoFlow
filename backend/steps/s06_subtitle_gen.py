@@ -209,33 +209,50 @@ class S06SubtitleGen(BaseStep):
         cache_dir = os.path.join(task_dir, "cache")
 
         subtitle_input = step_inputs.get("subtitle")
-        if subtitle_input:
-            # 连线注入的路径可能是相对路径（相对 task_dir），需拼接到任务目录再判断
-            if not os.path.isabs(subtitle_input):
-                subtitle_input = os.path.join(task_dir, subtitle_input)
-        if subtitle_input and os.path.exists(subtitle_input):
-            if subtitle_input.lower().endswith(".json"):
-                subtitle_input = cls._prefer_reflect_path(subtitle_input)
-                return cls._load_json_entries(subtitle_input)
-            elif subtitle_input.lower().endswith(".srt"):
-                entries = []
-                blocks = open(subtitle_input, "r", encoding="utf-8").read().strip().split("\n\n")
-                for block in blocks:
-                    lines = [line for line in block.splitlines() if line.strip()]
-                    if len(lines) < 3:
-                        continue
-                    ts = lines[1]
-                    start_s, end_s = ts.split(" --> ")
-                    def _parse_ts(value):
-                        value = value.replace(",", ".")
-                        hh, mm, ss = value.split(":")
-                        return int(hh) * 3600 + int(mm) * 60 + float(ss)
-                    entries.append({
-                        "start": _parse_ts(start_s),
-                        "end": _parse_ts(end_s),
-                        "text": "\n".join(lines[2:]).strip(),
-                    })
-                return entries, False
+        # 内存数据（dict / list）直接归一化
+        if isinstance(subtitle_input, (dict, list)):
+            entries = cls._normalize_entries(subtitle_input)
+            return entries, any(e.get("translated") for e in entries)
+        if isinstance(subtitle_input, str) and subtitle_input.strip():
+            v = subtitle_input.strip()
+            # 文件路径（绝对或相对 task_dir）
+            candidates = []
+            if os.path.isabs(v) and os.path.isfile(v):
+                candidates.append(v)
+            rel = os.path.join(task_dir, v)
+            if os.path.isfile(rel):
+                candidates.append(rel)
+            if candidates:
+                p = candidates[0]
+                if p.lower().endswith(".json"):
+                    p = cls._prefer_reflect_path(p)
+                    return cls._load_json_entries(p)
+                elif p.lower().endswith(".srt"):
+                    entries = []
+                    blocks = open(p, "r", encoding="utf-8").read().strip().split("\n\n")
+                    for block in blocks:
+                        lines = [line for line in block.splitlines() if line.strip()]
+                        if len(lines) < 3:
+                            continue
+                        ts = lines[1]
+                        start_s, end_s = ts.split(" --> ")
+                        def _parse_ts(value):
+                            value = value.replace(",", ".")
+                            hh, mm, ss = value.split(":")
+                            return int(hh) * 3600 + int(mm) * 60 + float(ss)
+                        entries.append({
+                            "start": _parse_ts(start_s),
+                            "end": _parse_ts(end_s),
+                            "text": "\n".join(lines[2:]).strip(),
+                        })
+                    return entries, False
+            # 内联 JSON 文本
+            try:
+                data = json.loads(v)
+            except json.JSONDecodeError:
+                raise ValueError(f"字幕生成：subtitle 输入既非文件也非合法 JSON：{v[:60]}")
+            entries = cls._normalize_entries(data)
+            return entries, any(e.get("translated") for e in entries)
 
         # 优先级 1: s07_subtitle_align 输出（双语，已对齐）
         aligned_path = find_artifact(cache_dir, "subtitle_aligned.json")

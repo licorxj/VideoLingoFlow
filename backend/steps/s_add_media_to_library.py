@@ -16,6 +16,7 @@ from typing import Callable, Optional
 
 from backend.editor.repository import EditorProjectRepository
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_project_json
 
 
 # 与编辑器侧 ASSET_CATEGORY 推导规则保持一致：按文件扩展名 + ffprobe mime 粗判
@@ -107,12 +108,12 @@ class S_AddMediaToLibrary(BaseStep):
         repository = EditorProjectRepository()
 
         # 1) 接力上游剪辑项目 JSON：恢复为当前项目（不上轨道，仅保素材库上下文一致）
-        project_input = str(inputs.get("project") or "")
-        if project_input and Path(project_input).is_file():
+        project_input = inputs.get("project")
+        project_data = resolve_project_json(project_input, task_dir)
+        if project_data is not None:
             if callback:
                 callback(15, "正在加载上游剪辑项目")
-            with open(project_input, "r", encoding="utf-8") as handle:
-                repository.restore_snapshot(task_id, json.load(handle), updated_by="add_media_to_library")
+            repository.restore_snapshot(task_id, project_data, updated_by="add_media_to_library")
 
         # 2) 解析素材端口
         media_path = self._resolve_media_path(inputs.get("media"), task_dir)

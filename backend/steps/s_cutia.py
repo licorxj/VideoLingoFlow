@@ -19,6 +19,7 @@ from typing import Callable, Optional
 from backend.control_plane.runtime import TaskCancelledError
 from backend.editor.repository import EditorProjectRepository
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_project_json
 from backend.utils.runtime_notifications import push_notification
 
 
@@ -58,10 +59,10 @@ class S_Cutia(BaseStep):
         # 1. 接收上游剪辑项目 JSON 并推送到剪辑台（恢复为剪辑仓库当前项目）
         if callback:
             callback(15, "正在接收剪辑项目")
-        project_input = str(inputs.get("project") or "")
-        if project_input and os.path.isfile(project_input):
-            with open(project_input, "r", encoding="utf-8") as handle:
-                snapshot = repository.restore_snapshot(task_id, json.load(handle), updated_by="cutia_push")
+        project_input = inputs.get("project")
+        project_data = resolve_project_json(project_input, task_dir)
+        if project_data is not None:
+            snapshot = repository.restore_snapshot(task_id, project_data, updated_by="cutia_push")
         else:
             try:
                 snapshot = repository.snapshot(task_id)

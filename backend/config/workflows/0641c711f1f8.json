@@ -1,0 +1,726 @@
+{
+  "id": "0641c711f1f8",
+  "name": "名画的故事",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1790811041860",
+      "type": "workflow",
+      "position": {
+        "x": 1260,
+        "y": -1395
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "filepath"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "X:/PCTMoveData/Pictures/艺术画作/Poem Postcards — Google 艺术与文化_files/unnamed.webp",
+          "text": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 434
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_2_1790811099706",
+      "type": "workflow",
+      "position": {
+        "x": 1755,
+        "y": -1035
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "text_input",
+        "label": "文本输入框",
+        "config": {
+          "text": "标题: Woman with a Parasol - Madame Monet and Her Son\n创作者: Claude Monet\n创作日期: 1875\n实际尺寸: overall: 100 x 81 cm (39 3/8 x 31 7/8 in.) framed: 119.4 x 99.7 cm (47 x 39 1/4 in.)\n出处: From the artist in 1876 to Dr. Georges de Bellio [1828-1894], Paris; by inheritance to M and Mme [she née Victorine de Bellio,1863-1958] Ernest Donop de Monchy, Paris, until at least 1897. Possibly (Paul Rosenberg and Co., London, New York, and Paris).[1] Georges Menier, Paris, by 1924;[2] (Menier sale, Palais Galliera, Paris, 15 June 1965, no. 121); purchased by (Hector Brame, Paris) for Paul Mellon [1907-1999], Upperville, VA; gift 1983 to NGA. [1] The painting is cited as no. 86 in an unpublished inventory of the de Bellio collection by Remus Niculescu, \"Georges de Bellio, l'Ami des Impressionists (I),\" _Paragone_ 247 (September 1970). See also the letter from Niculescu to Paul Mellon dated 12 April 1970, in NGA curatorial files. This could be the Monet \"Femme au monticule\" sold by Donop de Monchy to Paul Rosenberg on 16 April 1917 (Receipt, Paul Rosenberg Archives, Museum of Modern Art, New York, file 1.c.24b, copy in NGA curatorial files) [2] The painting was lent by Menier to the Première exposition de collectionneurs au profit de la Société des Amis du Luxembourg, Paris, in 1924.\n权利: CC0\n材质: oil on canvas"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "note": "画作介绍",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "标题: Woman with a Parasol - Madame Monet and Her Son\n创作者: Claude Monet\n创作日期: 1875\n实际尺寸: overall: 100 x 81 cm (39 3/8 x 31 7/8 in.) framed: 119.4 x 99.7 cm (47 x 39 1/4 in.)\n出处: From the artist in 1876 to Dr. Georges de Bellio [1828-1894], Paris; by inheritance to M and Mme [she née Victorine de Bellio,1863-1958] Ernest Donop de Monchy, Paris, until at least 1897. Possibly (Paul Rosenberg and Co., London, New York, and Paris).[1] Georges Menier, Paris, by 1924;[2] (Menier sale, Palais Galliera, Paris, 15 June 1965, no. 121); purchased by (Hector Brame, Paris) for Paul Mellon [1907-1999], Upperville, VA; gift 1983 to NGA. [1] The painting is cited as no. 86 in an unpublished inventory of the de Bellio collection by Remus Niculescu, \"Georges de Bellio, l'Ami des Impressionists (I),\" _Paragone_ 247 (September 1970). See also the letter from Niculescu to Paul Mellon dated 12 April 1970, in NGA curatorial files. This could be the Monet \"Femme au monticule\" sold by Donop de Monchy to Paul Rosenberg on 16 April 1917 (Receipt, Paul Rosenberg Archives, Museum of Modern Art, New York, file 1.c.24b, copy in NGA curatorial files) [2] The painting was lent by Menier to the Première exposition de collectionneurs au profit de la Société des Amis du Luxembourg, Paris, in 1924.\n权利: CC0\n材质: oil on canvas"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 332
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_1_1790811999033",
+      "type": "workflow",
+      "position": {
+        "x": 3660,
+        "y": -2175
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "llm_request",
+        "label": "通用LLM请求",
+        "config": {
+          "model": "vlf-create",
+          "system_prompt": "你是图片鉴赏和描述大师，从画风、艺术流派、构图和镜头语言、图片内容、人物描述几个方面描述用户输入的图片。",
+          "user_prompt": "以以下结构来描述我的图片：\n{\n画风：***\n艺术流派：***\n构图和镜头语言：***\n人物描述：****\n画面内容详细描述：***\n}",
+          "temperature": 0.8,
+          "response_json": true,
+          "log_request": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "note": "识图",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "result": "output/LLM_node_1_1790811999033.json",
+          "text": "{\n  \"画风\": \"写实摄影融合古典油画质感，画面明亮通透，色彩清新自然，带有浓郁的田园牧歌式浪漫气息，光影处理柔和细腻，呈现出类似古典风俗画的唯美氛围\",\n  \"艺术流派\": \"浪漫主义与印象派的审美倾向，致敬19世纪维多利亚时代的田园风情，兼具前拉斐尔派对自然光色与女性形象理想化的追求\",\n  \"构图和镜头语言\": \"采用低机位仰拍视角，镜头贴近草丛，前景的绿草与黄色野花形成自然的虚化框景；主体女性位于画面右侧偏中，撑伞的手臂与伞面构成向上的三角形引导线；背景中的男孩位于左侧黄金分割点，形成主次呼应与视线平衡；大面积蓝天白云占据画面上半部，营造出开阔、崇高的空间感，广角镜头强化了人物的修长与画面的纵深\",\n  \"人物描述\": \"画面主体是一位年轻女性，身着19世纪末风格的白色束腰长裙，裙摆层叠繁复带有褶裥花边，上身为淡青色收腰外套，颈间系蓝色领巾；头戴缀有白色薄纱的帽子，纱幔随风轻扬，棕色卷发蓬松自然；她双手握持一把墨绿色蕾丝阳伞，侧脸仰望远方，神情恬静优雅。背景中的男孩约七八岁，头戴草编平顶帽，身着浅蓝色套装并系深色领结，表情平静地望向镜头方向\",\n  \"画面内容详细描述\": \"在一片开满黄色小野花的茂盛草地上，一位穿着维多利亚时代白色长裙的优雅女士撑着一把墨绿色蕾丝阳伞伫立其中，薄纱帽饰在微风中飘动，她微微仰头望向远方，姿态端庄娴静；她身后不远处，一个戴草帽、穿浅蓝衣裳的小男孩静静站在花丛中。头顶是澄澈的湛蓝天空，大朵蓬松的积云在阳光下明亮耀眼，光线从云隙间洒落，照亮草地与人物，整个画面洋溢着夏日午后温暖、宁静而略带怀旧的诗意，仿佛定格了旧时光中一次温馨的郊野漫步\"\n}"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] step instance created: S_LLMRequest",
+          "[step_worker] step_inputs keys=['image', 'source_language', 'target_language']",
+          "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f, kwargs=['callback'])",
+          "[LLM] direct (step=vlf-create, strategy=vlf-create, stream=False, response_json=True, timeout=300s, prompt_chars=120)",
+          "[LLM] direct ok (step=vlf-create, elapsed=15.2s)",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\.step_node_1_1790811999033_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 534
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_5_1790813487147",
+      "type": "workflow",
+      "position": {
+        "x": 2355,
+        "y": -2055
+      },
+      "data": {
+        "nodeType": "llm_request",
+        "label": "通用LLM请求",
+        "config": {
+          "model": "vlf-create",
+          "system_prompt": "你是即梦AI图生图提示词撰写和优化大师，按照用户意图编写专业的图生图提示词，使用即梦seeddream系列生图提示词风格",
+          "user_prompt": "这一一副浪漫主义油画作品，我需要将其转化为写实风格照片，保持图片到元素不变，提高饱和度，人脸和服饰细节要拉满，人物面容娇美，整体以暖色系为主，塑造极致的浪漫主义色彩。直接回复完整提示词，不要有额外说明。",
+          "temperature": 0.7,
+          "response_json": false,
+          "log_request": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "result": "output/LLM_node_5_1790813487147.txt",
+          "text": "超写实摄影风格，将印象派油画转化为真实照片：低角度仰拍视角，一位容貌绝美的年轻贵妇站在开满黄色野花的草坡上，她身着白色维多利亚时代束腰长裙，外搭淡青色短外套，领口系着蓝色丝带蝴蝶结，头戴白色薄纱软帽，纱巾在微风中飘扬；她右手优雅地撑着一把墨绿色遮阳伞，伞面被风微微吹起；她面容精致娇美，皮肤白皙透亮，腮边泛着自然红晕，眼神温柔望向远方，唇角带着浅浅微笑；身后不远处站着一个戴草帽的小男孩，身穿浅蓝色套装，静静望向镜头；前景是茂密的青草与星星点点的黄色野花，在风中轻摆；背景是湛蓝天空中漂浮着大朵蓬松的白云，阳光明媚温暖；整体暖色调，高饱和度色彩，金色阳光洒满画面，光线柔和通透，皮肤质感细腻真实，织物纹理清晰可见，裙摆褶皱层次丰富，8K超高清细节，浅景深，自然光摄影，浪漫唯美氛围，电影级画质，大师级人像摄影"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] step instance created: S_LLMRequest",
+          "[step_worker] step_inputs keys=['image', 'source_language', 'target_language']",
+          "[step_worker] node_config keys=['model', 'system_prompt', 'user_prompt', 'temperature', 'response_json', 'log_request']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f, kwargs=['callback'])",
+          "[LLM] direct (step=vlf-create, strategy=vlf-create, stream=False, response_json=False, timeout=300s, prompt_chars=161)",
+          "[LLM] direct ok (step=vlf-create, elapsed=10.2s)",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\.step_node_5_1790813487147_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 534
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1790814832737",
+      "type": "workflow",
+      "position": {
+        "x": 2370,
+        "y": -1335
+      },
+      "data": {
+        "nodeType": "image_format_convert",
+        "label": "图片格式转换",
+        "config": {
+          "target_format": "png"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "image": "output\\node_2_1790814832737\\converted_node_2_1790814832737.png"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 276
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1790814971062",
+      "type": "workflow",
+      "position": {
+        "x": 1770,
+        "y": -1350
+      },
+      "data": {
+        "nodeType": "file_load",
+        "label": "文件加载",
+        "config": {
+          "filePath": "X:/PCTMoveData/Pictures/艺术画作/Poem Postcards — Google 艺术与文化_files/unnamed.webp"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "filepath": "X:\\PCTMoveData\\Pictures\\艺术画作\\Poem Postcards — Google 艺术与文化_files\\unnamed.webp"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 250
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1790815072571",
+      "type": "workflow",
+      "position": {
+        "x": 3540,
+        "y": -1605
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "image_compare",
+        "label": "图片对比",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "skipped": true
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 775
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_6_1790815168274",
+      "type": "workflow",
+      "position": {
+        "x": 2940,
+        "y": -1950
+      },
+      "data": {
+        "nodeType": "image_gen",
+        "label": "AI生图",
+        "config": {
+          "mode": [
+            "img2img"
+          ],
+          "interface": "kieai",
+          "model": "gpt-image-2-image-to-image",
+          "resolution": "2K",
+          "aspect_ratio": "9:16",
+          "num_images": 1,
+          "custom_prompt_enabled": false,
+          "custom_prompt": "",
+          "output_prefix": "img"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": "['output/img_1_gen_image_node_6_1790815168274.png']",
+          "text": "output/img_1_gen_image_node_6_1790815168274.png"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\.step_node_6_1790815168274_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_6_1790815168274 pid=40664",
+          "[step_worker] step instance created: S_ImageGen",
+          "[step_worker] step_inputs keys=['text', 'image']",
+          "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\.step_node_6_1790815168274_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 619
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_7_1790816530626",
+      "type": "workflow",
+      "position": {
+        "x": 4425,
+        "y": -2055
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "opencode_agent",
+        "label": "本地CLI智能体",
+        "config": {
+          "inputCount": 2,
+          "outputCount": 1,
+          "cli": "opencode",
+          "cli_path": "",
+          "opencode_exe": "",
+          "model": "opencode/mimo-v2.6-flash-free",
+          "model_free_only": true,
+          "fallback_models": "opencode/big-pickle",
+          "agent": "",
+          "skills": [
+            "screenwriting-master"
+          ],
+          "mcps": [],
+          "auto_approve": true,
+          "thinking": false,
+          "pure": false,
+          "dir_name": "",
+          "timeout": 1800,
+          "instruction": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：浪漫主义唯美短篇设计师。输入的json作为短篇的尾帧定格帧，浪漫主义唯美短篇（名画前置想象 / 尾帧倒推叙事）。以尾帧的内容，制作前置创意内容。总体分为4~6个镜头，时间20~30秒，每个镜头5秒。以\"浪漫主义 + 印象派光色 + 前拉斐尔派式理想化女性形象\"手法为主。分析尾帧的人物，以其中的角色1（一般以小孩、宠物、男人、路人）等配角作为第一个镜头的代入者，第一幕以微距镜头或者穿越镜头通过唯美的环境元素引入（环境不要以尾帧的作为开场，以尾帧的环境内容之外的延伸的时空想象的内容），通过穿越、反转、推拉摇移等动感的镜头手法自然的引入角色1，然后角色1的空间移动，逐渐引入到角色2（画幅的主角），角色2的出场不能直白的入境，需要虚实结合，局部摇移结合，逐渐显现主角的全貌，最终拉回镜头，显示全貌，给主角一个特写镜头，添加微表情，最后退回全景，以尾帧定格。",
+          "output_items": [
+            {
+              "port": "输出1",
+              "type": "json",
+              "desc": "结构化剧本输出"
+            }
+          ]
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output_1": "cache/oc_agent_node_7_1790816530626_1.json"
+        },
+        "error": "",
+        "workbench_url": "",
+        "logLines": [
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] start node_type=opencode_agent node_id=node_7_1790816530626 pid=37316",
+          "[step_worker] step instance created: S_OpenCodeAgent",
+          "[step_worker] step_inputs keys=['input_1']",
+          "[step_worker] node_config keys=['inputCount', 'outputCount', 'cli', 'cli_path', 'opencode_exe', 'model', 'model_free_only', 'fallback_models', 'agent', 'skills', 'mcps', 'auto_approve', 'thinking', 'pure', 'dir_name', 'timeout', 'instruction', 'output_items']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\.step_node_7_1790816530626_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 818
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1790898582872",
+      "type": "workflow",
+      "position": {
+        "x": 5430,
+        "y": -2160
+      },
+      "data": {
+        "nodeType": "agi_project",
+        "label": "项目立项·剧本创作",
+        "config": {
+          "project_name": "AI漫剧项目",
+          "llm_model": "vlf-create",
+          "style_preset": "6e6d67dbf745442fa597ba0f777f5fba",
+          "art_style_custom": "    \"画风\": \"写实摄影融合古典油画质感，明亮通透、高饱和暖调，田园牧歌式浪漫\",\n    \"艺术流派\": \"浪漫主义 + 印象派光色 + 前拉斐尔派式理想化女性形象\",\n    \"色彩设计\": \"主色——湛蓝天青(#4A90D9)、草甸黄绿(#8FBC5A)、野花暖黄(#F2C438)；点缀——裙摆象牙白(#F5F1E6)、阳伞墨绿(#2E5D46)、领巾湖蓝(#6FA8C7)；全程金色顺光 + 逆光轮廓光\",\n    \"光影\": \"夏日午后高位顺光，云隙丁达尔光束，逆光下纱幔与蕾丝透光，草地高光呈金绿色\",\n    \"质感关键词\": \"轻盈、通透、风、蕾丝、纱、草浪、积云、8K浅景深、电影级自然光\",\n    \"统一镜头语言\": \"低机位仰拍为主视角，广角强调崇高空间感；前景虚化草叶/野花作自然框景；大量升格(60fps)与无惯性丝滑运镜\"",
+          "genre_tags": "创意短篇",
+          "art_style_tags": "写实摄影融合古典油画质感，明亮通透、高饱和暖调，田园牧歌式浪漫",
+          "audience_tags": "",
+          "video_aspect_ratio": "9:16",
+          "outline_prompt": "    \"类型\": \"浪漫主义唯美短篇（名画前置想象 / 尾帧倒推叙事）\",\n    \"总时长\": \"20.0s\",\n    \"镜头数\": 4,\n    \"画幅\": \"9:16 竖屏\",\n    \"基调来源\": \"输入尾帧（莫奈式《撑阳伞的女人》超写实再创作）\",\n    \"一句话故事\": \"夏日野甸的风先遇见奔跑的男孩，再一寸一寸揭开那位撑伞女子的面容，最终风停在一幅油画里。\",\n    \"叙事逻辑\": \"倒推式——把尾帧当作'结局定格'，向前想象它发生前的20秒：微观自然 → 孩童嬉戏 → 女子局部渐显 → 拉远定格为画。\""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "creation_id": "23402433836b4e67b3f6b13153c77366",
+          "project": "{\"owner_id\": null, \"project_id\": null, \"name\": \"AI漫剧项目\", \"description\": \"{\\n  \\\"类型\\\": \\\"浪漫主义唯美短篇（名画前置想象 / 尾帧倒推叙事）\\\",\\n  \\\"标题\\\": \\\"风先经过的地方\\\",\\n  \\\"总时长\\\": \\\"25.0s\\\",\\n  \\\"镜头数\\\": 5,\\n  \\\"画幅\\\": \\\"9:16 竖屏\\\",\\n  \\\"整体风格\\\": \\\"浪漫主义 + 印象派光色 + 前拉斐尔派式理想化女性形象\\\",\\n  \\\"风格说明\\\": {\\n    \\\"浪漫主义\\\": \\\"以自然的崇高感与情感的含蓄涌动为内核，云、风、光皆为情绪的外化；构图强调向上的三角形与开阔天际，营造田园牧歌式的诗意与怀旧。\\\",\\n    \\\"印象派光色\\\": \\\"金色顺光与云隙丁达尔光束交织，草地高光呈金绿色，蓝(#4A90D9)与暖黄(#F2C438)互补跳色；大量逆光轮廓光、光斑、bokeh与升格飞尘，捕捉'光的颤动'。\\\",\\n    \\\"前拉斐尔派理想化女性\\\": \\\"主角容貌与仪态理想化：白皙透亮的肌肤、棕色蓬松卷发、层叠褶裥白裙、薄纱与蕾丝的精致质感；她如从画中走出，静谧、圣洁而略带疏离。\\\"\\n  },\\n  \\\"色彩基调\\\": \\\"主色——湛蓝天青(#4A90D9)、草甸黄绿(#8FBC5A)、野花暖黄(#F2C438)；点缀——裙摆象牙白(#F5F1E\", \"genre_tags\": [\"创意短篇\"], \"art_style_tags\": [\"写实摄影融合古典油画质感，明亮通透、高饱和暖调，田园牧歌式浪漫\"], \"audience_tags\": [\"青少年\"], \"video_aspect_ratio\": \"9:16\", \"status\": \"draft\", \"script_text\": \"【画风锁定】\\n\\\"画风\\\": \\\"写实摄影融合古典油画质感，明亮通透、高饱和暖调，田园牧歌式浪漫\\\",\\n    \\\"艺术流派\\\": \\\"浪漫主义 + 印象派光色 + 前拉斐尔派式理想化女性形象\\\",\\n    \\\"色彩设计\\\": \\\"主色——湛蓝天青(#4A90D9)、草甸黄绿(#8FBC5A)、野花暖黄(#F2C438)；点缀——裙摆象牙白(#F5F1E6)、阳伞墨绿(#2E5D46)、领巾湖蓝(#6FA8C7)；全程金色顺光 + 逆光轮廓光\\\",\\n    \\\"光影\\\": \\\"夏日午后高位顺光，云隙丁达尔光束，逆光下纱幔与蕾丝透光，草地高光呈金绿色\\\",\\n    \\\"质感关键词\\\": \\\"轻盈、通透、风、蕾丝、纱、草浪、积云、8K浅景深、电影级自然光\\\",\\n    \\\"统一镜头语言\\\": \\\"低机位仰拍为主视角，广角强调崇高空间感；前景虚化草叶/野花作自然框景；大量升格(60fps)与无惯性丝滑运镜\\\"\\n\\n【世界观】\\n{\\\"世界规则\\\": \\\"这是一个被风主宰的夏日欧式乡野：人们穿着束腰长裙、草编帽出行，手边是蕾丝阳伞，看不到任何现代物件。风是无形的主角——它从林溪的露珠里醒来，途经之处露珠滚落、花粉飘起、蝶群起飞、纱幔与裙裾扬起；当风终于停驻，被它拂过的世界便静止下来，凝成一幅油画。在这个世界里天显得极高、云极厚，低处仰望时，人是天地间小小的亮点。\\\", \\\"势力与关系\\\": \\\"登场者只有三方：无形的风、追白蝶的男孩、撑墨绿蕾丝阳伞的白衣女子。男孩是风的引路者，他追蝶的脚步把风从林缘一路带向草坡；白蝶是风派出的信使，始终飞在男孩前方。女子是风的终点——她背风立在坡顶，伞荫与逆光护着她的面容，风要一寸一寸把她揭开；冲突是温柔的：风步步逼近，她却始终将显未显，直到最后一刻才以一个浅笑回应。\\\", \\\"视觉基调\\\": \\\"写实摄影的通透质感叠加古典油画的暖调：湛蓝天青、草甸黄绿、野花暖黄为主色，裙摆象牙白、阳伞墨绿、领巾湖蓝点缀其间；全程金色自然光，逆光下纱幔与蕾丝透光，云隙间垂落光束，草地高光泛着金绿。标志性画面元素：苔石露珠、花粉光尘、白蝶、柳条、层叠褶裥白裙、墨绿蕾丝阳伞、蓬松积云，以及低角度下显得崇高的天空。\\\"}\\n\\n【大纲】\\n[{\\\"幕\\\": \\\"第一幕 · 开局（人物与目标）\\\", \\\"节拍\\\": [{\\\"内容\\\": \\\"苔石上的露珠里晃动着天光云影，露珠滚落、溪面泛起涟漪——风在微观世界里苏醒，沿溪流掠过浮叶与花粉光尘，踏上旅途。\\\", \\\"情绪曲线\\\": \\\"静谧神秘 → 初次涌动\\\"}, {\\\"内容\\\": \\\"风卷着水雾冲出林荫，天光骤然涨满天地；戴草编帽、穿浅蓝套装的男孩追着白蝶奔入开阔光线，成为风的引路者。\\\", \\\"情绪曲线\\\": \\\"豁然开朗 → 轻快雀跃\\\"}]}, {\\\"幕\\\": \\\"第二幕 · 对抗（阻力升级）\\\", \\\"节拍\\\": [{\\\"内容\\\": \\\"男孩在黄花草甸中奔跑穿行，草叶花瓣擦身而过；越过摇曳柳条，坡顶逆光深处第一次浮现墨绿伞沿与一角白裙的虚影——终点显形，却遥不可及。\\\", \\\"情绪曲线\\\": \\\"轻快流动 → 屏息悬停\\\"}, {\\\"内容\\\": \\\"风贴近那道身影：掀起层叠裙裥与蕾丝、拂动湖蓝领巾与白纱，却只见肩、手、纱、伞的局部，面容始终藏在伞荫与逆光之后——越靠近，越看不清。\\\", \\\"情绪曲线\\\": \\\"步步蓄势 → 欲显未显\\\"}]}, {\\\"幕\\\": \\\"第三幕 · 结局（代价与结果）\\\", \\\"节拍\\\": [{\\\"内容\\\": \\\"风自下而上揭开遮挡，女子全貌终于显现——棕卷发、白纱帽饰、侧脸仰望远方；男孩追蝶跑至她侧后花丛间，云隙光束横扫草甸，人立天地间如画。\\\", \\\"情绪曲线\\\": \\\"开阔释放 → 崇高\\\"}, {\\\"内容\\\": \\\"最后的抵达也是风的止息：卷发拂过她的脸颊，睫毛轻颤、瞳中映着云影，唇角漾开浅笑；风停，草浪伏下，万物定格为那幅油画。\\\", \\\"情绪曲线\\\": \\\"恬静向往 → 归于永恒的静止\\\"}]}]\\n\\n【总剧本】\\n《风先经过的地方》——全片约25秒，两章五场，每场约5秒。\\n\\n第一章 露珠里的风\\n\\n## S01 | 外景 · 林缘溪谷 | 夏日午后\\n\\n林下幽绿。一块覆满苔藓的石头探向浅溪，苔尖坠着一颗饱满的露珠，露珠里晃动着整片流动的天光与云影。\\n\\n露珠颤了颤，忽然滚落——叮的一声轻响，溪面漾开一圈细小的涟漪。浮叶轻晃，金色花粉与光尘从藤蔓拱廊间飘起，被一股刚刚苏醒的气流推着，沿溪水缓缓向前游去。鸟鸣退开，风声渐起。\\n\\n气流贴着水面疾行，卷起细碎水雾，掠过睡莲与浮叶，钻过垂落的藤蔓与柳条，朝林外的亮处一路涌去——\\n\\n亮光骤然涨满天地。\\n\\n## S02 | 外景 · 林缘至花甸边缘 | 夏日午后\\n\\n豁然明亮的草甸边缘。一个七八岁的男孩头戴草编平顶帽，身穿浅蓝色套装、系着深色领结，追着一只白蝶从坡下奔来。蝶在他前头忽高忽低，他伸出双手去扑，扑了个空，笑声清亮。\\n\\n男孩：（喘着气笑）哎——等等我呀！\\n\\n他踩着草往前追，脚步带起细碎的花瓣。草叶与野花不断擦过他的裤脚与手背，黄花碎影在他身上明明灭灭。前方一排柳条迎风翻飞——柳丝的间隙里，坡顶逆光深处浮出一道虚影：一抹墨绿的伞沿，一角被风掀起的白裙，在薄雾似的热浪里忽隐忽现。\\n\\n男孩的笑声轻了下去。白蝶却径直朝那道虚影飞去。\\n\\n## S03 | 外景 · 草坡中段 | 夏日午后\\n\\n风先一步到了。\\n\\n它掀起坡上那道身影的裙摆——层叠的褶裥与蕾丝花边逐层翻动，阳光穿透织物，裙裾透出象牙色的柔光。裙裾之上，湖蓝色领巾被吹得轻贴颈侧，淡青色收腰外套的衣角微微翻卷；一双手在裙前交叠，稳稳握着一柄墨绿蕾丝阳伞，伞面的镂空花纹在白裙上洒下斑驳碎光。\\n\\n一阵风扬起她帽上的白色薄纱。纱幔鼓起、飘掠，半掩住肩与颈——纱影里，身形由朦胧到清晰，又由清晰回到朦胧。始终只见肩、手、纱、伞，她的面容藏在伞荫与逆光深处，只余一道安静的侧影轮廓。\\n\\n草浪伏了又起。伞沿极轻地一倾，仿佛察觉了什么。\\n\\n第二章 风停成画\\n\\n## S04 | 外景 · 开满野花的草坡 | 夏日午后\\n\\n风绕到她身前，自下而上拂过——她的全貌终于显露。\\n\\n棕色的蓬松卷发被风撩起，白色薄纱帽饰在发间高高扬起；她微微侧脸仰望远方，双手将墨绿阳伞稳稳撑在肩头。白色束腰长裙在风里层层鼓荡，像云堆在身上。逆光为她周身镀上一圈金边，白皙的面容静谧、圣洁，又略带疏离。\\n\\n不远处坡下的花丛里，男孩追着白蝶跑来，在黄花间刹住脚步，仰头望向坡顶的她，胸口起伏，草帽微微歪着。\\n\\n云隙间的光束横扫过草甸，黄花与草浪齐齐亮起。天极高，云极厚，人立在天地之间，小而明亮。\\n\\n## S05 | 外景 · 开满野花的草坡 | 夏日午后，风将止\\n\\n一缕棕色卷发被风送上她的脸颊。她的眼睫轻轻一颤，瞳孔里映着流云与光的移动；目光由近处缓缓移向天际，唇角极缓、极浅地漾开一丝笑意。白色薄纱在耳畔鼓起，又缓缓落下。\\n\\n女子：（轻得几乎融进风里）……风，到了。\\n\\n风停了。草浪伏下，裙摆垂落，纱幔静静贴回肩头，男孩立在黄花间仰着头，积云驻在湛蓝的天空里。金色阳光洒满整面草坡，万物静止——她撑伞立在坡顶望向天际，男孩在她侧后低处的花丛间仰望，大朵积云铺满天际，一切都凝成一幅暖调的油画。\\n\\n最后一缕风声轻得像布料落地，随即归于寂静。\", \"deleted_at\": null, \"id\": \"23402433836b4e67b3f6b13153c77366\", \"version\": 1, \"created_at\": \"2026-10-02T00:34:51\", \"updated_at\": \"2026-10-02T00:34:51\", \"worldview\": \"{\\\"世界规则\\\": \\\"这是一个被风主宰的夏日欧式乡野：人们穿着束腰长裙、草编帽出行，手边是蕾丝阳伞，看不到任何现代物件。风是无形的主角——它从林溪的露珠里醒来，途经之处露珠滚落、花粉飘起、蝶群起飞、纱幔与裙裾扬起；当风终于停驻，被它拂过的世界便静止下来，凝成一幅油画。在这个世界里天显得极高、云极厚，低处仰望时，人是天地间小小的亮点。\\\", \\\"势力与关系\\\": \\\"登场者只有三方：无形的风、追白蝶的男孩、撑墨绿蕾丝阳伞的白衣女子。男孩是风的引路者，他追蝶的脚步把风从林缘一路带向草坡；白蝶是风派出的信使，始终飞在男孩前方。女子是风的终点——她背风立在坡顶，伞荫与逆光护着她的面容，风要一寸一寸把她揭开；冲突是温柔的：风步步逼近，她却始终将显未显，直到最后一刻才以一个浅笑回应。\\\", \\\"视觉基调\\\": \\\"写实摄影的通透质感叠加古典油画的暖调：湛蓝天青、草甸黄绿、野花暖黄为主色，裙摆象牙白、阳伞墨绿、领巾湖蓝点缀其间；全程金色自然光，逆光下纱幔与蕾丝透光，云隙间垂落光束，草地高光泛着金绿。标志性画面元素：苔石露珠、花粉光尘、白蝶、柳条、层叠褶裥白裙、墨绿蕾丝阳伞、蓬松积云，以及低角度下显得崇高的天空。\\\"}\", \"outline\": \"[{\\\"幕\\\": \\\"第一幕 · 开局（人物与目标）\\\", \\\"节拍\\\": [{\\\"内容\\\": \\\"苔石上的露珠里晃动着天光云影，露珠滚落、溪面泛起涟漪——风在微观世界里苏醒，沿溪流掠过浮叶与花粉光尘，踏上旅途。\\\", \\\"情绪曲线\\\": \\\"静谧神秘 → 初次涌动\\\"}, {\\\"内容\\\": \\\"风卷着水雾冲出林荫，天光骤然涨满天地；戴草编帽、穿浅蓝套装的男孩追着白蝶奔入开阔光线，成为风的引路者。\\\", \\\"情绪曲线\\\": \\\"豁然开朗 → 轻快雀跃\\\"}]}, {\\\"幕\\\": \\\"第二幕 · 对抗（阻力升级）\\\", \\\"节拍\\\": [{\\\"内容\\\": \\\"男孩在黄花草甸中奔跑穿行，草叶花瓣擦身而过；越过摇曳柳条，坡顶逆光深处第一次浮现墨绿伞沿与一角白裙的虚影——终点显形，却遥不可及。\\\", \\\"情绪曲线\\\": \\\"轻快流动 → 屏息悬停\\\"}, {\\\"内容\\\": \\\"风贴近那道身影：掀起层叠裙裥与蕾丝、拂动湖蓝领巾与白纱，却只见肩、手、纱、伞的局部，面容始终藏在伞荫与逆光之后——越靠近，越看不清。\\\", \\\"情绪曲线\\\": \\\"步步蓄势 → 欲显未显\\\"}]}, {\\\"幕\\\": \\\"第三幕 · 结局（代价与结果）\\\", \\\"节拍\\\": [{\\\"内容\\\": \\\"风自下而上揭开遮挡，女子全貌终于显现——棕卷发、白纱帽饰、侧脸仰望远方；男孩追蝶跑至她侧后花丛间，云隙光束横扫草甸，人立天地间如画。\\\", \\\"情绪曲线\\\": \\\"开阔释放 → 崇高\\\"}, {\\\"内容\\\": \\\"最后的抵达也是风的止息：卷发拂过她的脸颊，睫毛轻颤、瞳中映着云影，唇角漾开浅笑；风停，草浪伏下，万物定格为那幅油画。\\\", \\\"情绪曲线\\\": \\\"恬静向往 → 归于永恒的静止\\\"}]}]\"}"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 790
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1790898660638",
+      "type": "workflow",
+      "position": {
+        "x": 4905,
+        "y": -1875
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "json_to_text",
+        "label": "JSON转文本",
+        "config": {
+          "mode": "full",
+          "key_expr": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\output\\json2text_node_4_1790898660638.txt"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 276
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1790898808869",
+      "type": "workflow",
+      "position": {
+        "x": 6090,
+        "y": -2100
+      },
+      "data": {
+        "nodeType": "agi_deepen",
+        "label": "剧本深化",
+        "config": {
+          "creation_id": "",
+          "llm_model": "vlf-create",
+          "num_chapters": 3,
+          "num_characters": 2,
+          "art_style_input": "",
+          "extra_requirements": "",
+          "require_screenplay": true,
+          "replace_chapters": false
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "creation_id": "0ab3365abb8447c4b5396c07f6ec666c",
+          "bible": "{\"synopsis\": \"维多利亚乡间的花农之女莉薇娅，在草甸与花田间偷偷临摹往来画家的写生，渴望凭画笔走出村庄。一位落选的年轻风景画家来村里租住，她以带路寻景换来学画的机会；然而父亲已为她定下婚约，命她花期一过便收起画具。她要在夏天结束前，画出一幅足以证明自己的作品。\", \"art_style\": {\"style_bible\": \"写实摄影融合古典油画质感；浪漫主义光影、前拉斐尔派理想化人物造型；明亮通透的高饱和暖调，田园牧歌式浪漫。\", \"palette\": \"主色：湛蓝天青#4A90D9、草甸黄绿#8FBC5A、野花暖黄#F2C438；点缀：象牙白#F5F1E6、墨绿#2E5D46、湖蓝#6FA8C7；高饱和暖调，全程金色顺光叠加逆光轮廓光。\", \"lighting\": \"夏日午后高位金色顺光为主，云隙间丁达尔光束；逆光时纱幔、蕾丝与发丝透光镶金边；草地高光呈金绿色，暗部偏暖不沉闷。\", \"texture\": \"轻盈通透带风感：蕾丝薄纱半透、草浪与积云柔边、细腻轮廓叠柔和晕染、轻微颗粒质感；8K浅景深、电影级自然光。\"}, \"chapters\": [{\"title\": \"第一章 风起草甸\", \"content_plan\": \"## S01 | 外景 · 草甸花田 | 夏日午后\\n\\n风掠草浪，莉薇娅伏在野花间，炭笔追着云影在速写本上跑。马蹄声渐近，她慌忙把本子塞进花篮。\\n\\n埃德蒙（跳下马车，环顾）：这光……全英国找不出第二片这样的草甸。\\n莉薇娅（攥紧篮柄，垂眼）：先生，这里是私人牧场。\\n埃德蒙（瞥见她裙角的炭灰）：你——在画画？\\n\\n## S02 | 外景 · 花田边缘·老橡树下 | 午后偏晚\\n\\n莉薇娅迟疑着翻开速写本。埃德蒙一页页看下去，神情渐渐变了。\\n\\n埃德蒙：透视是谁教的？\\n莉薇娅：没人……我看云、看影子，自己琢磨的。\\n埃德蒙：明天我带颜料来。你带路，我教你调色——但绝不能让人知道。\\n莉薇娅（抬眼，光一闪又压下去）：好。\\n\\n风掀开本子最后一页——画着父亲与\\\"未婚夫\\\"并肩的速写，笔道深得划破纸背。\", \"summary\": \"牧歌开场埋下秘密师徒线，以婚约速写收尾，立起全剧核心阻力。\"}], \"characters\": [{\"name\": \"莉薇娅\", \"gender\": \"女\", \"age\": \"19\", \"personality\": \"少言、先观察后开口；紧张时攥衣角，把不敢说的话画进速写本；人前顺从低头，独处时极倔，认定的事会用最轻的声音说\\\"不\\\"。\", \"occupation\": \"花农之女、牧场帮工（私下作画）\", \"aliases\": [\"莉莉\", \"丫头\"], \"relationship_note\": \"花农霍布斯的独女，被父亲许配给镇上粮商之子；与埃德蒙由戒备到秘密师徒，情愫暗生。\", \"voice_design\": \"十九岁少女音，轻而清亮；语速偏慢，习惯压着嗓子说话，情绪翻涌时尾音微颤。\", \"visual_anchor\": \"栗色松辫垂肩，象牙白长裙配湖蓝领巾，墨绿阳伞，指尖沾炭灰。\"}, {\"name\": \"埃德蒙\", \"gender\": \"男\", \"age\": \"27\", \"personality\": \"语速快，见到好光线会当场驻足失神；嘴上傲、爱用行话压人，被提落选往事会突然沉默；对画宽容，对人急躁。\", \"occupation\": \"风景画家（离京游历写生）\", \"aliases\": [\"埃德先生\"], \"relationship_note\": \"皇家美术院年展落选后南下散心，租住村中客栈；是莉薇娅画艺的引路人与秘密老师。\", \"voice_design\": \"二十代末男声，温润微沙；语速快，谈及绘画时音调上扬、近乎急切。\", \"visual_anchor\": \"深金卷发微乱，亚麻衬衫卷袖，横挎画具背带，帽檐别一支画笔。\"}]}",
+          "synopsis": "维多利亚乡间的花农之女莉薇娅，在草甸与花田间偷偷临摹往来画家的写生，渴望凭画笔走出村庄。一位落选的年轻风景画家来村里租住，她以带路寻景换来学画的机会；然而父亲已为她定下婚约，命她花期一过便收起画具。她要在夏天结束前，画出一幅足以证明自己的作品。",
+          "style_bible": "\"画风\": \"写实摄影融合古典油画质感，明亮通透、高饱和暖调，田园牧歌式浪漫\",\n    \"艺术流派\": \"浪漫主义 + 印象派光色 + 前拉斐尔派式理想化女性形象\",\n    \"色彩设计\": \"主色——湛蓝天青(#4A90D9)、草甸黄绿(#8FBC5A)、野花暖黄(#F2C438)；点缀——裙摆象牙白(#F5F1E6)、阳伞墨绿(#2E5D46)、领巾湖蓝(#6FA8C7)；全程金色顺光 + 逆光轮廓光\",\n    \"光影\": \"夏日午后高位顺光，云隙丁达尔光束，逆光下纱幔与蕾丝透光，草地高光呈金绿色\",\n    \"质感关键词\": \"轻盈、通透、风、蕾丝、纱、草浪、积云、8K浅景深、电影级自然光\",\n    \"统一镜头语言\": \"低机位仰拍为主视角，广角强调崇高空间感；前景虚化草叶/野花作自然框景；大量升格(60fps)与无惯性丝滑运镜\""
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 700
+      },
+      "selected": true,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_7_1790899925136",
+      "type": "workflow",
+      "position": {
+        "x": 6735,
+        "y": -1965
+      },
+      "data": {
+        "nodeType": "agi_chapter",
+        "label": "章节剧本",
+        "config": {
+          "creation_id": "",
+          "num_chapters": 1,
+          "llm_model": "vlf-create",
+          "chapter_title": "",
+          "force": false
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 335
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1790811041860",
+      "sourceHandle": "out-no_input",
+      "target": "node_2_1790811099706",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1790811041860out-no_input-node_2_1790811099706in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_2_1790814832737",
+      "sourceHandle": "out-image",
+      "target": "node_5_1790813487147",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_2_1790814832737out-image-node_5_1790813487147in-image"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1790811041860",
+      "sourceHandle": "out-filepath",
+      "target": "node_4_1790814971062",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_1_1790811041860out-filepath-node_4_1790814971062in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_4_1790814971062",
+      "sourceHandle": "out-filepath",
+      "target": "node_2_1790814832737",
+      "targetHandle": "in-input",
+      "id": "xy-edge__node_4_1790814971062out-filepath-node_2_1790814832737in-input"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1790813487147",
+      "sourceHandle": "out-text",
+      "target": "node_6_1790815168274",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_5_1790813487147out-text-node_6_1790815168274in-text"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_2_1790814832737",
+      "sourceHandle": "out-image",
+      "target": "node_6_1790815168274",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_2_1790814832737out-image-node_6_1790815168274in-image"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_6_1790815168274",
+      "sourceHandle": "out-text",
+      "target": "node_5_1790815072571",
+      "targetHandle": "in-image2",
+      "id": "xy-edge__node_6_1790815168274out-text-node_5_1790815072571in-image2"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_2_1790814832737",
+      "sourceHandle": "out-image",
+      "target": "node_5_1790815072571",
+      "targetHandle": "in-image1",
+      "id": "xy-edge__node_2_1790814832737out-image-node_5_1790815072571in-image1"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_6_1790815168274",
+      "sourceHandle": "out-text",
+      "target": "node_1_1790811999033",
+      "targetHandle": "in-image",
+      "id": "xy-edge__node_6_1790815168274out-text-node_1_1790811999033in-image"
+    },
+    {
+      "source": "node_1_1790811999033",
+      "sourceHandle": "out-result",
+      "target": "node_7_1790816530626",
+      "targetHandle": "in-input_1",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1790811999033out-result-node_7_1790816530626in-input_1"
+    },
+    {
+      "source": "node_7_1790816530626",
+      "sourceHandle": "out-output_1",
+      "target": "node_4_1790898660638",
+      "targetHandle": "in-json",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_7_1790816530626out-output_1-node_4_1790898660638in-json"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_4_1790898660638",
+      "sourceHandle": "out-text",
+      "target": "node_3_1790898582872",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_4_1790898660638out-text-node_3_1790898582872in-text"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1790898582872",
+      "sourceHandle": "out-creation_id",
+      "target": "node_5_1790898808869",
+      "targetHandle": "in-creation_id",
+      "id": "xy-edge__node_3_1790898582872out-creation_id-node_5_1790898808869in-creation_id"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1790898808869",
+      "sourceHandle": "out-creation_id",
+      "target": "node_7_1790899925136",
+      "targetHandle": "in-creation_id",
+      "id": "xy-edge__node_5_1790898808869out-creation_id-node_7_1790899925136in-creation_id"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-01T07:35:21",
+  "updatedAt": "2026-10-02T11:06:14",
+  "revision": 14
+}

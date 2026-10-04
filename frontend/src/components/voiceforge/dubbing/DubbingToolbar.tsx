@@ -20,6 +20,8 @@ interface DubbingToolbarProps {
   totalCount: number;
   engine: string;
   engines: { id: string; name: string }[];
+  model: string;
+  modelOptions: string[];
   voiceControlMode: "clone" | "instruct";
   defaultGap: number;
   onSelectAll: () => void;
@@ -34,6 +36,7 @@ interface DubbingToolbarProps {
   onExportChapter: () => void;
   onBrowseExports: () => void;
   onEngineChange: (engine: string) => void;
+  onModelChange: (model: string) => void;
   onVoiceControlModeChange: (mode: "clone" | "instruct") => void;
   onGapChange: (gap: number) => void;
   onEngineSettings: () => void;
@@ -45,6 +48,8 @@ export function DubbingToolbar({
   totalCount,
   engine,
   engines,
+  model,
+  modelOptions,
   voiceControlMode,
   defaultGap,
   onSelectAll,
@@ -59,6 +64,7 @@ export function DubbingToolbar({
   onExportChapter,
   onBrowseExports,
   onEngineChange,
+  onModelChange,
   onVoiceControlModeChange,
   onGapChange,
   onEngineSettings,
@@ -141,6 +147,22 @@ export function DubbingToolbar({
           {engines.map((eng) => (
             <option key={eng.id} value={eng.id}>
               {eng.name}
+            </option>
+          ))}
+        </select>
+
+        {/* 模型选择：随所选接口的 model_options 联动，无选项时跟随接口默认 */}
+        <select
+          className="h-8 rounded-md border border-input bg-background px-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+          value={model}
+          onChange={(e) => onModelChange(e.target.value)}
+          disabled={modelOptions.length === 0}
+          title={modelOptions.length === 0 ? "该接口无可选模型，将使用接口默认模型" : "选择模型"}
+        >
+          <option value="">{modelOptions.length === 0 ? "接口默认模型" : "跟随接口默认"}</option>
+          {modelOptions.map((m) => (
+            <option key={m} value={m}>
+              {m}
             </option>
           ))}
         </select>

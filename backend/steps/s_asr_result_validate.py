@@ -18,6 +18,7 @@ import re
 import json
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 
 
 class S_ASRResultValidate(BaseStep):
@@ -439,26 +440,29 @@ class S_ASRResultValidate(BaseStep):
         return path if os.path.isabs(path) else os.path.join(task_dir, path)
 
     def _load_asr(self, task_dir):
-        path = self._input_path()
-        if not path:
+        raw = (getattr(self, "_step_inputs", {}) or {}).get("json")
+        if isinstance(raw, list):
+            raw = raw[0] if raw else None
+        if raw is None:
             raise ValueError(
-                "ASR 校验未通过：未接入有效的 ASR JSON 输入文件（step_inputs['json'] 为空）"
+                "ASR 校验未通过：未接入有效的 ASR JSON 输入（step_inputs['json'] 为空）"
             )
-        abs_path = self._resolve_input_path(task_dir)
-        if not os.path.isfile(abs_path):
-            raise ValueError(
-                "ASR 校验未通过：未接入有效的 ASR JSON 输入文件"
-                f"（step_inputs['json'] 指向的文件不存在：{abs_path}）"
-            )
-        with open(abs_path, "r", encoding="utf-8") as f:
-            return json.load(f), path
+        # 兼容内存数据（dict / list）、文件路径与内联 JSON 文本
+        asr_data = resolve_json_input(raw, task_dir)
+        return asr_data, (self._resolve_input_path(task_dir) or "<memory>")
 
     def check_artifact(self, task_dir):
-        # 本节点不生成新文件，产物即「接入的输入文件」本身，存在即可复跑/跳过。
+        # 内存数据（dict / list）直接视为有效输入；文件路径则检查文件存在
+        raw = (getattr(self, "_step_inputs", {}) or {}).get("json")
+        if isinstance(raw, (dict, list)):
+            return True
         path = self._resolve_input_path(task_dir)
         return bool(path) and os.path.isfile(path)
 
     def validate_inputs(self, task_dir):
+        raw = (getattr(self, "_step_inputs", {}) or {}).get("json")
+        if isinstance(raw, (dict, list)):
+            return True
         path = self._resolve_input_path(task_dir)
         return bool(path) and os.path.isfile(path)
 

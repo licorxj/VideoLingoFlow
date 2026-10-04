@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { type EditorAsset, type EditorTask, editorApi } from "@/api/editor";
 import { cn } from "@/lib/utils";
+import { toast } from "@/pages/llm-router/toast";
 
 const categoryLabels: Record<string, string> = { video: "视频", audio: "配音与音频", subtitle: "字幕", cover: "封面图片", other: "其他素材" };
 
@@ -63,6 +64,13 @@ export default function TaskImportDialog({ open, onOpenChange, onImported }: Pro
       setSelectedIds(response.data.candidates.filter((item) => item.selected && item.category !== "cover").map((item) => item.id));
       setCoverId(response.data.candidates.find((item) => item.category === "cover" && item.selected)?.id);
       setUseDubSegments(false);
+    } catch (error: any) {
+      setSelectedTask(null);
+      toast({
+        title: "无法加载素材候选",
+        description: error?.response?.data?.detail || "该任务无可导入的素材或已被清理。",
+        variant: "destructive",
+      });
     } finally {
       setLoading(false);
     }

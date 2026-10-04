@@ -115,23 +115,39 @@ class S08DubTask(BaseStep):
         cache_dir = os.path.join(task_dir, "cache")
 
         subtitle_input = step_inputs.get("subtitle") or step_inputs.get("text")
-        if subtitle_input:
-            # 连线注入的路径可能是相对路径（相对 task_dir），需拼接到任务目录再判断
-            if not os.path.isabs(subtitle_input):
-                subtitle_input = os.path.join(task_dir, subtitle_input)
-        if subtitle_input and os.path.exists(subtitle_input):
-            lower = subtitle_input.lower()
-            if lower.endswith(".json"):
-                with open(subtitle_input, "r", encoding="utf-8") as f:
-                    return cls._load_entries_from_json(json.load(f))
-            if lower.endswith(".srt"):
-                with open(subtitle_input, "r", encoding="utf-8") as f:
-                    srt_content = f.read()
-                    is_bilingual = cls._detect_bilingual_srt(srt_content)
-                    return cls._parse_srt(srt_content, is_bilingual), is_bilingual
-            # 文本类文件：按换行拆句，时间戳填 null
-            with open(subtitle_input, "r", encoding="utf-8") as f:
-                return cls._load_entries_from_text(f.read())
+        # 内存数据（dict / list）直接解析（兼容 ASR / 翻译结果 JSON）
+        if isinstance(subtitle_input, (dict, list)):
+            return cls._load_entries_from_json(subtitle_input)
+        if isinstance(subtitle_input, str) and subtitle_input.strip():
+            v = subtitle_input.strip()
+            # 文件路径（绝对或相对 task_dir）
+            candidates = []
+            if os.path.isabs(v) and os.path.isfile(v):
+                candidates.append(v)
+            rel = os.path.join(task_dir, v)
+            if os.path.isfile(rel):
+                candidates.append(rel)
+            if candidates:
+                p = candidates[0]
+                lower = p.lower()
+                if lower.endswith(".json"):
+                    with open(p, "r", encoding="utf-8") as f:
+                        return cls._load_entries_from_json(json.load(f))
+                if lower.endswith(".srt"):
+                    with open(p, "r", encoding="utf-8") as f:
+                        srt_content = f.read()
+                        is_bilingual = cls._detect_bilingual_srt(srt_content)
+                        return cls._parse_srt(srt_content, is_bilingual), is_bilingual
+                # 文本类文件：按换行拆句，时间戳填 null
+                with open(p, "r", encoding="utf-8") as f:
+                    return cls._load_entries_from_text(f.read())
+            # 内联 JSON 文本
+            try:
+                data = json.loads(v)
+            except json.JSONDecodeError:
+                # 视为纯文本内容
+                return cls._load_entries_from_text(v)
+            return cls._load_entries_from_json(data)
 
         text_file_input = step_inputs.get("text_file")
         if text_file_input:

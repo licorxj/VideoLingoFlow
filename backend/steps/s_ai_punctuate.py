@@ -11,6 +11,7 @@ import unicodedata
 from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 from backend.llm.llm_client import get_llm_client
 
 
@@ -172,12 +173,10 @@ class S_AiPunctuate(BaseStep):
         step_inputs = getattr(self, "_step_inputs", {}) or {}
 
         raw = step_inputs.get("json") or step_inputs.get("any") or step_inputs.get("file")
-        path = self._resolve_input_file(raw, task_dir)
-        if not path:
-            raise ValueError("未收到有效的 ASR JSON 文件输入")
+        if raw is None:
+            raise ValueError("未收到有效的 ASR JSON 输入")
 
-        with open(path, "r", encoding="utf-8") as f:
-            asr = json.load(f)
+        asr = resolve_json_input(raw, task_dir)
         if not isinstance(asr, dict):
             raise ValueError("ASR JSON 顶层应为对象")
 

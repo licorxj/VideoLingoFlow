@@ -11,6 +11,7 @@ from typing import Callable, Optional
 from backend.editor.headless_renderer import HeadlessRenderError, ensure_chromium_installed, render_project
 from backend.editor.repository import EditorProjectRepository
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_project_json
 
 EXPORT_FORMATS = {"mp4", "webm"}
 EXPORT_QUALITIES = {"low", "medium", "high", "very_high"}
@@ -55,10 +56,10 @@ class S_CutiaRender(BaseStep):
         repository = EditorProjectRepository()
 
         # 接力上游「剪辑AI Agent / Cutia 交互剪辑」输出的剪辑项目 JSON：优先渲染该快照
-        project_input = str((getattr(self, "_step_inputs", {}) or {}).get("project") or "")
-        if project_input and os.path.isfile(project_input):
-            with open(project_input, "r", encoding="utf-8") as handle:
-                snapshot = repository.restore_snapshot(task_id, json.load(handle), updated_by="cutia_render")
+        project_input = (getattr(self, "_step_inputs", {}) or {}).get("project")
+        project_data = resolve_project_json(project_input, task_dir)
+        if project_data is not None:
+            snapshot = repository.restore_snapshot(task_id, project_data, updated_by="cutia_render")
         else:
             try:
                 snapshot = repository.snapshot(task_id)

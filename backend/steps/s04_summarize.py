@@ -3,6 +3,7 @@ import os
 import json
 from typing import Callable, Optional
 from backend.steps.base_step import BaseStep, find_artifact
+from backend.steps.io_resolve import resolve_text_input
 from backend.config.config_manager import config
 
 
@@ -28,13 +29,14 @@ class S04Summarize(BaseStep):
         return val if val is not None else default
 
     def _load_input_text(self, task_dir: str) -> str:
-        """Load sentences_text.txt and join lines into a single text block."""
+        """Load text input. 兼容内存文本 / 文件路径，缺失时回退 cache 默认产物。"""
         step_inputs = getattr(self, "_step_inputs", {}) or {}
-        txt_path = step_inputs.get("text") or find_artifact(os.path.join(task_dir, "cache"), "sentences_text.txt")
+        txt_input = step_inputs.get("text")
+        if txt_input is not None:
+            return resolve_text_input(txt_input, task_dir)
+        txt_path = find_artifact(os.path.join(task_dir, "cache"), "sentences_text.txt")
         if not txt_path:
             raise FileNotFoundError("sentences_text.txt not found in cache directory")
-        if not os.path.isabs(txt_path):
-            txt_path = os.path.join(task_dir, txt_path)
         with open(txt_path, "r", encoding="utf-8") as f:
             lines = f.readlines()
         text = " ".join(line.strip() for line in lines if line.strip())

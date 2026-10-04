@@ -88,6 +88,12 @@ async def list_editor_tasks():
         for task in session.query(Task).all():
             if task.status not in TERMINAL_STATUSES:
                 continue
+            # 只列出磁盘上真实存在工作区目录的任务，避免列出已清理/迁移的幽灵任务，
+            # 否则前端「导入历史项目」对其调用 import-candidates 会 404 而崩溃。
+            try:
+                repository.task_dir(task.id)
+            except HTTPException:
+                continue
             payload = task.payload or {}
             batch = payload.get("batch", {}) or {}
             task_name = batch.get("task_name") or task.id

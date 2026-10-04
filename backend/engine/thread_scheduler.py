@@ -29,6 +29,7 @@ NODE_TYPES_DIR = os.path.join(
 )
 
 BUILTIN_STEP_REGISTRY = {
+    "image_format_convert": ("backend.steps.s_image_format_convert", "S_ImageFormatConvert"),
     "platform_download": ("backend.steps.s00_platform_download", "S00PlatformDownload"),
     "batch_download": ("backend.steps.s00_batch_download", "S00BatchDownload"),
     "asr": ("backend.steps.s02_asr", "S02ASR"),
@@ -43,6 +44,7 @@ BUILTIN_STEP_REGISTRY = {
     "merge_sub_video": ("backend.steps.s07_merge_sub_video", "S07MergeSubVideo"),
     "dub_task": ("backend.steps.s08_dub_task", "S08DubTask"),
     "tts": ("backend.steps.s09_tts", "S09TTS"),
+    "long_text_tts": ("backend.steps.s_long_text_tts", "S_LongTextTTS"),
     "merge_audio": ("backend.steps.s10_merge_audio", "S10MergeAudio"),
     "merge_dub": ("backend.steps.s_merge_dub", "S_MergeDub"),
     "merge_dub_video": ("backend.steps.s11_merge_dub_video", "S11MergeDubVideo"),

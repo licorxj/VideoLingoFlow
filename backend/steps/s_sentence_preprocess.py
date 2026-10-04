@@ -21,6 +21,7 @@ import re
 from typing import Callable, Dict, List, Optional, Tuple
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input, resolve_text_input
 from backend.config.config_manager import config
 
 # AI 断句复用"句子分割"阶段模型（config.yaml llm.step_models.s03_sentence_split）
@@ -151,18 +152,9 @@ class S_SentencePreprocess(BaseStep):
         json_val = step_inputs.get("json", "")
         text_val = step_inputs.get("text", "")
 
-        def _resolve_path(val: str) -> str:
-            if not val:
-                return ""
-            p = val if os.path.isabs(val) else os.path.join(task_dir, val)
-            return p if os.path.isfile(p) else ""
-
-        json_path = _resolve_path(json_val)
-        txt_path = _resolve_path(text_val)
-
-        if json_path:
-            with open(json_path, "r", encoding="utf-8") as f:
-                asr_data = json.load(f)
+        # json 优先于 text（兼容内存数据 / 文件路径 / 内联 JSON）
+        if json_val:
+            asr_data = resolve_json_input(json_val, task_dir)
             if not isinstance(asr_data, dict):
                 raise ValueError("JSON 输入必须是对象（ASR 格式）")
             full_text = str(asr_data.get("text", "") or "")
@@ -174,9 +166,8 @@ class S_SentencePreprocess(BaseStep):
                 full_text = " ".join(seg_texts)
             return "json", asr_data, full_text
 
-        if txt_path:
-            with open(txt_path, "r", encoding="utf-8") as f:
-                full_text = f.read()
+        if text_val:
+            full_text = resolve_text_input(text_val, task_dir)
             return "txt", None, full_text
 
         raise ValueError("未连接输入：请在 'ASR结果JSON' 或 '长文本TXT' 端口接入上游数据")

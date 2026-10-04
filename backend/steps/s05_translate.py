@@ -6,6 +6,7 @@ from typing import Callable, Optional, List, Dict, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from backend.steps.base_step import BaseStep, find_artifact
+from backend.steps.io_resolve import resolve_json_input
 from backend.config.config_manager import config
 from backend.llm.llm_client import get_llm_client
 
@@ -786,6 +787,12 @@ class S05Translate(BaseStep):
                     pass
 
     def validate_inputs(self, task_dir: str) -> bool:
+        step_inputs = getattr(self, "_step_inputs", {}) or {}
+        # 内存数据（dict / list）直接视为有效输入
+        if isinstance(step_inputs.get("subtitle"), (dict, list)) or isinstance(step_inputs.get("summary"), (dict, list)):
+            return True
+        if step_inputs.get("subtitle") or step_inputs.get("summary"):
+            return True
         sentences_path = find_artifact(os.path.join(task_dir, "cache"), "sentences.json")
         summarize_path = find_artifact(os.path.join(task_dir, "cache"), "summarize_result.json")
         return sentences_path is not None and summarize_path is not None
@@ -795,23 +802,28 @@ class S05Translate(BaseStep):
             callback(5, "Loading inputs...")
         node_suffix = f"_{self._node_id}" if self._node_id else ""
 
-        # Load inputs
+        # Load inputs（兼容内存数据 / 文件路径，缺失时回退 cache 默认产物）
         step_inputs = getattr(self, "_step_inputs", {}) or {}
-        sentences_path = step_inputs.get("subtitle") or find_artifact(os.path.join(task_dir, "cache"), "sentences.json")
-        summarize_path = step_inputs.get("summary") or find_artifact(os.path.join(task_dir, "cache"), "summarize_result.json")
-        if not sentences_path:
-            raise FileNotFoundError("sentences.json not found in cache directory")
-        if not summarize_path:
-            raise FileNotFoundError("summarize_result.json not found in cache directory")
-        if not os.path.isabs(sentences_path):
-            sentences_path = os.path.join(task_dir, sentences_path)
-        if not os.path.isabs(summarize_path):
-            summarize_path = os.path.join(task_dir, summarize_path)
+        subtitle_input = step_inputs.get("subtitle")
+        summary_input = step_inputs.get("summary")
 
-        with open(sentences_path, "r", encoding="utf-8") as f:
-            sentences = self._normalize_sentences(json.load(f))
-        with open(summarize_path, "r", encoding="utf-8") as f:
-            summarize_data = json.load(f)
+        if subtitle_input is not None:
+            sentences = self._normalize_sentences(resolve_json_input(subtitle_input, task_dir))
+        else:
+            sentences_path = find_artifact(os.path.join(task_dir, "cache"), "sentences.json")
+            if not sentences_path:
+                raise FileNotFoundError("sentences.json not found in cache directory")
+            with open(sentences_path, "r", encoding="utf-8") as f:
+                sentences = self._normalize_sentences(json.load(f))
+
+        if summary_input is not None:
+            summarize_data = resolve_json_input(summary_input, task_dir)
+        else:
+            summarize_path = find_artifact(os.path.join(task_dir, "cache"), "summarize_result.json")
+            if not summarize_path:
+                raise FileNotFoundError("summarize_result.json not found in cache directory")
+            with open(summarize_path, "r", encoding="utf-8") as f:
+                summarize_data = json.load(f)
 
         # Resolve target language early so output filenames carry the language suffix
         tgt_lang = self._resolve_target_language(task_dir)

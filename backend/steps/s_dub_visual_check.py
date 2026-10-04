@@ -12,7 +12,6 @@
 import json
 import os
 import time
-from pathlib import Path
 from typing import Callable, Optional
 
 from backend.control_plane.runtime import TaskCancelledError
@@ -33,23 +32,29 @@ class S_DubVisualCheck(BaseStep):
         return True
 
     @staticmethod
-    def _resolve(task_dir: str, raw: object) -> Optional[Path]:
-        """从上游输入中解析出配音任务 JSON 的绝对路径。"""
-        if isinstance(raw, dict):
-            for key in ("path", "file", "file_path", "json"):
-                value = raw.get(key)
-                if isinstance(value, str) and value.strip():
-                    raw = value.strip()
-                    break
-            else:
-                return None
+    def _resolve_input_data(task_dir: str, raw: object):
+        """从上游输入中解析出配音任务 JSON 数据（兼容内存 dict / list、文件路径、内联 JSON）。
+
+        返回 (data, path)：path 为来源文件路径（相对/绝对），内存数据时为 None。
+        """
+        if isinstance(raw, (dict, list)):
+            return raw, None
         if not isinstance(raw, str) or not raw.strip():
-            return None
-        value = raw.strip()
-        if os.path.isabs(value):
-            return Path(value) if os.path.isfile(value) else None
-        candidate = Path(task_dir) / value
-        return candidate if candidate.is_file() else None
+            return None, None
+        v = raw.strip()
+        candidates = []
+        if os.path.isabs(v) and os.path.isfile(v):
+            candidates.append(v)
+        rel = os.path.join(task_dir, v)
+        if os.path.isfile(rel):
+            candidates.append(rel)
+        if candidates:
+            with open(candidates[0], "r", encoding="utf-8") as f:
+                return json.load(f), candidates[0]
+        try:
+            return json.loads(v), None
+        except json.JSONDecodeError:
+            return None, None
 
     @staticmethod
     def _wait_audition(node_config: dict) -> tuple[bool, float]:
@@ -71,19 +76,13 @@ class S_DubVisualCheck(BaseStep):
         report = callback or (lambda *a, **k: None)
 
         report(10, "解析配音任务…")
-        dub_path = self._resolve(task_dir, step_inputs.get("json"))
-        if dub_path is None:
+        dub_data, dub_path = self._resolve_input_data(task_dir, step_inputs.get("json"))
+        if dub_data is None:
             raise ValueError(
                 "未收到配音任务 JSON：请将「语音合成(TTS)」等上游节点的配音任务输出连接到本节点的 json 输入端口"
             )
 
         report(30, "读取配音片段…")
-        try:
-            with open(dub_path, "r", encoding="utf-8") as handle:
-                dub_data = json.load(handle)
-        except Exception as exc:  # noqa: BLE001
-            raise ValueError(f"读取配音任务 JSON 失败: {dub_path}（{exc}）") from None
-
         segments = dub_data.get("segments", []) if isinstance(dub_data, dict) else []
         if not isinstance(segments, list):
             segments = []
@@ -97,6 +96,15 @@ class S_DubVisualCheck(BaseStep):
             audio_abs = audio_rel if os.path.isabs(audio_rel) else os.path.join(task_dir, audio_rel)
             if os.path.isfile(audio_abs) and os.path.getsize(audio_abs) > 0:
                 ready += 1
+
+        # 内存输入需落盘，以便下游按路径读取；文件路径则直接透传
+        if dub_path is None:
+            cache_dir = os.path.join(task_dir, "cache")
+            os.makedirs(cache_dir, exist_ok=True)
+            node_id = getattr(self, "_node_id", "") or "dub_visual_check"
+            dub_path = os.path.join(cache_dir, f"dub_visual_check_{node_id}.json")
+            with open(dub_path, "w", encoding="utf-8") as handle:
+                json.dump(dub_data, handle, ensure_ascii=False, indent=2)
 
         # 透传上游输入 JSON 到输出（相对 task_dir，供下游按路径读取）
         output_rel = os.path.relpath(str(dub_path), task_dir).replace("\\", "/")

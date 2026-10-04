@@ -54,7 +54,7 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS vf_projects (
     id TEXT PRIMARY KEY, name TEXT NOT NULL, description TEXT NOT NULL DEFAULT '',
     source_language TEXT NOT NULL DEFAULT 'zh-CN', target_language TEXT NOT NULL DEFAULT 'zh-CN',
-    status TEXT NOT NULL DEFAULT 'draft', default_interface_id TEXT, default_voice_id TEXT,
+    status TEXT NOT NULL DEFAULT 'draft', default_interface_id TEXT, default_voice_id TEXT, default_model TEXT,
     default_speed REAL NOT NULL DEFAULT 1.0, version INTEGER NOT NULL DEFAULT 1,
     legacy_source_id TEXT, legacy_import_batch_id TEXT, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -209,6 +209,11 @@ def initialize_database():
                 conn.execute("ALTER TABLE vf_chapters ADD COLUMN level INTEGER NOT NULL DEFAULT 1")
             if "char_count" not in chapter_columns:
                 conn.execute("ALTER TABLE vf_chapters ADD COLUMN char_count INTEGER NOT NULL DEFAULT 0")
+            # Projects: default TTS model for interface+model selection mode
+            project_columns = {row["name"] for row in conn.execute("PRAGMA table_info(vf_projects)").fetchall()}
+            if "default_model" not in project_columns:
+                conn.execute("ALTER TABLE vf_projects ADD COLUMN default_model TEXT")
+
             # Characters: align with LcVoiceForgeaApp project_characters (role def / binding / batch design)
             character_columns = {row["name"] for row in conn.execute("PRAGMA table_info(vf_characters)").fetchall()}
             for name, definition in {

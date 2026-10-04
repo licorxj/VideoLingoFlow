@@ -203,88 +203,6 @@
         "language": ""
       }
     ],
-    "openai_tts": [
-      {
-        "voice_id": "alloy",
-        "voice_name": "",
-        "description": "",
-        "gender": "",
-        "age": "",
-        "language": ""
-      },
-      {
-        "voice_id": "echo",
-        "voice_name": "",
-        "description": "",
-        "gender": "",
-        "age": "",
-        "language": ""
-      },
-      {
-        "voice_id": "fable",
-        "voice_name": "",
-        "description": "",
-        "gender": "",
-        "age": "",
-        "language": ""
-      },
-      {
-        "voice_id": "onyx",
-        "voice_name": "",
-        "description": "",
-        "gender": "",
-        "age": "",
-        "language": ""
-      },
-      {
-        "voice_id": "nova",
-        "voice_name": "",
-        "description": "",
-        "gender": "",
-        "age": "",
-        "language": ""
-      },
-      {
-        "voice_id": "shimmer",
-        "voice_name": "",
-        "description": "",
-        "gender": "",
-        "age": "",
-        "language": ""
-      },
-      {
-        "voice_id": "ash",
-        "voice_name": "Ash",
-        "description": "Clear and expressive",
-        "gender": "",
-        "age": "adult",
-        "language": "en"
-      },
-      {
-        "voice_id": "ballad",
-        "voice_name": "Ballad",
-        "description": "Warm and melodic",
-        "gender": "",
-        "age": "adult",
-        "language": "en"
-      },
-      {
-        "voice_id": "coral",
-        "voice_name": "Coral",
-        "description": "Friendly and natural",
-        "gender": "",
-        "age": "adult",
-        "language": "en"
-      },
-      {
-        "voice_id": "sage",
-        "voice_name": "Sage",
-        "description": "Calm and thoughtful",
-        "gender": "",
-        "age": "adult",
-        "language": "en"
-      }
-    ],
     "azure_tts": [
       {
         "voice_id": "zh-CN-YunjianNeural",
@@ -383,10 +301,8 @@
         "language": "ko-KR"
       }
     ],
-    "index_tts": [],
     "omnivoice": [],
     "voxcpm": [],
-    "dots_tts": [],
     "minimax_tts": [
       {
         "voice_id": "female-shaonv",

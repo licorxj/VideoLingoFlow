@@ -49,6 +49,7 @@ class ProjectUpdate(BaseModel):
     status: Optional[str] = None
     default_interface_id: Optional[str] = None
     default_voice_id: Optional[str] = None
+    default_model: Optional[str] = None
     default_speed: Optional[float] = Field(default=None, ge=0.5, le=2.0)
     version: int
 
@@ -137,6 +138,7 @@ class SynthesisRequest(BaseModel):
     sentence_ids: list[str] = Field(default_factory=list, max_length=500)
     retry_failed: bool = False
     interface_id: Optional[str] = None
+    model: Optional[str] = None
 
 
 class TextPreviewRequest(BaseModel):
@@ -937,13 +939,15 @@ def import_project_content(
 
 
 @router.post("/sentences/{sentence_id}/synthesize")
-def synthesize(sentence_id: str, interface_id: str = Query(None)):
+def synthesize(sentence_id: str, interface_id: str = Query(None), model: str = Query(None)):
     with session() as conn:
         sentence = _one(conn, "SELECT project_id, version FROM vf_sentences WHERE id = ?", (sentence_id,), "句子不存在")
     task_kwargs: dict = {"sentence_id": sentence_id, "sentence_version": sentence["version"]}
     if interface_id:
         task_kwargs["interface_id"] = interface_id
-    task_id, created = create_task(sentence["project_id"], "synthesize_sentence", task_kwargs, idempotency_key=f"synthesis:{sentence_id}:{sentence['version']}{(':' + interface_id) if interface_id else ''}")
+    if model:
+        task_kwargs["model"] = model
+    task_id, created = create_task(sentence["project_id"], "synthesize_sentence", task_kwargs, idempotency_key=f"synthesis:{sentence_id}:{sentence['version']}{(':' + interface_id) if interface_id else ''}{(':' + model) if model else ''}")
     if created:
         # 由任务泵按并发上限投递，避免瞬时打满 TTS 接口
         pump_pending_tasks()
@@ -971,7 +975,9 @@ def synthesize_project(project_id: str, data: SynthesisRequest):
         task_kwargs: dict = {"sentence_id": sentence["id"], "sentence_version": sentence["version"]}
         if data.interface_id:
             task_kwargs["interface_id"] = data.interface_id
-        task_id, created = create_task(project_id, "synthesize_sentence", task_kwargs, idempotency_key=f"synthesis:{sentence['id']}:{sentence['version']}{(':' + data.interface_id) if data.interface_id else ''}")
+        if data.model:
+            task_kwargs["model"] = data.model
+        task_id, created = create_task(project_id, "synthesize_sentence", task_kwargs, idempotency_key=f"synthesis:{sentence['id']}:{sentence['version']}{(':' + data.interface_id) if data.interface_id else ''}{(':' + data.model) if data.model else ''}")
         if created:
             created_tasks.append(task_id)
         else:

@@ -4,6 +4,7 @@ import os
 from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 from backend.llm.llm_client import get_llm_client
 from backend.prompts.prompt_service import get_prompt_service
 
@@ -30,18 +31,12 @@ class S12Cover(BaseStep):
         if callback:
             callback(10, "Reading content JSON...")
 
-        json_path = step_inputs.get("json", "")
-        if not json_path:
+        json_input = step_inputs.get("json", "")
+        if not json_input:
             raise ValueError("No JSON input connected. Please connect an upstream JSON output.")
 
-        # Resolve path
-        if not os.path.isabs(json_path):
-            json_path = os.path.join(task_dir, json_path)
-        if not os.path.isfile(json_path):
-            raise FileNotFoundError(f"JSON input file not found: {json_path}")
-
-        with open(json_path, "r", encoding="utf-8") as f:
-            content = json.load(f)
+        # 兼容内存数据 / 文件路径 / 内联 JSON 文本
+        content = resolve_json_input(json_input, task_dir)
 
         # Support both "title" and "tittle" spellings
         json_title = content.get("title") or content.get("tittle") or ""

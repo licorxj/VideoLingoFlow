@@ -83,18 +83,9 @@ export default function EditingWorkbench() {
 
   useEffect(() => {
     if (!taskId) return;
-    // #region debug-point B:parent-project-fetch
-    fetch("http://127.0.0.1:7777/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: "cutia-project-load", runId: "pre-fix-2", hypothesisId: "B", location: "EditingWorkbench.tsx:project-effect", msg: "[DEBUG] Parent requesting project", data: { taskId, apiBase: window.location.origin }, ts: Date.now() }) }).catch(() => {});
-    // #endregion
     editorApi.getProject(taskId).then((response) => {
-      // #region debug-point B:parent-project-success
-      fetch("http://127.0.0.1:7777/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: "cutia-project-load", runId: "pre-fix-2", hypothesisId: "B", location: "EditingWorkbench.tsx:project-effect", msg: "[DEBUG] Parent project received", data: { taskId, revision: response.data.revision, assetCount: response.data.assets.length }, ts: Date.now() }) }).catch(() => {});
-      // #endregion
       setSnapshot(response.data);
-    }).catch((error) => {
-      // #region debug-point B:parent-project-failed
-      fetch("http://127.0.0.1:7777/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: "cutia-project-load", runId: "pre-fix-2", hypothesisId: "B", location: "EditingWorkbench.tsx:project-effect", msg: "[DEBUG] Parent project request failed", data: { taskId, message: error instanceof Error ? error.message : String(error) }, ts: Date.now() }) }).catch(() => {});
-      // #endregion
+    }).catch(() => {
       setSnapshot(null);
     });
   }, [taskId]);
@@ -102,9 +93,6 @@ export default function EditingWorkbench() {
   const loadTaskProject = () => {
     if (!taskId || !snapshot || !frameRef.current?.contentWindow) return;
     setImportStatus("正在加载任务项目到 Cutia…");
-    // #region debug-point A:parent-load-message
-    fetch("http://127.0.0.1:7777/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: "cutia-project-load", runId: "pre-fix", hypothesisId: "A", location: "EditingWorkbench.tsx:loadTaskProject", msg: "[DEBUG] Parent sent task project", data: { taskId, revision: snapshot.revision, assetCount: snapshot.assets.length }, ts: Date.now() }) }).catch(() => {});
-    // #endregion
     frameRef.current.contentWindow.postMessage({
       type: "videolingo:load-task-project",
       version: TASK_PROJECT_BRIDGE_VERSION,

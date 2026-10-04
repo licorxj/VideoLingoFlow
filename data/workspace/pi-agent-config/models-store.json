@@ -701,7 +701,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790575882316,
+    "checkedAt": 1790923447169,
     "lastModified": 1790340035000,
     "etag": "W/\"fd618468d259cfd12b70206204a81069\""
   },
@@ -902,7 +902,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790575881968,
+    "checkedAt": 1790923447481,
     "lastModified": 1790340067000,
     "etag": "W/\"c6e5204bdd5c6de144b577d8f9233a6c\""
   },
@@ -1775,7 +1775,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790575881956,
+    "checkedAt": 1790923447198,
     "lastModified": 1790340008000,
     "etag": "W/\"7479536815e7f52fb17815e7f6031a76\""
   },
@@ -3348,6 +3348,157 @@
         "type": "chat"
       },
       {
+        "id": "gpt-6.1-sol",
+        "name": "GPT-6.1 Sol",
+        "api": "openai-responses",
+        "provider": "openai",
+        "baseUrl": "https://api.openai.com/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 2,
+          "output": 10,
+          "cacheRead": 0.1,
+          "cacheWrite": 2.5,
+          "tiers": [
+            {
+              "inputTokensAbove": 272000,
+              "input": 4,
+              "output": 15,
+              "cacheRead": 0.2,
+              "cacheWrite": 5
+            }
+          ]
+        },
+        "contextWindow": 272000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsOpenAIGrammarTools": true,
+          "supportsAdditionalTools": true,
+          "supportsToolSearch": true,
+          "supportsMidConvoSystemMessages": true,
+          "supportsExplicitPromptCacheMode": true
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "gpt-daybreak-blue-latest",
+        "name": "Daybreak Blue",
+        "api": "openai-responses",
+        "provider": "openai",
+        "baseUrl": "https://api.openai.com/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 4,
+          "output": 20,
+          "cacheRead": 0.4,
+          "cacheWrite": 5
+        },
+        "contextWindow": 1050000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": "none",
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsExplicitPromptCacheMode": true
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "gpt-daybreak-red-latest",
+        "name": "Daybreak Red",
+        "api": "openai-responses",
+        "provider": "openai",
+        "baseUrl": "https://api.openai.com/v1",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 12.5,
+          "output": 75,
+          "cacheRead": 1.25,
+          "cacheWrite": 15.625
+        },
+        "contextWindow": 400000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": "none",
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsExplicitPromptCacheMode": true
+        },
+        "inputLimits": {
+          "maxRequestBytes": 536870912,
+          "images": {
+            "maxPerRequest": 1500,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
         "id": "gpt-realtime-2.1",
         "name": "GPT-Realtime-2.1",
         "api": "openai-responses",
@@ -3650,9 +3801,9 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790575881990,
-    "lastModified": 1790340037000,
-    "etag": "W/\"d8710b077c3ba185cd70e038b8ca34d7\""
+    "checkedAt": 1790923447626,
+    "lastModified": 1790859104000,
+    "etag": "W/\"088045d5b9f69b280395672dcd5ada79\""
   },
   "huggingface": {
     "models": [
@@ -5969,7 +6120,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790575882529,
+    "checkedAt": 1790923447624,
     "lastModified": 1790340016000,
     "etag": "W/\"16fd3507eb5807845f3f87d72e24c778\""
   },
@@ -6664,10 +6815,64 @@
           }
         },
         "type": "chat"
+      },
+      {
+        "id": "claude-sonnet-5-5",
+        "name": "Claude Sonnet 5.5",
+        "api": "anthropic-messages",
+        "provider": "anthropic",
+        "baseUrl": "https://api.anthropic.com",
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 2,
+          "output": 10,
+          "cacheRead": 0.2,
+          "cacheWrite": 2.5
+        },
+        "contextWindow": 1000000,
+        "maxTokens": 128000,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": "xhigh",
+          "max": "max"
+        },
+        "compat": {
+          "supportsMidConvoEffort": true,
+          "supportsMidConvoSystemMessages": true,
+          "supportsMidConvoToolChanges": true,
+          "forceAdaptiveThinking": true,
+          "supportsTemperature": false,
+          "supportsStrictTools": true
+        },
+        "promptCache": {
+          "short": 300,
+          "long": 3600
+        },
+        "inputLimits": {
+          "maxRequestBytes": 33554432,
+          "images": {
+            "maxPerRequest": 600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
       }
     ],
-    "checkedAt": 1790575881933,
-    "lastModified": 1790339986000,
-    "etag": "W/\"6f3aa1a70db379098bbdda6d0286153f\""
+    "checkedAt": 1790923447189,
+    "lastModified": 1790859054000,
+    "etag": "W/\"71c17a51b322391f0f80077152bb3748\""
   }
 }

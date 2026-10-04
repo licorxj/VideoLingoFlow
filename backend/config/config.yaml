@@ -179,7 +179,9 @@ aigc:
     timeout: 120
 videogen:
   method: kieai_video
-  default_t2v_model: 'generate-veo3-1-video'
+  default_t2v_model: 'doubao-seedance-2-0-pro-260528'
   default_i2v_model: 'bytedance/seedance-2-mini'
   default_v2v_model: 'bytedance/seedance-2-mini'
   v2v_interface: kieai_video
+  t2v_interface: seedance_video
+  i2v_interface: seedance_video

@@ -181,13 +181,13 @@ def _resolve_emotion_clone_reference(data: dict, sentence_emotion: str, task_id:
     return str(audio_path), str(matched.get("instruct") or "")
 
 
-def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | None = None, interface_id: str | None = None):
+def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | None = None, interface_id: str | None = None, model: str | None = None):
     update_task(task_id, "running", 0.1)
     try:
         with session() as conn:
             row = conn.execute(
                 """
-                SELECT s.*, p.default_interface_id, p.default_voice_id, p.default_speed,
+                SELECT s.*, p.default_interface_id, p.default_voice_id, p.default_model, p.default_speed,
                        v.interface_id AS profile_interface_id, v.voice_id AS profile_voice_id, v.mode,
                        v.reference_storage_key, v.params_json, v.emotions_json
                 FROM vf_sentences s JOIN vf_projects p ON p.id = s.project_id
@@ -207,8 +207,9 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
                 return
             conn.execute("UPDATE vf_sentences SET status = 'generating', error_message = NULL WHERE id = ? AND version = ?", (sentence_id, data["version"]))
         text = (data.get("edited_text") or data["text"]).strip()
-        # 显式传入的 interface_id 优先级最高，其次句子/声音档案/项目默认，最后回退 edge_tts
+        # 显式传入的 interface_id/model 优先级最高，其次项目默认，最后回退 edge_tts
         effective_interface_id = interface_id or data.get("interface_id") or data.get("profile_interface_id") or data.get("default_interface_id") or "edge_tts"
+        effective_model = model or data.get("default_model") or ""
         voice_id = data.get("voice_id") or data.get("profile_voice_id") or data.get("default_voice_id")
         output_key = f"projects/{data['project_id']}/audio/{sentence_id}.wav"
         output_path = storage_root() / "temp" / f"{task_id}.wav"
@@ -238,6 +239,7 @@ def synthesize_sentence(sentence_id: str, task_id: str, expected_version: int | 
                         mode=data.get("mode"),
                         speed=data.get("speed") or data.get("default_speed"),
                         voice=voice_id,
+                        model=effective_model or None,
                         voice_design=params.get("voice_design"),
                         controllable_clone=(
                             f"{params.get('controllable_clone')}；{emotion_instruct}".strip("；")

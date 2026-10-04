@@ -179,9 +179,6 @@ class S09TTS(BaseStep):
     @classmethod
     def _load_dub_task(cls, task_dir: str, step_inputs: dict):
         pandas_path = step_inputs.get("pandas") or ""
-        json_path = step_inputs.get("text") or find_artifact(
-            os.path.join(task_dir, "cache"), "dub_task.json"
-        ) or os.path.join(task_dir, "cache", "dub_task.json")
 
         if pandas_path:
             if not os.path.isabs(pandas_path):
@@ -197,10 +194,42 @@ class S09TTS(BaseStep):
                 json.dump(dub_data, f, ensure_ascii=False, indent=2)
             return dub_data, canonical_json_path
 
-        if not os.path.isabs(json_path):
-            json_path = os.path.join(task_dir, json_path)
-        with open(json_path, "r", encoding="utf-8") as f:
-            return json.load(f), json_path
+        # 处理 text 端口（JSON 任务单）：兼容内存数据 / 文件路径 / 内联 JSON
+        raw = step_inputs.get("text")
+        if isinstance(raw, (dict, list)):
+            dub_data = raw
+            canonical_json_path = find_artifact(os.path.join(task_dir, "cache"), "dub_task.json") or \
+                os.path.join(task_dir, "cache", "dub_task.json")
+            with open(canonical_json_path, "w", encoding="utf-8") as f:
+                json.dump(dub_data, f, ensure_ascii=False, indent=2)
+            return dub_data, canonical_json_path
+        if isinstance(raw, str) and raw.strip():
+            v = raw.strip()
+            candidates = []
+            if os.path.isabs(v) and os.path.isfile(v):
+                candidates.append(v)
+            rel = os.path.join(task_dir, v)
+            if os.path.isfile(rel):
+                candidates.append(rel)
+            if candidates:
+                p = candidates[0]
+                with open(p, "r", encoding="utf-8") as f:
+                    return json.load(f), p
+            try:
+                data = json.loads(v)
+                canonical_json_path = find_artifact(os.path.join(task_dir, "cache"), "dub_task.json") or \
+                    os.path.join(task_dir, "cache", "dub_task.json")
+                with open(canonical_json_path, "w", encoding="utf-8") as f:
+                    json.dump(data, f, ensure_ascii=False, indent=2)
+                return data, canonical_json_path
+            except json.JSONDecodeError:
+                raise ValueError(f"TTS 任务单 JSON 解析失败：{v[:60]}")
+
+        # 回退：读取 cache 默认 dub_task.json
+        fallback = find_artifact(os.path.join(task_dir, "cache"), "dub_task.json") or \
+            os.path.join(task_dir, "cache", "dub_task.json")
+        with open(fallback, "r", encoding="utf-8") as f:
+            return json.load(f), fallback
 
     def _create_placeholder_audio(self, text: str, output_path: str, duration: float):
         """Create a placeholder silent WAV file using wave module."""

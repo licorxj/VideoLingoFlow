@@ -2327,10 +2327,6 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "webrtc",
             "label": "WebRTC"
-          },
-          {
-            "value": "sherpa",
-            "label": "sherpa-onnx (Silero/本地)"
           }
         ]
       },
@@ -2445,10 +2441,6 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "cam++",
             "label": "CAM++ (FunASR)"
-          },
-          {
-            "value": "sherpa",
-            "label": "sherpa-onnx (本地/无需Key)"
           }
         ]
       },
@@ -2506,10 +2498,6 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "ct_punc",
             "label": "CT-Punc (FunASR)"
-          },
-          {
-            "value": "sherpa",
-            "label": "sherpa-onnx (本地)"
           }
         ]
       },
@@ -3355,6 +3343,246 @@ export const FALLBACK_NODE_TYPES = [
         "dependsValue": true,
         "placeholder": "600",
         "description": "等待审听的最长时间（秒），到期后自动继续；仅在勾选「是否等待审听」时生效"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "long_text_tts",
+    "name": "长文本TTS",
+    "category": "ai_gen",
+    "description": "纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。",
+    "icon": "Volume2",
+    "color": "#10b981",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "长文本",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频路径",
+        "type": "audio"
+      },
+      {
+        "id": "record",
+        "label": "记录JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "tts_mode": [
+        "preset_voice"
+      ],
+      "tts_engine": "",
+      "tts_model": "",
+      "clone_source": "fixed",
+      "cc_colloquial_desc": "",
+      "ref_audio_path": "",
+      "ref_audio_role_1": "",
+      "ref_audio_role_2": "",
+      "ref_audio_role_3": "",
+      "ref_audio_role_4": "",
+      "voice_role_1": "",
+      "voice_role_2": "",
+      "voice_role_3": "",
+      "voice_role_4": "",
+      "voice_design_role_1_desc": "",
+      "voice_design_role_2_desc": "",
+      "voice_design_role_3_desc": "",
+      "voice_design_role_4_desc": "",
+      "overwrite_generate": false,
+      "max_chars": 80
+    },
+    "configFields": [
+      {
+        "key": "max_chars",
+        "label": "单句最大字数",
+        "type": "number",
+        "defaultValue": 80,
+        "min": 10,
+        "max": 500,
+        "step": 10,
+        "colSpan": "half",
+        "description": "分句时单句的最大字符数，超过则按标点/字数继续拆分后再逐句配音"
+      },
+      {
+        "key": "tts_mode",
+        "label": "TTS 模式",
+        "type": "chips",
+        "singleSelect": true,
+        "chipColor": "#10b981",
+        "options": [
+          { "value": "preset_voice", "label": "预置角色" },
+          { "value": "clone", "label": "克隆" },
+          { "value": "controllable_clone", "label": "指令克隆" },
+          { "value": "voice_design", "label": "音色设计" }
+        ]
+      },
+      {
+        "key": "tts_engine",
+        "label": "配音引擎",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "apiEndpoint": "/api/tts-interfaces/by-mode/{tts_mode}",
+        "placeholder": "跟随全局配置",
+        "optionLabel": "name",
+        "optionValue": "id"
+      },
+      {
+        "key": "tts_model",
+        "label": "TTS 模型",
+        "type": "api-select",
+        "dependsOn": "tts_engine",
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/models-for-node",
+        "placeholder": "跟随接口默认模型",
+        "colSpan": "half"
+      },
+      {
+        "key": "clone_source",
+        "label": "克隆音频来源",
+        "type": "select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["clone", "controllable_clone"],
+        "options": [
+          { "value": "fixed", "label": "固定克隆音频" },
+          { "value": "multi_role", "label": "多角色模式" }
+        ]
+      },
+      {
+        "key": "ref_audio_path",
+        "label": "参考音频路径",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "fixed",
+        "placeholder": "选择参考音频文件",
+        "fileFilter": ["wav", "mp3", "flac", "ogg"]
+      },
+      {
+        "key": "cc_colloquial_desc",
+        "label": "口语化描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["controllable_clone"],
+        "placeholder": "例如：用四川话说",
+        "colSpan": "full",
+        "description": "拼接在可控克隆指令最前面，自动补逗号分隔；留空不拼接"
+      },
+      {
+        "key": "ref_audio_role_1",
+        "label": "角色1参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色1的参考音频",
+        "fileFilter": ["wav", "mp3", "flac", "ogg"]
+      },
+      {
+        "key": "ref_audio_role_2",
+        "label": "角色2参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色2的参考音频",
+        "fileFilter": ["wav", "mp3", "flac", "ogg"]
+      },
+      {
+        "key": "ref_audio_role_3",
+        "label": "角色3参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色3的参考音频",
+        "fileFilter": ["wav", "mp3", "flac", "ogg"]
+      },
+      {
+        "key": "ref_audio_role_4",
+        "label": "角色4参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色4的参考音频",
+        "fileFilter": ["wav", "mp3", "flac", "ogg"]
+      },
+      {
+        "key": "voice_role_1",
+        "label": "朗读者1音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["preset_voice"],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_role_2",
+        "label": "朗读者2音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["preset_voice"],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_role_3",
+        "label": "朗读者3音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["preset_voice"],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_role_4",
+        "label": "朗读者4音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["preset_voice"],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_design_role_1_desc",
+        "label": "角色1音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["voice_design"],
+        "placeholder": "描述角色1的音色特征"
+      },
+      {
+        "key": "voice_design_role_2_desc",
+        "label": "角色2音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["voice_design"],
+        "placeholder": "描述角色2的音色特征"
+      },
+      {
+        "key": "voice_design_role_3_desc",
+        "label": "角色3音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["voice_design"],
+        "placeholder": "描述角色3的音色特征"
+      },
+      {
+        "key": "voice_design_role_4_desc",
+        "label": "角色4音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": ["voice_design"],
+        "placeholder": "描述角色4的音色特征"
+      },
+      {
+        "key": "overwrite_generate",
+        "label": "覆盖已有音频",
+        "type": "toggle",
+        "defaultValue": false,
+        "description": "勾选后即使音频文件已存在也会重新生成，不勾选则跳过已存在的音频"
       }
     ],
     "isBuiltIn": true
@@ -5720,7 +5948,7 @@ export const FALLBACK_NODE_TYPES = [
       {
         "id": "url",
         "label": "下载地址",
-        "type": "url",
+        "type": "any",
         "required": true
       },
       {
@@ -5734,7 +5962,7 @@ export const FALLBACK_NODE_TYPES = [
       {
         "id": "file",
         "label": "文件路径",
-        "type": "filepath"
+        "type": "any"
       },
       {
         "id": "filename",
@@ -7455,6 +7683,68 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "defaultConfig": {},
     "configFields": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "image_format_convert",
+    "name": "图片格式转换",
+    "category": "utility",
+    "description": "将输入的图片转换为指定格式并保存为新文件。输入端口为 any：自动识别上游传入的是图片文件路径还是 base64 图片数据（兼容 data:image/...;base64, 前缀），无法识别时报错。输出转换后的图片路径，可接入预览、剪辑、生图参考等图片类下游节点。",
+    "icon": "Image",
+    "color": "#f97316",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "input",
+        "label": "图片",
+        "type": "any",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "image",
+        "label": "图片",
+        "type": "image"
+      }
+    ],
+    "defaultConfig": {
+      "target_format": "png"
+    },
+    "configFields": [
+      {
+        "key": "target_format",
+        "label": "目标格式",
+        "type": "select",
+        "options": [
+          {
+            "value": "png",
+            "label": "PNG"
+          },
+          {
+            "value": "jpg",
+            "label": "JPG"
+          },
+          {
+            "value": "webp",
+            "label": "WEBP"
+          },
+          {
+            "value": "bmp",
+            "label": "BMP"
+          },
+          {
+            "value": "tiff",
+            "label": "TIFF"
+          },
+          {
+            "value": "gif",
+            "label": "GIF"
+          }
+        ],
+        "description": "转换后的图片格式；JPG 会自动丢弃透明通道"
+      }
+    ],
     "isBuiltIn": true
   },
   {
@@ -9538,7 +9828,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_project",
     "name": "项目立项·剧本创作",
     "category": "agi_story",
-    "description": "AI 漫剧·起始节点：创建创作项目并用 LLM 打好故事骨架（世界观/大纲/总剧本），产出 creation_id 贯穿下游全部节点",
+    "description": "AI 漫剧·第1步·剧本链【链路入口】：创建创作项目并用 LLM 打好故事骨架（世界观/大纲/总剧本），产出 creation_id 贯穿下游全部节点。上游：无（创意可从「输入」节点接 text 端口或在本节点填写）。下游：creation_id 端口 → 接「剧本深化」（推荐下一步）；资产链与章节剧本各节点也都从它接 creation_id",
     "icon": "Rocket",
     "color": "#db2777",
     "execution_domain": "thread",
@@ -9675,7 +9965,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_deepen",
     "name": "剧本深化",
     "category": "agi_story",
-    "description": "AI 漫剧·剧本深化：把项目骨架深化为严格格式化的设定书并入库——剧本简介、各章节内容规划(建章)、人物设计提炼(同名提炼/新增)、画风元素锁定(写入骨架供下游生图取用)",
+    "description": "AI 漫剧·第2步·剧本链【推荐主路径】：把项目骨架深化为严格格式化的设定书并入库——剧本简介、各章节内容规划(建章)、人物设计提炼(同名提炼/新增)、画风元素锁定(写入骨架供下游生图取用)。上游：「项目立项」creation_id 端口。下游：creation_id 端口 → 「人物资产创作/人物音色生产/场景资产创作/道具资产创作」（并行）与「章节剧本」；用本节点建好章节后，「章节剧本」节点可省略",
     "icon": "PenLine",
     "color": "#db2777",
     "execution_domain": "thread",
@@ -9794,7 +10084,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_character",
     "name": "人物资产创作",
     "category": "agi_asset",
-    "description": "AI 漫剧·人物资产创作：用 LLM 生成人物设定并写入创作项目，可发布到公共角色库并生成多视角图",
+    "description": "AI 漫剧·资产链【与场景/道具并行，无先后】：用 LLM 生成人物设定并写入创作项目，可发布到公共角色库并生成多视角图。上游：「项目立项」或「剧本深化」creation_id 端口。下游：人物多视角图由「分镜首尾帧」自动取用作为角色参考图（无需连线，按项目读库）；creation_id → 后续任意节点",
     "icon": "Users",
     "color": "#db2777",
     "execution_domain": "thread",
@@ -10006,7 +10296,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_voice",
     "name": "人物音色生产",
     "category": "agi_asset",
-    "description": "AI 漫剧·人物音色生产：按「生成对象」为目标人物一次性设计 15~25 字台词，分别调用设计与克隆 TTS 接口合成音色样本，登记到配音谷音色库（vf:voices 引用）并绑定人物 voice_ref，打通分镜配音的音色克隆链路",
+    "description": "AI 漫剧·资产链【依赖人物已入库，须在「剧本深化/人物资产创作」之后】：按「生成对象」为目标人物一次性设计 15~25 字台词，分别调用设计与克隆 TTS 接口合成音色样本，登记到配音谷音色库（vf:voices 引用）并绑定人物 voice_ref。上游：「剧本深化」或「人物资产创作」creation_id 端口（人物必须已存在）。下游：voice_ref 写到人物上，「分镜配音」按对话角色自动取用（无需连线）",
     "icon": "AudioWaveform",
     "color": "#db2777",
     "execution_domain": "process",
@@ -10176,7 +10466,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_scene",
     "name": "场景资产创作",
     "category": "agi_asset",
-    "description": "AI 漫剧·场景资产创作：生成关键场景(地点/时间段/光影)并生成固定视角概念图，写入场景资产表并登记 scene_image 资产",
+    "description": "AI 漫剧·资产链【与人物/道具并行，无先后】：生成关键场景(地点/时间段/光影)并生成固定视角概念图，登记 scene_image 资产。上游：「项目立项」或「剧本深化」creation_id 端口。下游：场景图由「组装分镜提示词」自动收集为【image1】参考图（按项目读库，无需连线）；creation_id → 后续任意节点",
     "icon": "Image",
     "color": "#db2777",
     "execution_domain": "process",
@@ -10327,7 +10617,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_prop",
     "name": "道具资产创作",
     "category": "agi_asset",
-    "description": "AI 漫剧·道具资产创作：从剧本提取/生成推动剧情的关键道具，生成白底单品图，写入道具资产表并登记 prop_image 资产",
+    "description": "AI 漫剧·资产链【与人物/场景并行，无先后】：从剧本提取/生成推动剧情的关键道具，生成白底单品图，登记 prop_image 资产。上游：「项目立项」或「剧本深化」creation_id 端口。下游：道具图由「组装分镜提示词」自动合并为【image2】参考图（按项目读库，无需连线）；creation_id → 后续任意节点",
     "icon": "Box",
     "color": "#db2777",
     "execution_domain": "process",
@@ -10478,7 +10768,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_extract",
     "name": "资产自动提取",
     "category": "agi_asset",
-    "description": "AI 漫剧·资产自动提取：从格式化剧本一次性提取人物/场景/道具，按名去重入库（同名复用更新，新增写入一级资产表），对标 Drama extractor",
+    "description": "AI 漫剧·资产链【可选捷径：替代「人物/场景/道具」三个节点】：从格式化剧本一次性提取人物/场景/道具，按名去重入库（同名复用更新，新增写入一级资产表）。上游：「剧本深化」creation_id 端口（章节剧本已格式化后提取效果最佳）。下游：与人物/场景/道具节点相同——产物由「分镜首尾帧」「组装分镜提示词」按项目读库自动取用",
     "icon": "Sparkles",
     "color": "#db2777",
     "execution_domain": "thread",
@@ -10583,7 +10873,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_prompt",
     "name": "生成提示词",
     "category": "agi_asset",
-    "description": "AI 漫剧·生成提示词：把资产描述结合整体画风生成 final_prompt 写入库（可调试/可人工改），供生图节点使用；资产类型选「分镜」时生成 image_prompt/video_prompt 供首尾帧与生视频节点消费",
+    "description": "AI 漫剧·资产链【可选：提示词精修，不接也能跑】：把资产描述结合整体画风生成 final_prompt 写入库（可调试/可人工改）；资产类型选「分镜」时生成 image_prompt 供「分镜首尾帧」优先取用。上游：资产创作完成后接 creation_id（可选 ids 指定部分资产；分镜用 chapter_id/chapter_ids）。下游：提示词写回资产/分镜记录，生图节点按库自动取用（无需连线）",
     "icon": "Wand2",
     "color": "#db2777",
     "execution_domain": "thread",
@@ -10701,7 +10991,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_chapter",
     "name": "章节剧本",
     "category": "agi_story",
-    "description": "AI 漫剧·章节剧本：为创作项目生成若干章节（标题/原文/简述）并写入",
+    "description": "AI 漫剧·第3步·剧本链【「剧本深化」已建章时可省略】：为创作项目生成若干章节（标题/原文/简述）并写入。上游：「项目立项/剧本深化」creation_id 端口。下游：chapter_id 端口 → 「分镜剧本」chapter_id 端口（推荐下一步）",
     "icon": "BookOpen",
     "color": "#db2777",
     "execution_domain": "thread",
@@ -10794,7 +11084,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_shot",
     "name": "分镜剧本",
     "category": "agi_story",
-    "description": "AI 漫剧·分镜剧本：为章节生成分镜（出场人物/场景/对话/音效设计）并写入",
+    "description": "AI 漫剧·第4步·剧本链【分镜链的起点】：为章节生成分镜（出场人物/场景/对话/音效设计）并写入。上游：「章节剧本」（或剧本深化建好的章节）chapter_id 端口。下游：chapter_id 端口 → 「组装分镜提示词/分镜首尾帧/分镜视频制作/分镜配音/分镜导出」的章节ID(批处理)端口；shot_ids → 单分镜处理时接各节点「分镜ID(单个)」",
     "icon": "Clapperboard",
     "color": "#db2777",
     "execution_domain": "thread",
@@ -10887,7 +11177,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_shot_prompt",
     "name": "组装分镜提示词",
     "category": "agi_shot",
-    "description": "AI 漫剧·组装分镜提示词：把分镜用到的角色图/场景图/道具图按【image1】/【image2】顺序组装，细化为 8 个故事走向关键帧的生图提示词(JSON)，并产出有序参考图供「分镜首尾帧」图生图使用",
+    "description": "AI 漫剧·第5步·分镜链【img2img 一致性链路的关键，文生图可跳过】：把分镜用到的角色图/场景图/道具图按【image1】/【image2】顺序组装，细化为 8 个故事走向关键帧的生图提示词(JSON)。上游：「分镜剧本」chapter_id(整章批处理) 或 shot_id(单个)；场景/道具/角色图按项目读库自动收集。下游：提示词与有序参考图写入分镜记录，「分镜首尾帧」img2img 模式自动取用（无需连线，但先跑本节点）",
     "icon": "ScrollText",
     "color": "#ea580c",
     "execution_domain": "process",
@@ -10992,7 +11282,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_shot_frames",
     "name": "分镜首尾帧",
     "category": "agi_shot",
-    "description": "AI 漫剧·分镜首尾帧：为分镜生成首/尾帧概念图（可整章批处理），注入角色多视角图/场景图作为参考图保证一致性",
+    "description": "AI 漫剧·第6步·分镜链【生图，耗时主要在此】：为分镜生成首/尾帧概念图（可整章批处理），注入角色多视角图/场景图作为参考图保证一致性；img2img 模式优先用「组装分镜提示词」的有序参考图。上游：「分镜剧本/组装分镜提示词」shot_id(单个) 或 chapter_id(整章批处理)。下游：first_frame/last_frame 端口 → 「分镜视频制作」同名端口（不连线时节点也会按库自动取最新首尾帧）",
     "icon": "Frame",
     "color": "#db2777",
     "execution_domain": "process",
@@ -11232,7 +11522,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_shot_video",
     "name": "分镜视频制作",
     "category": "agi_shot",
-    "description": "AI 漫剧·分镜视频制作：以首/尾帧 + 画面描述(场景+运镜)做图生视频（可整章批处理），登记为 shot_video 资产",
+    "description": "AI 漫剧·第7步·分镜链【生视频，耗时最长/最贵】：以首/尾帧 + 画面描述(场景+运镜)做图生视频（可整章批处理），登记 shot_video 资产。上游：「分镜首尾帧」first_frame/last_frame 端口（缺省时自动按库取该分镜最新首尾帧）；shot_id/chapter_id 定位分镜。下游：video 端口 → 「分镜配音」video 端口与「分镜导出」video 端口",
     "icon": "Film",
     "color": "#db2777",
     "execution_domain": "process",
@@ -11425,7 +11715,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_shot_dub",
     "name": "分镜配音",
     "category": "agi_shot",
-    "description": "AI 漫剧·分镜配音：按分镜对话逐句 TTS（依人物 voice_ref 音色克隆，可整章批处理），拼接配音并同步产出 SRT 字幕",
+    "description": "AI 漫剧·第8步·分镜链【依赖人物音色已生产】：按分镜对话逐句 TTS（依人物 voice_ref 音色克隆，可整章批处理），拼接配音并同步产出 SRT 字幕。上游：「分镜剧本」shot_id/chapter_id 定位分镜；可选接「分镜视频制作」video 端口（用于试听对齐，不影响登记）。下游：audio 端口 → 「分镜导出」audio 端口；subtitles → 「分镜导出」subtitle 端口（烧录字幕用）",
     "icon": "Mic",
     "color": "#db2777",
     "execution_domain": "process",
@@ -11618,7 +11908,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_shot_export",
     "name": "分镜导出",
     "category": "agi_render",
-    "description": "AI 漫剧·分镜导出：分镜视频+配音+BGM/音效混流成片，可烧录 SRT 字幕（可整章批处理），登记 shot_render 资产",
+    "description": "AI 漫剧·第9步·成片链：分镜视频+配音+BGM/音效混流成片，可烧录 SRT 字幕（可整章批处理），登记 shot_render 资产。上游：「分镜视频制作」video 端口 +「分镜配音」audio/subtitle 端口（不连线时也按库自动取该分镜最新视频/配音）。下游：render/renders 端口 → 「章节导出」renders 端口",
     "icon": "FileVideo",
     "color": "#db2777",
     "execution_domain": "process",
@@ -11794,7 +12084,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "agi_chapter_export",
     "name": "章节导出",
     "category": "agi_render",
-    "description": "AI 漫剧·章节导出：拼接本章全部分镜成片为一个章节视频，登记 chapter_render 资产",
+    "description": "AI 漫剧·第10步·成片链【链路终点】：拼接本章全部分镜成片为一个章节视频，登记 chapter_render 资产。上游：「分镜导出」renders 端口（缺省时按库按 order_no 自动收集本章 shot_render）+「分镜剧本」chapter_id 端口。下游：无——render 即最终章节成片",
     "icon": "Layers",
     "color": "#db2777",
     "execution_domain": "process",

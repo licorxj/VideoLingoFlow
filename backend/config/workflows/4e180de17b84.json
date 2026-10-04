@@ -23,24 +23,17 @@
           "copyInputs": true,
           "filePath": ""
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\425969f4cc944c828717ad0ecd6fe4fc\\cache\\input_video.mp4",
-          "languages": {
-            "source_language": "en",
-            "target_language": "zh"
-          },
-          "no_input": ""
-        },
+        "outputs": {},
         "error": "",
-        "disableExecute": true,
+        "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 500
+        "height": 430
       },
       "selected": false,
       "dragging": false,
@@ -57,12 +50,10 @@
         "nodeType": "summarize",
         "label": "内容总结",
         "config": {},
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/summarize_result_node_1_1780948332813.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -75,11 +66,11 @@
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\f0b40d97ecfe4355af45c220833bfbae\\cache\\.step_node_1_1780948332813_result.json, exiting 0"
         ],
-        "disableExecute": true
+        "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 355
+        "height": 285
       },
       "selected": false,
       "dragging": false,
@@ -96,17 +87,17 @@
         "nodeType": "translate",
         "label": "逐句翻译",
         "config": {
-          "translation_style": "科学科普",
+          "translation_style": "学术科普风格",
           "reflect_translate": "yes",
           "processing_language": "from_input",
           "target_language": "from_input"
         },
-        "status": "running",
+        "status": "pending",
         "progress": 100,
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": true,
+        "disableExecute": false,
         "workbench_url": "",
         "logLines": [
           "[step_worker] step_inputs keys=['subtitle', 'summary', 'language', 'prompt_template']",
@@ -121,7 +112,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 368
+        "height": 355
       },
       "selected": false,
       "dragging": false,
@@ -140,17 +131,17 @@
         "config": {
           "title": "原视频展示"
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
         "outputs": {},
         "error": "",
-        "disableExecute": true,
+        "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 443
+        "height": 440
       },
       "selected": false,
       "dragging": false,
@@ -167,9 +158,9 @@
         "nodeType": "tts",
         "label": "语音合成 (TTS)",
         "config": {
-          "tts_engine": "8dc074bb",
+          "tts_engine": "lctts_hub",
           "tts_mode": [
-            "preset_voice"
+            "clone"
           ],
           "clone_source": "per_segment",
           "voice_design_role_1_desc": "中年、女性、高音叫卖",
@@ -178,10 +169,13 @@
           "speed_rounds": 1,
           "ai_rounds": 1,
           "overwrite_generate": true,
-          "voice_role_1": "白桦"
+          "voice_role_1": "白桦",
+          "tts_model": "indextts25",
+          "speed_max": 2,
+          "speed_min": 0.7
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -200,7 +194,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 574
+        "height": 515
       },
       "selected": false,
       "dragging": false,
@@ -225,7 +219,7 @@
           "speed_predict_reduce": false
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -262,7 +256,7 @@
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": true,
+        "disableExecute": false,
         "workbench_url": ""
       },
       "measured": {
@@ -293,7 +287,7 @@
           "mute_original": true
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -327,7 +321,7 @@
           "subtitlePosition": "bottom"
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -360,14 +354,11 @@
           "response_json": true,
           "log_request": true
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "result": "output/LLM_node_1_1782422054967.json",
-          "text": "{\n  \"tittle\": \"18分钟讲透计算机科学\",\n  \"hook\": \"万物皆由0和1构成？\",\n  \"summary\": \"这段视频以极简的方式，将复杂的计算机科学拆解为普通人也能听懂的核心概念。从最基础的晶体管与二进制入手，解释了电脑如何通过 billions 个微小开关处理所有数据。随后深入逻辑门、CPU工作原理及冯·诺依曼架构，揭示了软件运行的本质是高速循环的“取指-解码-执行”。视频还涵盖了算法效率（如二分查找）、数据结构（数组、链表、栈、队列、树、图、哈希表）的选择策略，以及操作系统、文件系统如何协调硬件资源。此外，还介绍了互联网协议、DNS、加密安全、数据库及云计算等现代科技基石。无论是想了解编程原理，还是好奇手机为何比登月计算机更强大，这段内容都能帮你建立完整的计算机思维框架，领略从微观电路到宏观网络的惊人连接。\"\n}"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -383,7 +374,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 534
+        "height": 436
       },
       "selected": false,
       "dragging": false,
@@ -403,7 +394,7 @@
           "fit": "contain"
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -434,19 +425,17 @@
           "time_mode": "positive",
           "avoid_subtitles": true
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "image": "cache/key_frame_node_1_1782640383627.png"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 356
+        "height": 287
       },
       "selected": false,
       "dragging": false,
@@ -485,7 +474,7 @@
           "declaration": "ai_generated"
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -530,7 +519,7 @@
           "log_request": true
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -568,19 +557,17 @@
         "config": {
           "auto_fix": true
         },
-        "status": "completed",
+        "status": "pending",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "json": "cache/sentences_node_1_1789860352741.json"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": true
+        "disableExecute": false
       },
       "measured": {
         "width": 420,
-        "height": 243
+        "height": 174
       },
       "selected": false,
       "dragging": false,
@@ -604,19 +591,17 @@
           "output_format": "wav",
           "custom_command": ""
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "audio": "output/denoised_audio_node_9_1788017295074.wav"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 440
+        "height": 427
       },
       "selected": false,
       "dragging": false,
@@ -637,19 +622,17 @@
           "mode": "key",
           "key_expr": "text"
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\425969f4cc944c828717ad0ecd6fe4fc\\output\\json2text_node_1_1788530708958.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 332
+        "height": 263
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -681,7 +664,7 @@
           "post_diarization": true
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -731,7 +714,7 @@
           "pause_split_enabled": true
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -760,19 +743,17 @@
           "read_from_input": true,
           "update_task_name": true
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\425969f4cc944c828717ad0ecd6fe4fc\\cache\\path_to_title.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 368
+        "height": 298
       },
       "dragHandle": ".wf-node-drag-handle",
       "selected": false,
@@ -796,7 +777,7 @@
           "processing_language": "from_target"
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -841,7 +822,7 @@
           "audio_bitrate": "192"
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -880,7 +861,7 @@
           "output_format": "mp4"
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -910,44 +891,11 @@
           "asset_name": "",
           "preview": "/api/files/stream?path=Y%3A%5CVideoLingoLc%5Cdata%5Clibraries%5Cvideos%5C84841194_VLF%E7%89%87%E5%A4%B4%E5%AE%A3%E4%BC%A0%E7%89%873%E7%A7%92.mp4"
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\425969f4cc944c828717ad0ecd6fe4fc\\asset.mp4",
-          "info": {
-            "source": "e66dbf385efb4e9e9d23e6ffd8800645",
-            "source_type": "local",
-            "kind": "video",
-            "asset": {
-              "path": "data/libraries/videos/84841194_VLF片头宣传片3秒.mp4",
-              "width": 1920,
-              "height": 1080,
-              "duration_seconds": 3.827604,
-              "group_tags": [
-                "VLF"
-              ],
-              "custom_tags": [
-                "宣传片头"
-              ],
-              "description": "VLF软件宣传片头加上3秒",
-              "deleted_at": null,
-              "id": "e66dbf385efb4e9e9d23e6ffd8800645",
-              "version": 1,
-              "created_at": "2026-09-18T06:24:17",
-              "updated_at": "2026-09-18T06:24:17",
-              "absolute_path": "Y:\\VideoLingoLc\\data\\libraries\\videos\\84841194_VLF片头宣传片3秒.mp4"
-            },
-            "file": {
-              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\425969f4cc944c828717ad0ecd6fe4fc\\asset.mp4",
-              "name": "asset.mp4",
-              "size_bytes": 1238277,
-              "copied": true,
-              "from": "Y:\\VideoLingoLc\\data\\libraries\\videos\\84841194_VLF片头宣传片3秒.mp4"
-            }
-          }
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": "",
         "logLines": [
@@ -963,7 +911,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 502
+        "height": 433
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -1319,7 +1267,7 @@
           "name": "ASR典型组合",
           "savedNodeTypeId": "groupnode_mu37s0wv"
         },
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 100,
         "message": "",
         "outputs": {
@@ -1348,11 +1296,11 @@
         "nodeType": "dub_visual_check",
         "label": "配音审听及微调",
         "config": {
-          "wait_audition": false,
-          "wait_seconds": 600
+          "wait_audition": true,
+          "wait_seconds": 6000
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -1361,7 +1309,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 229
+        "height": 284
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -1384,7 +1332,7 @@
           "log_request": true
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -1429,19 +1377,17 @@
           "separator": "newline",
           "custom_separator": ""
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "text": "output/text_concat_node_1_1789563482048.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 424
+        "height": 354
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1465,7 +1411,7 @@
           "log_request": true
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -1516,20 +1462,17 @@
           "merge_gap_enabled": false,
           "pause_split_enabled": true
         },
-        "status": "completed",
-        "disableExecute": true,
+        "status": "pending",
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "subtitle": "cache/sentences_node_1_1789860352741.json",
-          "text": "cache/sentences_text_node_1_1789860352741.txt"
-        },
+        "outputs": {},
         "error": "",
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 600
+        "height": 502
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1549,7 +1492,7 @@
           "auto_fix": true
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -1577,7 +1520,7 @@
           "fit": "contain"
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -1586,7 +1529,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 230
+        "height": 253
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1606,7 +1549,7 @@
           "replace_task_name": true
         },
         "status": "completed",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -1645,7 +1588,7 @@
           "custom_prompt": ""
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -1682,7 +1625,7 @@
           "custom_prompt": ""
         },
         "status": "pending",
-        "disableExecute": true,
+        "disableExecute": false,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -1714,10 +1657,11 @@
     },
     {
       "type": "smoothstep",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780954897405",
       "sourceHandle": "out-reflect",
@@ -1798,28 +1742,28 @@
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_8_1788016850229",
       "sourceHandle": "out-json",
       "target": "node_1_1780954897405",
       "targetHandle": "in-subtitle",
-      "id": "xy-edge__node_8_1788016850229out-json-node_1_1780954897405in-subtitle",
-      "animated": true
+      "id": "xy-edge__node_8_1788016850229out-json-node_1_1780954897405in-subtitle"
     },
     {
       "type": "bezier",
       "style": {
-        "stroke": "#ff0099",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780948332813",
       "sourceHandle": "out-subtitle",
       "target": "node_1_1780954897405",
       "targetHandle": "in-summary",
-      "id": "xy-edge__node_1_1780948332813out-subtitle-node_1_1780954897405in-summary",
-      "animated": true
+      "id": "xy-edge__node_1_1780948332813out-subtitle-node_1_1780954897405in-summary"
     },
     {
       "source": "node_1_1781810867151",
@@ -2315,6 +2259,6 @@
   ],
   "type": "user",
   "createdAt": "2026-09-04T21:50:07",
-  "updatedAt": "2026-09-28T08:00:55",
-  "revision": 100
+  "updatedAt": "2026-10-02T16:27:46",
+  "revision": 103
 }

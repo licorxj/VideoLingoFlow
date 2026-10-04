@@ -23,6 +23,7 @@ import os
 import subprocess
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 from backend.utils.video_encoder import build_video_encode_args
 
 
@@ -93,7 +94,10 @@ class S_VideoRegionComposite(BaseStep):
         return os.path.isfile(os.path.join(cache_dir, f"video_region_composite_{node_id}.mp4"))
 
     def validate_inputs(self, task_dir: str) -> bool:
-        return bool(self._resolve(task_dir, "main_video") and self._resolve(task_dir, "patch_video"))
+        step_inputs = getattr(self, "_step_inputs", {}) or {}
+        raw = step_inputs.get("patch_json")
+        json_ok = isinstance(raw, (dict, list)) or bool(self._resolve(task_dir, "patch_json"))
+        return bool(self._resolve(task_dir, "main_video") and self._resolve(task_dir, "patch_video") and json_ok)
 
     # ------------------------------------------------------------------
     # 主流程
@@ -102,20 +106,20 @@ class S_VideoRegionComposite(BaseStep):
         node_id = getattr(self, "_node_id", "unknown")
         node_config = getattr(self, "_node_config", {}) or {}
 
+        step_inputs = getattr(self, "_step_inputs", {}) or {}
         main_path = self._resolve(task_dir, "main_video")
         patch_path = self._resolve(task_dir, "patch_video")
-        json_path = self._resolve(task_dir, "patch_json")
+        patch_json_raw = step_inputs.get("patch_json")
+        if patch_json_raw is None or (isinstance(patch_json_raw, str) and not patch_json_raw.strip()):
+            raise FileNotFoundError("未连接贴片坐标 json 输入。")
         if not main_path:
             raise FileNotFoundError("未连接主视频输入。")
         if not patch_path:
             raise FileNotFoundError("未连接贴片视频输入。")
-        if not json_path:
-            raise FileNotFoundError("未连接贴片坐标 json 输入。")
 
-        # --- 1. 读取坐标 json ---
+        # --- 1. 读取坐标 json（兼容内存数据 / 文件路径 / 内联 JSON） ---
         try:
-            with open(json_path, "r", encoding="utf-8") as f:
-                coord = json.load(f)
+            coord = resolve_json_input(patch_json_raw, task_dir)
         except Exception as e:
             raise ValueError(f"贴片坐标 json 解析失败: {e}")
         try:

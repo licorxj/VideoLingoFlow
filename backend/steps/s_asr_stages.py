@@ -16,6 +16,7 @@ import json
 from typing import Callable, Optional, Dict, Any
 
 from backend.steps.base_step import BaseStep, find_artifact
+from backend.steps.io_resolve import resolve_json_input
 from backend.steps.s02_asr import (
     S02ASR,
     resolve_asr_audio_inputs,
@@ -63,10 +64,13 @@ class S_ASRPostProcess(BaseStep):
     def validate_inputs(self, task_dir: str) -> bool:
         step_inputs = getattr(self, "_step_inputs", {}) or {}
         subtitle = step_inputs.get("subtitle", "")
-        if not subtitle:
-            return False
-        p = subtitle if os.path.isabs(subtitle) else os.path.join(task_dir, subtitle)
-        return os.path.exists(p)
+        # 内存数据（dict / list）直接视为有效输入
+        if isinstance(subtitle, (dict, list)):
+            return True
+        # 字符串：可能是文件路径，也可能是内联 JSON 文本，均视为有效输入（缺失由 run 阶段报错）
+        if isinstance(subtitle, str) and subtitle.strip():
+            return True
+        return False
 
     # ── config helpers ────────────────────────────────────────────────
 
@@ -232,14 +236,12 @@ class S_ASRPostProcess(BaseStep):
         step_inputs = getattr(self, "_step_inputs", {}) or {}
         print(f"[ASR-PP] step_inputs={json.dumps(step_inputs, ensure_ascii=False)[:500]}", flush=True)
 
-        # 1) 读取上游 ASR 结果 JSON
+        # 1) 读取上游 ASR 结果 JSON（兼容内存数据 / 文件路径 / 内联 JSON）
         subtitle = step_inputs.get("subtitle", "")
-        subtitle_path = subtitle if os.path.isabs(subtitle) else os.path.join(task_dir, subtitle)
-        print(f"[ASR-PP] [1/6] reading ASR result: subtitle={subtitle!r} path={subtitle_path!r}", flush=True)
-        if not os.path.exists(subtitle_path):
-            raise FileNotFoundError(f"ASR后处理输入缺失：找不到 ASR 结果 JSON '{subtitle}'")
-        with open(subtitle_path, "r", encoding="utf-8") as f:
-            asr_result = json.load(f)
+        print(f"[ASR-PP] [1/6] reading ASR result: subtitle={subtitle!r}", flush=True)
+        if not subtitle:
+            raise ValueError("ASR后处理缺少输入：请连接上游 ASR 结果 JSON")
+        asr_result = resolve_json_input(subtitle, task_dir)
         seg_count_in = len(asr_result.get("segments", []) or [])
         print(f"[ASR-PP] [1/6] ASR result loaded: language={asr_result.get('language')!r} segments={seg_count_in}", flush=True)
 

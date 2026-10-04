@@ -15,6 +15,7 @@ import json
 import re
 from typing import Callable, Optional, List, Dict
 from backend.steps.base_step import BaseStep, find_artifact
+from backend.steps.io_resolve import resolve_json_input
 from backend.config.config_manager import config
 from backend.utils import sentence_split_utils as split_utils
 from backend.utils.sentence_split_core import (
@@ -1012,19 +1013,28 @@ class S03SentenceSplit(BaseStep):
             except Exception:
                 pass
 
-        # 2. Fall back to ASR result language
-        asr_path = step_inputs.get("subtitle") or find_artifact(os.path.join(task_dir, "cache"), "asr_result.json")
-        if asr_path and not os.path.isabs(asr_path):
-            asr_path = os.path.join(task_dir, asr_path)
-        if asr_path and os.path.exists(asr_path):
+        # 2. Fall back to ASR result language（兼容内存数据 / 文件路径 / 内联 JSON）
+        asr_input = step_inputs.get("subtitle")
+        asr_data = None
+        if isinstance(asr_input, (dict, list)):
+            asr_data = asr_input if isinstance(asr_input, dict) else {"segments": asr_input}
+        elif isinstance(asr_input, str) and asr_input.strip():
             try:
-                with open(asr_path, "r", encoding="utf-8") as f:
-                    asr_data = json.load(f)
-                lang = asr_data.get("language", "auto")
-                if lang and lang != "auto":
-                    return lang
-            except Exception:
-                pass
+                asr_data = resolve_json_input(asr_input, task_dir)
+            except ValueError:
+                asr_data = None
+        if asr_data is None:
+            asr_path = find_artifact(os.path.join(task_dir, "cache"), "asr_result.json")
+            if asr_path and os.path.exists(asr_path):
+                try:
+                    with open(asr_path, "r", encoding="utf-8") as f:
+                        asr_data = json.load(f)
+                except Exception:
+                    asr_data = None
+        if asr_data:
+            lang = asr_data.get("language", "auto")
+            if lang and lang != "auto":
+                return lang
 
         return "auto"
 
@@ -1699,15 +1709,19 @@ class S03SentenceSplit(BaseStep):
             f"merge_short_enabled={merge_short_enabled} merge_gap_enabled={merge_gap_enabled} pause_split_enabled={pause_split_enabled}"
         )
 
-        # Load ASR results
+        # Load ASR results（兼容内存数据 / 文件路径 / 内联 JSON，缺失时回退 cache 默认产物）
         step_inputs = getattr(self, "_step_inputs", {}) or {}
-        asr_path = step_inputs.get("subtitle") or find_artifact(os.path.join(task_dir, "cache"), "asr_result.json")
-        if not asr_path:
-            raise FileNotFoundError("ASR result not found in cache directory")
-        if not os.path.isabs(asr_path):
-            asr_path = os.path.join(task_dir, asr_path)
-        with open(asr_path, "r", encoding="utf-8") as f:
-            asr_data = json.load(f)
+        asr_input = step_inputs.get("subtitle")
+        if isinstance(asr_input, (dict, list)):
+            asr_data = asr_input if isinstance(asr_input, dict) else {"segments": asr_input}
+        elif isinstance(asr_input, str) and asr_input.strip():
+            asr_data = resolve_json_input(asr_input, task_dir)
+        else:
+            asr_path = find_artifact(os.path.join(task_dir, "cache"), "asr_result.json")
+            if not asr_path:
+                raise FileNotFoundError("ASR result not found in cache directory")
+            with open(asr_path, "r", encoding="utf-8") as f:
+                asr_data = json.load(f)
 
         segments = asr_data.get("segments", [])
         if not segments:

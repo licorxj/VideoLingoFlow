@@ -103,20 +103,41 @@ class S10MergeAudio(BaseStep):
         audio_format_override = (node_config.get("audio_format") or "").strip()
         audio_bitrate_override = node_config.get("audio_bitrate")
 
-        # 加载配音任务表
-        dub_task_path = step_inputs.get("audio_manifest") or step_inputs.get("audio") or \
-            find_artifact(os.path.join(task_dir, "cache"), "dub_task.json") or \
-            os.path.join(task_dir, "cache", "dub_task.json")
-        if not os.path.isabs(dub_task_path):
-            dub_task_path = os.path.join(task_dir, dub_task_path)
-        if not os.path.exists(dub_task_path):
-            raise FileNotFoundError(
-                f"配音片段合并对齐缺少配音任务单 audio_manifest: {dub_task_path}\n"
-                "请检查工作流连线：将上游 dub_task/tts 节点的「TTS任务单」输出"
-                "连接到本节点的 audio_manifest 输入，并确保上游已成功执行。"
-            )
-        with open(dub_task_path, "r", encoding="utf-8") as f:
-            dub_data = json.load(f)
+        # 加载配音任务表（兼容内存数据 / 文件路径 / 内联 JSON）
+        raw = step_inputs.get("audio_manifest") or step_inputs.get("audio")
+        if raw is None:
+            dub_task_path = find_artifact(os.path.join(task_dir, "cache"), "dub_task.json") or \
+                os.path.join(task_dir, "cache", "dub_task.json")
+            if not os.path.exists(dub_task_path):
+                raise FileNotFoundError(
+                    f"配音片段合并对齐缺少配音任务单 audio_manifest\n"
+                    "请检查工作流连线：将上游 dub_task/tts 节点的「TTS任务单」输出"
+                    "连接到本节点的 audio_manifest 输入，并确保上游已成功执行。"
+                )
+            with open(dub_task_path, "r", encoding="utf-8") as f:
+                dub_data = json.load(f)
+        elif isinstance(raw, (dict, list)):
+            dub_data = raw
+        else:
+            v = str(raw).strip()
+            candidates = []
+            if os.path.isabs(v) and os.path.isfile(v):
+                candidates.append(v)
+            rel = os.path.join(task_dir, v)
+            if os.path.isfile(rel):
+                candidates.append(rel)
+            if candidates:
+                with open(candidates[0], "r", encoding="utf-8") as f:
+                    dub_data = json.load(f)
+            else:
+                try:
+                    dub_data = json.loads(v)
+                except json.JSONDecodeError:
+                    raise FileNotFoundError(
+                        f"配音片段合并对齐缺少配音任务单 audio_manifest: {v[:60]}\n"
+                        "请检查工作流连线：将上游 dub_task/tts 节点的「TTS任务单」输出"
+                        "连接到本节点的 audio_manifest 输入。"
+                    )
 
         segments = dub_data.get("segments", [])
         total = len(segments)

@@ -79,20 +79,37 @@ class StepVideoCutBySubtitle(BaseStep):
         """返回 (segments, source_label)。每个 segment 形如
         {"id": int, "text": str, "speaker": str, "start": float, "end": float}。"""
         step_inputs = getattr(self, "_step_inputs", {}) or {}
-        srt_raw = step_inputs.get("srt", "")
-        json_raw = step_inputs.get("json", "")
+        srt_raw = step_inputs.get("srt")
+        json_raw = step_inputs.get("json")
 
-        if srt_raw:
-            p = srt_raw if os.path.isabs(srt_raw) else os.path.join(task_dir, srt_raw)
-            if not os.path.isfile(p):
-                raise FileNotFoundError(f"未找到 srt 输入文件: {p}")
-            return srt_to_segments(p).get("segments", []), "srt"
-        if json_raw:
-            p = json_raw if os.path.isabs(json_raw) else os.path.join(task_dir, json_raw)
-            if not os.path.isfile(p):
-                raise FileNotFoundError(f"未找到 json 输入文件: {p}")
-            with open(p, "r", encoding="utf-8") as f:
-                data = json.load(f)
+        # srt 端口：兼容文件路径与内联 srt 文本
+        if isinstance(srt_raw, str) and srt_raw.strip():
+            v = srt_raw.strip()
+            p = v if os.path.isabs(v) else os.path.join(task_dir, v)
+            if os.path.isfile(p):
+                return srt_to_segments(p).get("segments", []), "srt"
+            # 内联 srt 文本：落盘后复用解析器
+            node_id = getattr(self, "_node_id", "") or "cut"
+            tmp = os.path.join(task_dir, "cache", f"srt_inline_{node_id}.srt")
+            os.makedirs(os.path.dirname(tmp), exist_ok=True)
+            with open(tmp, "w", encoding="utf-8") as f:
+                f.write(v)
+            return srt_to_segments(tmp).get("segments", []), "srt"
+
+        # json 端口：兼容内存数据 / 文件路径 / 内联 JSON
+        if isinstance(json_raw, (dict, list)):
+            data = json_raw
+        elif isinstance(json_raw, str) and json_raw.strip():
+            v = json_raw.strip()
+            p = v if os.path.isabs(v) else os.path.join(task_dir, v)
+            if os.path.isfile(p):
+                with open(p, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+            else:
+                data = json.loads(v)
+        else:
+            data = None
+        if data is not None:
             if isinstance(data, dict):
                 segs = data.get("segments", data.get("items", []))
             elif isinstance(data, list):

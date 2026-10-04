@@ -241,6 +241,44 @@ export const CATEGORIES = {
   agi_data: { label: "漫剧·数据链", color: "#0891b2", icon: "Database" },
 } as const;
 
+// ==================== 漫剧链路顺序 ====================
+// 用途：节点面板里给漫剧节点标序号徽标，并按链路顺序排序（定义顺序可能与链路顺序不一致）。
+// 数字 = 主链第几步；字母 = 资产阶段可并行的分支（A→B 有依赖：音色依赖人物已入库）；
+// 「A-D」「选」= 可选节点，徽标用虚线框区分。
+export interface AgiChainStep {
+  /** 分组内排序权重（越小越靠前），非漫剧节点无此项 */
+  order: number;
+  /** 面板徽标文本 */
+  badge: string;
+  /** 徽标悬浮说明 */
+  tip: string;
+  /** 可选节点（非必跑） */
+  optional?: boolean;
+}
+
+export const AGI_CHAIN_STEP: Record<string, AgiChainStep> = {
+  agi_project: { order: 1, badge: "1", tip: "第1步·链路入口：创建项目，产出 creation_id 贯穿全链" },
+  agi_deepen: { order: 2, badge: "2", tip: "第2步·剧本深化：建章 + 人物提炼 + 画风锁定" },
+  agi_character: { order: 3.1, badge: "A", tip: "资产阶段(并行)：人物设定与多视角图" },
+  agi_voice: { order: 3.2, badge: "B", tip: "资产阶段(并行，须在 A 之后)：人物音色样本 → voice_ref" },
+  agi_scene: { order: 3.3, badge: "C", tip: "资产阶段(并行)：场景概念图" },
+  agi_prop: { order: 3.4, badge: "D", tip: "资产阶段(并行)：道具白底图" },
+  agi_extract: { order: 3.5, badge: "A-D", tip: "资产阶段捷径：一次提取人物/场景/道具，可替代 A/C/D", optional: true },
+  agi_prompt: { order: 3.6, badge: "选", tip: "可选：生成/精修 final_prompt，不接也能跑", optional: true },
+  agi_chapter: { order: 4, badge: "3", tip: "第3步·章节剧本（深化已建章时可省略）" },
+  agi_shot: { order: 5, badge: "4", tip: "第4步·分镜剧本：分镜链起点" },
+  agi_shot_prompt: { order: 6, badge: "5", tip: "第5步·组装分镜提示词：img2img 一致性关键，文生图可跳过" },
+  agi_shot_frames: { order: 7, badge: "6", tip: "第6步·分镜首尾帧：生图" },
+  agi_shot_video: { order: 8, badge: "7", tip: "第7步·分镜视频：图生视频" },
+  agi_shot_dub: { order: 9, badge: "8", tip: "第8步·分镜配音：依赖人物音色已生产" },
+  agi_shot_export: { order: 10, badge: "9", tip: "第9步·分镜导出：视频 + 配音混流" },
+  agi_chapter_export: { order: 11, badge: "10", tip: "第10步·章节导出：链路终点" },
+};
+
+export function getAgiChainStep(nodeId?: string): AgiChainStep | undefined {
+  return nodeId ? AGI_CHAIN_STEP[nodeId] : undefined;
+}
+
 // ==================== Helper Functions ====================
 export function registerRuntimeNodeTypes(nodeTypes: NodeTypeDef[]) {
   const deduped = new Map<string, NodeTypeDef>();

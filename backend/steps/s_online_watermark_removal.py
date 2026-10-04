@@ -22,6 +22,7 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Optional
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 from backend.utils.video_encoder import build_video_encode_args
 
 logger = logging.getLogger(__name__)
@@ -57,12 +58,8 @@ class S_OnlineWatermarkRemoval(BaseStep):
                 "未收到输入 JSON。请将「媒体转链接」节点的「媒体详情」端口连接到本节点的「url_json」输入。"
             )
 
-        json_path = json_rel if os.path.isabs(json_rel) else os.path.join(task_dir, json_rel)
-        if not os.path.isfile(json_path):
-            raise FileNotFoundError(f"输入 JSON 文件不存在: {json_path}")
-
-        with open(json_path, "r", encoding="utf-8") as f:
-            data = json.load(f)
+        # 兼容内存数据（dict / list）、文件路径与内联 JSON 文本
+        data = resolve_json_input(json_rel, task_dir)
 
         url = data.get("url", "")
         if not url:

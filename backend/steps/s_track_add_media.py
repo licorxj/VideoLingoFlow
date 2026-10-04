@@ -13,6 +13,7 @@ from typing import Any, Callable, Optional
 
 from backend.editor.repository import EditorProjectRepository
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_project_json
 
 # 素材类型 → 承载轨道类型（图片与视频共用 video 轨道）
 TRACK_TYPE_FOR = {"video": "video", "image": "video", "audio": "audio", "text": "text"}
@@ -75,10 +76,10 @@ class S_TrackAddMedia(BaseStep):
         if callback:
             callback(15, "正在加载剪辑项目")
         # 接力上游剪辑项目 JSON；无上游时使用仓库当前状态
-        project_input = str(inputs.get("project") or "")
-        if project_input and os.path.isfile(project_input):
-            with open(project_input, "r", encoding="utf-8") as handle:
-                snapshot = repository.restore_snapshot(task_id, json.load(handle), updated_by="add_track_media")
+        project_input = inputs.get("project")
+        project_data = resolve_project_json(project_input, task_dir)
+        if project_data is not None:
+            snapshot = repository.restore_snapshot(task_id, project_data, updated_by="add_track_media")
         else:
             try:
                 snapshot = repository.snapshot(task_id)

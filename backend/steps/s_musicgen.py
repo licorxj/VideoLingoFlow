@@ -31,6 +31,7 @@ import logging
 from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 
 logger = logging.getLogger(__name__)
 
@@ -88,21 +89,17 @@ def _resolve_path(value, task_dir: str) -> str:
 
 
 def _read_upstream_json(value, task_dir: str) -> dict:
-    """读取上游音乐参数 JSON（可能是路径字符串或已解析的 dict）。"""
+    """读取上游音乐参数 JSON（兼容内存 dict / 文件路径 / 内联 JSON 文本）。"""
     if not value:
         return {}
-    if isinstance(value, dict):
-        return value
-    path = _resolve_path(value, task_dir)
-    if not path:
-        return {}
     try:
-        with open(path, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return data if isinstance(data, dict) else {}
-    except Exception as e:
-        logger.warning("AI音乐: 读取上游参数 JSON 失败: %s", e)
+        data = resolve_json_input(value, task_dir)
+    except ValueError:
+        logger.warning("AI音乐: 读取上游参数 JSON 失败: %s", value)
         return {}
+    if isinstance(data, dict):
+        return data
+    return {}
 
 
 def _extract_ids(obj, out=None, depth: int = 0) -> dict:

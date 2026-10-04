@@ -5,6 +5,7 @@ import subprocess
 from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 
 
 def _resolve_path(value, task_dir: str = "") -> str:
@@ -132,24 +133,28 @@ class S_VideoPublish(BaseStep):
         cover_landscape = _resolve_path(step_inputs.get("cover_landscape", ""), task_dir)
         cover_portrait = _resolve_path(step_inputs.get("cover_portrait", ""), task_dir)
 
-        # --- 5. Read upstream JSON for title/description if not set ---
-        json_path = _resolve_path(step_inputs.get("json", ""), task_dir)
-        if json_path:
+        # --- 5. 读取上游 JSON（标题/描述/标签），兼容内存数据 / 文件路径 / 内联 JSON ---
+        json_input = step_inputs.get("json")
+        content = None
+        if isinstance(json_input, (dict, list)):
+            content = json_input
+        elif isinstance(json_input, str) and json_input.strip():
             try:
-                content = _read_json_file(json_path)
-                if not title:
-                    title = content.get("title") or content.get("tittle") or ""
-                if not description:
-                    description = content.get("description") or content.get("hook") or content.get("summary") or ""
-                # Parse upstream tags
-                raw_tags = content.get("tags")
-                if isinstance(raw_tags, list):
-                    upstream_tags = [str(t).strip() for t in raw_tags if t]
-                elif isinstance(raw_tags, str) and raw_tags.strip():
-                    upstream_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
-                else:
-                    upstream_tags = []
-            except Exception:
+                content = resolve_json_input(json_input, task_dir)
+            except ValueError:
+                content = None
+        if content is not None:
+            if not title:
+                title = content.get("title") or content.get("tittle") or ""
+            if not description:
+                description = content.get("description") or content.get("hook") or content.get("summary") or ""
+            # Parse upstream tags
+            raw_tags = content.get("tags")
+            if isinstance(raw_tags, list):
+                upstream_tags = [str(t).strip() for t in raw_tags if t]
+            elif isinstance(raw_tags, str) and raw_tags.strip():
+                upstream_tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+            else:
                 upstream_tags = []
         else:
             upstream_tags = []

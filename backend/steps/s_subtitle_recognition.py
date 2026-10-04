@@ -9,26 +9,27 @@ import os
 from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep
+from backend.steps.io_resolve import resolve_json_input
 from backend.steps.s_subtitle_position_search import _resolve_video, _build_model_options
 from backend.utils.subtitle_recognition import recognize_subtitles
 
 
-def _load_box_json(task_dir: str, raw: str) -> tuple:
+def _load_box_json(task_dir: str, raw) -> tuple:
     """读取字幕区域坐标 JSON，返回 (box dict, meta dict)。
 
+    兼容：内存 dict / list、文件路径、内联 JSON 文本。
     box 为 {"x1","y1","x2","y2"}（相对比例或像素坐标）；
     meta 含 relative / width / height / skip_head_sec / skip_tail_sec。
     兼容两种结构：{"box": {...}, ...} 或直接 {"x1","y1","x2","y2"}。
     """
-    if not raw:
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
         raise FileNotFoundError(
             "缺少字幕区域坐标输入（json），请先连接「OCR字幕查找」节点的坐标输出"
         )
-    p = raw if os.path.isabs(raw) else os.path.join(task_dir, raw)
-    if not os.path.isfile(p):
-        raise FileNotFoundError(f"字幕区域坐标文件不存在：{p}")
-    with open(p, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    if isinstance(raw, (dict, list)):
+        data = raw
+    else:
+        data = resolve_json_input(raw, task_dir)
     if isinstance(data, dict):
         box = data.get("box") or {k: data.get(k) for k in ("x1", "y1", "x2", "y2")}
     else:

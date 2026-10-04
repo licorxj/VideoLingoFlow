@@ -380,6 +380,19 @@ export default function CreationCanvas() {
     }).catch(() => undefined);
   }, []);
 
+  const handleDeleteProject = useCallback((project: TfProject) => {
+    if (!window.confirm(`确定删除项目「${project.name}」及其全部创作数据吗？此操作不可恢复。`)) return;
+    toonflowApi.deleteProject(project.id).then(() => {
+      const remaining = projects.filter((p) => p.id !== project.id);
+      setProjects(remaining);
+      if (activeId === project.id) {
+        const next = remaining[0]?.id ?? null;
+        setActiveId(next);
+        localStorage.setItem(LS_ACTIVE, String(next ?? ""));
+      }
+    }).catch(() => window.alert("删除失败，请稍后重试"));
+  }, [projects, activeId]);
+
   const loadSnapshot = useCallback((id: number) => {
     // 先用缓存快照瞬时恢复画面，再向服务端刷新
     const cached = readJSON<Snapshot>(LS_SNAP(id));
@@ -712,6 +725,12 @@ export default function CreationCanvas() {
           <Button size="sm" variant="ghost" onClick={() => setProjectDlg({ open: true, initial: activeProject })}
             title="修改项目参数（比例/分辨率/画风/导演风格）">
             <SlidersHorizontal className="h-3.5 w-3.5" />项目设置
+          </Button>
+        )}
+        {activeProject && (
+          <Button size="sm" variant="ghost" className="text-destructive hover:text-destructive"
+            onClick={() => handleDeleteProject(activeProject)} title="删除当前项目及其全部创作数据">
+            <Trash2 className="h-3.5 w-3.5" />删除项目
           </Button>
         )}
         <Button size="sm" variant="ghost" onClick={() => activeId && loadSnapshot(activeId)} title="刷新">

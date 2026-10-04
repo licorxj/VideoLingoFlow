@@ -33,15 +33,26 @@ class S_MergeDub(BaseStep):
     AUDIO_EXTS = {".wav", ".mp3", ".flac", ".ogg", ".aac", ".m4a", ".wma", ".amr", ".opus"}
 
     @staticmethod
-    def _load_manifest(task_dir: str, manifest_input: str = "") -> tuple[list, str]:
+    def _load_manifest(task_dir: str, manifest_input="") -> tuple[list, str]:
         """读取配音任务单，返回 (segments, manifest_path)。
 
-        manifest_input 非空时作为任务单路径（绝对/相对 task_dir）；
+        兼容：内存 dict / list、文件路径、内联 JSON 文本；
         为空时回退到任务缓存中的 dub_task.json。
         """
-        manifest_path = manifest_input or \
-            find_artifact(os.path.join(task_dir, "cache"), "dub_task.json") or \
-            os.path.join(task_dir, "cache", "dub_task.json")
+        if isinstance(manifest_input, (dict, list)):
+            data = manifest_input
+            # 内存数据落盘，便于下游按路径读取
+            cache_dir = os.path.join(task_dir, "cache")
+            os.makedirs(cache_dir, exist_ok=True)
+            manifest_path = os.path.join(cache_dir, "dub_task.json")
+            with open(manifest_path, "w", encoding="utf-8") as f:
+                json.dump(data, f, ensure_ascii=False, indent=2)
+            return (data.get("segments", []) if isinstance(data, dict) else data), manifest_path
+        if not isinstance(manifest_input, str) or not manifest_input.strip():
+            manifest_path = find_artifact(os.path.join(task_dir, "cache"), "dub_task.json") or \
+                os.path.join(task_dir, "cache", "dub_task.json")
+        else:
+            manifest_path = manifest_input
         if not os.path.isabs(manifest_path):
             manifest_path = os.path.join(task_dir, manifest_path)
         if not os.path.exists(manifest_path):

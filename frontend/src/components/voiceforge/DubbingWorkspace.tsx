@@ -68,6 +68,7 @@ function DubbingWorkspaceInner() {
     selectedChapterId,
     selectedIds,
     engine,
+    model,
     voiceControlMode,
     defaultGap,
     busy,
@@ -280,13 +281,14 @@ function DubbingWorkspaceInner() {
       await voiceForgeApi.synthesizeProject(projectId, {
         sentence_ids: sentenceIds,
         interface_id: state.engine || undefined,
+        model: state.model || undefined,
       });
     } catch {
       dispatch({ type: "SET_ERROR", payload: "提交合成失败" });
     } finally {
       dispatch({ type: "SET_BUSY", payload: "" });
     }
-  }, [projectId, selectedIds, state.engine, dispatch]);
+  }, [projectId, selectedIds, state.engine, state.model, dispatch]);
 
   const handleCompleteGenerate = useCallback(async () => {
     dispatch({ type: "SET_BUSY", payload: "batch" });
@@ -296,6 +298,7 @@ function DubbingWorkspaceInner() {
         sentence_ids: sentenceIds,
         retry_failed: true,
         interface_id: state.engine || undefined,
+        model: state.model || undefined,
       });
     } catch {
       dispatch({ type: "SET_ERROR", payload: "补全合成失败" });
@@ -321,18 +324,37 @@ function DubbingWorkspaceInner() {
 
   const handleEngineChange = useCallback(
     async (value: string) => {
-      // 立即更新本地选择，保证后续合成即时生效
+      // 立即更新本地选择，保证后续合成即时生效；切换接口时清空模型，避免旧模型在新接口下无效
       dispatch({ type: "SET_ENGINE", payload: value });
-      // 持久化到项目默认 TTS 接口，使「配音功能」真正联通本项目的 TTS 服务层
+      dispatch({ type: "SET_MODEL", payload: "" });
+      // 持久化到项目默认 TTS 接口/模型
       try {
         if (state.project) {
           await voiceForgeApi.updateProject(projectId, {
             default_interface_id: value || undefined,
+            default_model: "",
             version: state.project.version,
           });
         }
       } catch {
         dispatch({ type: "SET_ERROR", payload: "保存引擎设置失败" });
+      }
+    },
+    [projectId, state.project, dispatch],
+  );
+
+  const handleModelChange = useCallback(
+    async (value: string) => {
+      dispatch({ type: "SET_MODEL", payload: value });
+      try {
+        if (state.project) {
+          await voiceForgeApi.updateProject(projectId, {
+            default_model: value || undefined,
+            version: state.project.version,
+          });
+        }
+      } catch {
+        dispatch({ type: "SET_ERROR", payload: "保存模型设置失败" });
       }
     },
     [projectId, state.project, dispatch],
@@ -396,14 +418,14 @@ function DubbingWorkspaceInner() {
     async (id: string) => {
       dispatch({ type: "SET_BUSY", payload: `regen-${id}` });
       try {
-        await voiceForgeApi.synthesize(id, state.engine || undefined);
+        await voiceForgeApi.synthesize(id, state.engine || undefined, state.model || undefined);
       } catch {
         dispatch({ type: "SET_ERROR", payload: "重新生成失败" });
       } finally {
         dispatch({ type: "SET_BUSY", payload: "" });
       }
     },
-    [dispatch, state.engine],
+    [dispatch, state.engine, state.model],
   );
 
   const handleAddAfter = useCallback(
@@ -893,6 +915,11 @@ function DubbingWorkspaceInner() {
     return matched?.id ?? engine;
   }, [capabilities, engine]);
 
+  const modelOptions = useMemo(() => {
+    const cap = capabilities.find((c) => c.id === currentEngineId);
+    return cap?.model_options ?? [];
+  }, [capabilities, currentEngineId]);
+
   /* ════════════════════════════════════════════════════════════════════
      Render
      ════════════════════════════════════════════════════════════════════ */
@@ -942,6 +969,8 @@ function DubbingWorkspaceInner() {
                 totalCount={shownSentences.length}
                 engine={engine}
                 engines={capabilities.map((c) => ({ id: c.id, name: c.name }))}
+                model={model}
+                modelOptions={modelOptions}
                 voiceControlMode={voiceControlMode}
                 defaultGap={defaultGap}
                 onSelectAll={handleSelectAll}
@@ -956,6 +985,7 @@ function DubbingWorkspaceInner() {
                 onExportChapter={handleToolbarExportChapter}
                 onBrowseExports={handleToolbarBrowseExports}
                 onEngineChange={handleEngineChange}
+                onModelChange={handleModelChange}
                 onVoiceControlModeChange={handleVoiceControlModeChange}
                 onGapChange={handleGapChange}
                 onEngineSettings={handleEngineSettings}

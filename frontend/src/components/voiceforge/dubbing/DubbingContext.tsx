@@ -58,6 +58,7 @@ export interface DubbingState {
   selectedChapterId: string | null;
   selectedIds: Set<string>;
   engine: string;
+  model: string;
   voiceControlMode: "clone" | "instruct";
   defaultGap: number;
   busy: string;
@@ -73,6 +74,7 @@ export type DubbingAction =
   | { type: "SELECT_ALL"; payload: string[] }
   | { type: "CLEAR_SELECTION" }
   | { type: "SET_ENGINE"; payload: string }
+  | { type: "SET_MODEL"; payload: string }
   | { type: "SET_MODE"; payload: "clone" | "instruct" }
   | { type: "SET_GAP"; payload: number }
   | { type: "SET_BUSY"; payload: string }
@@ -97,6 +99,7 @@ const initialState: DubbingState = {
   selectedChapterId: null,
   selectedIds: new Set<string>(),
   engine: "",
+  model: "",
   voiceControlMode: "clone",
   defaultGap: 0.3,
   busy: "",
@@ -142,6 +145,9 @@ function reducer(state: DubbingState, action: DubbingAction): DubbingState {
 
     case "SET_ENGINE":
       return { ...state, engine: action.payload };
+
+    case "SET_MODEL":
+      return { ...state, model: action.payload };
 
     case "SET_MODE":
       return { ...state, voiceControlMode: action.payload };
@@ -241,8 +247,9 @@ export function DubbingProvider({ children }: { children: React.ReactNode }) {
 
     if (pRes?.data?.project) {
       payload.project = pRes.data.project as VoiceForgeProject;
-      // 初始化工具栏 TTS 引擎选择，使其与项目已保存的默认接口对齐
+      // 初始化工具栏 TTS 引擎/模型选择，使其与项目已保存的默认配置对齐
       payload.engine = (pRes.data.project.default_interface_id as string) || "";
+      payload.model = (pRes.data.project.default_model as string) || "";
     }
     if (cRes?.data) payload.characters = (cRes.data.characters ?? []) as Character[];
     if (chRes?.data) payload.chapters = (chRes.data.chapters ?? []) as Chapter[];

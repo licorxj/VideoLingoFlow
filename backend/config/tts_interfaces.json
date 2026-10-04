@@ -414,7 +414,7 @@
           },
           {
             "key": "num_steps",
-            "default": "32",
+            "default": "25",
             "description": "扩散步数（1-100），默认32，越高音质越好"
           },
           {
@@ -504,7 +504,7 @@
           },
           {
             "key": "inference_timesteps",
-            "default": "10",
+            "default": "5",
             "description": "LocDiT 流匹配迭代步数，默认10"
           },
           {
@@ -955,7 +955,7 @@
           "lang": "zh",
           "emo_control_method": "reference",
           "emo_vector": "",
-          "emotion_alpha": 1.0,
+          "emotion_alpha": 1,
           "text_normalization": true,
           "interval_silence": 200,
           "max_text_tokens_per_segment": 120,
@@ -963,10 +963,10 @@
           "do_sample": true,
           "top_p": 0.9,
           "top_k": 50,
-          "temperature": 1.0,
+          "temperature": 1,
           "num_beams": 1,
           "repetition_penalty": 1.2,
-          "length_penalty": 1.0,
+          "length_penalty": 1,
           "max_mel_tokens": 3000
         },
         "custom_params": [
@@ -1017,8 +1017,8 @@
           },
           {
             "key": "top_p",
-            "default": "0.9",
-            "description": "nucleus 采样阈值"
+            "default": "0.8",
+            "description": "nucleus 采样阈值-随机性"
           },
           {
             "key": "top_k",
@@ -1027,8 +1027,8 @@
           },
           {
             "key": "temperature",
-            "default": "1.0",
-            "description": "采样温度"
+            "default": "0.8",
+            "description": "采样温度-随机性"
           },
           {
             "key": "num_beams",
@@ -1037,8 +1037,8 @@
           },
           {
             "key": "repetition_penalty",
-            "default": "1.2",
-            "description": "重复惩罚"
+            "default": "8",
+            "description": "重复惩罚-与随机性反向"
           },
           {
             "key": "length_penalty",
@@ -1062,7 +1062,7 @@
       "type": "sdk",
       "builtin": true,
       "enabled": true,
-      "description": "KIE AI 聚合的 ElevenLabs 语音合成（elevenlabs/text-to-speech-turbo-2-5）：预设音色文本转语音，云端合成不占本地 GPU；支持语速与稳定性/相似度/风格等高级参数。",
+      "description": "高性价比-KIE AI 聚合的 ElevenLabs 语音合成（elevenlabs/text-to-speech-turbo-2-5）：预设音色文本转语音，云端合成不占本地 GPU；支持语速与稳定性/相似度/风格等高级参数。",
       "api_source_url": "https://kie.ai",
       "config": {
         "sdk_package": "",
