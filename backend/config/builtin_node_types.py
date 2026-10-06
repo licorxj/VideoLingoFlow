@@ -1946,7 +1946,7 @@ BUILTIN_NODE_TYPES = [
             {"id": "text", "label": "文本结果", "type": "text"},
         ],
         "defaultConfig": {
-            "model": "",
+            "model": "vlf-01",
             "system_prompt": "",
             "user_prompt": "{input_text}",
             "temperature": 0.7,
@@ -3567,7 +3567,7 @@ BUILTIN_NODE_TYPES = [
         ],
         "defaultConfig": {
             "project_name": "AI漫剧项目",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "style_preset": "",
             "art_style_custom": "",
             "genre_tags": "",
@@ -3615,7 +3615,7 @@ BUILTIN_NODE_TYPES = [
         ],
         "defaultConfig": {
             "creation_id": "",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "num_chapters": 3,
             "num_characters": 3,
             "art_style_input": "",
@@ -3657,7 +3657,7 @@ BUILTIN_NODE_TYPES = [
             "num_characters": 4,
             "char_count_mode": "follow",
             "mode": "auto",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "generate_images": False,
             "publish_to_library": True,
             "seed": "",
@@ -3712,7 +3712,7 @@ BUILTIN_NODE_TYPES = [
         ],
         "defaultConfig": {
             "creation_id": "",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "target_mode": "all",
             "voice_targets": [],
             "default_mode": "design",
@@ -3765,7 +3765,7 @@ BUILTIN_NODE_TYPES = [
             "creation_id": "",
             "num_scenes": 6,
             "mode": "auto",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "generate_images": True,
             "image_interface": "",
             "image_model": "",
@@ -3811,7 +3811,7 @@ BUILTIN_NODE_TYPES = [
             "creation_id": "",
             "num_props": 6,
             "mode": "auto",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "generate_images": True,
             "image_interface": "",
             "image_model": "",
@@ -3859,7 +3859,7 @@ BUILTIN_NODE_TYPES = [
         "defaultConfig": {
             "creation_id": "",
             "mode": "auto",
-            "llm_model": "",
+            "llm_model": "vlf-create",
         },
         "configFields": [
             {"key": "creation_id", "label": "创作项目", "type": "api-select", "apiEndpoint": "/api/creation/list", "optionLabel": "name", "optionValue": "id", "followPort": "creation_id", "colSpan": "full", "description": "项目骨架数据源；连线传入 creation_id 时优先"},
@@ -3892,7 +3892,7 @@ BUILTIN_NODE_TYPES = [
             "creation_id": "",
             "asset_type": "scene",
             "chapter_ids": "",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "art_style_prompt": "",
         },
         "configFields": [
@@ -3925,7 +3925,7 @@ BUILTIN_NODE_TYPES = [
         "defaultConfig": {
             "creation_id": "",
             "num_chapters": 1,
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "chapter_title": "",
             "force": False,
         },
@@ -3958,7 +3958,7 @@ BUILTIN_NODE_TYPES = [
             "creation_id": "",
             "chapter_id": "",
             "num_shots": 8,
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "force": False,
         },
         "configFields": [
@@ -3992,7 +3992,7 @@ BUILTIN_NODE_TYPES = [
             "creation_id": "",
             "chapter_id": "",
             "shot_id": "",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "force": False,
         },
         "configFields": [
@@ -6572,7 +6572,7 @@ BUILTIN_NODE_TYPES.append(
         "defaultConfig": {
             "custom_prompt": "",
             "opt_template": "image",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "style_template_id": "",
             "assemble_result": "",
         },
@@ -6615,7 +6615,7 @@ BUILTIN_NODE_TYPES.append(
         "defaultConfig": {
             "custom_prompt": "",
             "opt_template": "video",
-            "llm_model": "",
+            "llm_model": "vlf-create",
             "style_template_id": "",
             "assemble_result": "",
         },

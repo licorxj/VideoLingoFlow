@@ -104,10 +104,14 @@ class S10MergeAudio(BaseStep):
         audio_bitrate_override = node_config.get("audio_bitrate")
 
         # 加载配音任务表（兼容内存数据 / 文件路径 / 内联 JSON）
+        # dub_task_path 必须在所有分支都可写：部分分支（内存/内联 JSON）没有
+        # 来源文件，统一回退到任务缓存目录的 dub_task.json
+        default_dub_task_path = os.path.join(task_dir, "cache", "dub_task.json")
+        dub_task_path = None
         raw = step_inputs.get("audio_manifest") or step_inputs.get("audio")
-        if raw is None:
+        if not raw:  # None / "" / 空列表都回退到缓存中的配音任务单
             dub_task_path = find_artifact(os.path.join(task_dir, "cache"), "dub_task.json") or \
-                os.path.join(task_dir, "cache", "dub_task.json")
+                default_dub_task_path
             if not os.path.exists(dub_task_path):
                 raise FileNotFoundError(
                     f"配音片段合并对齐缺少配音任务单 audio_manifest\n"
@@ -127,7 +131,8 @@ class S10MergeAudio(BaseStep):
             if os.path.isfile(rel):
                 candidates.append(rel)
             if candidates:
-                with open(candidates[0], "r", encoding="utf-8") as f:
+                dub_task_path = candidates[0]
+                with open(dub_task_path, "r", encoding="utf-8") as f:
                     dub_data = json.load(f)
             else:
                 try:
@@ -255,7 +260,10 @@ class S10MergeAudio(BaseStep):
         if callback:
             callback(90, "保存配音任务表...")
         dub_data["segments"] = segments
-        with open(dub_task_path, "w", encoding="utf-8") as f:
+        # 内存/内联来源时 dub_task_path 可能为 None，回退到任务缓存目录
+        save_task_path = dub_task_path or default_dub_task_path
+        os.makedirs(os.path.dirname(save_task_path), exist_ok=True)
+        with open(save_task_path, "w", encoding="utf-8") as f:
             json.dump(dub_data, f, ensure_ascii=False, indent=2)
 
         csv_path = find_artifact(os.path.join(task_dir, "cache"), "dub_task.csv") or \

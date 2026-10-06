@@ -9,10 +9,12 @@ import json
 import os
 import random
 import sqlite3
+import ssl
 import threading
 import time
 from pathlib import Path
 from typing import Any, Optional
+from urllib.parse import urlsplit
 
 import httpx
 
@@ -211,6 +213,69 @@ def _key_usable(key: dict, now: float | None = None) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# SSL 弹性策略
+#   背景：`[SSL: CERTIFICATE_VERIFY_FAILED] hostname mismatch, certificate is not
+#   valid for 'api.agnes-ai.cn'` 属于**间歇性**故障（域名证书本身正常，实测
+#   SAN 含 *.agnes-ai.cn）。典型诱因：本地代理/中间人劫持、CDN 偶发返回默认站点
+#   证书、DNS 污染到异常节点。彻底失败的代价是整条策略不可用。
+#   策略：按 host 分级降级并记忆，避免每次都握手失败：
+#     level 0 = httpx 默认（certifi + 校验主机名）
+#     level 1 = 系统 CA + 只放宽主机名校验（仍校验证书链，防降级到明文信任）
+#     level 2 = 完全不校验（**默认禁用**，需 DIRECT_ROUTER_SSL_INSECURE=1 显式开启）
+#   环境变量：
+#     DIRECT_ROUTER_SSL_RELAX=0        关闭降级（严格模式，只报原始错误）
+#     DIRECT_ROUTER_SSL_RELAX_HOSTS=a.com,b.com  限定哪些 host 允许降级（默认全部）
+#     DIRECT_ROUTER_SSL_RELAX_TTL=300   降级档位记忆秒数（默认 300）
+#     DIRECT_ROUTER_SSL_INSECURE=1      允许level 2（不校验证书）
+# ---------------------------------------------------------------------------
+def _env_bool(name: str, default: bool) -> bool:
+    raw = os.environ.get(name)
+    if raw is None or raw == "":
+        return default
+    return raw.strip().lower() in ("1", "true", "yes", "on")
+
+
+SSL_RELAX_ENABLED = _env_bool("DIRECT_ROUTER_SSL_RELAX", True)
+SSL_RELAX_INSECURE = _env_bool("DIRECT_ROUTER_SSL_INSECURE", False)
+SSL_RELAX_TTL = _env_int("DIRECT_ROUTER_SSL_RELAX_TTL", 300)
+#: 允许的降级档位链（level 2 默认不启用）
+SSL_LEVEL_CHAIN = [0, 1] + ([2] if SSL_RELAX_INSECURE else [])
+_SSL_RELAX_HOSTS = {
+    h.strip().lower()
+    for h in os.environ.get("DIRECT_ROUTER_SSL_RELAX_HOSTS", "").split(",")
+    if h.strip()
+}
+
+
+def _host_of(url: str) -> str:
+    try:
+        return (urlsplit(url).hostname or "").lower()
+    except Exception:
+        return ""
+
+
+def _is_hostname_mismatch(exc: BaseException) -> bool:
+    """沿异常链判断是否为「证书主机名不匹配」（而非过期/自签名等其它问题）。"""
+    cur: BaseException | None = exc
+    for _ in range(8):
+        if cur is None:
+            return False
+        if isinstance(cur, ssl.SSLCertVerificationError):
+            msg = str(getattr(cur, "verify_message", "") or cur).lower()
+            return "hostname" in msg or "doesn't match" in msg or "not valid for" in msg
+        cur = cur.__cause__ or cur.__context__
+    return False
+
+
+def _ssl_relax_allowed(host: str) -> bool:
+    if not SSL_RELAX_ENABLED or not host:
+        return False
+    if not _SSL_RELAX_HOSTS:
+        return True
+    return any(host == h or host.endswith("." + h) for h in _SSL_RELAX_HOSTS)
+
+
+# ---------------------------------------------------------------------------
 # DirectRouter singleton
 # ---------------------------------------------------------------------------
 class DirectRouterError(RuntimeError):
@@ -247,9 +312,11 @@ class DirectRouter:
         self._cache_lock = threading.Lock()
         # Round-robin index
         self._rr_index: dict[int, int] = {}
-        # httpx.Client pool keyed by (base_url, timeout)
+        # httpx.Client pool keyed by (base_url, timeout, ssl_level)
         self._http_clients: dict[tuple, httpx.Client] = {}
         self._http_lock = threading.Lock()
+        # host -> (降级档位, 记忆截止时间戳)，见 _post_upstream
+        self._ssl_relaxed: dict[str, tuple[int, float]] = {}
         _load_fernet()
 
     # ------------------------------------------------------------------
@@ -515,20 +582,91 @@ class DirectRouter:
         return usable + rest
 
     # ------------------------------------------------------------------
-    # HTTP client pool
+    # HTTP client pool（按 base_url + timeout + SSL 档位缓存）
     # ------------------------------------------------------------------
-    def _get_http_client(self, base_url: str, timeout: float) -> httpx.Client:
-        key = (base_url, timeout)
+    @staticmethod
+    def _verify_option(level: int):
+        """SSL 校验档位 → httpx verify 参数。level 0 = 保持默认严格校验。"""
+        if level <= 0:
+            return True
+        ctx = ssl.create_default_context()  # 系统 CA，覆盖面比 certifi 更全
+        ctx.check_hostname = False
+        if level == 1:
+            return ctx  # 只放宽主机名，证书链仍校验
+        ctx.verify_mode = ssl.CERT_NONE
+        return ctx
+
+    def _get_http_client(self, base_url: str, timeout: float,
+                         ssl_level: int = 0) -> httpx.Client:
+        key = (base_url, timeout, ssl_level)
         with self._http_lock:
             client = self._http_clients.get(key)
             if client is None:
                 client = httpx.Client(
                     timeout=timeout,
                     trust_env=False,
+                    verify=self._verify_option(ssl_level),
                     transport=httpx.HTTPTransport(retries=2, trust_env=False),
                 )
                 self._http_clients[key] = client
             return client
+
+    # ------------------------------------------------------------------
+    # SSL 降级重试
+    # ------------------------------------------------------------------
+    def _ssl_level(self, host: str) -> int:
+        """该 host 当前记忆的降级档位（0 = 严格；过期自动回退）。"""
+        with self._cache_lock:
+            level, until = self._ssl_relaxed.get(host, (0, 0.0))
+            if level and until > time.time():
+                return level
+            self._ssl_relaxed.pop(host, None)
+            return 0
+
+    def _remember_ssl_level(self, host: str, level: int) -> None:
+        with self._cache_lock:
+            if level <= 0:
+                self._ssl_relaxed.pop(host, None)
+            else:
+                self._ssl_relaxed[host] = (level, time.time() + SSL_RELAX_TTL)
+
+    def _post_upstream(self, route: _ResolvedRoute, url: str,
+                       headers: dict, body: dict, timeout: float) -> httpx.Response:
+        """POST 到上游；证书 hostname 不匹配时对该 host 逐级降级并记忆成功档位。
+
+        降级只放宽**主机名**（证书链仍校验），level 2 需显式开启；
+        仍失败则抛出原始异常交由上层 failover 到下一个 provider。
+        """
+        host = _host_of(url)
+        chain = SSL_LEVEL_CHAIN
+        level = self._ssl_level(host)
+        if level:
+            chain = chain[chain.index(level):] if level in chain else [level]
+
+        last_exc: Exception | None = None
+        for idx, lv in enumerate(chain):
+            client = self._get_http_client(route.provider_base_url, timeout, lv)
+            try:
+                resp = client.post(url, headers=headers, json=body)
+            except Exception as e:
+                last_exc = e
+                # 只在「主机名不匹配」且允许降级、且还有下一档时才继续
+                has_next = idx + 1 < len(chain)
+                if (has_next and _ssl_relax_allowed(host)
+                        and _is_hostname_mismatch(e)):
+                    nxt = chain[idx + 1]
+                    print(
+                        f"[DirectRouter] SSL hostname mismatch on {host} "
+                        f"({str(e)[:120]}) → 降级到 level {nxt} 重试",
+                        flush=True,
+                    )
+                    self._remember_ssl_level(host, nxt)
+                    continue
+                raise
+            self._remember_ssl_level(host, lv)
+            return resp
+
+        raise last_exc  # pragma: no cover - chain 至少含一档
 
     # ------------------------------------------------------------------
     # Build upstream request
@@ -728,11 +866,10 @@ class DirectRouter:
 
             effective_timeout = timeout or route.timeout or 120
             url, headers, body = self._build_upstream(route, request_body, is_stream)
-            client = self._get_http_client(route.provider_base_url, effective_timeout)
 
             t0 = time.time()
             try:
-                resp = client.post(url, headers=headers, json=body)
+                resp = self._post_upstream(route, url, headers, body, effective_timeout)
             except Exception as e:
                 latency = int((time.time() - t0) * 1000)
                 kind = _classify_exception(e)  # unreachable：连不通，不弃用 key

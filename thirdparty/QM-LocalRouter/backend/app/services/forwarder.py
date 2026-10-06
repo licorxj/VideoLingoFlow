@@ -8,6 +8,7 @@ from app.models.model import Model
 from app.models.strategy import Strategy, StrategyRule
 from app.models.log import RequestLog
 from app.utils.crypto import decrypt_value
+from app.utils import ssl_relax
 from app.utils.protocol_adapter import (
     openai_to_claude, openai_to_gemini,
     claude_response_to_openai, gemini_response_to_openai,
@@ -29,8 +30,9 @@ class Forwarder:
         self.db = db
 
     async def _post_json(self, url: str, headers: dict, body: dict, timeout: int) -> httpx.Response:
-        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
-            return await client.post(url, headers=headers, json=body)
+        return await ssl_relax.request_with_ssl_fallback(
+            "POST", url, timeout=timeout, headers=headers, json=body
+        )
 
     async def _real_key(self, api_key: ApiKey) -> str:
         """Decrypt the key, rotating OAuth access tokens that are about to expire."""
@@ -146,9 +148,10 @@ class Forwarder:
             raise ValueError(f"Unsupported protocol: {protocol}")
 
         timeout = strategy.timeout or 120
-        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
-            resp = await client.post(url, headers=headers, json=upstream_body)
-            return resp
+        # 主力聊天路径：证书 hostname 不匹配时按 host 降级重试（见 utils/ssl_relax）
+        return await ssl_relax.request_with_ssl_fallback(
+            "POST", url, timeout=timeout, headers=headers, json=upstream_body
+        )
 
     async def forward_stream(
         self, strategy: Strategy, rule: StrategyRule,
@@ -171,7 +174,7 @@ class Forwarder:
             timeout = strategy.timeout or 120
             completion_id = f"chatcmpl-{int(time.time()*1000)}"
 
-            async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+            async with ssl_relax.client(timeout, url) as client:
                 async with client.stream("POST", url, headers=headers, json=upstream_body) as resp:
                     if resp.status_code != 200:
                         body = await resp.aread()
@@ -226,7 +229,7 @@ class Forwarder:
         timeout = strategy.timeout or 120
         completion_id = f"chatcmpl-{int(time.time()*1000)}"
 
-        async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+        async with ssl_relax.client(timeout, url) as client:
             async with client.stream("POST", url, headers=headers, json=upstream_body) as resp:
                 if resp.status_code != 200:
                     body = await resp.aread()
@@ -354,7 +357,7 @@ class Forwarder:
             url = f"{base_url}/embeddings"
             headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
             upstream_body = {"model": model.model_id, "input": input_texts}
-            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+            async with ssl_relax.client(120, url) as client:
                 resp = await client.post(url, headers=headers, json=upstream_body)
                 if resp.status_code != 200:
                     raise ValueError(f"Upstream error {resp.status_code}: {resp.text[:300]}")
@@ -370,7 +373,7 @@ class Forwarder:
                     for t in input_texts
                 ]
             }
-            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+            async with ssl_relax.client(120, url) as client:
                 resp = await client.post(url, headers=headers, json=upstream_body)
                 if resp.status_code != 200:
                     raise ValueError(f"Upstream error {resp.status_code}: {resp.text[:300]}")
@@ -392,7 +395,7 @@ class Forwarder:
             url = f"{base_url}/audio/transcriptions"
             headers = {"Authorization": f"Bearer {real_key}"}
             data = {**fields, "model": model.model_id}
-            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+            async with ssl_relax.client(120, url) as client:
                 resp = await client.post(
                     url, headers=headers,
                     files={"file": (filename, file_bytes, content_type)},
@@ -416,7 +419,7 @@ class Forwarder:
                     ]
                 }]
             }
-            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+            async with ssl_relax.client(120, url) as client:
                 resp = await client.post(url, headers=headers, json=upstream_body)
                 if resp.status_code != 200:
                     raise ValueError(f"Upstream error {resp.status_code}: {resp.text[:300]}")
@@ -465,7 +468,7 @@ class Forwarder:
         else:
             raise ValueError(f"Unsupported protocol for image generation: {protocol}")
 
-        async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+        async with ssl_relax.client(120, url) as client:
             resp = await client.post(url, headers=headers, json=upstream_body)
             return resp
 
@@ -490,7 +493,7 @@ class Forwarder:
             url = f"{base_url}/audio/speech"
             headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
             upstream_body = {**request_body, "model": model.model_id}
-            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+            async with ssl_relax.client(120, url) as client:
                 resp = await client.post(url, headers=headers, json=upstream_body)
                 content_type = resp.headers.get("content-type", "audio/mpeg")
                 return resp, content_type
@@ -500,7 +503,7 @@ class Forwarder:
             gemini_body = openai_tts_to_gemini({**request_body, "model": model.model_id})
             url = f"{base_url}/models/{model.model_id}:generateContent?key={real_key}"
             headers = {"Content-Type": "application/json"}
-            async with httpx.AsyncClient(timeout=120, trust_env=False) as client:
+            async with ssl_relax.client(120, url) as client:
                 resp = await client.post(url, headers=headers, json=gemini_body)
                 if resp.status_code == 200:
                     audio_bytes = gemini_tts_response_to_openai_audio(resp.json())
@@ -557,7 +560,7 @@ class Forwarder:
             headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
             upstream_body = {**request_body, "model": model.model_id}
 
-        async with httpx.AsyncClient(timeout=300, trust_env=False) as client:
+        async with ssl_relax.client(300, url) as client:
             resp = await client.post(url, headers=headers, json=upstream_body)
             return resp
 
@@ -580,7 +583,7 @@ class Forwarder:
             url = f"{base_url}/videos/{task_id}"
             headers = {"Authorization": f"Bearer {real_key}"}
 
-        async with httpx.AsyncClient(timeout=30, trust_env=False) as client:
+        async with ssl_relax.client(30, url) as client:
             resp = await client.get(url, headers=headers)
             return resp
 
