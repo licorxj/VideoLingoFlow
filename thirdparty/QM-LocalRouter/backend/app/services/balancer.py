@@ -211,20 +211,41 @@ class Balancer:
 
         return rules[0]
 
-    async def select_key(self, provider_id: int, strategy: Strategy | None = None) -> ApiKey | None:
-        """Select an API key based on strategy's key_strategy and switch thresholds."""
+    async def select_key(
+        self, provider_id: int, strategy: Strategy | None = None,
+        exclude_key_ids: set | None = None,
+    ) -> ApiKey | None:
+        """Select an API key based on strategy's key_strategy and switch thresholds.
+
+        取 key 规则（避免"连不通就把整个 provider 判死"）：
+        1. 先把冷却到期的 rate_limited key 自动恢复为 active；
+        2. 候选池 = 该 provider 下全部 key（除 exclude_key_ids），
+           优先 status 为 active/untested 或限流已冷却的；
+        3. 一个可用 key 都没有时，回退到全部 key（宁可试一把，也不直接失败）。
+        """
+        from app.utils.key_health import is_usable, restore_due_keys
+
+        await restore_due_keys(self.db, provider_id)
+
         result = await self.db.execute(
             select(ApiKey)
-            .where(ApiKey.provider_id == provider_id, ApiKey.status.in_(["active", "untested"]))
+            .where(ApiKey.provider_id == provider_id)
             .order_by(ApiKey.id)
         )
-        keys = result.scalars().all()
+        keys = list(result.scalars().all())
         if not keys:
             return None
 
+        if exclude_key_ids:
+            remaining = [k for k in keys if k.id not in exclude_key_ids]
+            keys = remaining or keys
+
+        usable = [k for k in keys if is_usable(k.status, k.status_until)]
+        pool = usable or keys
+
         if not strategy:
             # Fallback: weighted random
-            return self._weighted_random(keys)
+            return self._weighted_random(pool)
 
         key_method = strategy.key_strategy
         switch_mode = strategy.key_switch_mode
@@ -233,15 +254,15 @@ class Balancer:
 
         # Filter out keys that have hit their threshold
         eligible = []
-        for k in keys:
+        for k in pool:
             over_rpm = switch_mode in ("rpm_threshold", "both") and _key_tracker.is_over_rpm(k.id, rpm_threshold)
             over_count = switch_mode in ("count_threshold", "both") and _key_tracker.is_over_count(k.id, count_threshold)
             if not over_rpm and not over_count:
                 eligible.append(k)
 
-        # If all keys are throttled, fall back to all keys (best effort)
+        # If all keys are throttled, fall back to the whole pool (best effort)
         if not eligible:
-            eligible = keys
+            eligible = pool
 
         # Apply key strategy
         if key_method == "round_robin":

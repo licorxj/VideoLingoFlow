@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-02 16:18:01  
-> 节点总数：159　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-06 10:19:40  
+> 节点总数：161　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -11,7 +11,7 @@
 | 预览节点（`preview`） | 4 |
 | 音频处理节点（`audio`） | 10 |
 | 视频处理节点（`video`） | 18 |
-| AI生成类节点（`ai_gen`） | 21 |
+| AI生成类节点（`ai_gen`） | 23 |
 | 翻译相关节点（`translation`） | 16 |
 | 漫剧·剧本链（`agi_story`） | 4 |
 | 漫剧·资产链（`agi_asset`） | 6 |
@@ -109,6 +109,8 @@
 | 图声生视频-kie | `kie_image_audio_to_video` | 用图片 + 声音驱动生成视频（数字人 / 对口型 / 角色演绎）。image1 为必填主图，kling-3.0/video 额外支持 image2~image5 共 5 张参考图；audio 输入口接驱动音频；提示词可来自连线文本或节点内填写。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；用量见「用量日志」。 | process | 主图片(`image1`*:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考图5(`image5`:image); 驱动音频(`audio`*:audio); 提示词(`text`:text) | 生成视频(`video`:video); 视频列表(`videos`:json); 生成参数JSON(`params`:json) |
 | 图片蒙版 | `image_mask` | 上游输入图片，在卡片上用画笔/矩形绘制蒙版，后端合成蒙版图并输出蒙版合成图与黑白蒙版 | thread | 图片(`image`:image) | 蒙版合成图(`image`:image); 蒙版(`mask`:image) |
 | 图片高清放大-kie | `kie_image_upscale` | 调用 KIE AI 对图片做高清放大。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。 | process | 待放大图片(`image`*:image) | 放大后图片(`image`:image); 图片列表(`images`:json); 处理参数JSON(`params`:json) |
+| 生图提示词优化 | `prompt_opt_image` | 通用·生图提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/image_prompt_optimize.md）调 LLM 补全主体/构图/光线/风格等静态画面维度，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选画风模板，风格段会作为约束一起发给 LLM | thread | 原始提示词(`text`:text) | 优化后提示词(`text`:text); 落盘路径(`file_path`:filepath) |
+| 生视频提示词优化 | `prompt_opt_video` | 通用·生视频提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/video_prompt_optimize.md）调 LLM 补全运动、运镜、景别与镜头状态，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选视频风格模板（景别/运镜/光线/色调/节奏） | thread | 原始提示词(`text`:text) | 优化后提示词(`text`:text); 落盘路径(`file_path`:filepath) |
 | 视频对口型-kie | `kie_lip_sync` | 调用 KIE AI 让视频人物口型匹配目标音频（视频 + 音频 → 对口型视频）。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。 | process | 待对口型视频(`video`*:video); 目标音频(`audio`*:audio) | 对口型视频(`video`:video); 视频列表(`videos`:json); 处理参数JSON(`params`:json) |
 | 视频高清放大-kie | `kie_video_upscale` | 调用 KIE AI 对视频做高清放大。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。 | process | 待放大视频(`video`*:video) | 放大后视频(`video`:video); 视频列表(`videos`:json); 处理参数JSON(`params`:json) |
 | 语音合成 (TTS) | `tts` | 文本转语音，支持多种TTS模式 | process | TTS任务单JSON(`text`*:json); TTS任务表(`pandas`:pandas); 原始音频(切割参考)(`source_audio`:audio) | TTS任务单JSON(`text`:json); TTS任务表(`pandas`:pandas) |

@@ -122,6 +122,12 @@ export interface ConfigField {
   action?: { label: string; url: string; method?: "GET" | "POST"; busyLabel?: string };
   /** button 类型：点击在新标签页打开的外链（如「获取key」「用量日志」） */
   url?: string;
+  /** button 类型：提示词组装弹窗的模板类型（art=画风 / video=视频风格） */
+  assembleKind?: "art" | "video";
+  /** button 类型：提示词组装结果回写的节点字段名 */
+  assembleTarget?: string;
+  /** button 类型：是否把项目统一画风作为前缀约束（默认 true） */
+  assembleUseStyleHint?: boolean;
   fileFilter?: string[];
   apiEndpoint?: string;
   apiUrl?: string;

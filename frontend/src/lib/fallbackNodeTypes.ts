@@ -3348,246 +3348,6 @@ export const FALLBACK_NODE_TYPES = [
     "isBuiltIn": true
   },
   {
-    "id": "long_text_tts",
-    "name": "长文本TTS",
-    "category": "ai_gen",
-    "description": "纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。",
-    "icon": "Volume2",
-    "color": "#10b981",
-    "execution_domain": "process",
-    "inputs": [
-      {
-        "id": "text",
-        "label": "长文本",
-        "type": "text",
-        "required": true
-      }
-    ],
-    "outputs": [
-      {
-        "id": "audio",
-        "label": "音频路径",
-        "type": "audio"
-      },
-      {
-        "id": "record",
-        "label": "记录JSON",
-        "type": "json"
-      }
-    ],
-    "defaultConfig": {
-      "tts_mode": [
-        "preset_voice"
-      ],
-      "tts_engine": "",
-      "tts_model": "",
-      "clone_source": "fixed",
-      "cc_colloquial_desc": "",
-      "ref_audio_path": "",
-      "ref_audio_role_1": "",
-      "ref_audio_role_2": "",
-      "ref_audio_role_3": "",
-      "ref_audio_role_4": "",
-      "voice_role_1": "",
-      "voice_role_2": "",
-      "voice_role_3": "",
-      "voice_role_4": "",
-      "voice_design_role_1_desc": "",
-      "voice_design_role_2_desc": "",
-      "voice_design_role_3_desc": "",
-      "voice_design_role_4_desc": "",
-      "overwrite_generate": false,
-      "max_chars": 80
-    },
-    "configFields": [
-      {
-        "key": "max_chars",
-        "label": "单句最大字数",
-        "type": "number",
-        "defaultValue": 80,
-        "min": 10,
-        "max": 500,
-        "step": 10,
-        "colSpan": "half",
-        "description": "分句时单句的最大字符数，超过则按标点/字数继续拆分后再逐句配音"
-      },
-      {
-        "key": "tts_mode",
-        "label": "TTS 模式",
-        "type": "chips",
-        "singleSelect": true,
-        "chipColor": "#10b981",
-        "options": [
-          { "value": "preset_voice", "label": "预置角色" },
-          { "value": "clone", "label": "克隆" },
-          { "value": "controllable_clone", "label": "指令克隆" },
-          { "value": "voice_design", "label": "音色设计" }
-        ]
-      },
-      {
-        "key": "tts_engine",
-        "label": "配音引擎",
-        "type": "api-select",
-        "dependsOn": "tts_mode",
-        "apiEndpoint": "/api/tts-interfaces/by-mode/{tts_mode}",
-        "placeholder": "跟随全局配置",
-        "optionLabel": "name",
-        "optionValue": "id"
-      },
-      {
-        "key": "tts_model",
-        "label": "TTS 模型",
-        "type": "api-select",
-        "dependsOn": "tts_engine",
-        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/models-for-node",
-        "placeholder": "跟随接口默认模型",
-        "colSpan": "half"
-      },
-      {
-        "key": "clone_source",
-        "label": "克隆音频来源",
-        "type": "select",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["clone", "controllable_clone"],
-        "options": [
-          { "value": "fixed", "label": "固定克隆音频" },
-          { "value": "multi_role", "label": "多角色模式" }
-        ]
-      },
-      {
-        "key": "ref_audio_path",
-        "label": "参考音频路径",
-        "type": "audio-selector",
-        "dependsOn": "clone_source",
-        "dependsValue": "fixed",
-        "placeholder": "选择参考音频文件",
-        "fileFilter": ["wav", "mp3", "flac", "ogg"]
-      },
-      {
-        "key": "cc_colloquial_desc",
-        "label": "口语化描述",
-        "type": "text",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["controllable_clone"],
-        "placeholder": "例如：用四川话说",
-        "colSpan": "full",
-        "description": "拼接在可控克隆指令最前面，自动补逗号分隔；留空不拼接"
-      },
-      {
-        "key": "ref_audio_role_1",
-        "label": "角色1参考音频",
-        "type": "audio-selector",
-        "dependsOn": "clone_source",
-        "dependsValue": "multi_role",
-        "placeholder": "角色1的参考音频",
-        "fileFilter": ["wav", "mp3", "flac", "ogg"]
-      },
-      {
-        "key": "ref_audio_role_2",
-        "label": "角色2参考音频",
-        "type": "audio-selector",
-        "dependsOn": "clone_source",
-        "dependsValue": "multi_role",
-        "placeholder": "角色2的参考音频",
-        "fileFilter": ["wav", "mp3", "flac", "ogg"]
-      },
-      {
-        "key": "ref_audio_role_3",
-        "label": "角色3参考音频",
-        "type": "audio-selector",
-        "dependsOn": "clone_source",
-        "dependsValue": "multi_role",
-        "placeholder": "角色3的参考音频",
-        "fileFilter": ["wav", "mp3", "flac", "ogg"]
-      },
-      {
-        "key": "ref_audio_role_4",
-        "label": "角色4参考音频",
-        "type": "audio-selector",
-        "dependsOn": "clone_source",
-        "dependsValue": "multi_role",
-        "placeholder": "角色4的参考音频",
-        "fileFilter": ["wav", "mp3", "flac", "ogg"]
-      },
-      {
-        "key": "voice_role_1",
-        "label": "朗读者1音色",
-        "type": "api-select",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["preset_voice"],
-        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
-        "placeholder": "选择音色"
-      },
-      {
-        "key": "voice_role_2",
-        "label": "朗读者2音色",
-        "type": "api-select",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["preset_voice"],
-        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
-        "placeholder": "选择音色"
-      },
-      {
-        "key": "voice_role_3",
-        "label": "朗读者3音色",
-        "type": "api-select",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["preset_voice"],
-        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
-        "placeholder": "选择音色"
-      },
-      {
-        "key": "voice_role_4",
-        "label": "朗读者4音色",
-        "type": "api-select",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["preset_voice"],
-        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
-        "placeholder": "选择音色"
-      },
-      {
-        "key": "voice_design_role_1_desc",
-        "label": "角色1音色描述",
-        "type": "text",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["voice_design"],
-        "placeholder": "描述角色1的音色特征"
-      },
-      {
-        "key": "voice_design_role_2_desc",
-        "label": "角色2音色描述",
-        "type": "text",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["voice_design"],
-        "placeholder": "描述角色2的音色特征"
-      },
-      {
-        "key": "voice_design_role_3_desc",
-        "label": "角色3音色描述",
-        "type": "text",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["voice_design"],
-        "placeholder": "描述角色3的音色特征"
-      },
-      {
-        "key": "voice_design_role_4_desc",
-        "label": "角色4音色描述",
-        "type": "text",
-        "dependsOn": "tts_mode",
-        "dependsAnyValues": ["voice_design"],
-        "placeholder": "描述角色4的音色特征"
-      },
-      {
-        "key": "overwrite_generate",
-        "label": "覆盖已有音频",
-        "type": "toggle",
-        "defaultValue": false,
-        "description": "勾选后即使音频文件已存在也会重新生成，不勾选则跳过已存在的音频"
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
     "id": "tts",
     "name": "语音合成 (TTS)",
     "category": "ai_gen",
@@ -3946,6 +3706,310 @@ export const FALLBACK_NODE_TYPES = [
         "step": 0.1,
         "colSpan": "half",
         "description": "允许的最大减速倍率（下限）。偏短片段减速填充不慢于此值；槽空档超过 0.3 秒即判定需要变速"
+      },
+      {
+        "key": "overwrite_generate",
+        "label": "覆盖已有音频",
+        "type": "toggle",
+        "defaultValue": false,
+        "description": "勾选后即使音频文件已存在也会重新生成，不勾选则跳过已存在的音频"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "long_text_tts",
+    "name": "长文本TTS",
+    "category": "ai_gen",
+    "description": "纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），进程中断也不丢记录，方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。",
+    "icon": "Volume2",
+    "color": "#10b981",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "长文本",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频路径",
+        "type": "audio"
+      },
+      {
+        "id": "record",
+        "label": "记录JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "tts_mode": [
+        "preset_voice"
+      ],
+      "tts_engine": "",
+      "tts_model": "",
+      "clone_source": "fixed",
+      "cc_colloquial_desc": "",
+      "ref_audio_path": "",
+      "ref_audio_role_1": "",
+      "ref_audio_role_2": "",
+      "ref_audio_role_3": "",
+      "ref_audio_role_4": "",
+      "voice_role_1": "",
+      "voice_role_2": "",
+      "voice_role_3": "",
+      "voice_role_4": "",
+      "voice_design_role_1_desc": "",
+      "voice_design_role_2_desc": "",
+      "voice_design_role_3_desc": "",
+      "voice_design_role_4_desc": "",
+      "overwrite_generate": false,
+      "max_chars": 80
+    },
+    "configFields": [
+      {
+        "key": "max_chars",
+        "label": "单句最大字数",
+        "type": "number",
+        "defaultValue": 80,
+        "min": 10,
+        "max": 500,
+        "step": 10,
+        "colSpan": "half",
+        "description": "分句时单句的最大字符数，超过则按标点/字数继续拆分后再逐句配音"
+      },
+      {
+        "key": "tts_mode",
+        "label": "TTS 模式",
+        "type": "chips",
+        "singleSelect": true,
+        "chipColor": "#10b981",
+        "options": [
+          {
+            "value": "preset_voice",
+            "label": "预置角色"
+          },
+          {
+            "value": "clone",
+            "label": "克隆"
+          },
+          {
+            "value": "controllable_clone",
+            "label": "指令克隆"
+          },
+          {
+            "value": "voice_design",
+            "label": "音色设计"
+          }
+        ]
+      },
+      {
+        "key": "tts_engine",
+        "label": "配音引擎",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "apiEndpoint": "/api/tts-interfaces/by-mode/{tts_mode}",
+        "placeholder": "跟随全局配置",
+        "optionLabel": "name",
+        "optionValue": "id"
+      },
+      {
+        "key": "tts_model",
+        "label": "TTS 模型",
+        "type": "api-select",
+        "dependsOn": "tts_engine",
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/models-for-node",
+        "placeholder": "跟随接口默认模型",
+        "colSpan": "half"
+      },
+      {
+        "key": "clone_source",
+        "label": "克隆音频来源",
+        "type": "select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "clone",
+          "controllable_clone"
+        ],
+        "options": [
+          {
+            "value": "fixed",
+            "label": "固定克隆音频"
+          },
+          {
+            "value": "multi_role",
+            "label": "多角色模式"
+          }
+        ]
+      },
+      {
+        "key": "ref_audio_path",
+        "label": "参考音频路径",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "fixed",
+        "placeholder": "选择参考音频文件",
+        "fileFilter": [
+          "wav",
+          "mp3",
+          "flac",
+          "ogg"
+        ]
+      },
+      {
+        "key": "cc_colloquial_desc",
+        "label": "口语化描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "controllable_clone"
+        ],
+        "placeholder": "例如：用四川话说",
+        "colSpan": "full",
+        "description": "拼接在可控克隆指令最前面，自动补逗号分隔；留空不拼接"
+      },
+      {
+        "key": "ref_audio_role_1",
+        "label": "角色1参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色1的参考音频",
+        "fileFilter": [
+          "wav",
+          "mp3",
+          "flac",
+          "ogg"
+        ]
+      },
+      {
+        "key": "ref_audio_role_2",
+        "label": "角色2参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色2的参考音频",
+        "fileFilter": [
+          "wav",
+          "mp3",
+          "flac",
+          "ogg"
+        ]
+      },
+      {
+        "key": "ref_audio_role_3",
+        "label": "角色3参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色3的参考音频",
+        "fileFilter": [
+          "wav",
+          "mp3",
+          "flac",
+          "ogg"
+        ]
+      },
+      {
+        "key": "ref_audio_role_4",
+        "label": "角色4参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色4的参考音频",
+        "fileFilter": [
+          "wav",
+          "mp3",
+          "flac",
+          "ogg"
+        ]
+      },
+      {
+        "key": "voice_role_1",
+        "label": "朗读者1音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "preset_voice"
+        ],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_role_2",
+        "label": "朗读者2音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "preset_voice"
+        ],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_role_3",
+        "label": "朗读者3音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "preset_voice"
+        ],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_role_4",
+        "label": "朗读者4音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "preset_voice"
+        ],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_design_role_1_desc",
+        "label": "角色1音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "voice_design"
+        ],
+        "placeholder": "描述角色1的音色特征"
+      },
+      {
+        "key": "voice_design_role_2_desc",
+        "label": "角色2音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "voice_design"
+        ],
+        "placeholder": "描述角色2的音色特征"
+      },
+      {
+        "key": "voice_design_role_3_desc",
+        "label": "角色3音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "voice_design"
+        ],
+        "placeholder": "描述角色3的音色特征"
+      },
+      {
+        "key": "voice_design_role_4_desc",
+        "label": "角色4音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "voice_design"
+        ],
+        "placeholder": "描述角色4的音色特征"
       },
       {
         "key": "overwrite_generate",
@@ -10211,6 +10275,15 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half"
       },
       {
+        "key": "open_prompt_assemble",
+        "label": "提示词组装",
+        "type": "button",
+        "colSpan": "full",
+        "assembleKind": "art",
+        "assembleTarget": "art_style_prompt",
+        "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可用 LLM 优化模板改写，结果写回「画风补充提示词」"
+      },
+      {
         "key": "art_style_prompt",
         "label": "画风补充提示词",
         "type": "textarea",
@@ -10572,6 +10645,15 @@ export const FALLBACK_NODE_TYPES = [
         "defaultValue": true
       },
       {
+        "key": "open_prompt_assemble",
+        "label": "提示词组装",
+        "type": "button",
+        "colSpan": "full",
+        "assembleKind": "art",
+        "assembleTarget": "art_style_prompt",
+        "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可用 LLM 优化模板改写，结果写回「画风补充提示词」"
+      },
+      {
         "key": "art_style_prompt",
         "label": "画风补充提示词",
         "type": "textarea",
@@ -10721,6 +10803,15 @@ export const FALLBACK_NODE_TYPES = [
         "label": "生成道具图",
         "type": "toggle",
         "defaultValue": true
+      },
+      {
+        "key": "open_prompt_assemble",
+        "label": "提示词组装",
+        "type": "button",
+        "colSpan": "full",
+        "assembleKind": "art",
+        "assembleTarget": "art_style_prompt",
+        "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可用 LLM 优化模板改写，结果写回「画风补充提示词」"
       },
       {
         "key": "art_style_prompt",
@@ -11452,6 +11543,15 @@ export const FALLBACK_NODE_TYPES = [
         "description": "img2img 时优先使用「组装分镜提示词」产出的有序参考图(场景→道具→角色)，须配图生图接口"
       },
       {
+        "key": "open_prompt_assemble",
+        "label": "提示词组装",
+        "type": "button",
+        "colSpan": "full",
+        "assembleKind": "art",
+        "assembleTarget": "art_style_prompt",
+        "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可用 LLM 优化模板改写，结果写回「画风补充提示词」"
+      },
+      {
         "key": "art_style_prompt",
         "label": "画风补充提示词",
         "type": "textarea",
@@ -11642,6 +11742,15 @@ export const FALLBACK_NODE_TYPES = [
         "dependsOn": "video_interface",
         "colSpan": "half",
         "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "open_prompt_assemble",
+        "label": "提示词组装",
+        "type": "button",
+        "colSpan": "full",
+        "assembleKind": "video",
+        "assembleTarget": "camera_prompt",
+        "description": "打开视频风格模板弹窗：按景别/运镜/光线/色调/节奏组装（可用 LLM 视频优化模板改写），结果写回「运镜提示词」，节点按 video_prompt.md 规则拼到视频提示词头/尾"
       },
       {
         "key": "camera_prompt",
@@ -18996,6 +19105,194 @@ export const FALLBACK_NODE_TYPES = [
             "label": "低质量（CRF 28）"
           }
         ]
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "prompt_opt_image",
+    "name": "生图提示词优化",
+    "category": "ai_gen",
+    "description": "通用·生图提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/image_prompt_optimize.md）调 LLM 补全主体/构图/光线/风格等静态画面维度，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选画风模板，风格段会作为约束一起发给 LLM",
+    "icon": "Sparkles",
+    "color": "#8b5cf6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "原始提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "text",
+        "label": "优化后提示词",
+        "type": "text"
+      },
+      {
+        "id": "file_path",
+        "label": "落盘路径",
+        "type": "filepath"
+      }
+    ],
+    "defaultConfig": {
+      "custom_prompt": "",
+      "opt_template": "image",
+      "llm_model": "",
+      "style_template_id": "",
+      "assemble_result": ""
+    },
+    "configFields": [
+      {
+        "key": "open_prompt_assemble",
+        "label": "提示词组装",
+        "type": "button",
+        "colSpan": "full",
+        "assembleKind": "art",
+        "assembleTarget": "assemble_result",
+        "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可 LLM 改写，结果写回「风格/组装结果」，执行时作为风格约束随原始提示词一起发给优化 LLM"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义原始提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "未连线 text 端口时的提示词来源（第二优先）",
+        "description": "优先级：输入端口 text > 本输入框"
+      },
+      {
+        "key": "opt_template",
+        "label": "优化模板",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "image",
+            "label": "生图提示词优化"
+          },
+          {
+            "value": "video",
+            "label": "视频提示词优化"
+          }
+        ],
+        "description": "对应 backend/config/drama_prompts/*_prompt_optimize.md，改文件即改优化行为"
+      },
+      {
+        "key": "llm_model",
+        "label": "LLM 模型",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空使用全局 LLM 路由",
+        "description": "本节点 LLM 请求使用的模型名"
+      },
+      {
+        "key": "style_template_id",
+        "label": "已选风格模板",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "由「提示词组装」写入"
+      },
+      {
+        "key": "assemble_result",
+        "label": "风格/组装结果",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "由「提示词组装」写入：风格段 + 填槽后的画面要求；留空则不附加风格约束"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "prompt_opt_video",
+    "name": "生视频提示词优化",
+    "category": "ai_gen",
+    "description": "通用·生视频提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/video_prompt_optimize.md）调 LLM 补全运动、运镜、景别与镜头状态，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选视频风格模板（景别/运镜/光线/色调/节奏）",
+    "icon": "Wand2",
+    "color": "#8b5cf6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "原始提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "text",
+        "label": "优化后提示词",
+        "type": "text"
+      },
+      {
+        "id": "file_path",
+        "label": "落盘路径",
+        "type": "filepath"
+      }
+    ],
+    "defaultConfig": {
+      "custom_prompt": "",
+      "opt_template": "video",
+      "llm_model": "",
+      "style_template_id": "",
+      "assemble_result": ""
+    },
+    "configFields": [
+      {
+        "key": "open_prompt_assemble",
+        "label": "提示词组装",
+        "type": "button",
+        "colSpan": "full",
+        "assembleKind": "video",
+        "assembleTarget": "assemble_result",
+        "description": "打开视频风格模板弹窗：按景别/运镜/光线/色调/节奏组装，结果写回「风格/组装结果」，执行时作为风格约束随原始提示词一起发给优化 LLM"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义原始提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "未连线 text 端口时的提示词来源（第二优先）",
+        "description": "优先级：输入端口 text > 本输入框"
+      },
+      {
+        "key": "opt_template",
+        "label": "优化模板",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "video",
+            "label": "视频提示词优化"
+          },
+          {
+            "value": "image",
+            "label": "生图提示词优化"
+          }
+        ],
+        "description": "对应 backend/config/drama_prompts/*_prompt_optimize.md，改文件即改优化行为"
+      },
+      {
+        "key": "llm_model",
+        "label": "LLM 模型",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空使用全局 LLM 路由",
+        "description": "本节点 LLM 请求使用的模型名"
+      },
+      {
+        "key": "style_template_id",
+        "label": "已选风格模板",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "由「提示词组装」写入"
+      },
+      {
+        "key": "assemble_result",
+        "label": "风格/组装结果",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "由「提示词组装」写入：风格段 + 填槽后的镜头要求；留空则不附加风格约束"
       }
     ],
     "isBuiltIn": true

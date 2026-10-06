@@ -3680,6 +3680,7 @@ BUILTIN_NODE_TYPES = [
                 "description": "跟随项目：由 LLM 依骨架与剧情决定人数（默认）；手动指定：固定数量"},
             {"key": "num_characters", "label": "指定数量", "type": "number", "colSpan": "half", "min": 1, "max": 20, "dependsOn": "char_count_mode", "dependsValue": "manual"},
             {"key": "genre_tags", "label": "发布标签", "type": "text", "placeholder": "逗号分隔，发布到公共角色库时使用", "colSpan": "half"},
+            {"key": "open_prompt_assemble", "label": "提示词组装", "type": "button", "colSpan": "full", "assembleKind": "art", "assembleTarget": "art_style_prompt", "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可用 LLM 优化模板改写，结果写回「画风补充提示词」"},
             {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "placeholder": "追加到生图/分镜提示词中的画风描述"},
             {"key": "generate_images", "label": "生成角色立绘", "type": "toggle", "defaultValue": False},
             {"key": "seed", "label": "生图种子(留空自动)", "type": "number", "colSpan": "half", "min": 0, "description": "固定种子可让角色立绘在重生成时保持一致；留空则由系统为角色分配并锁定"},
@@ -3780,6 +3781,7 @@ BUILTIN_NODE_TYPES = [
                 "description": "提取模式按人物姓名（场景按地点+时间段）去重复用，适合小说/剧本改编"},
             {"key": "num_scenes", "label": "场景数量", "type": "number", "colSpan": "half", "min": 1, "max": 30},
             {"key": "generate_images", "label": "生成场景图", "type": "toggle", "defaultValue": True},
+            {"key": "open_prompt_assemble", "label": "提示词组装", "type": "button", "colSpan": "full", "assembleKind": "art", "assembleTarget": "art_style_prompt", "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可用 LLM 优化模板改写，结果写回「画风补充提示词」"},
             {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "colSpan": "full"},
             {"key": "image_interface", "label": "生图接口", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/enabled", "colSpan": "half"},
             {"key": "image_model", "label": "生图模型", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/{image_interface}/models-for-node?mode=txt2img", "dependsOn": "image_interface", "colSpan": "half", "placeholder": "跟随接口默认模型"},
@@ -3825,6 +3827,7 @@ BUILTIN_NODE_TYPES = [
                 "description": "提取模式按道具名去重复用，适合小说/剧本改编"},
             {"key": "num_props", "label": "道具数量", "type": "number", "colSpan": "half", "min": 1, "max": 30},
             {"key": "generate_images", "label": "生成道具图", "type": "toggle", "defaultValue": True},
+            {"key": "open_prompt_assemble", "label": "提示词组装", "type": "button", "colSpan": "full", "assembleKind": "art", "assembleTarget": "art_style_prompt", "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可用 LLM 优化模板改写，结果写回「画风补充提示词」"},
             {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "colSpan": "full"},
             {"key": "image_interface", "label": "生图接口", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/enabled", "colSpan": "half"},
             {"key": "image_model", "label": "生图模型", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/{image_interface}/models-for-node?mode=txt2img", "dependsOn": "image_interface", "colSpan": "half", "placeholder": "跟随接口默认模型"},
@@ -4052,6 +4055,7 @@ BUILTIN_NODE_TYPES = [
             {"key": "use_scene_ref", "label": "场景参考图", "type": "toggle", "defaultValue": True},
             {"key": "max_ref_images", "label": "参考图上限", "type": "number", "colSpan": "half", "min": 0, "max": 8},
             {"key": "gen_mode", "label": "生图模式", "type": "select", "colSpan": "half", "options": [{"label": "文生图(txt2img)", "value": "txt2img"}, {"label": "图生图(img2img)", "value": "img2img"}], "description": "img2img 时优先使用「组装分镜提示词」产出的有序参考图(场景→道具→角色)，须配图生图接口"},
+            {"key": "open_prompt_assemble", "label": "提示词组装", "type": "button", "colSpan": "full", "assembleKind": "art", "assembleTarget": "art_style_prompt", "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可用 LLM 优化模板改写，结果写回「画风补充提示词」"},
             {"key": "art_style_prompt", "label": "画风补充提示词", "type": "textarea", "colSpan": "full"},
             {"key": "image_interface", "label": "生图接口", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/enabled", "colSpan": "half", "description": "img2img 模式请选择支持图生图的接口"},
             {"key": "image_model", "label": "文生图模型", "type": "api-select", "apiEndpoint": "/api/imagegen-interfaces/{image_interface}/models-for-node?mode=txt2img", "dependsOn": "image_interface", "colSpan": "half", "placeholder": "跟随接口默认模型"},
@@ -4104,6 +4108,7 @@ BUILTIN_NODE_TYPES = [
             {"key": "shot_id", "label": "分镜(单个)", "type": "api-select", "apiEndpoint": "/api/creation/{creation_id}/shots?chapter_id={chapter_id}", "optionLabel": "label", "optionValue": "id", "colSpan": "full", "description": "先选择创作项目与章节；连线传入时优先"},
             {"key": "video_interface", "label": "生视频接口", "type": "api-select", "apiEndpoint": "/api/videogen-interfaces/enabled", "colSpan": "half"},
             {"key": "video_model", "label": "生视频模型", "type": "api-select", "apiEndpoint": "/api/videogen-interfaces/{video_interface}/models-for-node?mode=i2v", "dependsOn": "video_interface", "colSpan": "half", "placeholder": "跟随接口默认模型"},
+            {"key": "open_prompt_assemble", "label": "提示词组装", "type": "button", "colSpan": "full", "assembleKind": "video", "assembleTarget": "camera_prompt", "description": "打开视频风格模板弹窗：按景别/运镜/光线/色调/节奏组装（可用 LLM 视频优化模板改写），结果写回「运镜提示词」，节点按 video_prompt.md 规则拼到视频提示词头/尾"},
             {"key": "camera_prompt", "label": "运镜提示词", "type": "text", "colSpan": "half", "placeholder": "如 缓慢推近，电影感镜头"},
             {"key": "duration", "label": "时长(秒)", "type": "number", "colSpan": "half", "min": 1, "max": 30, "description": "接口不支持的时长会回退到最接近档位"},
             {"key": "resolution", "label": "分辨率", "type": "api-select", "apiEndpoint": "/api/videogen-interfaces/{video_interface}/param-options?model={video_model}", "dependsOn": "video_model", "colSpan": "half", "placeholder": "跟随模型默认(720P)"},
@@ -6546,6 +6551,92 @@ BUILTIN_NODE_TYPES.append(
             },
         ],
     }
+)
+
+BUILTIN_NODE_TYPES.append(
+    {
+        "id": "prompt_opt_image",
+        "name": "生图提示词优化",
+        "execution_domain": "thread",
+        "category": "ai_gen",
+        "description": "通用·生图提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/image_prompt_optimize.md）调 LLM 补全主体/构图/光线/风格等静态画面维度，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选画风模板，风格段会作为约束一起发给 LLM",
+        "icon": "Sparkles",
+        "color": "#8b5cf6",
+        "inputs": [
+            {"id": "text", "label": "原始提示词", "type": "text"},
+        ],
+        "outputs": [
+            {"id": "text", "label": "优化后提示词", "type": "text"},
+            {"id": "file_path", "label": "落盘路径", "type": "filepath"},
+        ],
+        "defaultConfig": {
+            "custom_prompt": "",
+            "opt_template": "image",
+            "llm_model": "",
+            "style_template_id": "",
+            "assemble_result": "",
+        },
+        "configFields": [
+            {"key": "open_prompt_assemble", "label": "提示词组装", "type": "button", "colSpan": "full",
+             "assembleKind": "art", "assembleTarget": "assemble_result",
+             "description": "打开画风模板弹窗：选画风 → 填槽预览 → 可 LLM 改写，结果写回「风格/组装结果」，执行时作为风格约束随原始提示词一起发给优化 LLM"},
+            {"key": "custom_prompt", "label": "自定义原始提示词", "type": "textarea", "colSpan": "full",
+             "placeholder": "未连线 text 端口时的提示词来源（第二优先）",
+             "description": "优先级：输入端口 text > 本输入框"},
+            {"key": "opt_template", "label": "优化模板", "type": "select", "colSpan": "half",
+             "options": [{"value": "image", "label": "生图提示词优化"}, {"value": "video", "label": "视频提示词优化"}],
+             "description": "对应 backend/config/drama_prompts/*_prompt_optimize.md，改文件即改优化行为"},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half",
+             "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
+            {"key": "style_template_id", "label": "已选风格模板", "type": "text", "colSpan": "half",
+             "placeholder": "由「提示词组装」写入"},
+            {"key": "assemble_result", "label": "风格/组装结果", "type": "textarea", "colSpan": "full",
+             "placeholder": "由「提示词组装」写入：风格段 + 填槽后的画面要求；留空则不附加风格约束"},
+        ],
+    }
+)
+
+BUILTIN_NODE_TYPES.append(
+    {
+        "id": "prompt_opt_video",
+        "name": "生视频提示词优化",
+        "execution_domain": "thread",
+        "category": "ai_gen",
+        "description": "通用·生视频提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/video_prompt_optimize.md）调 LLM 补全运动、运镜、景别与镜头状态，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选视频风格模板（景别/运镜/光线/色调/节奏）",
+        "icon": "Wand2",
+        "color": "#8b5cf6",
+        "inputs": [
+            {"id": "text", "label": "原始提示词", "type": "text"},
+        ],
+        "outputs": [
+            {"id": "text", "label": "优化后提示词", "type": "text"},
+            {"id": "file_path", "label": "落盘路径", "type": "filepath"},
+        ],
+        "defaultConfig": {
+            "custom_prompt": "",
+            "opt_template": "video",
+            "llm_model": "",
+            "style_template_id": "",
+            "assemble_result": "",
+        },
+        "configFields": [
+            {"key": "open_prompt_assemble", "label": "提示词组装", "type": "button", "colSpan": "full",
+             "assembleKind": "video", "assembleTarget": "assemble_result",
+             "description": "打开视频风格模板弹窗：按景别/运镜/光线/色调/节奏组装，结果写回「风格/组装结果」，执行时作为风格约束随原始提示词一起发给优化 LLM"},
+            {"key": "custom_prompt", "label": "自定义原始提示词", "type": "textarea", "colSpan": "full",
+             "placeholder": "未连线 text 端口时的提示词来源（第二优先）",
+             "description": "优先级：输入端口 text > 本输入框"},
+            {"key": "opt_template", "label": "优化模板", "type": "select", "colSpan": "half",
+             "options": [{"value": "video", "label": "视频提示词优化"}, {"value": "image", "label": "生图提示词优化"}],
+             "description": "对应 backend/config/drama_prompts/*_prompt_optimize.md，改文件即改优化行为"},
+            {"key": "llm_model", "label": "LLM 模型", "type": "text", "colSpan": "half",
+             "placeholder": "留空使用全局 LLM 路由", "description": "本节点 LLM 请求使用的模型名"},
+            {"key": "style_template_id", "label": "已选风格模板", "type": "text", "colSpan": "half",
+             "placeholder": "由「提示词组装」写入"},
+            {"key": "assemble_result", "label": "风格/组装结果", "type": "textarea", "colSpan": "full",
+             "placeholder": "由「提示词组装」写入：风格段 + 填槽后的镜头要求；留空则不附加风格约束"},
+        ],
+    },
 )
 
 

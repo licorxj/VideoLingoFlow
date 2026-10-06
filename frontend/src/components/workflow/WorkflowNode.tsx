@@ -48,6 +48,7 @@ import { VoiceCharacterNode } from "./VoiceCharacterNode";
 import WorkflowRunnerMappingField from "./WorkflowRunnerMappingField";
 import { AudioMultitrackPreview, AUDIO_TRACK_COUNT } from "./AudioMultitrackPreview";
 import { FileTransitOutNode } from "./FileTransitOutNode";
+import PromptAssembleDialog from "@/components/creation/PromptAssembleDialog";
 
 const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
@@ -1518,7 +1519,7 @@ function VoiceTargetListField({ field, value, config, onConfigChange, taskId }: 
   );
 }
 
-function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonAction, onBrowseProject, upstreamOutputs, taskId }: {
+function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonAction, onBrowseProject, onPromptAssemble, upstreamOutputs, taskId }: {
   nodeType: any;
   config: Record<string, any>;
   onConfigChange: (key: string, value: any) => void;
@@ -1526,6 +1527,8 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   onButtonAction?: (field: ConfigField) => void;
   /** 漫剧节点「创作项目」字段旁的「浏览项目」按钮回调 */
   onBrowseProject?: () => void;
+  /** 「提示词组装」按钮回调：打开风格/提示词组装弹窗 */
+  onPromptAssemble?: (field: ConfigField) => void;
   upstreamOutputs?: Record<string, any>;
   taskId?: string;
 }) {
@@ -1817,6 +1820,9 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
                     // 带 url 的按钮（如「获取key」「用量日志」）直接在新标签打开外链
                     if (externalUrl) {
                       window.open(externalUrl, "_blank", "noopener,noreferrer");
+                    } else if ((field as any).assembleKind) {
+                      // 「提示词组装」按钮：打开风格/提示词组装弹窗
+                      onPromptAssemble?.(field);
                     } else {
                       onButtonAction?.(field);
                     }
@@ -2595,6 +2601,9 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const [subtitleFindOpen, setSubtitleFindOpen] = useState(false);
   const [creationBrowserOpen, setCreationBrowserOpen] = useState(false);
   const [dubCheckOpen, setDubCheckOpen] = useState(false);
+  // 「提示词组装」弹窗：按钮字段 + 当前待回写字段
+  const [promptAssembleOpen, setPromptAssembleOpen] = useState(false);
+  const [assembleField, setAssembleField] = useState<ConfigField | null>(null);
 
   // 头部顶栏既是唯一的节点拖拽手柄，也承担"点击展开/折叠"，需要区分拖动与点击
   const { headerRef, onClickGuarded: onHeaderClick } = useHeaderDragSafeClick(
@@ -3677,6 +3686,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                 onConfigChange={handleConfigChange}
                 onVoiceSelect={setVoiceSelectField}
                 onBrowseProject={nodeType.id?.startsWith("agi_") ? () => setCreationBrowserOpen(true) : undefined}
+                onPromptAssemble={(f) => { setAssembleField(f); setPromptAssembleOpen(true); }}
                 onButtonAction={() => {
                   if (nodeType.id === "agi_project") { setCreationBrowserOpen(true); }
           else if (nodeType.id === "text_editor") openTextEditor();
@@ -3731,6 +3741,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           onConfigChange={handleConfigChange}
           onVoiceSelect={setVoiceSelectField}
           onBrowseProject={nodeType.id?.startsWith("agi_") ? () => setCreationBrowserOpen(true) : undefined}
+          onPromptAssemble={(f) => { setAssembleField(f); setPromptAssembleOpen(true); }}
           onButtonAction={() => {
             if (nodeType.id === "agi_project") { setCreationBrowserOpen(true); }
           else if (nodeType.id === "text_editor") openTextEditor();
@@ -3747,6 +3758,31 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           open={creationBrowserOpen}
           onClose={() => setCreationBrowserOpen(false)}
           creationId={String((upstreamOutputs as any)?.creation_id || nd?.outputs?.creation_id || config.creation_id || "")}
+        />
+      )}
+
+      {/* 提示词组装弹窗（画风 / 视频风格模板 + LLM 提示词优化） */}
+      {promptAssembleOpen && assembleField && (
+        <PromptAssembleDialog
+          open={promptAssembleOpen}
+          onClose={() => setPromptAssembleOpen(false)}
+          kind={(assembleField.assembleKind as "art" | "video") || "art"}
+          targetField={String(assembleField.assembleTarget || "")}
+          initialText={String(config[assembleField.assembleTarget || ""] ?? "")}
+          styleHint={String(config.art_style_prompt || "")}
+          onApply={(r) => {
+            const target = String(assembleField.assembleTarget || "");
+            if (target) handleConfigChange(target, r.prompt);
+            // 风格模板 id 一并写回（提示词优化节点执行时按它渲染风格段）
+            if (r.template_id && "style_template_id" in config) {
+              handleConfigChange("style_template_id", r.template_id);
+            }
+            // 反向提示词一并写回（节点有 negative_prompt 字段时）
+            if (r.negative_prompt && "negative_prompt" in config) {
+              handleConfigChange("negative_prompt", r.negative_prompt);
+            }
+            setPromptAssembleOpen(false);
+          }}
         />
       )}
 

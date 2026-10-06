@@ -36,13 +36,24 @@ async def _resolve(strategy_name: str, db: AsyncSession):
     return strategy
 
 
+#: 同一个 provider 内最多换几个 key（key 级故障转移上限）
+MAX_KEY_ATTEMPTS = 3
+
+
 async def _try_forward(strategy, db, request_body, is_stream):
     """Try to forward request using balancer with retry logic.
 
-    仅传输层错误（连接失败/读写超时/对端断开）和上游 HTTP 状态错误会重试，
-    并通过 exclude_rule_ids 实现真正的 failover；协议转换、响应处理等
-    非传输错误重试必然复现，立即失败并保留真实错误。
+    两级故障转移：
+    - rule 级：exclude_rule_ids 跳过失败的 provider/model 规则；
+    - key 级：exclude_key_ids 跳过限流(429)/鉴权失败(401/403)的 key，换同 provider 的下一把。
+
+    状态判定遵循「连不通 ≠ 弃用」：连接失败/DNS/超时、5xx、404 等只记录 last_error，
+    key 状态保持不变；429 走冷却自动恢复；只有连续 401/403 才置inactive。
     """
+    from app.utils.key_health import (
+        classify_exception, classify_status_code, mark_failure, mark_success,
+    )
+
     balancer = Balancer(db)
     forwarder = Forwarder(db)
     last_error = None
@@ -50,6 +61,7 @@ async def _try_forward(strategy, db, request_body, is_stream):
     last_provider = None
     last_model = None
     failed_rule_ids: set = set()
+    failed_key_ids: set = set()
     log_prefix = f"[router] strategy={strategy.name}"
 
     for attempt in range(strategy.retry_count + 1):
@@ -83,69 +95,99 @@ async def _try_forward(strategy, db, request_body, is_stream):
             failed_rule_ids.add(rule.id)
             continue
 
-        api_key = await balancer.select_key(provider.id, strategy)
-        if not api_key:
-            last_error = f"No active API key for {provider.name}"
-            last_rule, last_provider, last_model = rule, provider, model
-            print(
-                f"{log_prefix} attempt {attempt + 1}/{strategy.retry_count + 1}: "
-                f"{last_error}",
-                flush=True,
-            )
-            failed_rule_ids.add(rule.id)
-            continue
-
         attempt_prefix = (
             f"{log_prefix} provider={provider.name} "
             f"model={model.model_id} stream={is_stream}"
         )
         last_rule, last_provider, last_model = rule, provider, model
-        try:
-            if is_stream:
-                return await _handle_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
-            else:
+
+        # --- key 级故障转移：同一 provider 内逐把尝试 ---
+        rule_failed = False
+        for key_try in range(MAX_KEY_ATTEMPTS):
+            api_key = await balancer.select_key(
+                provider.id, strategy, exclude_key_ids=failed_key_ids
+            )
+            if not api_key:
+                last_error = f"No API key configured for {provider.name}"
+                rule_failed = True
+                break
+
+            key_prefix = f"{attempt_prefix} key={api_key.alias or api_key.id}"
+            try:
+                # 成功即复位（连同 last_used_at 一起在 handler 内commit）
+                mark_success(api_key)
+                if is_stream:
+                    return await _handle_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
                 return await _handle_non_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
-        except httpx.HTTPStatusError as e:
-            last_error = f"{type(e).__name__}: {e}"
-            status = getattr(getattr(e, "response", None), "status_code", None)
-            if status == 429:
-                api_key.status = "rate_limited"
-                api_key.last_error = "Rate limited"
+            except httpx.HTTPStatusError as e:
+                status = getattr(getattr(e, "response", None), "status_code", None)
+                kind = classify_status_code(status)
+                last_error = f"HTTP {status}: {type(e).__name__}: {e}"
+                failed_key_ids.add(api_key.id)
                 try:
+                    mark_failure(api_key, kind, f"HTTP {status}")
                     await db.commit()
                 except Exception:
-                    pass
-            elif status in (401, 403):
-                api_key.status = "inactive"
-                api_key.last_error = f"Auth error: {status}"
+                    try:
+                        await db.rollback()
+                    except Exception:
+                        pass
+                print(
+                    f"{key_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
+                    f"HTTP {status} ({kind}, key #{api_key.id} 已跳过): {str(last_error)[:300]}",
+                    flush=True,
+                )
+                if kind in ("rate_limit", "auth"):
+                    continue  # key 级问题 → 换同 provider 的下一把 key
+                rule_failed = True
+                break  # 上游/配置问题 → 换 rule
+            except httpx.RequestError as e:
+                kind = classify_exception(e)  # 连不通：DNS/拒连/TLS/超时
+                last_error = f"{type(e).__name__}: {e}"
+                failed_key_ids.add(api_key.id)
                 try:
+                    mark_failure(api_key, kind, str(e)[:500])
                     await db.commit()
                 except Exception:
+                    try:
+                        await db.rollback()
+                    except Exception:
+                        pass
+                print(
+                    f"{key_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
+                    f"transport error ({kind}, key 状态不变): {str(last_error)[:300]}",
+                    flush=True,
+                )
+                # 同一 host 连不通，换 key 也没用 → 直接换 rule
+                rule_failed = True
+                break
+            except Exception as e:
+                last_error = f"{type(e).__name__}: {e}"
+                print(
+                    f"{key_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
+                    f"non-retryable error: {str(last_error)[:300]}",
+                    flush=True,
+                )
+                # 协议转换/响应处理类错误重试必然复现：记日志后立即原样抛出
+                try:
+                    await forwarder.log_request(
+                        strategy.id, provider.id, api_key.id, model.model_id,
+                        request_body, 500, 0, is_stream, str(last_error)[:500],
+                    )
+                except Exception:
                     pass
+                raise
+
+        if rule_failed:
             failed_rule_ids.add(rule.id)
-            print(
-                f"{attempt_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
-                f"HTTP {status}: {last_error[:300]}",
-                flush=True,
-            )
             continue
-        except httpx.RequestError as e:
-            last_error = f"{type(e).__name__}: {e}"
-            failed_rule_ids.add(rule.id)
+        # 内层 key 用尽仍未成功 → 该 rule 视为失败，换下一条规则
+        if last_error:
             print(
-                f"{attempt_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
-                f"transport error: {last_error[:300]}",
+                f"{attempt_prefix} all keys failed, switching rule: {str(last_error)[:200]}",
                 flush=True,
             )
-            continue
-        except Exception as e:
-            last_error = f"{type(e).__name__}: {e}"
-            print(
-                f"{attempt_prefix} attempt {attempt + 1}/{strategy.retry_count + 1} "
-                f"non-retryable error: {last_error[:300]}",
-                flush=True,
-            )
-            break
+        failed_rule_ids.add(rule.id)
 
     # --- 日志：console 兜底（即使 DB 写入失败也不丢失诊断信息）---
     model_name = last_model.model_id if last_model else "?"
@@ -233,6 +275,13 @@ async def _handle_stream(strategy, rule, provider, model, api_key, request_body,
                 f"latency={latency}ms): {str(e)[:300]}",
                 flush=True,
             )
+            # 按失败原因更新 key 状态：连不通只记录、不弃用
+            try:
+                from app.utils.key_health import classify_exception, mark_failure
+                mark_failure(api_key, classify_exception(e), str(e)[:500])
+                await db.commit()
+            except Exception:
+                pass
             try:
                 await forwarder.log_request(
                     strategy.id, provider.id, api_key.id, model.model_id,
@@ -275,6 +324,9 @@ async def _handle_non_stream(strategy, rule, provider, model, api_key, request_b
                 f"[router] WARNING: failed to write upstream error log: {log_exc}",
                 flush=True,
             )
+        if resp.status_code in (401, 403, 429):
+            # 凭证被拒/限流属于 key 级问题：抛给上层换一把 key 再试
+            resp.raise_for_status()
         return JSONResponse(status_code=resp.status_code, content={"error": {"message": error_text}})
 
     data = resp.json()
@@ -424,11 +476,22 @@ async def _resolve_model_from_provider(model_name: str, provider_id: int, db: As
 
 
 async def _select_key_for_provider(provider_id: int, db: AsyncSession):
-    """Select first active API key for a provider."""
-    key_result = await db.execute(
-        select(ApiKey).where(ApiKey.provider_id == provider_id, ApiKey.status == "active")
+    """Select an API key for a provider.
+
+    优先取可用 key（active/untested，或限流已冷却）；
+    一个可用都没有时回退到全部 key —— 不再因状态标记直接判定"无可用 key"。
+    """
+    from app.utils.key_health import is_usable, restore_due_keys
+
+    await restore_due_keys(db, provider_id)
+    result = await db.execute(
+        select(ApiKey).where(ApiKey.provider_id == provider_id).order_by(ApiKey.id)
     )
-    return key_result.scalars().first()
+    keys = list(result.scalars().all())
+    if not keys:
+        return None
+    usable = [k for k in keys if is_usable(k.status, k.status_until)]
+    return (usable or keys)[0]
 
 
 async def _find_provider_and_model_for_image(model_name: str, provider_id: int | None, db: AsyncSession):

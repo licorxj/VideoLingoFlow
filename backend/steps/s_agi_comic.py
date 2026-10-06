@@ -423,6 +423,9 @@ _STEP_PROMPT_FILES = {
     "agi_shot": "storyboard_break.md",
     "agi_shot_prompt": "shot_assemble.md",
     "agi_voice": "voice_sample.md",
+    # 提示词优化（prompt_opt_image / prompt_opt_video 节点与弹窗调用 LLM 时按 key 直接选用）
+    "prompt_opt_image": "image_prompt_optimize.md",
+    "prompt_opt_video": "video_prompt_optimize.md",
 }
 
 

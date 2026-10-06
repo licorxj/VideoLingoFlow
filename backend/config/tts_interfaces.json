@@ -504,7 +504,7 @@
           },
           {
             "key": "inference_timesteps",
-            "default": "5",
+            "default": "6",
             "description": "LocDiT 流匹配迭代步数，默认10"
           },
           {
@@ -524,89 +524,6 @@
           }
         ],
         "startup_script": "Y:\\Omnivoice\\启动_vox_api.bat",
-        "voice_options": []
-      }
-    },
-    {
-      "id": "dots_tts",
-      "name": "DotTTS",
-      "type": "local",
-      "builtin": false,
-      "enabled": false,
-      "description": "【推荐值：****】小红书开源2B参数全连续自回归TTS，48kHz采样率，支持续写克隆和指令控制",
-      "config": {
-        "api_url": "http://localhost:8856",
-        "text_param": "text",
-        "ref_audio_param": "ref_audio_path",
-        "speed_param": null,
-        "body_type": "form",
-        "is_async": true,
-        "modes": {
-          "clone": {
-            "enabled": true,
-            "endpoint": "/api/v1/voice/clone"
-          },
-          "voice_design": {
-            "enabled": false,
-            "endpoint": ""
-          },
-          "controllable_clone": {
-            "enabled": true,
-            "endpoint": "/api/v1/voice/clone"
-          },
-          "preset_voice": {
-            "enabled": false,
-            "endpoint": ""
-          }
-        },
-        "voice_design_param": null,
-        "controllable_clone_param": "instruct",
-        "model_options": [],
-        "custom_params": [
-          {
-            "key": "prompt_text",
-            "default": "",
-            "description": "参考音频对应的文本内容（提供后启用续写克隆，音色还原更佳）"
-          },
-          {
-            "key": "language",
-            "default": "auto_detect",
-            "description": "语言代码：none(不添加标签)/auto_detect(自动检测)/zh(中文)/en(英语)/Cantonese(粤语)等"
-          },
-          {
-            "key": "num_steps",
-            "default": "20",
-            "description": "Flow-matching 采样步数（1-100），越高音质越好，越低速度越快"
-          },
-          {
-            "key": "guidance_scale",
-            "default": "1.8",
-            "description": "CFG 引导强度（0.0-5.0），>2 会放大音频能量"
-          },
-          {
-            "key": "speaker_scale",
-            "default": "4",
-            "description": "参考说话人嵌入缩放系数（0.0-5.0），越大音色越接近参考音频"
-          },
-          {
-            "key": "normalize_text",
-            "default": "true",
-            "description": "是否启用文本规范化（通过 WeTextProcessing）"
-          },
-          {
-            "key": "max_generate_length",
-            "default": "800",
-            "description": "最大生成音频 patch 数（50-2000），约500 patches ≈ 10秒"
-          },
-          {
-            "key": "seed",
-            "default": "42",
-            "description": "随机种子（≥0），固定种子可复现结果"
-          }
-        ],
-        "max_concurrent": 1,
-        "timeout": 300,
-        "startup_script": "Y:\\Omnivoice\\启动_dots_api.bat",
         "voice_options": []
       }
     },

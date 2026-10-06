@@ -196,12 +196,26 @@ async def test_all_keys(provider_id: int, db: AsyncSession = Depends(get_db)):
     )
 
 
-async def _test_single_key(key: ApiKey, provider: Provider, db: AsyncSession) -> dict:
-    """Test a single key and update its status."""
+async def _probe_key(key: ApiKey, provider: Provider) -> dict:
+    """探测单个 key 是否可用（不写库）。
+
+    返回 {success, message, latency_ms, kind}；kind 由 key_health 归类，
+    调用方据此决定状态——**连不通 / 限流 / 上游 5xx 一律不停用 key**。
+    """
+    from app.utils.key_health import classify_exception, classify_status_code
+
     real_key = decrypt_value(key.key_value)
     start = time.monotonic()
-    key_id = key.id
-    alias = key.alias or ""
+
+    def _done(ok: bool, msg: str, kind: str) -> dict:
+        if not ok and kind not in ("auth", "rate_limit"):
+            msg = f"{msg}（非凭证问题，未停用该 key）"
+        return {
+            "success": ok,
+            "message": msg[:200],
+            "latency_ms": int((time.monotonic() - start) * 1000),
+            "kind": kind,
+        }
 
     try:
         if provider.protocol == "openai":
@@ -210,19 +224,6 @@ async def _test_single_key(key: ApiKey, provider: Provider, db: AsyncSession) ->
                     f"{provider.base_url.rstrip('/')}/models",
                     headers={"Authorization": f"Bearer {real_key}"},
                 )
-                elapsed = int((time.monotonic() - start) * 1000)
-                if resp.status_code == 200:
-                    key.status = "active"
-                    key.last_error = None
-                    await db.commit()
-                    return {"key_id": key_id, "alias": alias, "success": True, "message": "Key is valid", "latency_ms": elapsed}
-                else:
-                    msg = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                    key.status = "inactive"
-                    key.last_error = msg
-                    await db.commit()
-                    return {"key_id": key_id, "alias": alias, "success": False, "message": msg, "latency_ms": elapsed}
-
         elif provider.protocol == "claude":
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.post(
@@ -234,46 +235,41 @@ async def _test_single_key(key: ApiKey, provider: Provider, db: AsyncSession) ->
                     },
                     json={"model": "claude-3-haiku-20240307", "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]},
                 )
-                elapsed = int((time.monotonic() - start) * 1000)
-                if resp.status_code == 200:
-                    key.status = "active"
-                    key.last_error = None
-                    await db.commit()
-                    return {"key_id": key_id, "alias": alias, "success": True, "message": "Key is valid", "latency_ms": elapsed}
-                else:
-                    msg = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                    key.status = "inactive"
-                    key.last_error = msg
-                    await db.commit()
-                    return {"key_id": key_id, "alias": alias, "success": False, "message": msg, "latency_ms": elapsed}
-
         elif provider.protocol == "gemini":
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(
                     f"{provider.base_url.rstrip('/')}/models?key={real_key}",
                 )
-                elapsed = int((time.monotonic() - start) * 1000)
-                if resp.status_code == 200:
-                    key.status = "active"
-                    key.last_error = None
-                    await db.commit()
-                    return {"key_id": key_id, "alias": alias, "success": True, "message": "Key is valid", "latency_ms": elapsed}
-                else:
-                    msg = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                    key.status = "inactive"
-                    key.last_error = msg
-                    await db.commit()
-                    return {"key_id": key_id, "alias": alias, "success": False, "message": msg, "latency_ms": elapsed}
-
         else:
-            return {"key_id": key_id, "alias": alias, "success": False, "message": "Test not supported for custom protocol"}
+            return _done(False, "Test not supported for this protocol", "config")
 
+        if 200 <= resp.status_code < 300:
+            return _done(True, "Key is valid", "ok")
+        return _done(
+            False,
+            f"HTTP {resp.status_code}: {resp.text[:200]}",
+            classify_status_code(resp.status_code),
+        )
     except Exception as e:
-        elapsed = int((time.monotonic() - start) * 1000)
-        key.status = "inactive"
-        key.last_error = str(e)[:500]
-        await db.commit()
-        return {"key_id": key_id, "alias": alias, "success": False, "message": str(e)[:200], "latency_ms": elapsed}
+        return _done(False, f"{type(e).__name__}: {e}", classify_exception(e))
+
+
+async def _apply_probe(key: ApiKey, probe: dict, db: AsyncSession) -> None:
+    """把探测结果写入 key 状态（连不通不弃用；401/403 需连续确认；429 冷却）。"""
+    from app.utils.key_health import mark_failure, mark_success
+
+    if probe["success"]:
+        mark_success(key)
+    else:
+        mark_failure(key, probe["kind"], probe["message"])
+    await db.commit()
+
+
+async def _test_single_key(key: ApiKey, provider: Provider, db: AsyncSession) -> dict:
+    """Test a single key and update its status."""
+    probe = await _probe_key(key, provider)
+    await _apply_probe(key, probe, db)
+    return {"key_id": key.id, "alias": key.alias or "", **probe}
 
 
 @router.post("/api-keys/{key_id}/test", response_model=ApiKeyTestResult)
@@ -285,77 +281,8 @@ async def test_key(key_id: int, db: AsyncSession = Depends(get_db)):
     if not provider:
         raise HTTPException(404, "Provider not found")
 
-    real_key = decrypt_value(key.key_value)
-    start = time.monotonic()
-
-    try:
-        if provider.protocol == "openai":
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.get(
-                    f"{provider.base_url.rstrip('/')}/models",
-                    headers={"Authorization": f"Bearer {real_key}"},
-                )
-                elapsed = int((time.monotonic() - start) * 1000)
-                if resp.status_code == 200:
-                    key.status = "active"
-                    key.last_error = None
-                    await db.commit()
-                    return ApiKeyTestResult(success=True, message="Key is valid", latency_ms=elapsed)
-                else:
-                    msg = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                    key.status = "inactive"
-                    key.last_error = msg
-                    await db.commit()
-                    return ApiKeyTestResult(success=False, message=msg, latency_ms=elapsed)
-
-        elif provider.protocol == "claude":
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.post(
-                    f"{provider.base_url.rstrip('/')}/messages",
-                    headers={
-                        "x-api-key": real_key,
-                        "anthropic-version": "2023-06-01",
-                        "content-type": "application/json",
-                    },
-                    json={"model": "claude-3-haiku-20240307", "max_tokens": 1, "messages": [{"role": "user", "content": "hi"}]},
-                )
-                elapsed = int((time.monotonic() - start) * 1000)
-                if resp.status_code == 200:
-                    key.status = "active"
-                    key.last_error = None
-                    await db.commit()
-                    return ApiKeyTestResult(success=True, message="Key is valid", latency_ms=elapsed)
-                else:
-                    msg = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                    key.status = "inactive"
-                    key.last_error = msg
-                    await db.commit()
-                    return ApiKeyTestResult(success=False, message=msg, latency_ms=elapsed)
-
-        elif provider.protocol == "gemini":
-            async with httpx.AsyncClient(timeout=15) as client:
-                resp = await client.get(
-                    f"{provider.base_url.rstrip('/')}/models?key={real_key}",
-                )
-                elapsed = int((time.monotonic() - start) * 1000)
-                if resp.status_code == 200:
-                    key.status = "active"
-                    key.last_error = None
-                    await db.commit()
-                    return ApiKeyTestResult(success=True, message="Key is valid", latency_ms=elapsed)
-                else:
-                    msg = f"HTTP {resp.status_code}: {resp.text[:200]}"
-                    key.status = "inactive"
-                    key.last_error = msg
-                    await db.commit()
-                    return ApiKeyTestResult(success=False, message=msg, latency_ms=elapsed)
-
-        else:
-            return ApiKeyTestResult(success=False, message="Test not supported for custom protocol")
-
-    except Exception as e:
-        elapsed = int((time.monotonic() - start) * 1000)
-        key.status = "inactive"
-        key.last_error = str(e)[:500]
-        await db.commit()
-        return ApiKeyTestResult(success=False, message=str(e)[:200], latency_ms=elapsed)
+    probe = await _probe_key(key, provider)
+    await _apply_probe(key, probe, db)
+    return ApiKeyTestResult(
+        success=probe["success"], message=probe["message"], latency_ms=probe["latency_ms"]
+    )

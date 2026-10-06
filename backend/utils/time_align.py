@@ -34,10 +34,25 @@ import re
 
 _WS = re.compile(r"\s+")
 
+# Unicode 标点归一化表：把各类弯引号 / 破折号 / 不换行空格折成 ASCII 等价物。
+# ASR 的 word 词元与全文 text 常使用不同码点的「同类」标点（弯引号 vs 直引号、
+# em-dash vs hyphen、全角 vs 半角），若不归一化会导致字符子序列匹配失败，
+# 进而触发锚定游标跳变（见 _build_word_anchors 的窗口限制）。
+_PUNCT_FOLD = {
+    "\u2018": "'", "\u2019": "'", "\u02bc": "'", "\u2032": "'",   # 左/右单引号等
+    "\u201c": '"', "\u201d": '"', "\u2033": '"',                   # 左/右双引号
+    "\u00ab": '"', "\u00bb": '"',                                  # « »
+    "\u2010": "-", "\u2011": "-", "\u2012": "-", "\u2013": "-",    # hyphen/en-dash
+    "\u2014": "-", "\u2015": "-", "\u2212": "-",                   # em-dash/minus
+    "\ufe58": "-", "\ufe63": "-", "\uff0d": "-",                   # 小/全角减号
+    "\u00a0": " ", "\u3000": " ",                                  # 不换行/全角空格
+}
+_FOLD_TABLE = str.maketrans(_PUNCT_FOLD)
+
 
 def norm_chars(s: str) -> str:
-    """小写 + 折叠空白，保留标点（标点同样参与锚定，保证与原始词一致）。"""
-    return _WS.sub("", (s or "").lower())
+    """小写 + 标点归一化 + 折叠空白，保留标点（标点同样参与锚定，保证与原始词一致）。"""
+    return _WS.sub("", (s or "").lower().translate(_FOLD_TABLE))
 
 
 class _WordAnchor:
@@ -60,13 +75,46 @@ class SentenceTimeAligner:
         self.full_text = full_text or ""
         self.norm = norm_chars(self.full_text)
         self.n = len(self.norm)
+        # 子序列定位时允许的最大字符跨度膨胀倍数（防止稀疏缺口把句子拉到很远的词）
+        self.max_expansion = max(1.0, float(max_expansion))
         self.anchors: List[_WordAnchor] = []
         self._build_word_anchors(words)
         self.seg_spans: List[Tuple[int, int, float, float]] = []
         self._build_segment_spans(segments)
-        # 子序列定位时允许的最大字符跨度膨胀倍数（防止稀疏缺口把句子拉到很远的词）
-        self.max_expansion = max(1.0, float(max_expansion))
         self._cursor = 0
+
+    def _match_forward(self, target: str, start: int) -> Tuple[Optional[int], int]:
+        """从 ``start`` 起在归一化全文中按顺序匹配 ``target`` 的字符子序列。
+
+        返回 (first, last)。为保证鲁棒性，前向搜索被限制在
+        ``start + len(target) * max_expansion + 40`` 的窗口内：当某个词元
+        （尤其是单独的标点，或与全文码点不一致的标点）在附近找不到匹配时，
+        直接判定失败并跳过，**绝不**让它匹配到很远的同形字符——否则游标会
+        一次性跳变大段文本，导致其后所有词全部锚定失败（整段丢词级时间戳）。
+        找不到返回 (None, start)。
+        """
+        m = len(target)
+        if m == 0:
+            return start, start
+        cap = int(m * self.max_expansion) + 40
+        limit = min(self.n, start + cap)
+        i = start
+        first = None
+        last = start
+        for ch in target:
+            found = False
+            while i < limit:
+                if self.norm[i] == ch:
+                    if first is None:
+                        first = i
+                    last = i
+                    i += 1
+                    found = True
+                    break
+                i += 1
+            if not found:
+                return None, start
+        return first, last
 
     # ── 锚点构建 ───────────────────────────────────────────────
     def _build_word_anchors(self, words: Sequence[dict]) -> None:
@@ -75,26 +123,9 @@ class SentenceTimeAligner:
             wc = norm_chars(w.get("word", ""))
             if not wc:
                 continue
-            i = prev
-            first = None
-            last = prev
-            ok = True
-            for ch in wc:
-                found = False
-                while i < self.n:
-                    if self.norm[i] == ch:
-                        if first is None:
-                            first = i
-                        last = i
-                        i += 1
-                        found = True
-                        break
-                    i += 1
-                if not found:
-                    ok = False
-                    break
-            if not ok:
-                # 该词在剩余全文里找不到（通常是稀疏缺口），跳过，不参与锚定
+            first, last = self._match_forward(wc, prev)
+            if first is None:
+                # 该词在窗口内找不到（稀疏缺口 / 标点不一致），跳过且不推进游标
                 continue
             self.anchors.append(_WordAnchor(first, last + 1,
                                             w.get("start"), w.get("end"), w))
@@ -106,34 +137,16 @@ class SentenceTimeAligner:
         prev = 0
         for seg in segments:
             st = norm_chars(seg.get("text", ""))
+            s0 = float(seg.get("start", 0) or 0)
+            e0 = float(seg.get("end", 0) or 0)
             if not st:
-                self.seg_spans.append((prev, prev,
-                                       float(seg.get("start", 0) or 0),
-                                       float(seg.get("end", 0) or 0)))
+                self.seg_spans.append((prev, prev, s0, e0))
                 continue
-            i = prev
-            first = None
-            last = prev
-            ok = True
-            for ch in st:
-                found = False
-                while i < self.n:
-                    if self.norm[i] == ch:
-                        if first is None:
-                            first = i
-                        last = i
-                        i += 1
-                        found = True
-                        break
-                    i += 1
-                if not found:
-                    self.seg_spans.append((prev, prev,
-                                           float(seg.get("start", 0) or 0),
-                                           float(seg.get("end", 0) or 0)))
-                    continue
-            self.seg_spans.append((first, last + 1,
-                                   float(seg.get("start", 0) or 0),
-                                   float(seg.get("end", 0) or 0)))
+            first, last = self._match_forward(st, prev)
+            if first is None:
+                self.seg_spans.append((prev, prev, s0, e0))
+                continue
+            self.seg_spans.append((first, last + 1, s0, e0))
             prev = last + 1
 
     # ── 任意字符位置 -> 时间（线性插值） ───────────────────────

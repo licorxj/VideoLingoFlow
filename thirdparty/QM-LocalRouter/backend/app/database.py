@@ -48,6 +48,8 @@ async def _add_missing_columns():
         ("api_keys", "oauth_profile", "VARCHAR(50) DEFAULT ''"),
         ("api_keys", "oauth_refresh", "TEXT DEFAULT ''"),
         ("api_keys", "oauth_expires_at", "INTEGER DEFAULT 0"),
+        ("api_keys", "status_until", "INTEGER DEFAULT 0"),
+        ("api_keys", "fail_count", "INTEGER DEFAULT 0"),
     ]
     async with engine.begin() as conn:
         for table, col, col_def in columns_to_add:

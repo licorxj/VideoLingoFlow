@@ -73,6 +73,7 @@ from backend.steps.s_json_get import S_JsonGet
 from backend.steps.s_json_visual_editor import S_JsonVisualEditor
 from backend.steps.s_text_editor import S_TextEditor
 from backend.steps.s_text_concat import S_TextConcat
+from backend.steps.s_prompt_optimize import S_PromptOptImage, S_PromptOptVideo
 from backend.steps.s_subtitle_editor import S_SubtitleEditor
 from backend.steps.s_video_split import S_VideoSplit
 from backend.steps.s_video_clip_intro_outro import S_VideoClipIntroOutro
@@ -287,6 +288,10 @@ _STEPS = {
     "json_visual_editor": S_JsonVisualEditor(),
     "s_text_editor": S_TextEditor(),
     "text_editor": S_TextEditor(),
+    "s_prompt_opt_image": S_PromptOptImage(),
+    "prompt_opt_image": S_PromptOptImage(),
+    "s_prompt_opt_video": S_PromptOptVideo(),
+    "prompt_opt_video": S_PromptOptVideo(),
     "s_text_concat": S_TextConcat(),
     "text_concat": S_TextConcat(),
     "s_subtitle_editor": S_SubtitleEditor(),
