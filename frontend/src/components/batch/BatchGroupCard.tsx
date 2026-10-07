@@ -497,6 +497,7 @@ export default function BatchGroupCard({ batch, loading, onRefresh }: Props) {
                 onResume={(taskId) => handleAction(() => batchApi.resumeTask(batch.batch_id, taskId))}
                 onRetry={(taskId) => handleAction(() => batchApi.retryTask(batch.batch_id, taskId))}
                 onCancel={(taskId) => handleAction(() => batchApi.cancelTask(batch.batch_id, taskId))}
+                onRenamed={() => onRefresh()}
               />
             ))}
           </div>

@@ -1,9 +1,13 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
-import { Play, RotateCcw, Square, FolderOpen, Pencil } from "lucide-react";
+import { Play, RotateCcw, Square, FolderOpen, Eye, SquarePen } from "lucide-react";
 import client from "@/api/client";
+import { tasksApi } from "@/api/tasks";
 import NodeProgressBar from "./NodeProgressBar";
 import { STATUS_META } from "@/components/task/TaskCard";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface BatchTaskData {
   task_id: string;
@@ -33,6 +37,7 @@ interface Props {
   onResume: (taskId: string) => void;
   onRetry: (taskId: string) => void;
   onCancel: (taskId: string) => void;
+  onRenamed?: (taskId: string, taskName: string) => void;
 }
 
 const STATUS_BADGE: Record<string, { label: string; cls: string }> = Object.fromEntries(
@@ -51,13 +56,54 @@ function formatTime(ts: string) {
   }
 }
 
-export default function BatchTaskItem({ task, workflowNodes, selected, onSelect, onResume, onRetry, onCancel }: Props) {
+export default function BatchTaskItem({ task, workflowNodes, selected, onSelect, onResume, onRetry, onCancel, onRenamed }: Props) {
   const navigate = useNavigate();
   const badge = STATUS_BADGE[task.status] || STATUS_BADGE.created;
   const runningMessage =
     Object.values(task.nodes || {}).find((node) => node.status === "running" && node.message)?.message ||
     Object.values(task.nodes || {}).find((node) => node.message)?.message ||
     "";
+
+  // 改名弹窗：确认后写入任务 task.json 的 task_name（后端同步控制平面负载）
+  const [renameOpen, setRenameOpen] = useState(false);
+  const [renameValue, setRenameValue] = useState(task.task_name || "");
+  const [renameBusy, setRenameBusy] = useState(false);
+  const [renameError, setRenameError] = useState("");
+
+  useEffect(() => {
+    if (renameOpen) {
+      setRenameValue(task.task_name || "");
+      setRenameError("");
+    }
+  }, [renameOpen, task.task_name]);
+
+  const handleOpenRename = () => {
+    setRenameValue(task.task_name || "");
+    setRenameError("");
+    setRenameOpen(true);
+  };
+
+  const handleRename = async () => {
+    const name = renameValue.trim();
+    if (!name) {
+      setRenameError("任务名称不能为空");
+      return;
+    }
+    if (name === (task.task_name || "")) {
+      setRenameOpen(false);
+      return;
+    }
+    setRenameBusy(true);
+    try {
+      await tasksApi.updateName(task.task_id, name);
+      setRenameOpen(false);
+      onRenamed?.(task.task_id, name);
+    } catch (e: any) {
+      setRenameError(e?.response?.data?.detail || e?.message || "重命名失败");
+    } finally {
+      setRenameBusy(false);
+    }
+  };
 
   const handleOpenFolder = async () => {
     try {
@@ -88,6 +134,15 @@ export default function BatchTaskItem({ task, workflowNodes, selected, onSelect,
           {task.task_name || task.task_id.substring(0, 8)}
         </span>
 
+        {/* 重命名任务（写入 task.json 的 task_name） */}
+        <button
+          onClick={handleOpenRename}
+          className="p-1 rounded-md hover:bg-accent transition-colors text-muted-foreground/70 hover:text-primary flex-shrink-0"
+          title="修改任务名称"
+        >
+          <SquarePen className="w-3.5 h-3.5" />
+        </button>
+
         {/* Task ID as small badge */}
         <span className="text-[10px] font-mono text-muted-foreground/60 bg-muted/50 px-1.5 py-0.5 rounded flex-shrink-0" title={task.task_id}>
           {task.task_id.substring(0, 8)}
@@ -115,7 +170,7 @@ export default function BatchTaskItem({ task, workflowNodes, selected, onSelect,
             className="p-1.5 rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-primary"
             title="编辑工作流"
           >
-            <Pencil className="w-3.5 h-3.5" />
+            <Eye className="w-3.5 h-3.5" />
           </button>
           <span className="w-px h-4 bg-border/40" />
           {/* 断点继续 (resume from checkpoint) */}
@@ -162,6 +217,37 @@ export default function BatchTaskItem({ task, workflowNodes, selected, onSelect,
       {/* Error message if failed */}
       {task.error && (
         <p className="text-[11px] text-red-500 truncate">{task.error}</p>
+      )}
+
+      {/* Rename task dialog */}
+      {renameOpen && (
+        <Dialog open onOpenChange={(value) => !value && !renameBusy && setRenameOpen(false)}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>修改任务名称</DialogTitle>
+              <DialogDescription className="truncate">
+                任务 ID：{task.task_id}
+              </DialogDescription>
+            </DialogHeader>
+            <input
+              autoFocus
+              value={renameValue}
+              onChange={(event) => setRenameValue(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") void handleRename();
+              }}
+              className="voice-input"
+              placeholder="请输入任务名称"
+              disabled={renameBusy}
+            />
+            <p className="text-xs text-muted-foreground">改名会同步写入该任务 task.json 的 task_name 字段。</p>
+            {renameError && <p className="text-xs text-red-500">{renameError}</p>}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setRenameOpen(false)} disabled={renameBusy}>取消</Button>
+              <Button onClick={() => void handleRename()} disabled={renameBusy || !renameValue.trim()}>保存</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

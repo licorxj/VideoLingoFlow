@@ -14,5 +14,6 @@ export const tasksApi = {
   execute: (id: string, fromStep?: string) => client.post(`/api/tasks/${id}/execute`, { from_step: fromStep }),
   rollback: (id: string, stepId: string) => client.post(`/api/tasks/${id}/rollback/${stepId}`),
   delete: (id: string) => client.delete(`/api/tasks/${id}`),
+  updateName: (id: string, taskName: string) => client.put(`/api/tasks/${id}/name`, { task_name: taskName }),
   getMeta: () => client.get("/api/tasks/meta/types"),
 };

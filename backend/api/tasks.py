@@ -1,12 +1,13 @@
 """Tasks API: query task status, artifacts, and task lifecycle actions."""
 import json
 import os
+import threading
 from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 router = APIRouter()
 
@@ -109,6 +110,19 @@ def _load_task(task_id: str):
         return payload
 
 
+def _legacy_task_json_lock():
+    """取 workflow_runtime 保护 task.json 读-改-写的锁（编译产物 pyd 中同样存在该符号）。
+
+    拿不到时退化为一把进程内私有锁：仍能防止本接口自身并发，但无法与节点落盘互斥。
+    """
+    try:
+        from backend.control_plane.workflow_runtime import _legacy_lock
+
+        return _legacy_lock
+    except Exception:
+        return threading.Lock()
+
+
 class WorkflowUpdateRequest(BaseModel):
     """Request body for updating a task's workflow."""
     class Config:
@@ -120,6 +134,10 @@ class CreateTaskRequest(BaseModel):
     input_files: dict = {}
     name: str = ""
     options: dict = {}
+
+
+class TaskNameUpdateRequest(BaseModel):
+    task_name: str = Field(default="", max_length=200, description="新的任务名称（写入 task.json 的 task_name）")
 
 
 class ExecuteTaskRequest(BaseModel):
@@ -244,6 +262,50 @@ async def update_task_workflow(task_id: str, req: WorkflowUpdateRequest):
             (workspace / "workflow.json").write_text(json.dumps(workflow, ensure_ascii=False), encoding="utf-8")
             _write_legacy_task(task, workspace)
     return _deprecated({"success": True, "task_id": task_id, "workflow": workflow})
+
+
+@router.put("/{task_id}/name")
+async def update_task_name(task_id: str, req: TaskNameUpdateRequest):
+    """重命名任务：写入任务工作区 task.json 的 task_name，并同步控制平面负载。
+
+    批量工作台 / 历史页展示的任务名都取自 payload.batch.task_name，落盘后立即生效。
+
+    注意：落盘逻辑必须写在这里而不是 workflow_runtime —— 运行时该模块是编译产物
+    （control_plane_binaries/**/workflow_runtime.cp312-*.pyd），新增函数不会生效。
+    """
+    from backend.control_plane.database import session_scope
+    from backend.control_plane.models import Task
+    from backend.engine.batch_archive import resolve_task_dir
+
+    name = (req.task_name or "").strip()
+    if not name:
+        raise HTTPException(400, "任务名称不能为空")
+
+    workspace = resolve_task_dir(task_id)
+    if workspace is None:
+        raise HTTPException(404, "任务工作区不存在（可能已归档或被删除），无法重命名")
+
+    with session_scope() as session:
+        task = session.get(Task, task_id)
+        if task is None:
+            raise HTTPException(404, "Task not found")
+        # 与 workflow_runtime._write_legacy_task 共用同一把锁，避免与执行期节点落盘竞争：
+        # 那边的落盘以磁盘 task.json 为权威并反向吸收 task_name，抢跑会把新名字刷回旧值。
+        with _legacy_task_json_lock():
+            path = workspace / "task.json"
+            try:
+                data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+            except (OSError, json.JSONDecodeError):
+                data = {}
+            if not isinstance(data, dict):
+                data = {}
+            data["task_name"] = name
+            path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            payload = task.payload or {}
+            batch = payload.get("batch", {}) or {}
+            task.payload = {**payload, "batch": {**batch, "task_name": name}}
+            session.flush()
+    return _deprecated({"success": True, "task_id": task_id, "task_name": name})
 
 
 @router.post("/{task_id}/cancel")
