@@ -4,7 +4,8 @@
 - segment_order: 视频片段拼接顺序（主视频、片段1/2/3 的排序）
 - scale_mode: 片段尺寸缩放方式（stretch 拉伸 / crop 裁切填充）
 - cover_position / cover_duration: 封面图插入位置（开头/结尾）与停留时长（none 不插入）
-所有视频统一缩放到首个参考视频的分辨率与帧率后拼接，封面图以静帧形式插入，
+所有视频统一缩放到「主视频」的分辨率与帧率后拼接（主视频缺失时回退到排序首个
+有效视频/封面图），与片段排序无关；封面图以静帧形式插入，
 输出拼接后的单个视频文件。
 """
 import json
@@ -325,19 +326,33 @@ class S_VideoConcat(BaseStep):
         if not video_clips and not cover_path:
             raise FileNotFoundError("未找到任何有效输入：请连接主视频/片段/封面图中的至少一个")
 
-        # 3) 探测目标分辨率与帧率（首个视频，否则封面图）
+        # 3) 探测目标分辨率与帧率
+        #    严格以「主视频」为尺寸基准（分辨率 + 帧率），与其他片段的排序无关；
+        #    仅当主视频未连线或探测不到有效尺寸时，才回退到排序中的首个有效视频，
+        #    最后回退封面图，保证缺主视频时节点仍可用。
         target = None
-        for vc in video_clips:
-            m = vc["meta"]
+        basis = ""
+        main_path = _resolve_path(step_inputs.get("main"), task_dir)
+        if main_path:
+            m = _probe(main_path)
             if m["width"] and m["height"]:
                 target = m
-                break
+                basis = "主视频"
+        if target is None:
+            for vc in video_clips:
+                m = vc["meta"]
+                if m["width"] and m["height"]:
+                    target = m
+                    basis = f"排序首个视频({os.path.basename(vc['path'])})"
+                    break
         if target is None and cover_path:
             target = _probe(cover_path)
+            basis = "封面图"
         if target is None or not target["width"] or not target["height"]:
             raise RuntimeError("无法探测参考视频/图片尺寸，无法确定输出分辨率")
         out_w, out_h = target["width"], target["height"]
         fps = target.get("fps") or 30.0
+        print(f"[视频拼接] 尺寸基准: {basis} -> {out_w}x{out_h} @ {fps:.3f}fps")
 
         # 4) 组装最终 clips 顺序（含封面插入）
         clips: list = []

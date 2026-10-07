@@ -2,6 +2,99 @@
   "nvidia": {
     "models": [
       {
+        "id": "deepseek-ai/deepseek-v4.1-flash",
+        "name": "DeepSeek V4.1 Flash",
+        "api": "openai-completions",
+        "provider": "nvidia",
+        "baseUrl": "https://integrate.api.nvidia.com/v1",
+        "headers": {
+          "NVCF-POLL-SECONDS": "3600"
+        },
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStore": false,
+          "supportsDeveloperRole": false,
+          "supportsReasoningEffort": false,
+          "maxTokensField": "max_tokens",
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false,
+          "requiresReasoningContentOnAssistantMessages": true,
+          "thinkingFormat": "deepseek"
+        },
+        "contextWindow": 1000000,
+        "maxTokens": 384000,
+        "thinkingLevelMap": {
+          "minimal": null,
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "max": "max"
+        },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "google/diffusiongemma-26b-a4b-it",
+        "name": "DiffusionGemma 26B A4B IT",
+        "api": "openai-completions",
+        "provider": "nvidia",
+        "baseUrl": "https://integrate.api.nvidia.com/v1",
+        "headers": {
+          "NVCF-POLL-SECONDS": "3600"
+        },
+        "reasoning": true,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0,
+          "output": 0,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStore": false,
+          "supportsDeveloperRole": false,
+          "supportsReasoningEffort": false,
+          "maxTokensField": "max_tokens",
+          "supportsLongCacheRetention": false,
+          "supportsStrictMode": false
+        },
+        "contextWindow": 250000,
+        "maxTokens": 32768,
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
         "id": "google/gemma-3-12b-it",
         "name": "Gemma 3 12B IT",
         "api": "openai-completions",
@@ -701,9 +794,9 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790923447169,
-    "lastModified": 1790340035000,
-    "etag": "W/\"fd618468d259cfd12b70206204a81069\""
+    "checkedAt": 1791354932149,
+    "lastModified": 1791313527000,
+    "etag": "W/\"ea873eafd4b0253d71632fad1ac725b4\""
   },
   "xiaomi": {
     "models": [
@@ -902,7 +995,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790923447481,
+    "checkedAt": 1791354933134,
     "lastModified": 1790340067000,
     "etag": "W/\"c6e5204bdd5c6de144b577d8f9233a6c\""
   },
@@ -1775,7 +1868,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790923447198,
+    "checkedAt": 1791354932589,
     "lastModified": 1790340008000,
     "etag": "W/\"7479536815e7f52fb17815e7f6031a76\""
   },
@@ -3801,7 +3894,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790923447626,
+    "checkedAt": 1791354932157,
     "lastModified": 1790859104000,
     "etag": "W/\"088045d5b9f69b280395672dcd5ada79\""
   },
@@ -6120,7 +6213,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790923447624,
+    "checkedAt": 1791354932594,
     "lastModified": 1790340016000,
     "etag": "W/\"16fd3507eb5807845f3f87d72e24c778\""
   },
@@ -6871,7 +6964,7 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1790923447189,
+    "checkedAt": 1791354932152,
     "lastModified": 1790859054000,
     "etag": "W/\"71c17a51b322391f0f80077152bb3748\""
   }

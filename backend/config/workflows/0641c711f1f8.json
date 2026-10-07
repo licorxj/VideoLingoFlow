@@ -32,7 +32,7 @@
           "var2Required": false
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -68,7 +68,7 @@
           "text": "标题: Woman with a Parasol - Madame Monet and Her Son\n创作者: Claude Monet\n创作日期: 1875\n实际尺寸: overall: 100 x 81 cm (39 3/8 x 31 7/8 in.) framed: 119.4 x 99.7 cm (47 x 39 1/4 in.)\n出处: From the artist in 1876 to Dr. Georges de Bellio [1828-1894], Paris; by inheritance to M and Mme [she née Victorine de Bellio,1863-1958] Ernest Donop de Monchy, Paris, until at least 1897. Possibly (Paul Rosenberg and Co., London, New York, and Paris).[1] Georges Menier, Paris, by 1924;[2] (Menier sale, Palais Galliera, Paris, 15 June 1965, no. 121); purchased by (Hector Brame, Paris) for Paul Mellon [1907-1999], Upperville, VA; gift 1983 to NGA. [1] The painting is cited as no. 86 in an unpublished inventory of the de Bellio collection by Remus Niculescu, \"Georges de Bellio, l'Ami des Impressionists (I),\" _Paragone_ 247 (September 1970). See also the letter from Niculescu to Paul Mellon dated 12 April 1970, in NGA curatorial files. This could be the Monet \"Femme au monticule\" sold by Donop de Monchy to Paul Rosenberg on 16 April 1917 (Receipt, Paul Rosenberg Archives, Museum of Modern Art, New York, file 1.c.24b, copy in NGA curatorial files) [2] The painting was lent by Menier to the Première exposition de collectionneurs au profit de la Société des Amis du Luxembourg, Paris, in 1924.\n权利: CC0\n材质: oil on canvas"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "画作介绍",
         "progress": 100,
         "message": "Completed",
@@ -105,7 +105,7 @@
           "log_request": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "识图",
         "progress": 100,
         "message": "Completed",
@@ -152,7 +152,7 @@
           "log_request": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -200,7 +200,7 @@
           "image": "output\\node_2_1790814832737\\converted_node_2_1790814832737.png"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
@@ -225,7 +225,7 @@
           "filePath": "X:/PCTMoveData/Pictures/艺术画作/Poem Postcards — Google 艺术与文化_files/unnamed.webp"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -246,8 +246,8 @@
       "id": "node_5_1790815072571",
       "type": "workflow",
       "position": {
-        "x": 3540,
-        "y": -1605
+        "x": 3510,
+        "y": -1395
       },
       "selected": false,
       "data": {
@@ -259,11 +259,9 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "skipped": true
-        },
+        "outputs": {},
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
@@ -297,7 +295,7 @@
           "output_prefix": "img"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -329,8 +327,8 @@
       "id": "node_7_1790816530626",
       "type": "workflow",
       "position": {
-        "x": 4425,
-        "y": -2055
+        "x": 4365,
+        "y": -2175
       },
       "selected": false,
       "data": {
@@ -365,7 +363,7 @@
           ]
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -382,22 +380,24 @@
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f, kwargs=['callback', 'cancel_callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\.step_node_7_1790816530626_result.json, exiting 0"
-        ]
+        ],
+        "note": "视频框架生成"
       },
       "measured": {
         "width": 420,
         "height": 818
       },
-      "dragHandle": ".wf-node-drag-handle"
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
     },
     {
       "id": "node_4_1790898660638",
       "type": "workflow",
       "position": {
-        "x": 4950,
-        "y": -1890
+        "x": 4995,
+        "y": -2280
       },
-      "selected": true,
+      "selected": false,
       "data": {
         "nodeType": "json_to_text",
         "label": "JSON转文本",
@@ -412,15 +412,338 @@
           "text": "Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\output\\json2text_node_4_1790898660638.txt"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 273
+        "height": 276
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
+    },
+    {
+      "id": "node_7_1791343665483",
+      "type": "workflow",
+      "position": {
+        "x": 4125,
+        "y": -1245
+      },
+      "data": {
+        "nodeType": "file_load",
+        "label": "文件加载",
+        "config": {
+          "filePath": "Y:/VideoLingoLc/control_plane_workspaces/0533049ba5d3405d9f1c1b3894366b8f/cache/images/@图一为人物参考图，根据参考图_node_1_1791341429518.png"
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "filepath": "Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\images\\@图一为人物参考图，根据参考图_node_1_1791341429518.png"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 250
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "n_muxjs2gue8t6",
+      "type": "workflow",
+      "position": {
+        "x": 4125,
+        "y": -855
+      },
+      "data": {
+        "nodeType": "file_load",
+        "label": "文件加载",
+        "config": {
+          "filePath": "Y:/VideoLingoLc/control_plane_workspaces/0533049ba5d3405d9f1c1b3894366b8f/cache/images/@图一为人物参考图，根据参考图_node_4_1791342265679.png"
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "filepath": "Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\images\\@图一为人物参考图，根据参考图_node_4_1791342265679.png"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 250
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "selected": false,
+      "dragging": false
+    },
+    {
+      "id": "node_8_1791343711472",
+      "type": "workflow",
+      "position": {
+        "x": 4995,
+        "y": -1125
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "disableExecute": true,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 406
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_9_1791343716223",
+      "type": "workflow",
+      "position": {
+        "x": 4995,
+        "y": -690
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "disableExecute": true,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 406
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_10_1791343746407",
+      "type": "workflow",
+      "position": {
+        "x": 4995,
+        "y": -1950
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "json_get",
+        "label": "JSON取值",
+        "config": {
+          "outputCount": 3,
+          "key_exprs": [
+            "镜头",
+            "风格说明",
+            "色彩基调"
+          ]
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "out_1": [
+            {
+              "序号": 1,
+              "时间": "0.0s - 5.0s",
+              "时长": "5.0s",
+              "镜头类型": "微距穿越镜头（尾帧之外的延伸时空）",
+              "景别": "微距 → 近景",
+              "场景": "林缘溪谷（尾帧草甸之外的想象时空）：苔石、溪水、藤蔓拱廊、悬浮的光尘与花粉",
+              "画面内容": "开场是极致微距：苔藓上一颗露珠内部倒映着流动的天光，水珠滚落激起微小涟漪；镜头贴着溪面高速前推，掠过浮叶与睡莲，穿过一层金色花粉光尘的'隧道'；随后180°翻转（反转镜头），视线沿垂落的藤蔓与柳条急速上升，冲出林荫的瞬间光圈爆开——画面豁然开朗，一个戴草帽、穿浅蓝套装的小男孩正追着一只白蝶从坡下跑来。",
+              "镜头运动": "微距推进(0-2s) → 溪面低空前冲(2-3.5s) → 180°翻转+升格上升(3.5-4.5s) → 冲出林荫定格男孩入场(4.5-5s)",
+              "运镜手法": "穿越、反转、上升",
+              "光影": "林下斑驳丁达尔光束，逆光花粉bokeh，出林瞬间高光绽放",
+              "声音设计": "溪水细响、露珠滴落、林间鸟鸣渐入弦乐；出林时风声与竖琴上行音阶同步绽放",
+              "转场": "光斑过曝白闪 → 切"
+            },
+            {
+              "序号": 2,
+              "时间": "5.0s - 10.0s",
+              "时长": "5.0s",
+              "镜头类型": "低机位跟拍+横移摇镜",
+              "景别": "近景 → 中景",
+              "场景": "从林缘过渡到开满黄色野花的草甸边缘（尾帧环境的'逼近'，尚未成画）",
+              "画面内容": "镜头降至草丛高度，跟随男孩在花丛中奔跑穿行；前景虚化的草叶与野花不断擦过镜头形成自然框景与速度感；白蝶引他向前，他伸手去扑、脚步带起花瓣；镜头随他的行进向右横移并微微上摇，越过一排摇曳的柳条——柳条拂过镜头的瞬间，远处坡顶的逆光里，第一次出现'虚'的身影：一顶阳伞的墨绿边缘与一角被风掀起的白裙，在热浪与薄雾中若隐若现。",
+              "镜头运动": "低机位跟拍前移(0-3s) → 右横移+微上摇(3-4.5s) → 柳条擦镜转场，焦外虚影入画(4.5-5s)",
+              "运镜手法": "跟拍、横移、摇移、擦镜转场",
+              "光影": "逆光草浪金绿色高光，男孩轮廓光，远处主角以剪影式虚影出现",
+              "声音设计": "草叶摩擦、孩童呼吸与笑声、风声加厚；虚影出现时弦乐长音悬停",
+              "转场": "前景枝叶擦镜遮挡 → 切"
+            },
+            {
+              "序号": 3,
+              "时间": "10.0s - 15.0s",
+              "时长": "5.0s",
+              "镜头类型": "局部摇移渐显（虚实结合）",
+              "景别": "特写 → 中近景（局部）",
+              "场景": "草坡中段，主角所在位置的近距离环绕",
+              "画面内容": "主角不直白入境：画面先落在被风掀起的裙摆层叠褶裥与蕾丝花边的特写上，阳光穿透织物呈现象牙色的透光；镜头沿裙裾缓缓上摇——掠过湖蓝领巾、握伞的纤手、墨绿蕾丝伞面投下的碎光光斑；中途一阵风扬起白色薄纱，纱幔扫过镜头形成半遮半掩的'虚'，纱后身影由失焦到入焦；镜头同时绕主体缓慢弧形移动，始终只见肩、手、纱、伞的'局部'，面容始终隐于伞荫与逆光之中，蓄势待显。",
+              "镜头运动": "裙摆特写起幅(0-1.5s) → 沿身形垂直上摇(1.5-3.5s) → 弧形环绕+薄纱遮挡虚实切换(3.5-5s)",
+              "运镜手法": "局部摇移、弧形环绕、遮挡揭示、焦点渐变(rack focus)",
+              "光影": "逆光纱幔与蕾丝透光，伞面蕾丝在裙上投下斑驳碎光，轮廓光勾勒身形",
+              "声音设计": "织物窸窣、风声贴近麦克风的呼吸感、单簧管独奏主题首次浮现",
+              "转场": "薄纱扫镜柔焦 → 叠化"
+            },
+            {
+              "序号": 4,
+              "时间": "15.0s - 20.0s",
+              "时长": "5.0s",
+              "镜头类型": "拉回全景显现全貌",
+              "景别": "中近景 → 全景",
+              "场景": "尾帧草坡：黄花草甸、湛蓝天空、蓬松积云",
+              "画面内容": "镜头从主角身前缓缓后拉并下降机位至仰角，她的全貌逐渐显现——前拉斐尔派式的理想化容颜终于清晰：棕色蓬松卷发、白纱帽饰随风扬起、侧脸仰望远方，双手握墨绿阳伞立于坡顶，白裙在风中如云堆叠；随着视野拉开，左后方追蝶的男孩也进入画幅，落入黄金分割点；云隙光束扫过草甸，天地开阔，画面从'人'生长为'画'，已无限接近尾帧构图。",
+              "镜头运动": "缓慢后拉(dolly out)+机位下降(0-4s) → 稳定为低机位仰拍全景(4-5s)",
+              "运镜手法": "后拉、降机位、显现",
+              "光影": "云隙丁达尔光束横扫，主角全身逆光轮廓光，草地金绿高光",
+              "声音设计": "弦乐组全奏主题展开，风声与草浪声铺满声场",
+              "转场": "运动匹配 → 切"
+            },
+            {
+              "序号": 5,
+              "时间": "20.0s - 25.0s",
+              "时长": "5.0s",
+              "镜头类型": "面部特写（微表情）→ 退回全景定格尾帧",
+              "景别": "特写 → 全景",
+              "场景": "同尾帧草坡，最终定格为尾帧",
+              "画面内容": "【特写段 20.0-23.0s】镜头急速柔和推近至主角面部特写并以升格呈现微表情：一缕棕色卷发被风拂过脸颊，她眼睫轻颤、瞳孔里映出云影与光的移动，目光由近及远望向天际，唇角缓缓漾开一丝极浅的笑意，白纱在耳畔鼓起又落下——恬静、向往而略带怀旧；【退回定格段 23.0-25.0s】镜头缓缓后拉退回低机位仰拍全景，男孩、草甸、阳伞、积云归位，画面轻微过曝并叠加暖色油画质感，风在这一刻静止——定格为输入尾帧（100%构图匹配：女性右侧偏中、阳伞三角引导线、男孩左侧黄金分割点、上半部蓬松云天）。",
+              "镜头运动": "柔和推近至面部特写(0-1s) → 升格静观微表情(1-3s) → 缓慢后拉退回全景(3-4.5s) → 定格(4.5-5s)",
+              "运镜手法": "推近、升格特写、后拉、定格",
+              "光影": "面部柔光+眼神光，逆光发丝金边；定格时整体暖调油画化",
+              "微表情": "眼睫轻颤→瞳孔映云→目光远眺→唇角浅笑→纱幔掠面，全过程升格60fps",
+              "声音设计": "主题旋律以独奏小提琴收束，风声渐轻，最后一秒所有声音淡出，仅留一声布料轻响",
+              "转场": "定格（尾帧）",
+              "尾帧匹配要求": "人物位置、姿态、构图、云形与前景虚化草叶须与输入尾帧一致，末帧即尾帧"
+            }
+          ],
+          "out_2": {
+            "浪漫主义": "以自然的崇高感与情感的含蓄涌动为内核，云、风、光皆为情绪的外化；构图强调向上的三角形与开阔天际，营造田园牧歌式的诗意与怀旧。",
+            "印象派光色": "金色顺光与云隙丁达尔光束交织，草地高光呈金绿色，蓝(#4A90D9)与暖黄(#F2C438)互补跳色；大量逆光轮廓光、光斑、bokeh与升格飞尘，捕捉'光的颤动'。",
+            "前拉斐尔派理想化女性": "主角容貌与仪态理想化：白皙透亮的肌肤、棕色蓬松卷发、层叠褶裥白裙、薄纱与蕾丝的精致质感；她如从画中走出，静谧、圣洁而略带疏离。"
+          },
+          "out_3": "主色——湛蓝天青(#4A90D9)、草甸黄绿(#8FBC5A)、野花暖黄(#F2C438)；点缀——裙摆象牙白(#F5F1E6)、阳伞墨绿(#2E5D46)、领巾湖蓝(#6FA8C7)；全程金色自然光 + 逆光纱幔透光。"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 711
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_11_1791343952590",
+      "type": "workflow",
+      "position": {
+        "x": 5805,
+        "y": -1965
+      },
+      "data": {
+        "nodeType": "opencode_agent",
+        "label": "本地CLI智能体",
+        "config": {
+          "inputCount": 1,
+          "outputCount": 2,
+          "cli": "opencode",
+          "cli_path": "",
+          "opencode_exe": "",
+          "model": "opencode/mimo-v2.6-flash-free",
+          "model_free_only": true,
+          "fallback_models": "opencode/big-pickle",
+          "agent": "",
+          "skills": [
+            "storyboard-video-skill"
+          ],
+          "mcps": [],
+          "auto_approve": true,
+          "thinking": false,
+          "pure": false,
+          "dir_name": "",
+          "timeout": 1800,
+          "instruction": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：熟读并理解输入的视频json脚本，全面理解我的创作意图，然后把每个分镜用 $storyboard-video-previs 技能制作成 8面板视频故事板的生图提示词，给我直接用于AI生图模型生成分镜的多宫格故事板。返回包含所有分镜故事版生图提示词的json文件。",
+          "output_items": [
+            {
+              "port": "输出1",
+              "type": "text",
+              "desc": "完成情况总结"
+            },
+            {
+              "port": "输出2",
+              "type": "json",
+              "desc": "含所有分镜故事版生图提示词的json文件"
+            }
+          ]
+        },
+        "status": "running",
+        "disableExecute": true,
+        "progress": 20,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "logLines": [
+          "[step_worker] start node_type=opencode_agent node_id=node_11_1791343952590 pid=40420",
+          "[step_worker] step instance created: S_OpenCodeAgent",
+          "[step_worker] step_inputs keys=['input_1']",
+          "[step_worker] node_config keys=['inputCount', 'outputCount', 'cli', 'cli_path', 'opencode_exe', 'model', 'model_free_only', 'fallback_models', 'agent', 'skills', 'mcps', 'auto_approve', 'thinking', 'pure', 'dir_name', 'timeout', 'instruction', 'output_items']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f, kwargs=['callback', 'cancel_callback'])"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 772
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_12_1791357804760",
+      "type": "workflow",
+      "position": {
+        "x": 4155,
+        "y": -510
+      },
+      "data": {
+        "nodeType": "audio_asset_library",
+        "label": "音频素材库",
+        "config": {
+          "source": "ffde5d77242341899f59f0d003772b73",
+          "asset_name": "need you氛围版"
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 339
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     }
   ],
   "edges": [
@@ -566,10 +889,101 @@
         "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_7_1790816530626out-output_1-node_4_1790898660638in-json"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1790815072571",
+      "sourceHandle": "out-image",
+      "target": "node_7_1791343665483",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_5_1790815072571out-image-node_7_1791343665483in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1790815072571",
+      "sourceHandle": "out-image",
+      "target": "n_muxjs2gue8t6",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_5_1790815072571out-image-n_muxjs2gue8t6in-any"
+    },
+    {
+      "source": "node_7_1791343665483",
+      "sourceHandle": "out-filepath",
+      "target": "node_8_1791343711472",
+      "targetHandle": "in-image",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_7_1791343665483out-filepath-node_8_1791343711472in-image"
+    },
+    {
+      "source": "n_muxjs2gue8t6",
+      "sourceHandle": "out-filepath",
+      "target": "node_9_1791343716223",
+      "targetHandle": "in-image",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__n_muxjs2gue8t6out-filepath-node_9_1791343716223in-image"
+    },
+    {
+      "source": "node_7_1790816530626",
+      "sourceHandle": "out-output_1",
+      "target": "node_10_1791343746407",
+      "targetHandle": "in-json",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_7_1790816530626out-output_1-node_10_1791343746407in-json"
+    },
+    {
+      "type": "bezier",
+      "animated": true,
+      "style": {
+        "stroke": "#ff0099",
+        "strokeWidth": 2
+      },
+      "source": "node_7_1790816530626",
+      "sourceHandle": "out-output_1",
+      "target": "node_11_1791343952590",
+      "targetHandle": "in-input_1",
+      "id": "xy-edge__node_7_1790816530626out-output_1-node_11_1791343952590in-input_1"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1790815072571",
+      "sourceHandle": "out-image",
+      "target": "node_12_1791357804760",
+      "targetHandle": "in-any",
+      "id": "xy-edge__node_5_1790815072571out-image-node_12_1791357804760in-any"
     }
   ],
   "type": "user",
   "createdAt": "2026-10-01T07:35:21",
-  "updatedAt": "2026-10-06T12:11:04",
-  "revision": 15
+  "updatedAt": "2026-10-07T15:25:17",
+  "revision": 23
 }

@@ -4901,7 +4901,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "video_concat",
     "name": "视频拼接",
     "category": "video",
-    "description": "将主视频/片段1~3/封面图按设定顺序与缩放方式一次性拼装为单个视频，封面图可选插入开头或结尾。",
+    "description": "将主视频/片段1~3/封面图按设定顺序与缩放方式一次性拼装为单个视频；所有片段统一缩放到「主视频」的分辨率与帧率（与片段排序无关），封面图可选插入开头或结尾。",
     "icon": "Clapperboard",
     "color": "#3b82f6",
     "execution_domain": "thread",
@@ -5652,7 +5652,7 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "model": "",
+      "model": "vlf-01",
       "system_prompt": "",
       "user_prompt": "{input_text}",
       "temperature": 0.7,
@@ -9917,7 +9917,7 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "defaultConfig": {
       "project_name": "AI漫剧项目",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "style_preset": "",
       "art_style_custom": "",
       "genre_tags": "",
@@ -10069,7 +10069,7 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "defaultConfig": {
       "creation_id": "",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "num_chapters": 3,
       "num_characters": 3,
       "art_style_input": "",
@@ -10187,7 +10187,7 @@ export const FALLBACK_NODE_TYPES = [
       "num_characters": 4,
       "char_count_mode": "follow",
       "mode": "auto",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "generate_images": false,
       "publish_to_library": true,
       "seed": "",
@@ -10404,7 +10404,7 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "defaultConfig": {
       "creation_id": "",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "target_mode": "all",
       "voice_targets": [],
       "default_mode": "design",
@@ -10581,7 +10581,7 @@ export const FALLBACK_NODE_TYPES = [
       "creation_id": "",
       "num_scenes": 6,
       "mode": "auto",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "generate_images": true,
       "image_interface": "",
       "image_model": "",
@@ -10741,7 +10741,7 @@ export const FALLBACK_NODE_TYPES = [
       "creation_id": "",
       "num_props": 6,
       "mode": "auto",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "generate_images": true,
       "image_interface": "",
       "image_model": "",
@@ -10915,7 +10915,7 @@ export const FALLBACK_NODE_TYPES = [
     "defaultConfig": {
       "creation_id": "",
       "mode": "auto",
-      "llm_model": ""
+      "llm_model": "vlf-create"
     },
     "configFields": [
       {
@@ -11016,7 +11016,7 @@ export const FALLBACK_NODE_TYPES = [
       "creation_id": "",
       "asset_type": "scene",
       "chapter_ids": "",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "art_style_prompt": ""
     },
     "configFields": [
@@ -11123,7 +11123,7 @@ export const FALLBACK_NODE_TYPES = [
     "defaultConfig": {
       "creation_id": "",
       "num_chapters": 1,
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "chapter_title": "",
       "force": false
     },
@@ -11212,7 +11212,7 @@ export const FALLBACK_NODE_TYPES = [
       "creation_id": "",
       "chapter_id": "",
       "num_shots": 8,
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "force": false
     },
     "configFields": [
@@ -11315,7 +11315,7 @@ export const FALLBACK_NODE_TYPES = [
       "creation_id": "",
       "chapter_id": "",
       "shot_id": "",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "force": false
     },
     "configFields": [
@@ -19139,7 +19139,7 @@ export const FALLBACK_NODE_TYPES = [
     "defaultConfig": {
       "custom_prompt": "",
       "opt_template": "image",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "style_template_id": "",
       "assemble_result": ""
     },
@@ -19233,7 +19233,7 @@ export const FALLBACK_NODE_TYPES = [
     "defaultConfig": {
       "custom_prompt": "",
       "opt_template": "video",
-      "llm_model": "",
+      "llm_model": "vlf-create",
       "style_template_id": "",
       "assemble_result": ""
     },

@@ -1678,7 +1678,7 @@ BUILTIN_NODE_TYPES = [
         "name": "视频拼接",
         "execution_domain": "thread",
         "category": "video",
-        "description": "将主视频/片段1~3/封面图按设定顺序与缩放方式一次性拼装为单个视频，封面图可选插入开头或结尾。",
+        "description": "将主视频/片段1~3/封面图按设定顺序与缩放方式一次性拼装为单个视频；所有片段统一缩放到「主视频」的分辨率与帧率（与片段排序无关），封面图可选插入开头或结尾。",
         "icon": "Clapperboard",
         "color": "#3b82f6",
         "inputs": [

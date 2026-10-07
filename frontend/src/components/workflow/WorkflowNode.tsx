@@ -2768,6 +2768,28 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
     });
   })();
 
+  // JSON取值节点：取值结果是内存型值（字符串/数字/布尔/对象/数组），
+  // 不做类型过滤、不按值去重，按输出端口顺序原样展示（见下方「取值结果」面板）
+  const isJsonGet = nodeType.id === "json_get";
+  const jsonGetEntries = (() => {
+    if (!isJsonGet) return [] as { portId: string; label: string; value: any }[];
+    const raw = nd.outputs;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+    const order = visibleOutputs.map((p: any) => p.id);
+    return Object.keys(raw)
+      .filter((k) => raw[k] !== undefined && raw[k] !== null && raw[k] !== "")
+      .sort((a, b) => {
+        const ia = order.indexOf(a);
+        const ib = order.indexOf(b);
+        return (ia < 0 ? Number.MAX_SAFE_INTEGER : ia) - (ib < 0 ? Number.MAX_SAFE_INTEGER : ib);
+      })
+      .map((k) => ({
+        portId: k,
+        label: visibleOutputs.find((p: any) => p.id === k)?.label || k,
+        value: raw[k],
+      }));
+  })();
+
   const configRef = useRef(config);
   configRef.current = config;
 
@@ -3969,8 +3991,52 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         />
       )}
 
+      {/* JSON取值节点：直接展示各取值端口的实际结果（值可能是字符串/数字/布尔/对象/数组） */}
+      {isJsonGet && status === "completed" && jsonGetEntries.length > 0 && (
+        <div className="px-3 pb-3 border-t border-border/50 pt-2">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <FileText className="w-3 h-3 text-emerald-500" />
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">取值结果</span>
+          </div>
+          <div className="space-y-1">
+            {jsonGetEntries.map(({ portId, label, value }) => {
+              const isPathLike = typeof value === "string" && /[\\/]/.test(value);
+              // 值像文件路径时保留「点击打开」能力（与其它节点的输出产物一致）
+              if (isPathLike) {
+                const raw = String(value).replace(/\\/g, "/");
+                const full = raw.split("/").pop() || String(value);
+                return (
+                  <button
+                    key={portId}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); client.post("/api/tasks/open-file", { file_path: String(value), task_id: previewTaskId }).catch(() => { }); }}
+                    className="flex w-full items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 text-left text-[10px] transition-colors hover:bg-emerald-500/15"
+                    title={String(value)}
+                  >
+                    <span className="flex-shrink-0 font-medium text-emerald-600 dark:text-emerald-400">{label}</span>
+                    <span className="min-w-0 flex-1 truncate text-muted-foreground">{full}</span>
+                    <ExternalLink className="w-3 h-3 flex-shrink-0 text-emerald-600" />
+                  </button>
+                );
+              }
+              const text = typeof value === "string" ? value : JSON.stringify(value);
+              const display = text.length > 300 ? text.slice(0, 300) + "…" : text;
+              return (
+                <div
+                  key={portId}
+                  className="flex gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 text-[10px]"
+                >
+                  <span className="flex-shrink-0 font-medium text-emerald-600 dark:text-emerald-400">{label}</span>
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-all text-muted-foreground" title={text}>{display}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Output Display Panel - shows results/errors after execution */}
-      {status === "completed" && dedupedOutputEntries.length > 0 && (() => {
+      {status === "completed" && !isJsonGet && dedupedOutputEntries.length > 0 && (() => {
         // Separate file-based outputs from text/JSON outputs
         const fileEntries: [string, string | number][] = [];
         const jsonEntries: [string, string][] = [];
