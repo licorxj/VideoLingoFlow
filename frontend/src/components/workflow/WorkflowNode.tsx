@@ -2790,6 +2790,24 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
       }));
   })();
 
+  // 输出合并为列表：输出内容是裸列表（数组），同样不做类型过滤与去重；
+  // 兼容读取旧结构 {"items":[{id,value,type}]}
+  const isMergeList = nodeType.id === "output_merge_list";
+  const mergeListEntries = (() => {
+    if (!isMergeList) return [] as { label: string; value: any }[];
+    const raw: any = (nd.outputs || {}).json;
+    if (Array.isArray(raw)) {
+      return raw.map((v: any, i: number) => ({ label: `${i + 1}`, value: v }));
+    }
+    if (raw && typeof raw === "object" && Array.isArray(raw.items)) {
+      return raw.items.map((it: any, i: number) => ({
+        label: String(it?.id || `${i + 1}`),
+        value: it?.value,
+      }));
+    }
+    return [];
+  })();
+
   const configRef = useRef(config);
   configRef.current = config;
 
@@ -4035,8 +4053,54 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         </div>
       )}
 
+      {/* 输出合并为列表：直接展示合并后的列表项 */}
+      {isMergeList && status === "completed" && mergeListEntries.length > 0 && (
+        <div className="px-3 pb-3 border-t border-border/50 pt-2">
+          <div className="flex items-center gap-1.5 mb-1.5">
+            <FileText className="w-3 h-3 text-emerald-500" />
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">合并结果</span>
+            <span className="text-[10px] text-muted-foreground">{mergeListEntries.length} 项</span>
+          </div>
+          <div className="space-y-1">
+            {mergeListEntries.map(({ label, value }: { label: string; value: any }, i: number) => {
+              const isPathLike = typeof value === "string" && /[\\/]/.test(value);
+              if (isPathLike) {
+                const raw = String(value).replace(/\\/g, "/");
+                const full = raw.split("/").pop() || String(value);
+                return (
+                  <button
+                    key={`${label}-${i}`}
+                    type="button"
+                    onClick={(e) => { e.stopPropagation(); client.post("/api/tasks/open-file", { file_path: String(value), task_id: previewTaskId }).catch(() => { }); }}
+                    className="flex w-full items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 text-left text-[10px] transition-colors hover:bg-emerald-500/15"
+                    title={String(value)}
+                  >
+                    <span className="flex-shrink-0 font-medium text-emerald-600 dark:text-emerald-400">{label}</span>
+                    <span className="min-w-0 flex-1 truncate text-muted-foreground">{full}</span>
+                    <ExternalLink className="w-3 h-3 flex-shrink-0 text-emerald-600" />
+                  </button>
+                );
+              }
+              const text = value === null || value === undefined
+                ? ""
+                : (typeof value === "string" ? value : JSON.stringify(value));
+              const display = text.length > 300 ? text.slice(0, 300) + "…" : text;
+              return (
+                <div
+                  key={`${label}-${i}`}
+                  className="flex gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-2 py-1 text-[10px]"
+                >
+                  <span className="flex-shrink-0 font-medium text-emerald-600 dark:text-emerald-400">{label}</span>
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-all text-muted-foreground" title={text}>{display || "(空)"}</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Output Display Panel - shows results/errors after execution */}
-      {status === "completed" && !isJsonGet && dedupedOutputEntries.length > 0 && (() => {
+      {status === "completed" && !isJsonGet && !isMergeList && dedupedOutputEntries.length > 0 && (() => {
         // Separate file-based outputs from text/JSON outputs
         const fileEntries: [string, string | number][] = [];
         const jsonEntries: [string, string][] = [];

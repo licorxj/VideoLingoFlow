@@ -335,7 +335,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "ai_video_gen",
     "name": "AI生视频",
     "category": "ai_gen",
-    "description": "根据提示词（文本或txt）、图片/图片列表、音频，调用视频生成接口生成视频；提示词前缀会拼接到连线提示词前",
+    "description": "根据提示词（文本或txt）、参考图1~4、参考视频1~2、参考音频1~2、音频，调用视频生成接口生成视频；提示词前缀会拼接到连线提示词前。生成类型决定参考素材的用法：首尾帧(flf2video)自动把 参考图1 作为首帧、参考图2 作为尾帧；单图(img2video)只取 参考图1；全模态(autovideo)按 参考图1→4、参考视频1→2、参考音频1→2 的顺序提交。「音频」口用于保留输入音频的原声（接听后声音自动设为 keep_original），参考音频请接 参考音频1/2。",
     "icon": "Film",
     "color": "#a855f7",
     "execution_domain": "thread",
@@ -347,14 +347,56 @@ export const FALLBACK_NODE_TYPES = [
         "required": false
       },
       {
-        "id": "images",
-        "label": "图片/图片列表",
+        "id": "image1",
+        "label": "参考图1",
         "type": "image",
         "required": false
       },
       {
+        "id": "image2",
+        "label": "参考图2",
+        "type": "image",
+        "required": false
+      },
+      {
+        "id": "image3",
+        "label": "参考图3",
+        "type": "image",
+        "required": false
+      },
+      {
+        "id": "image4",
+        "label": "参考图4",
+        "type": "image",
+        "required": false
+      },
+      {
+        "id": "video1",
+        "label": "参考视频1",
+        "type": "video",
+        "required": false
+      },
+      {
+        "id": "video2",
+        "label": "参考视频2",
+        "type": "video",
+        "required": false
+      },
+      {
+        "id": "audio1",
+        "label": "参考音频1",
+        "type": "audio",
+        "required": false
+      },
+      {
+        "id": "audio2",
+        "label": "参考音频2",
+        "type": "audio",
+        "required": false
+      },
+      {
         "id": "audio",
-        "label": "音频",
+        "label": "音频(保留原声)",
         "type": "audio",
         "required": false
       }
@@ -382,6 +424,7 @@ export const FALLBACK_NODE_TYPES = [
       "model": "",
       "mode": "",
       "resolution": "720P",
+      "ratio": "16:9",
       "duration": 5,
       "num_videos": 1,
       "sound": "on",
@@ -5403,7 +5446,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "video_preview",
     "name": "视频预览器",
     "category": "preview",
-    "description": "预览视频和字幕，支持标题设置、快捷调整字体大小和位置",
+    "description": "预览视频和字幕，支持标题设置、快捷调整字体大小和位置；输入端口会原样透传到同名输出端口，下游可直接引用预览的素材",
     "icon": "Play",
     "color": "#14b8a6",
     "execution_domain": "thread",
@@ -5436,7 +5479,33 @@ export const FALLBACK_NODE_TYPES = [
         "description": "接入列表（如多产物/合并列表节点）时，竖向依次展示多个视频"
       }
     ],
-    "outputs": [],
+    "outputs": [
+      {
+        "id": "video",
+        "label": "视频",
+        "type": "video"
+      },
+      {
+        "id": "subtitle",
+        "label": "译文字幕",
+        "type": "subtitle"
+      },
+      {
+        "id": "original",
+        "label": "原文字幕",
+        "type": "subtitle"
+      },
+      {
+        "id": "bilingual",
+        "label": "双语字幕",
+        "type": "subtitle"
+      },
+      {
+        "id": "list",
+        "label": "列表",
+        "type": "any"
+      }
+    ],
     "defaultConfig": {
       "title": "",
       "fontSize": 12,
@@ -5452,7 +5521,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "image_preview",
     "name": "图片预览器",
     "category": "preview",
-    "description": "预览图片结果",
+    "description": "预览图片结果；输入端口会原样透传到同名输出端口，下游可直接引用预览的素材",
     "icon": "Eye",
     "color": "#14b8a6",
     "execution_domain": "thread",
@@ -5470,7 +5539,18 @@ export const FALLBACK_NODE_TYPES = [
         "description": "接入列表（如多产物/合并列表节点）时，竖向依次展示多张图片"
       }
     ],
-    "outputs": [],
+    "outputs": [
+      {
+        "id": "image",
+        "label": "图片",
+        "type": "image"
+      },
+      {
+        "id": "list",
+        "label": "列表",
+        "type": "any"
+      }
+    ],
     "defaultConfig": {
       "fit": "contain"
     },
@@ -5505,7 +5585,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "image_compare",
     "name": "图片对比",
     "category": "preview",
-    "description": "叠加对比两张图片：图片2在上、图片1在下，鼠标横向拖动分割线去除上层蒙版，快速对比图形差异；默认上层蒙版只显示右半部，分割线居中",
+    "description": "叠加对比两张图片：图片2在上、图片1在下，鼠标横向拖动分割线去除上层蒙版，快速对比图形差异；默认上层蒙版只显示右半部，分割线居中。两张图片会原样透传到同名输出端口，下游可直接引用",
     "icon": "Columns2",
     "color": "#14b8a6",
     "execution_domain": "thread",
@@ -5525,8 +5605,13 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "image",
-        "label": "图片",
+        "id": "image1",
+        "label": "图片1（下层）",
+        "type": "any"
+      },
+      {
+        "id": "image2",
+        "label": "图片2（上层）",
         "type": "any"
       }
     ],
@@ -5564,7 +5649,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "audio_multitrack_preview",
     "name": "音频多轨预览",
     "category": "preview",
-    "description": "最多接入 6 路音频，卡片按实际接入情况分轨展示：每轨可独立播放/拖动进度/静音；顶部「同步播放」开启时六轨对齐到同一时间轴播放（静音轨仍同步走位，取消静音即与其他轨对齐），用于对比检查多轨音频",
+    "description": "最多接入 6 路音频，卡片按实际接入情况分轨展示：每轨可独立播放/拖动进度/静音；顶部「同步播放」开启时六轨对齐到同一时间轴播放（静音轨仍同步走位，取消静音即与其他轨对齐），用于对比检查多轨音频。各路音频会原样透传到同名输出端口，下游可直接引用",
     "icon": "AudioLines",
     "color": "#14b8a6",
     "execution_domain": "thread",
@@ -5606,7 +5691,38 @@ export const FALLBACK_NODE_TYPES = [
         "required": false
       }
     ],
-    "outputs": [],
+    "outputs": [
+      {
+        "id": "audio1",
+        "label": "音轨1",
+        "type": "audio"
+      },
+      {
+        "id": "audio2",
+        "label": "音轨2",
+        "type": "audio"
+      },
+      {
+        "id": "audio3",
+        "label": "音轨3",
+        "type": "audio"
+      },
+      {
+        "id": "audio4",
+        "label": "音轨4",
+        "type": "audio"
+      },
+      {
+        "id": "audio5",
+        "label": "音轨5",
+        "type": "audio"
+      },
+      {
+        "id": "audio6",
+        "label": "音轨6",
+        "type": "audio"
+      }
+    ],
     "defaultConfig": {
       "sync_play": true,
       "solo_mode": false
@@ -7679,7 +7795,9 @@ export const FALLBACK_NODE_TYPES = [
       "outputCount": 1,
       "key_exprs": [
         ""
-      ]
+      ],
+      "value_source": "auto",
+      "custom_json": ""
     },
     "configFields": [
       {
@@ -7689,6 +7807,33 @@ export const FALLBACK_NODE_TYPES = [
         "min": 1,
         "max": 8,
         "description": "通过节点卡片上的 + / - 控制（1~8），每个端口对应一个取值表达式"
+      },
+      {
+        "key": "value_source",
+        "label": "JSON来源",
+        "type": "select",
+        "options": [
+          {
+            "value": "auto",
+            "label": "自动（优先连线，回退自定义）"
+          },
+          {
+            "value": "input",
+            "label": "仅连线输入"
+          },
+          {
+            "value": "custom",
+            "label": "自定义输入"
+          }
+        ],
+        "description": "auto：连线接入优先，未接线时回退到下方自定义JSON；input：必须连线；custom：直接使用自定义JSON（无需连线）"
+      },
+      {
+        "key": "custom_json",
+        "label": "自定义JSON",
+        "type": "textarea",
+        "placeholder": "粘贴 JSON 文本，或填写 JSON 文件路径（如 cache/xxx.json）",
+        "description": "当「JSON来源」为 custom，或 auto 且未连线时用作取值对象"
       }
     ],
     "isBuiltIn": true
@@ -14677,7 +14822,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "seedream_img2img",
     "name": "Seedream图生图",
     "category": "ai_gen",
-    "description": "调用 Seedream 图生图（img2img）：以一张参考图为基础按提示词重绘生成单张图片。",
+    "description": "调用 Seedream 图生图（img2img）：以参考图为基础按提示词重绘生成图片。提供 image1~image4 共 4 个独立参考图输入口，后端按口序收集（空口跳过、保持顺序）并按实际张数自动决定提交形态：只接 1 张时以单图模式提交，接 2 张及以上时按 参考图1→4 的顺序组装为列表提交（与多图融合等价）。",
     "icon": "Image",
     "color": "#f472b6",
     "execution_domain": "process",
@@ -14688,8 +14833,23 @@ export const FALLBACK_NODE_TYPES = [
         "type": "text"
       },
       {
-        "id": "image",
-        "label": "参考图",
+        "id": "image1",
+        "label": "参考图1",
+        "type": "image"
+      },
+      {
+        "id": "image2",
+        "label": "参考图2",
+        "type": "image"
+      },
+      {
+        "id": "image3",
+        "label": "参考图3",
+        "type": "image"
+      },
+      {
+        "id": "image4",
+        "label": "参考图4",
         "type": "image"
       }
     ],
@@ -14816,7 +14976,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "seedream_fusion",
     "name": "Seedream多图融合",
     "category": "ai_gen",
-    "description": "调用 Seedream 多图融合（fusion）：融合多张参考图生成单张图片。支持 image1~image5 共 5 个参考图输入口，按实际连接组装成输入列表。",
+    "description": "调用 Seedream 多图融合（fusion）：融合多张参考图生成单张图片。提供 image1~image5 共 5 个独立参考图输入口，后端按口序收集（空口跳过、保持顺序）：只接 1 张时自动以单图模式提交，接 2 张及以上时按 参考图1→5 的顺序组装为列表提交。",
     "icon": "Image",
     "color": "#f472b6",
     "execution_domain": "process",
@@ -15446,7 +15606,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "seedance_img2video",
     "name": "即梦-图生视频",
     "category": "ai_gen",
-    "description": "调用 Seedance 图生视频-首帧（img2video）：以 1 张参考图为首帧，按提示词生成视频。",
+    "description": "调用 Seedance 图生视频-首帧（img2video）：以参考图按提示词生成视频。提供 image1~image4 共 4 个独立参考图输入口，后端按口序收集（空口跳过、保持顺序）：参考图1 作为首帧（first_frame），参考图2~4 自动作为参考图（reference_image）一并提交；只接 1 张时即为标准单首帧图生视频。注意：本节点不产生/不支持尾帧，需要精确指定尾帧请使用「即梦-图生视频(首尾帧)」节点。",
     "icon": "Film",
     "color": "#a855f7",
     "execution_domain": "process",
@@ -15457,8 +15617,23 @@ export const FALLBACK_NODE_TYPES = [
         "type": "text"
       },
       {
-        "id": "image",
-        "label": "参考图",
+        "id": "image1",
+        "label": "参考图1",
+        "type": "image"
+      },
+      {
+        "id": "image2",
+        "label": "参考图2",
+        "type": "image"
+      },
+      {
+        "id": "image3",
+        "label": "参考图3",
+        "type": "image"
+      },
+      {
+        "id": "image4",
+        "label": "参考图4",
         "type": "image"
       }
     ],
@@ -15510,7 +15685,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "seedance_flf2video",
     "name": "即梦-图生视频(首尾帧)",
     "category": "ai_gen",
-    "description": "调用 Seedance 图生视频-首尾帧（flf2video）：以 2 张参考图（首帧/尾帧）生成视频。",
+    "description": "调用 Seedance 图生视频-首尾帧（flf2video）：以 2 张参考图（首帧/尾帧）生成视频。首尾帧由本节点专用——参考图1 → first_frame、参考图2 → last_frame，角色固定不可互换；多余的图会被忽略。需要额外参考图时请改用「即梦-全模态参考生视频」节点。",
     "icon": "Film",
     "color": "#a855f7",
     "execution_domain": "process",
@@ -15579,7 +15754,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "seedance_autovideo",
     "name": "即梦-全模态参考生视频",
     "category": "ai_gen",
-    "description": "调用 Seedance 全模态参考生视频（autovideo）：以参考图/视频/音频任意组合生成视频。",
+    "description": "调用 Seedance 全模态参考生视频（autovideo）：以参考图/视频/音频任意组合生成视频。参考图拆为 参考图1~5、参考视频拆为 参考视频1~2、参考音频拆为 参考音频1~2 共 9 个独立输入口，后端按口序收集（空口跳过、保持顺序）后提交：只接 1 张参考图时以单图模式提交，多张按 参考图1→5 顺序组装为列表。",
     "icon": "Film",
     "color": "#a855f7",
     "execution_domain": "process",
@@ -15590,18 +15765,48 @@ export const FALLBACK_NODE_TYPES = [
         "type": "text"
       },
       {
-        "id": "image",
-        "label": "参考图列表",
-        "type": "list"
+        "id": "image1",
+        "label": "参考图1",
+        "type": "image"
       },
       {
-        "id": "video",
-        "label": "参考视频",
+        "id": "image2",
+        "label": "参考图2",
+        "type": "image"
+      },
+      {
+        "id": "image3",
+        "label": "参考图3",
+        "type": "image"
+      },
+      {
+        "id": "image4",
+        "label": "参考图4",
+        "type": "image"
+      },
+      {
+        "id": "image5",
+        "label": "参考图5",
+        "type": "image"
+      },
+      {
+        "id": "video1",
+        "label": "参考视频1",
         "type": "video"
       },
       {
-        "id": "audio",
-        "label": "参考音频",
+        "id": "video2",
+        "label": "参考视频2",
+        "type": "video"
+      },
+      {
+        "id": "audio1",
+        "label": "参考音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio2",
+        "label": "参考音频2",
         "type": "audio"
       }
     ],
@@ -19293,6 +19498,131 @@ export const FALLBACK_NODE_TYPES = [
         "type": "textarea",
         "colSpan": "full",
         "placeholder": "由「提示词组装」写入：风格段 + 填槽后的镜头要求；留空则不附加风格约束"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "audio_split",
+    "name": "音频切割",
+    "category": "audio",
+    "description": "将音频按数量或时长切割为多段，支持静音点切割",
+    "icon": "Scissors",
+    "color": "#0ea5e9",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "audio",
+        "label": "音频",
+        "type": "audio",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "切割片段",
+        "type": "audio"
+      },
+      {
+        "id": "text",
+        "label": "切割信息",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "split_mode": "count",
+      "segment_count": 2,
+      "segment_duration": 60,
+      "use_silence": false,
+      "output_index": 1
+    },
+    "configFields": [
+      {
+        "key": "split_mode",
+        "label": "切割方式",
+        "type": "select",
+        "options": [
+          {
+            "value": "count",
+            "label": "按片段数量"
+          },
+          {
+            "value": "duration",
+            "label": "按固定时长"
+          }
+        ]
+      },
+      {
+        "key": "segment_count",
+        "label": "片段数量",
+        "type": "text",
+        "dependsOn": "split_mode",
+        "dependsValue": "count",
+        "colSpan": "half"
+      },
+      {
+        "key": "segment_duration",
+        "label": "每段时长(秒)",
+        "type": "text",
+        "dependsOn": "split_mode",
+        "dependsValue": "duration",
+        "colSpan": "half"
+      },
+      {
+        "key": "use_silence",
+        "label": "寻找静音点切割",
+        "type": "checkbox",
+        "colSpan": "half"
+      },
+      {
+        "key": "output_index",
+        "label": "输出片段序号",
+        "type": "text",
+        "placeholder": "从1开始",
+        "colSpan": "half"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "get_video_last_frame",
+    "name": "获取视频尾帧",
+    "category": "video",
+    "description": "获取视频的尾帧图片（默认取最末帧，可设置从尾部偏移秒数跳过片尾）",
+    "icon": "Film",
+    "color": "#0ea5e9",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "video",
+        "label": "视频",
+        "type": "video",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "image",
+        "label": "尾帧图片",
+        "type": "image"
+      },
+      {
+        "id": "text",
+        "label": "尾帧信息",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "frame_offset": 0
+    },
+    "configFields": [
+      {
+        "key": "frame_offset",
+        "label": "从尾部偏移(秒)",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "0 = 取最末帧"
       }
     ],
     "isBuiltIn": true

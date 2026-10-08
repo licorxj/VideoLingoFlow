@@ -8,6 +8,8 @@ import client from "@/api/client";
 import { toast } from "@/pages/llm-router/toast";
 import { PageBackground } from "@/components/shared/PageBackground";
 import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
+import { MaterialPickerDialog, type PickerKind } from "@/components/materials/MaterialPickerDialog";
+import { materialPreviewUrl } from "@/api/materials";
 
 const CUTIA_EDITOR_URL = "/cutia/zh/editor";
 const TASK_PROJECT_BRIDGE_VERSION = 1;
@@ -29,6 +31,8 @@ export default function EditingWorkbench() {
   const [conflictRevision, setConflictRevision] = useState<number | null>(null);
   const [updatingCutia, setUpdatingCutia] = useState(false);
   const [pendingTasks, setPendingTasks] = useState<{ id: string; task_name: string; pushed_at: string | null }[]>([]);
+  // Cutia 请求从主项目素材库注入素材
+  const [materialRequest, setMaterialRequest] = useState<{ requestId: string; kind: PickerKind } | null>(null);
   const frameRef = useRef<HTMLIFrameElement>(null);
 
   const keepAliveActive = useKeepAliveActive();
@@ -51,7 +55,15 @@ export default function EditingWorkbench() {
   useEffect(() => {
     const handleMessage = (event: MessageEvent<unknown>) => {
       if (event.origin !== window.location.origin || !event.data || typeof event.data !== "object") return;
-      const message = event.data as { type?: string; version?: number; taskId?: string; message?: string; revision?: number; asset?: { name?: string } };
+      const message = event.data as { type?: string; version?: number; taskId?: string; message?: string; revision?: number; asset?: { name?: string }; requestId?: string; kind?: string };
+      // Cutia 素材库选择器请求（在 version 校验之前处理，避免协议版本差异影响新能力）
+      if (message.type === "videolingo:request-material-picker") {
+        const requestId = message.requestId;
+        const kind: PickerKind = message.kind === "video" ? "video" : "image";
+        if (!requestId) return;
+        setMaterialRequest({ requestId, kind });
+        return;
+      }
       if (message.type === "videolingo:editor-ready") {
         setEditorReady(true);
         setEditorReadyVersion((version) => version + 1);
@@ -158,6 +170,33 @@ export default function EditingWorkbench() {
     }
   };
 
+  /** 把素材库选择结果回传给 Cutia iframe。 */
+  const replyMaterialPicker = (type: string, materials?: unknown[]) => {
+    const request = materialRequest;
+    if (!request || !frameRef.current?.contentWindow) return;
+    frameRef.current.contentWindow.postMessage(
+      { type, version: TASK_PROJECT_BRIDGE_VERSION, taskId, requestId: request.requestId, materials },
+      window.location.origin,
+    );
+    setMaterialRequest(null);
+  };
+
+  const onMaterialPicked = (record: any) => {
+    if (!materialRequest) return;
+    const path: string = record?.path || "";
+    replyMaterialPicker("videolingo:materials-selected", [
+      {
+        id: String(record?.id ?? ""),
+        name: path.split("/").pop() || record?.name || "素材",
+        kind: materialRequest.kind,
+        url: materialPreviewUrl(path, record?.abs_path),
+        duration: record?.duration_seconds ?? undefined,
+        width: record?.width ?? undefined,
+        height: record?.height ?? undefined,
+      },
+    ]);
+  };
+
   const requestSaveProject = () => {
     if (!taskId) {
       toast({ title: "空白项目", description: "空白项目仅保存在本地 Cutia 中，无需同步到任务项目。", variant: "default", duration: 3000 });
@@ -182,5 +221,11 @@ export default function EditingWorkbench() {
     <div className="flex h-auto min-h-11 shrink-0 flex-wrap items-center gap-2 border-b px-3 py-1"><div className="flex min-w-0 items-center gap-2"><Clapperboard className="h-4 w-4 text-primary" /><span className="truncate text-sm font-medium">剪辑工作台 · {taskId ? `任务 ${taskId}` : "空白项目"}</span></div><span className="hidden text-xs text-muted-foreground md:block">{projectSaveMessage || importStatus || (editorReady ? "原始 Cutia 编辑器已就绪" : "正在加载原始 Cutia 编辑器…")}</span>{taskId && projectSaveState === "saving" && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}{taskId && projectSaveState === "saved" && <Save className="h-3.5 w-3.5 text-success" />}{projectSaveState === "conflict" && <div className="flex items-center gap-1"><Button variant="outline" size="sm" onClick={reloadAfterConflict}><RefreshCw className="mr-1.5 h-3.5 w-3.5" />重新加载</Button><Button variant="outline" size="sm" onClick={preserveLocalProject}>保留本地修改</Button></div>}<div className="ml-auto flex items-center gap-1"><Button variant="ghost" size="sm" disabled={!taskId || !editorReady} onClick={requestSaveProject}><Save className="mr-1.5 h-4 w-4" />保存</Button><Button variant="ghost" size="sm" onClick={() => navigate("/editing")}><Home className="mr-1.5 h-4 w-4" />返回首页</Button><Button variant="ghost" size="sm" onClick={() => setImportOpen(true)}><FolderInput className="mr-1.5 h-4 w-4" />导入任务</Button><Button variant="ghost" size="sm" disabled={updatingCutia} onClick={updateCutia}>{updatingCutia ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />}更新 Cutia</Button><Button variant="ghost" size="sm" onClick={() => window.open("https://github.com/msgbyte/cutia", "_blank", "noopener,noreferrer")}><ExternalLink className="mr-1.5 h-4 w-4" />访问 Cutia 开源项目</Button><Button variant="ghost" size="icon" title="重新加载项目" disabled={!editorReady || !snapshot} onClick={loadTaskProject}><RefreshCw className="h-4 w-4" /></Button><Button variant="ghost" size="icon" title="在独立窗口打开 Cutia" onClick={() => window.open(source, "_blank", "noopener,noreferrer")}><Maximize2 className="h-4 w-4" /></Button></div></div>
     <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border shadow-sm">{!editorReady && <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-background/70"><div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" />加载 Cutia 编辑器</div></div>}<iframe ref={frameRef} key={source} src={source} title="Cutia video editor" className="h-full w-full border-0" allow="clipboard-read; clipboard-write; fullscreen" onLoad={() => setEditorReady(true)} /></div>
     <TaskImportDialog open={importOpen} onOpenChange={setImportOpen} onImported={onImported} />
+    <MaterialPickerDialog
+      kind={materialRequest?.kind ?? "image"}
+      open={Boolean(materialRequest)}
+      onClose={() => replyMaterialPicker("videolingo:material-picker-cancelled")}
+      onPicked={onMaterialPicked}
+    />
   </PageBackground>;
 }

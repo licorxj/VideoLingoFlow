@@ -9,6 +9,9 @@ interface VGParams {
   max_ref_videos?: number;
   supports_audio?: boolean;
   default_audio?: string;
+  supports_ratio?: boolean;
+  ratios?: string[];
+  ratio_default?: string;
 }
 
 interface Option {
@@ -31,6 +34,12 @@ const fieldCls =
   "w-full rounded-md border border-border bg-background px-2 py-1 text-xs text-foreground focus:outline-none focus:ring-1 focus:ring-primary";
 const labelCls = "block text-[11px] text-muted-foreground mb-0.5";
 const checkboxCls = "flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer";
+
+// 视频比例可选项：后端未返回 ratios 时用此列表兜底（与「即梦」节点保持一致）
+const DEFAULT_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"];
+
+// 时长下拉中的「手动输入」哨兵值（不可能与真实秒数冲突）
+const MANUAL_DURATION = "__manual__";
 
 export function VideoGenNode({ config, onChange }: Props) {
   const [interfaces, setInterfaces] = useState<Option[]>([]);
@@ -104,11 +113,23 @@ export function VideoGenNode({ config, onChange }: Props) {
     if (params.resolutions?.length && !params.resolutions.includes(config.resolution)) {
       onChange("resolution", params.resolutions[0]);
     }
-    if (params.durations?.length && !params.durations.map(String).includes(String(config.duration))) {
+    // 时长：非手动模式下，当前值不在模型可选时长内才对齐到首个合法值；
+    // 手动模式（duration_manual）保留用户输入，不强制改写
+    if (params.durations?.length && !config.duration_manual
+        && !params.durations.map(String).includes(String(config.duration))) {
       onChange("duration", params.durations[0]);
     }
     if (!config.sound && params.default_audio) {
       onChange("sound", params.default_audio);
+    }
+    // 视频比例：未配置时按模型默认值落盘，保证「界面显示」与「实际执行」一致
+    if (!config.ratio && params.supports_ratio !== false) {
+      const opts = params.ratios?.length ? params.ratios : DEFAULT_RATIOS;
+      const def =
+        params.ratio_default && opts.includes(params.ratio_default)
+          ? params.ratio_default
+          : opts[0] || "16:9";
+      onChange("ratio", def);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params]);
@@ -123,6 +144,22 @@ export function VideoGenNode({ config, onChange }: Props) {
   const durations = (params?.durations || [5]).map(String);
   const modes = params?.modes || [];
   const supportsAudio = params?.supports_audio ?? false;
+  // 时长：下拉首选「手动输入」，选中后改为直接输入秒数（可超出模型预设区间）
+  const manualDuration = config.duration_manual === true;
+  const durationValue = String(config.duration ?? "");
+  // 后端未声明 supports_ratio 时按支持处理（兼容旧后端）；ratios 为空则用通用比例列表
+  const supportsRatio = params?.supports_ratio !== false;
+  const ratioOptions = params?.ratios?.length ? params.ratios : DEFAULT_RATIOS;
+  const ratioDefault =
+    params?.ratio_default && ratioOptions.includes(params.ratio_default)
+      ? params.ratio_default
+      : ratioOptions[0] || "16:9";
+  const ratio = config.ratio || ratioDefault;
+  // 图生视频场景下画幅通常由首帧图/模型策略决定（Seedance 强制 adaptive）
+  const ratioHint =
+    config.mode === "img2video" || config.mode === "flf2video"
+      ? "图生视频的画幅通常由首帧图决定，部分模型固定为自适应，此项可能不生效。"
+      : "";
 
   return (
     <div className="space-y-2">
@@ -218,15 +255,82 @@ export function VideoGenNode({ config, onChange }: Props) {
               </select>
             </div>
             <div>
-              <label className={labelCls}>时长(秒)</label>
-              <select className={fieldCls} value={String(config.duration || "")} onChange={(e) => onChange("duration", Number(e.target.value))}>
-                {durations.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
+              <label className={labelCls}>
+                时长(秒)
+                {manualDuration && <span className="ml-1 text-primary">· 手动</span>}
+              </label>
+              {manualDuration ? (
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    className={fieldCls}
+                    title="手动输入视频时长（秒）"
+                    value={durationValue}
+                    onChange={(e) => {
+                      const n = Math.max(1, Math.floor(Number(e.target.value) || 1));
+                      onChange("duration", n);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    title="改回从预设时长中选择"
+                    className="shrink-0 rounded-md border border-border bg-background px-1.5 py-1 text-[11px] text-muted-foreground hover:border-primary/50 hover:text-foreground"
+                    onClick={() => {
+                      onChange("duration_manual", false);
+                      if (!durations.includes(durationValue)) {
+                        onChange("duration", Number(durations[0]) || 5);
+                      }
+                    }}
+                  >
+                    ▾
+                  </button>
+                </div>
+              ) : (
+                <select
+                  className={fieldCls}
+                  value={durations.includes(durationValue) ? durationValue : MANUAL_DURATION}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    if (v === MANUAL_DURATION) {
+                      // 切到手动输入：沿用当前时长作为起点（不合法则取预设首项）
+                      onChange("duration_manual", true);
+                      if (!durations.includes(durationValue)) {
+                        onChange("duration", Number(durations[0]) || 5);
+                      }
+                    } else {
+                      onChange("duration_manual", false);
+                      onChange("duration", Number(v));
+                    }
+                  }}
+                >
+                  <option value={MANUAL_DURATION}>手动输入</option>
+                  {durations.map((d) => (
+                    <option key={d} value={d}>
+                      {d}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
+            {supportsRatio && (
+              <div>
+                <label className={labelCls}>视频比例</label>
+                <select
+                  className={fieldCls}
+                  value={ratio}
+                  title="视频宽高比，如 16:9 横屏 / 9:16 竖屏"
+                  onChange={(e) => onChange("ratio", e.target.value)}
+                >
+                  {ratioOptions.map((r) => (
+                    <option key={r} value={r}>
+                      {r}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div>
               <label className={labelCls}>视频数量</label>
               <input
@@ -254,6 +358,9 @@ export function VideoGenNode({ config, onChange }: Props) {
 
           {!supportsAudio && (
             <p className="text-[10px] text-muted-foreground/70">该接口/模型不支持声音。</p>
+          )}
+          {supportsRatio && ratioHint && (
+            <p className="text-[10px] text-muted-foreground/70">{ratioHint}</p>
           )}
 
           {/* 负向提示词 */}

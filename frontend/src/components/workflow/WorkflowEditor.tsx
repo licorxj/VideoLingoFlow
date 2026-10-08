@@ -4,6 +4,7 @@ import { ReactFlow, Controls, ControlButton, Background, BackgroundVariant, Bezi
 import type { Connection, ReactFlowInstance, OnConnectStartParams, FinalConnectionState } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import {
   type GroupOutputMapping, type WorkflowNode, type WorkflowEdge, type Workflow, type NodeTypeDef,
@@ -41,6 +42,39 @@ const edgeTypes = { bezier: BezierEdge };
 let nodeIdCounter = 0;
 const getNextId = () => "node_" + (++nodeIdCounter) + "_" + Date.now();
 
+// 为粘贴生成唯一 id，避免与画布现有节点/边冲突
+const genPasteId = () => "n_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+// 复制组合/循环节点时，重映射其内部节点与内部连线 id，避免执行时冲突
+function remapContainerInnerIds(node: any) {
+  const data = node?.data;
+  const metaKey = data?.groupMeta ? "groupMeta" : data?.loopMeta ? "loopMeta" : null;
+  if (!metaKey || !data[metaKey]?.internalWorkflow) return node;
+  const inner = data[metaKey].internalWorkflow;
+  const innerIdMap: Record<string, string> = {};
+  const newInnerNodes = (inner.nodes || []).map((n: any) => {
+    const nid = genPasteId();
+    innerIdMap[n.id] = nid;
+    return { ...n, id: nid };
+  });
+  const newInnerEdges = (inner.edges || []).map((e: any) => ({
+    ...e,
+    id: genPasteId(),
+    source: innerIdMap[e.source] ?? e.source,
+    target: innerIdMap[e.target] ?? e.target,
+  }));
+  return {
+    ...node,
+    data: {
+      ...data,
+      [metaKey]: {
+        ...data[metaKey],
+        internalWorkflow: { ...inner, nodes: newInnerNodes, edges: newInnerEdges },
+      },
+    },
+  };
+}
+
 const EDGE_TYPES = [
   { value: "smoothstep", label: "圆角直角线", description: "转折处使用圆角连接", icon: CornerDownRight },
   { value: "bezier", label: "贝塞尔曲线", description: "平滑弯曲的连接线", icon: Spline },
@@ -48,6 +82,17 @@ const EDGE_TYPES = [
 ] as const;
 
 type EdgeType = typeof EDGE_TYPES[number]["value"];
+
+/** 自动保存：默认开启，每 2 分钟保存一次有改动的工作流。偏好写入 localStorage。 */
+const AUTO_SAVE_KEY = "vl.workflow.autosave";
+const AUTO_SAVE_INTERVALS = [
+  { value: 1, label: "1 分钟" },
+  { value: 2, label: "2 分钟" },
+  { value: 5, label: "5 分钟" },
+  { value: 10, label: "10 分钟" },
+] as const;
+type AutoSaveState = { state: "idle" | "saving" | "saved" | "error"; at: string; message?: string };
+type SaveOptions = { silent?: boolean };
 
 /**
  * 工作流模糊搜索匹配：查询词按空白拆分，每个词命中名称或描述之一即算匹配；
@@ -368,6 +413,78 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   // 右键菜单点选节点后的“粘附光标”放置模式：节点跟随鼠标，再次点击落入画布
   const [placingNode, setPlacingNode] = useState<NodeTypeDef | null>(null);
   const [placingPos, setPlacingPos] = useState({ x: 0, y: 0 });
+
+  // Ctrl 拖动复制模式：按住 Ctrl 拖动节点，落点生成一个副本（含相连连线）
+  const CTRL_CLONE_ID = "__ctrl_drag_clone__";
+  const dragCloneRef = useRef<{ srcId: string; startPos: { x: number; y: number } } | null>(null);
+
+  const onNodeDragStart = useCallback((event: any, node: any) => {
+    const ctrl = event?.ctrlKey || event?.metaKey;
+    if (!ctrl) return;
+    dragCloneRef.current = { srcId: node.id, startPos: { ...node.position } };
+    const cloned = JSON.parse(JSON.stringify(node));
+    setNodes((nds) => [
+      ...nds,
+      {
+        ...cloned,
+        id: CTRL_CLONE_ID,
+        position: { x: node.position.x + 30, y: node.position.y + 30 },
+        selected: false,
+        dragging: true,
+      },
+    ]);
+  }, [setNodes]);
+
+  const onNodeDrag = useCallback((_event: any, node: any) => {
+    const info = dragCloneRef.current;
+    if (!info || info.srcId !== node.id) return;
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === CTRL_CLONE_ID
+          ? { ...n, position: { x: node.position.x + 30, y: node.position.y + 30 } }
+          : n
+      )
+    );
+  }, [setNodes]);
+
+  const onNodeDragStop = useCallback((_event: any, node: any) => {
+    const info = dragCloneRef.current;
+    if (!info || info.srcId !== node.id) return;
+    dragCloneRef.current = null;
+    const srcId = info.srcId;
+    const newId = genPasteId();
+    const dropPos = { x: node.position.x, y: node.position.y };
+    setNodes((nds) => {
+      const src = nds.find((n) => n.id === srcId);
+      const remapped = src ? remapContainerInnerIds(src) : null;
+      const newNode = remapped
+        ? {
+            ...JSON.parse(JSON.stringify(remapped)),
+            id: newId,
+            position: { x: dropPos.x + 30, y: dropPos.y + 30 },
+            selected: true,
+            dragging: false,
+          }
+        : null;
+      const cleaned = nds
+        .filter((n) => n.id !== CTRL_CLONE_ID)
+        .map((n) => (n.id === srcId ? { ...n, position: { ...info.startPos }, selected: false } : n));
+      return newNode ? [...cleaned, newNode] : cleaned;
+    });
+    setEdges((eds) => {
+      const newEdges = eds
+        .filter((e) => e.source === srcId || e.target === srcId)
+        .map((e) => ({
+          ...e,
+          id: genPasteId(),
+          source: e.source === srcId ? newId : e.source,
+          target: e.target === srcId ? newId : e.target,
+          selected: false,
+        }));
+      return [...eds, ...newEdges];
+    });
+  }, [setNodes, setEdges]);
+
   const [savedWorkflows, setSavedWorkflows] = useState<SavedWorkflow[]>([]);
   const [loadingList, setLoadingList] = useState(false);
   const [execModeModalOpen, setExecModeModalOpen] = useState(false);
@@ -387,6 +504,17 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const [groupSaveLoading, setGroupSaveLoading] = useState(false);
   const [canvasSettingsOpen, setCanvasSettingsOpen] = useState(false);
   const [edgeType, setEdgeType] = useState<EdgeType>("bezier");
+
+  // 自动保存：间隔到期且画布有改动时静默保存一次（设置项见「画布设置」弹窗）
+  const [autoSaveOn, setAutoSaveOn] = useState<boolean>(() => localStorage.getItem(`${AUTO_SAVE_KEY}.on`) !== "0");
+  const [autoSaveMinutes, setAutoSaveMinutes] = useState<number>(() => {
+    const raw = Number(localStorage.getItem(`${AUTO_SAVE_KEY}.minutes`));
+    return AUTO_SAVE_INTERVALS.some((item) => item.value === raw) ? raw : 2;
+  });
+  const [autoSaveInfo, setAutoSaveInfo] = useState<AutoSaveState>({ state: "idle", at: "" });
+  const autoSaveDirtyRef = useRef(false);
+  // 加载/新建工作流后的首次 nodes/edges 变化不算「改动」，跳过脏标记
+  const skipDirtyRef = useRef(true);
 
   // 工作流分组（独立于 workflow 定义的分组索引表）
   const [groups, setGroups] = useState<{ id: string; name: string; order: number }[]>([]);
@@ -672,6 +800,9 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         // 否则工具栏会停留在上一个工作流的「运行中」状态。
         detachTaskRuntime();
         saveCurrentId(wf.id);
+        // 载入的工作流不算「未保存改动」：跳过后续首次标脏
+        skipDirtyRef.current = true;
+        autoSaveDirtyRef.current = false;
         setNodes(wf.nodes || []);
         setEdges(wf.edges || []);
         // 载入工作流后自动适配视角：缩放显示全部并居中
@@ -938,23 +1069,46 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     setEdges((eds) => eds.filter((e) => !e.selected));
   }, [setNodes, setEdges]);
 
-  // 剪贴板：复制/粘贴节点
-  const [clipboard, setClipboard] = useState<any[]>([]);
+  // 剪贴板：复制/粘贴节点（含连线、组合/循环内部节点）
+  const [clipboard, setClipboard] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
   const copySelected = useCallback(() => {
-    const selected = nodes.filter((n) => n.selected);
-    if (selected.length === 0) return;
-    setClipboard(JSON.parse(JSON.stringify(selected)));
-  }, [nodes]);
-  const pasteClipboard = useCallback(() => {
-    if (clipboard.length === 0) return;
-    const idMap: Record<string, string> = {};
-    const newNodes = clipboard.map((n) => {
-      const newId = "n_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
-      idMap[n.id] = newId;
-      return { ...n, id: newId, position: { x: n.position.x + 40, y: n.position.y + 40 }, selected: false };
+    const selectedNodes = nodes.filter((n) => n.selected);
+    if (selectedNodes.length === 0) return;
+    const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
+    // 复制选中边，以及两端都在选中节点集合内的内部连线
+    const relatedEdges = edges.filter(
+      (e) => e.selected || (selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target))
+    );
+    setClipboard({
+      nodes: JSON.parse(JSON.stringify(selectedNodes)),
+      edges: JSON.parse(JSON.stringify(relatedEdges)),
     });
+  }, [nodes, edges]);
+  const pasteClipboard = useCallback(() => {
+    if (clipboard.nodes.length === 0) return;
+    const idMap: Record<string, string> = {};
+    const newNodes = clipboard.nodes.map((n: any) => {
+      const newId = genPasteId();
+      idMap[n.id] = newId;
+      // 组合/循环节点：内部节点与内部连线重新赋值 id，避免执行冲突
+      const remapped = remapContainerInnerIds(n);
+      return {
+        ...remapped,
+        id: newId,
+        position: { x: n.position.x + 200, y: n.position.y + 200 },
+        selected: false,
+      };
+    });
+    const newEdges = clipboard.edges.map((e: any) => ({
+      ...e,
+      id: genPasteId(),
+      source: idMap[e.source] ?? e.source,
+      target: idMap[e.target] ?? e.target,
+      selected: false,
+    }));
     setNodes((nds) => [...nds, ...newNodes]);
-  }, [clipboard, setNodes]);
+    setEdges((eds) => [...eds, ...newEdges]);
+  }, [clipboard, setNodes, setEdges]);
   const selectAll = useCallback(() => {
     setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
     setEdges((eds) => eds.map((e) => ({ ...e, selected: true })));
@@ -1123,8 +1277,12 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     };
   };
 
-  const handleSave = async () => {
-    setSaving(true);
+  /** 保存当前画布。silent=true 用于自动保存：不弹冲突确认、不刷新工作流列表，返回是否保存成功。 */
+  const handleSave = async (options?: SaveOptions): Promise<boolean> => {
+    const silent = !!options?.silent;
+    // 任务调试模式：自动保存直接跳过，避免静默改写运行中任务的编排
+    if (silent && taskMode && taskModeId) return false;
+    if (!silent) setSaving(true);
     try {
       if (taskMode && taskModeId) {
         const wf = getWorkflowJSON();
@@ -1138,6 +1296,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           } catch (error) {
             const conflict = error as RevisionConflictError;
             if (conflict.code !== "revision_conflict") throw error;
+            // 自动保存不打断编辑：交由用户手动保存时处理冲突
+            if (silent) return false;
             if (confirm("工作流已被其他成员修改。选择“确定”将刷新为服务器版本；选择“取消”可继续选择覆盖。")) {
               const definition = conflict.currentDefinition as Workflow | null;
               if (definition) {
@@ -1145,9 +1305,9 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                 setEdges(definition.edges || []);
               }
               workflowRevisionRef.current = conflict.actualRevision;
-              return;
+              return false;
             }
-            if (!confirm("确认覆盖其他成员的修改吗？")) return;
+            if (!confirm("确认覆盖其他成员的修改吗？")) return false;
             const saved = await saveControlWorkflow(currentProjectId, currentWfId, wf as unknown as Record<string, unknown>, conflict.actualRevision, true);
             workflowRevisionRef.current = saved.revision;
           }
@@ -1162,12 +1322,63 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             saveCurrentId(res.data.id);
           }
         }
-        fetchWorkflows();
+        if (!silent) fetchWorkflows();
       }
+      return true;
     } catch (err) {
       console.error("Save failed:", err);
+      return false;
+    } finally {
+      if (!silent) setSaving(false);
     }
-    setSaving(false);
+  };
+
+  // 自动保存：把最新的 handleSave 暴露给定时器，避免闭包拿到过期的 nodes/edges
+  const handleSaveRef = useRef<(options?: SaveOptions) => Promise<boolean>>(handleSave);
+  useEffect(() => { handleSaveRef.current = handleSave; });
+
+  // 画布有改动 → 标脏（加载/新建后的首次变化跳过）
+  useEffect(() => {
+    if (skipDirtyRef.current) {
+      skipDirtyRef.current = false;
+      return;
+    }
+    autoSaveDirtyRef.current = true;
+  }, [nodes, edges, workflowName, workflowDesc]);
+
+  // 手动保存成功后视为已同步，避免紧接着的自动保存重复提交
+  useEffect(() => {
+    if (!saving) autoSaveDirtyRef.current = false;
+  }, [saving]);
+
+  useEffect(() => {
+    if (!autoSaveOn) return;
+    const timer = window.setInterval(async () => {
+      if (!autoSaveDirtyRef.current) return;
+      // 未保存过的新画布 / 已删除的工作流不自动创建，需用户手动保存
+      if (!currentWfId || currentWfId === "new") return;
+      if (taskMode && taskModeId) return;
+      setAutoSaveInfo((prev) => ({ ...prev, state: "saving" }));
+      const ok = await handleSaveRef.current({ silent: true });
+      if (ok) {
+        autoSaveDirtyRef.current = false;
+        setAutoSaveInfo({ state: "saved", at: new Date().toLocaleTimeString("zh-CN", { hour12: false }) });
+      } else {
+        setAutoSaveInfo({ state: "error", at: "", message: "自动保存失败（可能与协作者改动冲突），请手动保存" });
+      }
+    }, Math.max(1, autoSaveMinutes) * 60 * 1000);
+    return () => window.clearInterval(timer);
+  }, [autoSaveOn, autoSaveMinutes, currentWfId, taskMode, taskModeId]);
+
+  const handleToggleAutoSave = (next: boolean) => {
+    setAutoSaveOn(next);
+    localStorage.setItem(`${AUTO_SAVE_KEY}.on`, next ? "1" : "0");
+    setAutoSaveInfo({ state: "idle", at: "" });
+  };
+
+  const handleSetAutoSaveMinutes = (minutes: number) => {
+    setAutoSaveMinutes(minutes);
+    localStorage.setItem(`${AUTO_SAVE_KEY}.minutes`, String(minutes));
   };
 
   // 全局快捷键
@@ -2018,7 +2229,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             <div className="flex items-center gap-1 ml-auto flex-shrink-0">
               <Btn icon={RefreshCw} label={"刷新"} onClick={() => { if (currentWfId && currentWfId !== "new") loadWorkflow(currentWfId); }} />
               <Btn icon={Copy} label={"另存为"} onClick={handleSaveAs} loading={saving} />
-<Btn icon={Save} label={"\u4fdd\u5b58"} onClick={handleSave} loading={saving} />
+<Btn icon={Save} label={"\u4fdd\u5b58"} onClick={() => { void handleSave(); }} loading={saving} />
               <Btn icon={Share2} label={"分享"} onClick={() => {
                 if (!currentWfId || currentWfId === "new") {
                   if (confirm("当前工作流尚未保存，建议先保存再分享，是否现在保存？")) handleSave();
@@ -2071,6 +2282,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             <ReactFlow nodes={flowNodes} edges={styledEdges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
               onConnect={onConnect} onConnectStart={onConnectStart} onConnectEnd={onConnectEnd}
               onInit={(inst) => { reactFlowInstanceRef.current = inst; setReactFlowInstance(inst); }} onDragOver={onDragOver} onDrop={onDrop}
+              onNodeDragStart={onNodeDragStart} onNodeDrag={onNodeDrag} onNodeDragStop={onNodeDragStop}
               onPaneContextMenu={(e) => { e.preventDefault(); setContextMenu({ visible: true, position: { x: e.clientX, y: e.clientY } }); }}
               nodeTypes={nodeTypes} edgeTypes={edgeTypes} fitView snapToGrid snapGrid={[15, 15]}
               connectionRadius={30}
@@ -2091,6 +2303,23 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                   <Settings2 className="w-3.5 h-3.5" />
                 </ControlButton>
               </Controls>
+              {/* 自动保存状态提示（点击打开画布设置） */}
+              {autoSaveOn && (
+                <button
+                  type="button"
+                  onClick={() => setCanvasSettingsOpen(true)}
+                  title="自动保存设置"
+                  className="absolute bottom-4 right-4 z-10 rounded-lg border border-border/60 bg-card/85 px-2.5 py-1 text-[11px] text-muted-foreground backdrop-blur-sm transition-colors hover:text-foreground"
+                >
+                  {taskMode && taskModeId
+                    ? "自动保存已跳过（任务模式）"
+                    : autoSaveInfo.state === "saving"
+                      ? "自动保存中…"
+                      : autoSaveInfo.state === "error"
+                        ? "自动保存失败，点击查看"
+                        : `自动保存 ${autoSaveMinutes} 分钟${autoSaveInfo.at ? ` · ${autoSaveInfo.at}` : ""}`}
+                </button>
+              )}
               <Background variant={BackgroundVariant.Dots} gap={20} size={1} color="hsl(var(--border))" />
               {showWorkflowProgress && (
                 <div className="absolute bottom-4 left-1/2 z-10 w-[min(520px,calc(100%-32px))] -translate-x-1/2 rounded-xl border border-border bg-card/95 px-4 py-3 shadow-xl backdrop-blur-sm">
@@ -2194,6 +2423,46 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                     </button>
                   );
                 })}
+              </div>
+            </div>
+            <div className="border-t border-border/60 pt-4 space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <div className="text-xs font-medium text-muted-foreground">自动保存</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground/80">
+                    {taskMode && taskModeId
+                      ? "任务调试模式下不参与自动保存"
+                      : autoSaveOn
+                        ? `每 ${autoSaveMinutes} 分钟自动保存一次有改动的工作流`
+                        : "已关闭，画布改动需手动保存"}
+                  </div>
+                </div>
+                <Switch checked={autoSaveOn} onCheckedChange={handleToggleAutoSave} />
+              </div>
+              {autoSaveOn && !(taskMode && taskModeId) && (
+                <div className="grid grid-cols-4 gap-2">
+                  {AUTO_SAVE_INTERVALS.map((item) => (
+                    <button
+                      key={item.value}
+                      type="button"
+                      onClick={() => handleSetAutoSaveMinutes(item.value)}
+                      className={cn(
+                        "rounded-lg border px-2 py-1.5 text-xs transition-colors",
+                        autoSaveMinutes === item.value
+                          ? "border-primary bg-primary/10 text-foreground"
+                          : "border-border/60 text-muted-foreground hover:bg-secondary/60"
+                      )}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="text-[11px] text-muted-foreground/80">
+                {autoSaveInfo.state === "saving" && "正在自动保存…"}
+                {autoSaveInfo.state === "saved" && `上次自动保存 ${autoSaveInfo.at}`}
+                {autoSaveInfo.state === "error" && (autoSaveInfo.message || "自动保存失败")}
+                {autoSaveInfo.state === "idle" && (autoSaveDirtyRef.current ? "有未保存的改动" : "暂无未保存改动")}
               </div>
             </div>
             <div className="border-t border-border/60 pt-4">
