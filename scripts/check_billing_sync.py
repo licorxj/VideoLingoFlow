@@ -57,7 +57,6 @@ SOURCE_FILES = (
     "backend/auth/error_codes.json",
     "backend/control_plane/workflow_runtime.py",
     "backend/control_plane/runtime.py",
-    "backend/control_plane/custom_node_runtime.py",
 )
 
 
