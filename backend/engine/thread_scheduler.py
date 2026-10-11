@@ -76,6 +76,8 @@ BUILTIN_STEP_REGISTRY = {
     "text_editor": ("backend.steps.s_text_editor", "S_TextEditor"),
     "subtitle_editor": ("backend.steps.s_subtitle_editor", "S_SubtitleEditor"),
     "video_split": ("backend.steps.s_video_split", "S_VideoSplit"),
+    "audio_split": ("backend.steps.s_audio_split", "S_AudioSplit"),
+    "get_video_last_frame": ("backend.steps.s_get_video_last_frame", "S_GetVideoLastFrame"),
     "path_to_title": ("backend.steps.s_path_to_title", "S_PathToTitle"),
     "track_separation": ("backend.steps.s17_track_separation", "S17TrackSeparation"),
     "file_rename": ("backend.steps.s_file_rename", "S_FileRename"),

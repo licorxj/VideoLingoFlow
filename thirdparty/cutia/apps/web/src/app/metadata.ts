@@ -36,8 +36,9 @@ export const baseMetaData: Metadata = {
 		follow: true,
 	},
 	icons: {
-		icon: [{ url: "/logos/cutia/svg/logo.svg", type: "image/svg+xml" }],
-		shortcut: ["/logos/cutia/svg/logo.svg"],
+		// 带 basePath 前缀：cutia 以 /cutia 反代进主项目，根绝对路径会打到宿主 origin 而 404
+		icon: [{ url: "/cutia/logos/cutia/svg/logo.svg", type: "image/svg+xml" }],
+		shortcut: ["/cutia/logos/cutia/svg/logo.svg"],
 	},
 	appleWebApp: {
 		capable: true,

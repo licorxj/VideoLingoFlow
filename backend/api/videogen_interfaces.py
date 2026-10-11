@@ -479,6 +479,19 @@ def _resolve_videogen_config(mgr, iface_id=None, sdk_module=None, config=None):
     raise HTTPException(status_code=400, detail="需提供 config / interface_id / sdk_module 之一")
 
 
+# 通用视频比例可选项（与前端 SeedanceVideoNode 的列表保持一致）
+DEFAULT_VIDEO_RATIOS = ["16:9", "9:16", "1:1", "4:3", "3:4", "21:9"]
+
+# 支持「视频比例」的引擎 SDK：kieai / seedance 会把 ratio 映射为模型的宽高比参数
+# （kieai 按模型 enum 归一化，seedance 图生视频-首/尾帧强制 adaptive）；
+# 可灵(wuli) 由 resolution 决定画幅、不接受比例参数，故不展示该设置。
+_RATIO_SDK_MODULES = {
+    "backend.videogen.sdk.kieai_wrapper",
+    "backend.videogen.sdk.seedance_wrapper",
+    "backend.videogen.sdk.agnes_video_wrapper",
+}
+
+
 def _build_videogen_schema(config, model, mode):
     """根据模型 metadata / SDK 能力矩阵构造节点设置 schema（设置项及其可选项）。
 
@@ -532,6 +545,13 @@ def _build_videogen_schema(config, model, mode):
         ratio_default = meta.get("ratio_default", "16:9")
         modes = list(meta.get("modes", []) or [])
 
+    # 视频比例：仅支持比例的引擎返回可选项；ratio_default 必须落在可选项内，
+    # 否则前端下拉会显示为空（seedance 部分模型默认 adaptive 但未列入选项）。
+    supports_ratio = sdk_module in _RATIO_SDK_MODULES
+    ratios = list(meta.get("ratios", [])) or list(DEFAULT_VIDEO_RATIOS)
+    if ratio_default not in ratios:
+        ratio_default = ratios[0] if ratios else "16:9"
+
     audio_options = ["on", "off", "keep_original", "model_default"] if supports_audio else []
     # 专有参数能力开关：供前端按模型显隐设置项（seedance 取能力矩阵，其它取 meta.supports）
     caps = {
@@ -554,6 +574,9 @@ def _build_videogen_schema(config, model, mode):
         {"key": "audio", "label": "声音", "type": "select",
          "options": [{"value": v, "label": v} for v in audio_options],
          "default": default_audio, "visible": supports_audio},
+        {"key": "ratio", "label": "视频比例", "type": "select",
+         "options": [{"value": v, "label": v} for v in ratios],
+         "default": ratio_default, "visible": supports_ratio},
     ]
     return {
         "model": model,
@@ -564,6 +587,8 @@ def _build_videogen_schema(config, model, mode):
         "modes": modes,
         "supports_audio": supports_audio,
         "default_audio": default_audio,
+        "supports_ratio": supports_ratio,
+        "ratios": ratios if supports_ratio else [],
         "ratio_default": ratio_default,
         "max_ref_images": meta.get("max_ref_images", 0),
         "max_ref_videos": meta.get("max_ref_videos", 0),

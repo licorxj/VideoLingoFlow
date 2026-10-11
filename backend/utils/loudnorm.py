@@ -19,7 +19,7 @@ def _analyze(audio_path: str) -> dict:
         "-af", "loudnorm=I=-16:TP=-1.5:LRA=11:print_format=json",
         "-f", "null", "-"
     ])
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
     stderr = result.stderr
 
     # Find the last complete JSON block in stderr
@@ -79,6 +79,6 @@ def normalize_loudness(audio_path: str, target_lufs: float = -16.0, output_path:
         "-c:a", "pcm_s16le", output_path
     ]
     from backend.utils.ffmpeg_guard import apply_resource_args
-    subprocess.run(apply_resource_args(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    subprocess.run(apply_resource_args(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
 
     return output_path

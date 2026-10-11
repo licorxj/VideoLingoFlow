@@ -96,7 +96,7 @@ def run(cmd, cwd=None, check=True):
     print(f"  [执行] {' '.join(str(c) for c in cmd)}")
     try:
         result = subprocess.run(
-            cmd, cwd=cwd, check=check, text=True, encoding="utf-8", errors="replace",
+            cmd, cwd=cwd, check=check, text=True,
         )
         return result
     except subprocess.CalledProcessError as e:

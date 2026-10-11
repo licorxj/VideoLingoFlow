@@ -215,7 +215,7 @@ def ensure_chromium_installed(progress: Optional[Callable[[int, str], None]] = N
         try:
             result = subprocess.run(
                 cmd_prefix + ["install", "chromium", "--dry-run"],
-                capture_output=True, text=True, timeout=60, check=False,
+                capture_output=True, text=True, timeout=60, check=False, encoding="utf-8", errors="replace",
             )
         except (OSError, subprocess.SubprocessError):
             return []

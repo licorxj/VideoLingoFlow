@@ -193,7 +193,7 @@ class SherpaOnnxASR(ASRBase):
             "-vn", "-ac", "1", "-ar", "16000",
             "-c:a", "pcm_s16le", out_path,
         ])
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
         if proc.returncode != 0 or not os.path.exists(out_path):
             raise RuntimeError(f"ffmpeg 音频转换失败: {proc.stderr[-500:]}")
         return out_path

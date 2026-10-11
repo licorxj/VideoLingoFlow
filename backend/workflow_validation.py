@@ -12,6 +12,8 @@ NODE_TYPE_ID_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 LEGACY_HANDLE_MIGRATIONS = {
     ("asr", "target", "audio"): "asr_audio",
     ("asr", "source", "asr_result"): "subtitle",
+    # 预览类节点改为透传输出：image_compare 原单一 out-image 端口并入 out-image2（上层图）
+    ("image_compare", "source", "image"): "image2",
 }
 
 
@@ -144,6 +146,46 @@ def _port_map(node_type: str, direction: str) -> dict[str, str]:
     }
 
 
+def _dynamic_ports(node: dict, direction: str) -> dict[str, str]:
+    """按节点配置生成「动态端口」映射，与前端 workflowTypes.getVisibleOutputs /
+    getNodeInputs 的规则保持一致。
+
+    json_get / pi_agent / opencode_agent / output_merge_list 的端口数量由 config 决定
+    （outputCount / inputCount）。若仅按静态定义校验，超出静态声明的端口（如 json_get
+    的 out_2+、output_merge_list 的 input_*）连边会在归一化阶段被误删。
+    """
+    node_type = _node_type(node)
+    config = (node.get("data") or {}).get("config") or {}
+    if not isinstance(config, dict):
+        config = {}
+
+    def _count(key: str, default: int) -> int:
+        raw = config.get(key)
+        try:
+            n = int(raw) if raw not in (None, "", False) else default
+        except (TypeError, ValueError):
+            n = default
+        return max(1, min(n, 8))
+
+    def _add(prefix: str, count: int, out: dict) -> None:
+        for i in range(1, count + 1):
+            out[f"{prefix}_{i}"] = "any"
+
+    ports: dict[str, str] = {}
+    if node_type == "json_get":
+        if direction == "source":
+            _add("out", _count("outputCount", 1), ports)
+    elif node_type in ("pi_agent", "opencode_agent"):
+        if direction == "source":
+            _add("output", _count("outputCount", 2), ports)
+        else:
+            _add("input", _count("inputCount", 2), ports)
+    elif node_type == "output_merge_list":
+        if direction == "target":
+            _add("input", _count("inputCount", 2), ports)
+    return ports
+
+
 def _port_map_for_node(node: dict, direction: str) -> dict[str, str]:
     if _is_container_node(node):
         meta = _container_meta(node)
@@ -159,7 +201,11 @@ def _port_map_for_node(node: dict, direction: str) -> dict[str, str]:
             for port_id, port_type in static_ports.items():
                 ports.setdefault(port_id, port_type)
         return ports
-    return _port_map(_node_type(node), direction)
+    ports = _port_map(_node_type(node), direction)
+    # 合并动态端口：静态定义 + 按配置生成的端口（静态优先保持既有类型声明）
+    for port_id, port_type in _dynamic_ports(node, direction).items():
+        ports.setdefault(port_id, port_type)
+    return ports
 
 
 def _handle_port_id(handle: object, prefix: str) -> str | None:
@@ -182,6 +228,7 @@ def normalize_workflow_edges(nodes: list[dict], edges: list[dict]) -> tuple[list
     normalized: list[dict] = []
     migrated = 0
     removed = 0
+    dropped_ports: list[str] = []
     for edge in edges:
         if not isinstance(edge, dict):
             removed += 1
@@ -212,6 +259,9 @@ def normalize_workflow_edges(nodes: list[dict], edges: list[dict]) -> tuple[list
         target_port_type = target_ports.get(target_port_id)
         if source_port_type is None or target_port_type is None or not _can_connect(source_port_type, target_port_type):
             removed += 1
+            dropped_ports.append(
+                f"{source_id}({source_type}).{source_port_id} -> {target_id}({target_type}).{target_port_id}"
+            )
             continue
         normalized_edge = dict(edge)
         next_source_handle = f"out-{source_port_id}"
@@ -223,6 +273,10 @@ def normalize_workflow_edges(nodes: list[dict], edges: list[dict]) -> tuple[list
             normalized_edge["targetHandle"] = next_target_handle
             migrated += 1
         normalized.append(normalized_edge)
+    if dropped_ports:
+        preview = "; ".join(dropped_ports[:5])
+        more = "" if len(dropped_ports) <= 5 else f" …等 {len(dropped_ports)} 条"
+        print(f"[workflow_validation] 已丢弃 {len(dropped_ports)} 条端口无效的连线: {preview}{more}")
     return normalized, migrated, removed
 
 

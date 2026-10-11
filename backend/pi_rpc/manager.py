@@ -108,7 +108,7 @@ class PiSessionManager:
         node_version = ""
         node_ok = True
         try:
-            out = subprocess.run([str(node_path), "--version"], capture_output=True, text=True, timeout=10)
+            out = subprocess.run([str(node_path), "--version"], capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
             node_version = (out.stdout or out.stderr).strip()
             match = re.search(r"v(\d+)\.(\d+)\.", node_version)
             if match:
@@ -138,7 +138,7 @@ class PiSessionManager:
                 capture_output=True,
                 text=True,
                 timeout=30,
-                cwd=str(node_modules.parent) if node_modules else None,
+                cwd=str(node_modules.parent) if node_modules else None, encoding="utf-8", errors="replace",
             )
             if out.returncode == 0:
                 launch_ok = True

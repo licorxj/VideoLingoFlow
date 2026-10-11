@@ -2815,6 +2815,7 @@ class S_AGI_ShotFrames(BaseStep):
         scene_assets = [a for a in agi.list_assets(creation_id, asset_kind="scene_image")
                         if not a.get("shot_id")]
         style = _style_hint(agi, creation_id, cfg)
+        gen_mode = (str(cfg.get("gen_mode") or "").strip() or "txt2img").lower()
         use_char = bool(cfg.get("use_char_ref", True))
         use_scene = bool(cfg.get("use_scene_ref", True))
         try:

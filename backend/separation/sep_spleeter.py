@@ -46,7 +46,7 @@ class SpleeterSeparation(SeparationBase):
 
         try:
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout, cwd=output_dir
+                cmd, capture_output=True, text=True, timeout=timeout, cwd=output_dir, encoding="utf-8", errors="replace"
             )
             if result.returncode != 0:
                 raise Exception(f"Spleeter failed: {result.stderr[:500]}")
@@ -135,7 +135,7 @@ class SpleeterSeparation(SeparationBase):
 
         try:
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout, cwd=output_dir
+                cmd, capture_output=True, text=True, timeout=timeout, cwd=output_dir, encoding="utf-8", errors="replace"
             )
             if result.returncode != 0:
                 raise Exception(f"Spleeter failed: {result.stderr[:500]}")
@@ -187,6 +187,6 @@ class SpleeterSeparation(SeparationBase):
                 "-acodec", "pcm_s16le" if dst_ext == "wav" else "libmp3lame",
                 dst,
             ])
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
             if result.returncode != 0:
                 raise Exception(f"Audio conversion failed: {result.stderr[:300]}")

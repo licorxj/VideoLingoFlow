@@ -323,7 +323,7 @@ def _probe_video(target: Path) -> dict:
             capture_output=True,
             text=True,
             timeout=30,
-            check=True,
+            check=True, encoding="utf-8", errors="replace",
         )
         payload = json.loads(output.stdout or "{}")
     except Exception:

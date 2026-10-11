@@ -27,7 +27,7 @@ def get_audio_duration(audio_path: str) -> float:
             "-of", "default=noprint_wrappers=1:nokey=1",
             audio_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
         return float(result.stdout.strip())
     except Exception:
         return 0.0
@@ -161,7 +161,7 @@ def cut_audio_segment(audio_path: str, start: float, end: float,
         "-avoid_negative_ts", "make_zero",
         output_path,
     ], mux_queue=64)
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
     if result.returncode != 0:
         # 极少数容器无法重编码时，退回 copy 快速路径（边界可能有包级抖动）
         print(f"[ASR] 精确切分失败，回退 copy 模式: {result.stderr[:200]}", flush=True)
@@ -171,7 +171,7 @@ def cut_audio_segment(audio_path: str, start: float, end: float,
             "-c", "copy",
             output_path,
         ], mux_queue=64)
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
         if result.returncode != 0:
             raise RuntimeError(f"Failed to split audio: {result.stderr[:300]}")
     return output_path

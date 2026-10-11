@@ -475,6 +475,18 @@ function AISettingsView() {
 		setDevPlaceholderEnabled,
 	} = useAISettingsStore();
 
+	const imageProvider =
+		IMAGE_PROVIDERS.find((item) => item.id === imageProviderId) ?? null;
+	const videoProvider =
+		VIDEO_PROVIDERS.find((item) => item.id === videoProviderId) ?? null;
+	// VideoLingo 通道由主项目接口层提供凭证，无需在 Cutia 里填 Key
+	const imageNeedsKey = imageProvider
+		? imageProvider.requiresApiKey !== false
+		: true;
+	const videoNeedsKey = videoProvider
+		? videoProvider.requiresApiKey !== false
+		: true;
+
 	const handleImageProviderChange = (value: string) => {
 		setImageProvider(value === NO_PROVIDER ? null : value);
 	};
@@ -510,17 +522,23 @@ function AISettingsView() {
 						</Select>
 					</PropertyItemValue>
 				</PropertyItem>
-				<PropertyItem direction="column">
-					<PropertyItemLabel>{t("API Key")}</PropertyItemLabel>
-					<PropertyItemValue>
-						<Input
-							type="password"
-							placeholder={t("Enter API key")}
-							value={imageApiKey}
-							onChange={(event) => setImageApiKey(event.target.value)}
-						/>
-					</PropertyItemValue>
-				</PropertyItem>
+				{imageNeedsKey ? (
+					<PropertyItem direction="column">
+						<PropertyItemLabel>{t("API Key")}</PropertyItemLabel>
+						<PropertyItemValue>
+							<Input
+								type="password"
+								placeholder={t("Enter API key")}
+								value={imageApiKey}
+								onChange={(event) => setImageApiKey(event.target.value)}
+							/>
+						</PropertyItemValue>
+					</PropertyItem>
+				) : (
+					<p className="text-muted-foreground text-xs">
+						{t("Uses the VideoLingo interface layer, no API key needed here.")}
+					</p>
+				)}
 			</div>
 
 			<div className="flex flex-col gap-3">
@@ -548,17 +566,23 @@ function AISettingsView() {
 						</Select>
 					</PropertyItemValue>
 				</PropertyItem>
-				<PropertyItem direction="column">
-					<PropertyItemLabel>{t("API Key")}</PropertyItemLabel>
-					<PropertyItemValue>
-						<Input
-							type="password"
-							placeholder={t("Enter API key")}
-							value={videoApiKey}
-							onChange={(event) => setVideoApiKey(event.target.value)}
-						/>
-					</PropertyItemValue>
-				</PropertyItem>
+				{videoNeedsKey ? (
+					<PropertyItem direction="column">
+						<PropertyItemLabel>{t("API Key")}</PropertyItemLabel>
+						<PropertyItemValue>
+							<Input
+								type="password"
+								placeholder={t("Enter API key")}
+								value={videoApiKey}
+								onChange={(event) => setVideoApiKey(event.target.value)}
+							/>
+						</PropertyItemValue>
+					</PropertyItem>
+				) : (
+					<p className="text-muted-foreground text-xs">
+						{t("Uses the VideoLingo interface layer, no API key needed here.")}
+					</p>
+				)}
 			</div>
 
 			{isDevPlaceholderAvailable() && (

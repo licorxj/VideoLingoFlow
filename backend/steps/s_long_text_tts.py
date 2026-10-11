@@ -262,7 +262,7 @@ class S_LongTextTTS(S09TTS):
                 cmd = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
                        "-f", "concat", "-safe", "0", "-i", list_path,
                        "-c", "copy", out_path]
-                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+                proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
                 if proc.returncode == 0 and os.path.isfile(out_path) and os.path.getsize(out_path) > 0:
                     print(f"[长文本TTS] 已用 ffmpeg(copy) 拼接 {len(valid)} 段 -> {out_path}")
                     return out_path
@@ -270,7 +270,7 @@ class S_LongTextTTS(S09TTS):
                 cmd2 = [ffmpeg, "-y", "-hide_banner", "-loglevel", "error",
                         "-f", "concat", "-safe", "0", "-i", list_path,
                         "-c:a", "pcm_s16le", "-ar", "44100", "-ac", "1", out_path]
-                proc2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=1800)
+                proc2 = subprocess.run(cmd2, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
                 if proc2.returncode == 0 and os.path.isfile(out_path) and os.path.getsize(out_path) > 0:
                     print(f"[长文本TTS] 已用 ffmpeg(重编码) 拼接 {len(valid)} 段 -> {out_path}")
                     return out_path

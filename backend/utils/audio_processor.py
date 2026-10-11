@@ -41,7 +41,7 @@ def get_ffmpeg_timeout(default: float = 600) -> float:
 def get_audio_duration(audio_path: str) -> float:
     """获取音频文件时长（秒）"""
     cmd = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", audio_path]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe failed: {result.stderr}")
     
@@ -52,7 +52,7 @@ def get_audio_duration(audio_path: str) -> float:
 def get_video_duration(video_path: str) -> float:
     """获取视频文件时长（秒）"""
     cmd = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", video_path]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe failed: {result.stderr}")
     
@@ -90,7 +90,7 @@ def prepare_bgm(bgm_path: str, target_duration: float, output_path: str, loop: b
             output_path
         ]
     
-    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
 
@@ -116,7 +116,7 @@ def adjust_volume(audio_path: str, volume: float, output_path: str) -> str:
         output_path
     ]
     
-    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
 
@@ -159,7 +159,7 @@ def apply_fade(audio_path: str, fade_in: float, fade_out: float, duration: float
             output_path
         ]
     
-    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
 
@@ -176,7 +176,7 @@ def _video_has_audio(video_path: str) -> bool:
             "-of", "csv=p=0",
             video_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
         return "audio" in result.stdout
     except Exception:
         return False
@@ -321,7 +321,7 @@ def mix_audio(
                 "-b:a", f"{output_settings['bitrate']}k",
                 output_path
             ]
-            result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+            result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
             if result.returncode != 0:
                 raise RuntimeError(f"ffmpeg failed: {result.stderr}")
             return output_path
@@ -351,7 +351,7 @@ def mix_audio(
         output_path
     ]
 
-    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
     if result.returncode != 0:
         # 如果使用了 [0:a] 但失败，可能是音频流损坏，去掉原始音频重试
         if has_audio and "[0:a]" in filter_complex and (bgm_path or dub_path):
@@ -389,7 +389,7 @@ def mute_video_audio(video_path: str, output_path: str) -> str:
         output_path
     ]
 
-    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout())
+    result = subprocess.run(_guarded(cmd), capture_output=True, text=True, timeout=get_ffmpeg_timeout(), encoding="utf-8", errors="replace")
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg failed: {result.stderr}")
 

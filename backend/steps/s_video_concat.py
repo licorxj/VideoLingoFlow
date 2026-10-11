@@ -74,7 +74,7 @@ def _probe(path: str) -> dict:
         return info
     try:
         cmd = [exe, "-v", "quiet", "-print_format", "json", "-show_streams", "-show_format", path]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
         data = json.loads(res.stdout or "{}")
         if "format" in data and data["format"].get("duration"):
             try:

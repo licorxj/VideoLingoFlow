@@ -368,7 +368,7 @@ class DiarizeLibProcessor(SpeakerDiarizationProcessor):
         tmp_path = os.path.join(tempfile.mkdtemp(prefix="diarize_lib_"), "audio.wav")
         from backend.utils.ffmpeg_guard import apply_resource_args
         cmd = apply_resource_args([ffmpeg, "-y", "-i", audio_path, "-vn", "-ac", "1", "-ar", "16000", tmp_path])
-        proc = subprocess.run(cmd, capture_output=True, text=True)
+        proc = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
         if proc.returncode != 0:
             raise RuntimeError(f"ffmpeg conversion failed: {proc.stderr[-500:]}")
         print(f"[Diarization] Converted to temp WAV for diarize library: {tmp_path}")

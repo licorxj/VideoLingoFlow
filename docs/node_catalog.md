@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-06 10:19:40  
-> 节点总数：161　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-09 20:44:53  
+> 节点总数：163　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -9,8 +9,8 @@
 |------|-------|
 | 输入输出节点（`io`） | 5 |
 | 预览节点（`preview`） | 4 |
-| 音频处理节点（`audio`） | 10 |
-| 视频处理节点（`video`） | 18 |
+| 音频处理节点（`audio`） | 11 |
+| 视频处理节点（`video`） | 19 |
 | AI生成类节点（`ai_gen`） | 23 |
 | 翻译相关节点（`translation`） | 16 |
 | 漫剧·剧本链（`agi_story`） | 4 |
@@ -46,10 +46,10 @@
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| 图片对比 | `image_compare` | 叠加对比两张图片：图片2在上、图片1在下，鼠标横向拖动分割线去除上层蒙版，快速对比图形差异；默认上层蒙版只显示右半部，分割线居中 | thread | 图片1（下层）(`image1`:any); 图片2（上层）(`image2`:any) | 图片(`image`:any) |
-| 图片预览器 | `image_preview` | 预览图片结果 | thread | 图片(`image`:image); 列表输入(`list`:any) | — |
-| 视频预览器 | `video_preview` | 预览视频和字幕，支持标题设置、快捷调整字体大小和位置 | thread | 视频(`video`:video); 译文字幕(`subtitle`:subtitle); 原文字幕(`original`:subtitle); 双语字幕(`bilingual`:subtitle); 列表输入(`list`:any) | — |
-| 音频多轨预览 | `audio_multitrack_preview` | 最多接入 6 路音频，卡片按实际接入情况分轨展示：每轨可独立播放/拖动进度/静音；顶部「同步播放」开启时六轨对齐到同一时间轴播放（静音轨仍同步走位，取消静音即与其他轨对齐），用于对比检查多轨音频 | thread | 音轨1(`audio1`:audio); 音轨2(`audio2`:audio); 音轨3(`audio3`:audio); 音轨4(`audio4`:audio); 音轨5(`audio5`:audio); 音轨6(`audio6`:audio) | — |
+| 图片对比 | `image_compare` | 叠加对比两张图片：图片2在上、图片1在下，鼠标横向拖动分割线去除上层蒙版，快速对比图形差异；默认上层蒙版只显示右半部，分割线居中。两张图片会原样透传到同名输出端口，下游可直接引用 | thread | 图片1（下层）(`image1`:any); 图片2（上层）(`image2`:any) | 图片1（下层）(`image1`:any); 图片2（上层）(`image2`:any) |
+| 图片预览器 | `image_preview` | 预览图片结果；输入端口会原样透传到同名输出端口，下游可直接引用预览的素材 | thread | 图片(`image`:image); 列表输入(`list`:any) | 图片(`image`:image); 列表(`list`:any) |
+| 视频预览器 | `video_preview` | 预览视频和字幕，支持标题设置、快捷调整字体大小和位置；输入端口会原样透传到同名输出端口，下游可直接引用预览的素材 | thread | 视频(`video`:video); 译文字幕(`subtitle`:subtitle); 原文字幕(`original`:subtitle); 双语字幕(`bilingual`:subtitle); 列表输入(`list`:any) | 视频(`video`:video); 译文字幕(`subtitle`:subtitle); 原文字幕(`original`:subtitle); 双语字幕(`bilingual`:subtitle); 列表(`list`:any) |
+| 音频多轨预览 | `audio_multitrack_preview` | 最多接入 6 路音频，卡片按实际接入情况分轨展示：每轨可独立播放/拖动进度/静音；顶部「同步播放」开启时六轨对齐到同一时间轴播放（静音轨仍同步走位，取消静音即与其他轨对齐），用于对比检查多轨音频。各路音频会原样透传到同名输出端口，下游可直接引用 | thread | 音轨1(`audio1`:audio); 音轨2(`audio2`:audio); 音轨3(`audio3`:audio); 音轨4(`audio4`:audio); 音轨5(`audio5`:audio); 音轨6(`audio6`:audio) | 音轨1(`audio1`:audio); 音轨2(`audio2`:audio); 音轨3(`audio3`:audio); 音轨4(`audio4`:audio); 音轨5(`audio5`:audio); 音轨6(`audio6`:audio) |
 
 ### 音频处理节点（`audio`）
 
@@ -63,6 +63,7 @@
 | 音轨分离 | `track_separation` | 将音频分离为6轨：人声/贝斯/鼓/吉他/钢琴/其他 | process | 音频(`audio`*:audio) | 人声(`vocals`:audio); 贝斯(`bass`:audio); 鼓(`drums`:audio); 吉他(`guitar`:audio); 钢琴(`piano`:audio); 其他(`other`:audio) |
 | 音轨混响 | `track_mix` | 将最多四路音频（主音轨、背景音乐、音轨3、音轨4）按设置的响度、淡入淡出与循环混合后输出。总时长支持「最长」或「以主音轨为准」两种模式。主音轨固定不循环，其余音轨可循环以填充总时长。 | thread | 主音轨(`main_audio`*:audio); 背景音乐(`bgm`:audio); 音轨3(`track3`:audio); 音轨4(`track4`:audio) | 混音结果(`audio`:audio) |
 | 音频分离 | `extract_audio` | 从视频中分离提取音频 | thread | 视频(`video`*:video) | 音频(`audio`:audio) |
+| 音频切割 | `audio_split` | 将音频按数量或时长切割为多段，或按指定时间段截取单段，支持静音点切割 | thread | 音频(`audio`*:audio) | 切割片段(`audio`:audio); 切割信息(`text`:text) |
 | 音频增强 | `audio_enhance` | 通过音频增强接口/模型处理音频（去混响、降噪、音质增强），输出增强后的音频 | process | 音频(`audio`*:audio) | 增强音频(`audio`:audio); 残差/副产物(`background`:audio); 第三路输出(`extra`:audio) |
 | 音频质量转码 | `audio_transcode` | 转换音频格式、采样率、位深、声道和码率 | thread | 音频(`audio`*:audio) | 转码音频(`audio`:audio) |
 
@@ -79,12 +80,13 @@
 | 按字幕切割视频 | `video_cut_by_subtitle` | 按 srt 字幕或句子 json 的时间轴切割视频，输出片段清单 json 与各视频片段 | thread | 视频(`video`*:video); SRT字幕(`srt`:subtitle); 句子JSON(`json`:json) | 切割信息(`json`:json); 视频片段清单(`video_segments`:json) |
 | 水印添加 | `watermark` | 为视频添加水印 | thread | 视频(`video`*:video); 水印图片(`image`:image) | 最终视频(`video`:video) |
 | 添加素材到剪辑 | `add_media_to_library` | 将任意类型素材注册到剪辑工作台的素材库（不写入时间线轨道），供后续剪辑操作调用 | thread | 剪辑项目(`project`:json); 素材(`media`:any) | 剪辑项目(`project`:json) |
+| 获取视频尾帧 | `get_video_last_frame` | 获取视频的尾帧图片（默认取最末帧，可设置从尾部偏移秒数跳过片尾） | thread | 视频(`video`*:video) | 尾帧图片(`image`:image); 尾帧信息(`text`:text) |
 | 视频切割 | `video_split` | 将视频按数量或时长切割为多段，支持静音点切割 | thread | 视频(`video`*:video); 音频(`audio`:audio) | 切割片段(`video`:video); 切割信息(`text`:text) |
 | 视频区域贴片 | `video_region_composite` | 将「视频截取区域」产出的局部视频按坐标贴回主视频。贴片大于区域时自动缩放，主/贴片编码不一致时统一重编码后贴合。 | thread | 主视频(`main_video`*:video); 贴片视频(`patch_video`*:video); 贴片坐标(`patch_json`*:json) | 贴合后视频(`video`:video) |
 | 视频去重 | `video_dedupe` | 反平台查重变换：对视频做水平镜像、放大裁切、调速、调色/滤镜、加边框等画面变换以规避重复检测；不删内容，只改画面（ffmpeg 重编码） | thread | 视频(`video`*:video) | 去重视频(`video`:video) |
 | 视频截取区域 | `video_region_crop` | 从大分辨率视频中截取指定区域与时段，输出局部视频与坐标 JSON，供「视频区域贴片」节点贴回原视频做局部处理。 | thread | 视频(`video`*:video) | 截取区域视频(`video`:video); 截取坐标(`json`:json) |
 | 视频抽帧 | `video_frame_extract` | 从视频指定时间点提取帧图片，支持避开字幕 | thread | 视频(`video`:video); 字幕(`srt`:subtitle) | 帧图片(`image`:image) |
-| 视频拼接 | `video_concat` | 将主视频/片段1~3/封面图按设定顺序与缩放方式一次性拼装为单个视频，封面图可选插入开头或结尾。 | thread | 主视频(`main`:video); 片段1(`segment1`:video); 片段2(`segment2`:video); 片段3(`segment3`:video); 封面图(`cover`:image) | 拼接视频(`video`:video) |
+| 视频拼接 | `video_concat` | 将主视频/片段1~3/封面图按设定顺序与缩放方式一次性拼装为单个视频；所有片段统一缩放到「主视频」的分辨率与帧率（与片段排序无关），封面图可选插入开头或结尾。 | thread | 主视频(`main`:video); 片段1(`segment1`:video); 片段2(`segment2`:video); 片段3(`segment3`:video); 封面图(`cover`:image) | 拼接视频(`video`:video) |
 | 视频缩放 | `video_scale` | 使用 ffmpeg 将视频缩放到预置分辨率（按目标高度等比缩放）或自定义宽高，支持输出容器格式与编码质量（CRF）设置 | thread | 视频(`video`*:video) | 缩放后视频(`video`:video) |
 | 视频转码 | `video_transcode` | 使用 ffmpeg 对视频进行转码，支持容器格式、视频/音频编码、码率、分辨率、帧率、编码速度档与像素格式等参数配置 | thread | 视频(`video`*:video) | 转码视频(`video`:video) |
 | 音视频合成 | `merge_dub_video` | 将输入音频合成到视频，可设置原视频是否静音、输入音频的响度与淡入淡出。 | thread | 视频(`video`*:video); 音频(`audio`*:audio) | 合成后视频(`video`:video) |
@@ -95,16 +97,16 @@
 |------|----|------|-------|---------|---------|
 | AI封面设计 | `cover` | 根据内容JSON生成封面文生图提示词，支持AI设计和自定义描述两种模式 | thread | 内容JSON(`json`*:json) | 封面提示词(`prompt`:text) |
 | AI生图 | `image_gen` | AI图像生成，支持文生图和图生图模式，集成多种生图接口和模型 | process | 文本输入(`text`:text); 图片输入(`image`:image); 分辨率(`resolution`:text); 比例(`aspect_ratio`:text) | 图片列表(`images`:json); 首张图片(`text`:image) |
-| AI生视频 | `ai_video_gen` | 根据提示词（文本或txt）、图片/图片列表、音频，调用视频生成接口生成视频；提示词前缀会拼接到连线提示词前 | thread | 提示词(`prompt`:text); 图片/图片列表(`images`:image); 音频(`audio`:audio) | 视频(`videos`:video); 视频(首个)(`video`:video); 尾帧(`last_frame`:image) |
+| AI生视频 | `ai_video_gen` | 根据提示词（文本或txt）、参考图1~4、参考视频1~2、参考音频1~2、音频，调用视频生成接口生成视频；提示词前缀会拼接到连线提示词前。生成类型决定参考素材的用法：首尾帧(flf2video)自动把 参考图1 作为首帧、参考图2 作为尾帧；单图(img2video)只取 参考图1；全模态(autovideo)按 参考图1→4、参考视频1→2、参考音频1→2 的顺序提交。「音频」口用于保留输入音频的原声（接听后声音自动设为 keep_original），参考音频请接 参考音频1/2。 | thread | 提示词(`prompt`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考视频1(`video1`:video); 参考视频2(`video2`:video); 参考音频1(`audio1`:audio); 参考音频2(`audio2`:audio); 音频(保留原声)(`audio`:audio) | 视频(`videos`:video); 视频(首个)(`video`:video); 尾帧(`last_frame`:image) |
 | Seedream图层拆分 | `seedream_layer` | 调用 Seedream 图层拆分（img2img + layer_decomposition，需 5.0 Pro）：将一张参考图拆为底图与多个图层（含 z_index/名称/bounding_box 坐标），便于二次编辑。 | process | 提示词(`text`:text); 参考图(`image`:image) | 底图(`base`:image); 图层列表(`layers`:list); 坐标数据(`coords`:json) |
-| Seedream图生图 | `seedream_img2img` | 调用 Seedream 图生图（img2img）：以一张参考图为基础按提示词重绘生成单张图片。 | process | 提示词(`text`:text); 参考图(`image`:image) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
-| Seedream多图融合 | `seedream_fusion` | 调用 Seedream 多图融合（fusion）：融合多张参考图生成单张图片。支持 image1~image5 共 5 个参考图输入口，按实际连接组装成输入列表。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考图5(`image5`:image) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
+| Seedream图生图 | `seedream_img2img` | 调用 Seedream 图生图（img2img）：以参考图为基础按提示词重绘生成图片。提供 image1~image4 共 4 个独立参考图输入口，后端按口序收集（空口跳过、保持顺序）并按实际张数自动决定提交形态：只接 1 张时以单图模式提交，接 2 张及以上时按 参考图1→4 的顺序组装为列表提交（与多图融合等价）。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
+| Seedream多图融合 | `seedream_fusion` | 调用 Seedream 多图融合（fusion）：融合多张参考图生成单张图片。提供 image1~image5 共 5 个独立参考图输入口，后端按口序收集（空口跳过、保持顺序）：只接 1 张时自动以单图模式提交，接 2 张及以上时按 参考图1→5 的顺序组装为列表提交。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考图5(`image5`:image) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream文生图 | `seedream_txt2img` | 调用火山引擎方舟 Seedream 文生图（txt2img）：根据提示词生成单张图片。支持流式输出与提示词优化，产物保存到 cache/images。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream组图生成 | `seedream_grid` | 调用 Seedream 文生组图（grid / sequential_image_generation）：根据提示词一次生成多张图片。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream联网搜索生图 | `seedream_websearch` | 调用 Seedream 联网搜索生图（websearch / tools=[web_search]）：结合网络搜索结果按提示词生成图片，适合需要真实世界参考的场景。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
-| 即梦-全模态参考生视频 | `seedance_autovideo` | 调用 Seedance 全模态参考生视频（autovideo）：以参考图/视频/音频任意组合生成视频。 | process | 提示词(`text`:text); 参考图列表(`image`:list); 参考视频(`video`:video); 参考音频(`audio`:audio) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
-| 即梦-图生视频 | `seedance_img2video` | 调用 Seedance 图生视频-首帧（img2video）：以 1 张参考图为首帧，按提示词生成视频。 | process | 提示词(`text`:text); 参考图(`image`:image) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
-| 即梦-图生视频(首尾帧) | `seedance_flf2video` | 调用 Seedance 图生视频-首尾帧（flf2video）：以 2 张参考图（首帧/尾帧）生成视频。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
+| 即梦-全模态参考生视频 | `seedance_autovideo` | 调用 Seedance 全模态参考生视频（autovideo）：以参考图/视频/音频任意组合生成视频。参考图拆为 参考图1~5、参考视频拆为 参考视频1~2、参考音频拆为 参考音频1~2 共 9 个独立输入口，后端按口序收集（空口跳过、保持顺序）后提交：只接 1 张参考图时以单图模式提交，多张按 参考图1→5 顺序组装为列表。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考图5(`image5`:image); 参考视频1(`video1`:video); 参考视频2(`video2`:video); 参考音频1(`audio1`:audio); 参考音频2(`audio2`:audio) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
+| 即梦-图生视频 | `seedance_img2video` | 调用 Seedance 图生视频-首帧（img2video）：以参考图按提示词生成视频。提供 image1~image4 共 4 个独立参考图输入口，后端按口序收集（空口跳过、保持顺序）：参考图1 作为首帧（first_frame），参考图2~4 自动作为参考图（reference_image）一并提交；只接 1 张时即为标准单首帧图生视频。注意：本节点不产生/不支持尾帧，需要精确指定尾帧请使用「即梦-图生视频(首尾帧)」节点。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
+| 即梦-图生视频(首尾帧) | `seedance_flf2video` | 调用 Seedance 图生视频-首尾帧（flf2video）：以 2 张参考图（首帧/尾帧）生成视频。首尾帧由本节点专用——参考图1 → first_frame、参考图2 → last_frame，角色固定不可互换；多余的图会被忽略。需要额外参考图时请改用「即梦-全模态参考生视频」节点。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
 | 即梦-文生视频 | `seedance_txt2video` | 调用火山方舟 Seedance 文生视频（txt2video）：根据提示词生成视频。支持异步任务轮询、优先历史记录与查询进度。 | process | 提示词(`text`:text) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
 | 图声生视频-kie | `kie_image_audio_to_video` | 用图片 + 声音驱动生成视频（数字人 / 对口型 / 角色演绎）。image1 为必填主图，kling-3.0/video 额外支持 image2~image5 共 5 张参考图；audio 输入口接驱动音频；提示词可来自连线文本或节点内填写。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；用量见「用量日志」。 | process | 主图片(`image1`*:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考图5(`image5`:image); 驱动音频(`audio`*:audio); 提示词(`text`:text) | 生成视频(`video`:video); 视频列表(`videos`:json); 生成参数JSON(`params`:json) |
 | 图片蒙版 | `image_mask` | 上游输入图片，在卡片上用画笔/矩形绘制蒙版，后端合成蒙版图并输出蒙版合成图与黑白蒙版 | thread | 图片(`image`:image) | 蒙版合成图(`image`:image); 蒙版(`mask`:image) |

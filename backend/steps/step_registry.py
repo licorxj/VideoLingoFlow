@@ -9,6 +9,8 @@ from backend.steps.s02_asr import S02ASR
 from backend.steps.s_asr_stages import S_ASRRecognize, S_ASRPostProcess
 from backend.steps.s_audio_denoise import StepAudioDenoise
 from backend.steps.s_audio_cut_by_subtitle import StepAudioCutBySubtitle
+from backend.steps.s_audio_split import S_AudioSplit
+from backend.steps.s_get_video_last_frame import S_GetVideoLastFrame
 from backend.steps.s_aigc_comfyui import S_AIGC_ComfyUI
 from backend.steps.s_aigc_runninghub import S_AIGC_RunningHub
 from backend.steps.s_aigc_jimeng import S_AIGC_Jimeng
@@ -298,6 +300,10 @@ _STEPS = {
     "subtitle_editor": S_SubtitleEditor(),
     "s_video_split": S_VideoSplit(),
     "video_split": S_VideoSplit(),
+    "s_audio_split": S_AudioSplit(),
+    "audio_split": S_AudioSplit(),
+    "s_get_video_last_frame": S_GetVideoLastFrame(),
+    "get_video_last_frame": S_GetVideoLastFrame(),
     "s_video_clip_intro_outro": S_VideoClipIntroOutro(),
     "video_clip_intro_outro": S_VideoClipIntroOutro(),
     "s_video_dedupe": S_VideoDedupe(),

@@ -124,7 +124,7 @@ def _get_video_duration(video_path: str) -> float:
     """Get video duration in seconds using ffprobe, with a plain-text fallback."""
     def _run(cmd):
         try:
-            return subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
         except FileNotFoundError:
             raise RuntimeError("ffprobe not found. Please install ffmpeg.")
         except subprocess.TimeoutExpired:
@@ -297,7 +297,7 @@ class S_VideoFrameExtract(BaseStep):
         ])
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
             if result.returncode != 0:
                 error_msg = result.stderr[:500] if result.stderr else "Unknown error"
                 raise RuntimeError(f"ffmpeg frame extraction failed: {error_msg}")

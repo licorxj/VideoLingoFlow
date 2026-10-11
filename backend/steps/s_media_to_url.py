@@ -35,7 +35,7 @@ def _probe_video_dimensions(video_path: str) -> tuple[int, int]:
              "-show_entries", "stream=width,height",
              "-of", "csv=p=0:s=x",
              video_path],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace",
         )
         if result.returncode == 0 and result.stdout.strip():
             w_str, h_str = result.stdout.strip().split("x")
@@ -99,7 +99,7 @@ def _normalize_video(video_path: str, output_path: str, callback=None) -> str:
         duration = 0.0
     try:
         result = subprocess.run(cmd, capture_output=True, text=True,
-                                timeout=adaptive_timeout(duration))
+                                timeout=adaptive_timeout(duration), encoding="utf-8", errors="replace")
         if result.returncode != 0:
             error_msg = result.stderr[-500:] if result.stderr else "Unknown error"
             raise RuntimeError(f"ffmpeg 标准化视频失败: {error_msg}")
@@ -117,7 +117,7 @@ def _probe_video_duration(video_path: str) -> float:
         result = subprocess.run(
             ["ffprobe", "-v", "error", "-show_entries", "format=duration",
              "-of", "csv=p=0", video_path],
-            capture_output=True, text=True, timeout=30,
+            capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace",
         )
         if result.returncode == 0 and result.stdout.strip():
             return float(result.stdout.strip())
@@ -171,7 +171,7 @@ def _split_video_by_duration(video_path: str, segment_seconds: float, output_dir
         from backend.utils.ffmpeg_guard import apply_resource_args
         cmd = apply_resource_args(cmd)
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
             if result.returncode != 0:
                 raise RuntimeError(f"ffmpeg 分段失败（第 {i + 1}/{n} 段）: {result.stderr[-500:]}")
         except FileNotFoundError:

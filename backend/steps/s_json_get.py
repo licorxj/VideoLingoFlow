@@ -90,9 +90,32 @@ class S_JsonGet(BaseStep):
             raise ValueError("未设置任何取值表达式，请在节点配置中填写（如 images$0）")
 
         # --- Resolve JSON input ---
+        value_source = str(node_config.get("value_source", "auto") or "auto").strip().lower()
+        custom_json = (node_config.get("custom_json", "") or "").strip()
         json_input = step_inputs.get("json", "")
-        if not json_input:
-            raise ValueError("未连接 JSON 输入。")
+
+        if value_source == "input":
+            # 仅允许连线输入：未接线则明确报错
+            if not json_input:
+                raise ValueError("未连接 JSON 输入（当前「JSON来源」=仅连线输入）。请在节点左侧连入上游 JSON 输出端口。")
+            data_source = "连线"
+        elif value_source == "custom":
+            # 仅允许自定义 JSON：未填则报错
+            if not custom_json:
+                raise ValueError("未填写自定义 JSON（当前「JSON来源」=自定义输入）。请在节点配置中填写 JSON 文本或文件路径。")
+            json_input = custom_json
+            data_source = "自定义"
+        else:  # auto：连线优先，缺失时回退自定义
+            if json_input:
+                data_source = "连线"
+            elif custom_json:
+                json_input = custom_json
+                data_source = "自定义"
+            else:
+                raise ValueError(
+                    "未连接 JSON 输入，也未填写自定义 JSON。请：①在节点左侧连入上游 JSON 输出端口；"
+                    "或②将「JSON来源」设为「自定义输入」并填写 JSON 文本/文件路径。"
+                )
 
         json_path = _resolve_path(json_input, task_dir)
         if json_path:
@@ -106,7 +129,7 @@ class S_JsonGet(BaseStep):
             data = json_input  # already a dict/list
 
         if callback:
-            callback(40, f"已读取 JSON，准备按 {len([k for k in key_exprs if k])} 个表达式取值")
+            callback(40, f"已读取 JSON（{data_source}），准备按 {len([k for k in key_exprs if k])} 个表达式取值")
 
         # --- Extract values for each output port ---
         outputs = {}

@@ -550,9 +550,9 @@ def _cloudflared_running() -> bool:
     """检测 cloudflared 进程是否在运行（Windows 用 tasklist，其余平台用 pgrep）。"""
     try:
         if os.name == "nt":
-            result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq cloudflared.exe", "/NH"], capture_output=True, text=True, timeout=10)
+            result = subprocess.run(["tasklist", "/FI", "IMAGENAME eq cloudflared.exe", "/NH"], capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
             return "cloudflared.exe" in result.stdout
-        result = subprocess.run(["pgrep", "-x", "cloudflared"], capture_output=True, text=True, timeout=10)
+        result = subprocess.run(["pgrep", "-x", "cloudflared"], capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
         return bool(result.stdout.strip())
     except Exception:
         return False

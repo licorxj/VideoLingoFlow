@@ -131,7 +131,7 @@ class _FileTailer:
                     if size < self._offset:
                         self._offset = 0  # File was truncated
                     if size > self._offset:
-                        with open(self._filepath, "r", encoding="utf-8", errors="replace") as f:
+                        with open(self._filepath, "r") as f:
                             f.seek(self._offset)
                             new_data = f.read()
                             self._offset = f.tell()

@@ -54,7 +54,7 @@ def _probe_media_info(path: Path) -> dict[str, Any]:
             ],
             capture_output=True,
             text=True,
-            timeout=DEFAULT_PROBE_TIMEOUT,
+            timeout=DEFAULT_PROBE_TIMEOUT, encoding="utf-8", errors="replace",
         )
     except Exception:
         return {}

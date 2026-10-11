@@ -13,6 +13,7 @@ Seedance 是异步任务接口：本模块负责「组装请求体 + 提交任�
 官方文档要点（详见 _TASK_TYPES / _PARAM_NOTES）：
   - content 元素支持：text / image_url / video_url / audio_url / draft_task
   - 图生视频-首帧：1 张 image_url，role=first_frame（或不填）
+    （实现上允许多传：首张作 first_frame，其余自动作 reference_image）
   - 图生视频-首尾帧：2 张 image_url，role=first_frame / last_frame
   - 全模态参考生视频：reference_image(role) + reference_video(role) + reference_audio(role)
   - 视频产物通过 content.video_url 返回（URL 有效期 24h），可选 last_frame_url
@@ -261,7 +262,7 @@ def build_content(prompt: str, ref_images=None, ref_videos=None, ref_audios=None
 
     mode 映射（与 backend/videogen 服务层一致）：
       txt2video : 纯文本
-      img2video : 图生视频-首帧（1 张 image_url, role=first_frame）
+      img2video : 图生视频（首张 image_url 作 role=first_frame，其余作 role=reference_image）
       flf2video : 图生视频-首尾帧（2 张 image_url, role=first_frame/last_frame）
       autovideo : 全模态参考生视频（reference_image + reference_video + reference_audio 任意组合）
 
@@ -272,13 +273,21 @@ def build_content(prompt: str, ref_images=None, ref_videos=None, ref_audios=None
         content.append({"type": "text", "text": prompt})
 
     if mode == "img2video":
-        imgs = (ref_images or [])[:1]
-        for img in imgs:
+        # 图生视频：参考图1 作首帧；参考图2~N 自动作为参考图（reference_image）一并提交，
+        # 等价全模态的多图参考。只接 1 张时就是标准的单首帧图生视频。
+        has_first_frame = False
+        for i, img in enumerate(ref_images or []):
             url, err = _resolve_media(img, "image", api_key=api_key)
             if err:
-                logger.warning("Seedance: 首帧图解析失败: %s", err)
+                logger.warning("Seedance: 图生视频参考图[%d]解析失败: %s", i + 1, err)
                 continue
-            content.append({"type": "image_url", "image_url": {"url": url}, "role": "first_frame"})
+            role = "reference_image" if has_first_frame else "first_frame"
+            content.append({"type": "image_url", "image_url": {"url": url}, "role": role})
+            if role == "first_frame":
+                has_first_frame = True
+            elif i == 0:
+                # 上游必须有 first_frame：参考图1 不可用时由后续图顶替，避免整单失败
+                logger.warning("Seedance: 参考图1 解析失败，已由后续参考图顶替为首帧")
     elif mode == "flf2video":
         imgs = (ref_images or [])[:2]
         roles = ["first_frame", "last_frame"]

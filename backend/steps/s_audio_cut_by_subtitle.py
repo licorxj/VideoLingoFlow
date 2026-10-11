@@ -31,7 +31,7 @@ def _ffprobe_duration(audio_path: str) -> float:
             ["ffprobe", "-v", "error",
              "-show_entries", "format=duration",
              "-of", "default=noprint_wrappers=1:nokey=1", audio_path],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+            capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace",
         )
         if r.returncode == 0 and r.stdout.strip():
             return float(r.stdout.strip())
@@ -214,7 +214,7 @@ class StepAudioCutBySubtitle(BaseStep):
                 "-t", f"{duration:.3f}", "-c:a", seg_codec, abs_audio,
             ])
             try:
-                r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+                r = subprocess.run(cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
                 if r.returncode != 0:
                     raise RuntimeError(f"ffmpeg 切割失败(段 {seg_id}): {r.stderr[-500:]}")
             except FileNotFoundError:

@@ -67,6 +67,52 @@ def _control_plane_workspace_path(path: str) -> Path | None:
     return None
 
 
+# 允许在「未带 task_id」时回查的任务内相对目录前缀（避免任意路径扫描）
+_WORKSPACE_RELATIVE_PREFIXES = {"output", "cache", "input", "preview"}
+_WORKSPACE_SCAN_LIMIT = 300
+
+
+def _find_in_workspaces(path: str) -> Path | None:
+    """相对产物路径但前端未带 task_id 时的兜底查找。
+
+    旧工作流里保存的产物路径是任务内相对路径（如 ``output/node_x/xxx.png``），
+    而任务 id 只在「当前有活动任务」时才随请求带上；离线回看历史节点结果时
+    task_id 为空，直接按相对路径解析会落空。此处按最近修改的工作区倒序查一遍。
+    """
+    requested = Path(path)
+    if requested.is_absolute() or not requested.parts:
+        return None
+    if any(part in {"", ".", ".."} for part in requested.parts):
+        return None
+    if requested.parts[0].lower() not in _WORKSPACE_RELATIVE_PREFIXES:
+        return None
+
+    workspace_root = Path(
+        os.getenv("CONTROL_PLANE_WORKSPACE_ROOT", Path.cwd() / "control_plane_workspaces")
+    ).resolve()
+    if not workspace_root.is_dir():
+        return None
+
+    entries: list[tuple[float, Path]] = []
+    for index, entry in enumerate(workspace_root.iterdir()):
+        if index >= _WORKSPACE_SCAN_LIMIT:
+            break
+        if not entry.is_dir():
+            continue
+        try:
+            entries.append((entry.stat().st_mtime, entry))
+        except OSError:
+            continue
+    entries.sort(key=lambda item: item[0], reverse=True)
+
+    for _mtime, workspace in entries:
+        root = workspace.resolve()
+        candidate = (root.joinpath(*requested.parts)).resolve()
+        if root in candidate.parents and candidate.is_file():
+            return candidate
+    return None
+
+
 def _stream_path(path: str, task_id: str | None = None) -> str:
     safe = _safe_path(path)
     if os.path.isfile(safe):
@@ -81,6 +127,10 @@ def _stream_path(path: str, task_id: str | None = None) -> str:
         candidate = (workspace_root / task_id / path).resolve()
         if workspace_root in candidate.parents and candidate.is_file():
             return str(candidate)
+    # 未带 task_id（离线回看历史工作流节点结果）时，按最近改动的工作区兜底查一次
+    fallback = _find_in_workspaces(path)
+    if fallback:
+        return str(fallback)
     return safe
 
 @router.post("/browse")
@@ -377,7 +427,7 @@ async def video_info(path: str, task_id: Optional[str] = None):
 
     def _run(cmd):
         try:
-            return subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            return subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
         except FileNotFoundError:
             raise HTTPException(status_code=500, detail="ffprobe not found. Please install ffmpeg.")
         except subprocess.TimeoutExpired:
@@ -479,7 +529,7 @@ async def trim_audio(body: dict):
     def _run_ffmpeg():
         from backend.utils.ffmpeg_guard import apply_resource_args
         cmd = apply_resource_args(["ffmpeg", "-y", "-i", safe, "-ss", str(start), "-to", str(end), "-c", "copy", out_path])
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
         if result.returncode != 0:
             raise HTTPException(status_code=500, detail=f"FFmpeg error: {result.stderr[:500]}")
 

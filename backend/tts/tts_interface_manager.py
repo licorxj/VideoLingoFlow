@@ -96,7 +96,7 @@ def _speed_ref_audio(ref_audio: str, speed: float) -> str:
         "-vn", out_path,
     ])
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
         if result.returncode != 0:
             # ffmpeg 版本头过滤
             stderr = result.stderr or ""

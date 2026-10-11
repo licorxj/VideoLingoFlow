@@ -171,7 +171,7 @@ class S17TrackSeparation(BaseStep):
             probe = subprocess.run(
                 ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
                  "-of", "csv=p=0", reference_audio],
-                capture_output=True, text=True, timeout=30
+                capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace"
             )
             duration = float(probe.stdout.strip())
         except Exception:
@@ -185,7 +185,7 @@ class S17TrackSeparation(BaseStep):
                 ["ffmpeg", "-y", "-f", "lavfi", "-i", f"anullsrc=r=44100:cl=stereo",
                  "-t", str(duration), "-acodec", codec, output_path]
             ),
-            capture_output=True, text=True, timeout=60
+            capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace"
         )
 
     @staticmethod

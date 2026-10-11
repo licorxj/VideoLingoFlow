@@ -278,7 +278,7 @@ class S00BatchDownload(BaseStep):
         # 3) 更新 yt-dlp（20s 超时，失败不阻塞）
         try:
             upd = subprocess.run([sys.executable, "-m", "yt_dlp", "-U"],
-                                 capture_output=True, text=True, timeout=20)
+                                 capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace")
             status = "updated" if upd.returncode == 0 else "skipped"
         except Exception:
             status = "skipped"
@@ -334,7 +334,7 @@ class S00BatchDownload(BaseStep):
         # 5) 执行：stdout 由后台线程排空（--print 输出），主线程读 stderr 报进度
         proc = subprocess.Popen(
             cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, encoding="utf-8", errors="replace",
+            text=True,
         )
         stdout_lines: List[str] = []
         stderr_lines: List[str] = []

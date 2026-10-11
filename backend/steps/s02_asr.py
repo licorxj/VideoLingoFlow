@@ -588,7 +588,7 @@ class S02ASR(BaseStep):
             "-vn", "-acodec", "pcm_s16le", "-ar", "16000", "-ac", "1",
             audio_path,
         ])
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
         if result.returncode != 0:
             raise Exception(f"Audio extraction failed: {result.stderr[:200]}")
         if callback:
@@ -603,7 +603,7 @@ class S02ASR(BaseStep):
                 "-of", "default=noprint_wrappers=1:nokey=1",
                 video_path,
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
             return float(result.stdout.strip())
         except Exception:
             return 60.0

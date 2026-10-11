@@ -301,7 +301,7 @@ class MiMoASRLocal(ASRBase):
                 ],
                 capture_output=True,
                 text=True,
-                timeout=30,
+                timeout=30, encoding="utf-8", errors="replace",
             )
             if result.returncode == 0 and result.stdout.strip():
                 return float(result.stdout.strip())
@@ -324,7 +324,7 @@ class MiMoASRLocal(ASRBase):
                 ], mux_queue=64),
                 capture_output=True,
                 text=True,
-                timeout=300,
+                timeout=300, encoding="utf-8", errors="replace",
             )
             
             silence_points = []

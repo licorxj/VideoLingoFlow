@@ -6,7 +6,7 @@ import {
 	isDevPlaceholderActive,
 	generatePlaceholderImage,
 } from "@/lib/ai/placeholder";
-import { getImageProvider } from "@/lib/ai/providers";
+import { resolveImageProvider } from "@/lib/ai/providers";
 import { processMediaAssets } from "@/lib/media/processing";
 import { uploadReferenceImage } from "@/lib/media/upload-reference";
 import { useAISettingsStore } from "./ai-settings-store";
@@ -311,20 +311,18 @@ export const useAIImageGenerationStore = create<AIImageGenerationState>()(
 
 			const { imageProviderId, imageApiKey } = useAISettingsStore.getState();
 
-			if (!imageProviderId) {
+			// 嵌入主项目时回落到 VideoLingo 接口层（无需 Cutia 侧 Key）
+			const resolved = resolveImageProvider({
+				id: imageProviderId,
+				apiKey: imageApiKey,
+			});
+			if (!resolved) {
 				toast.error(
 					i18next.t("Please configure an image provider in Settings"),
 				);
 				return;
 			}
-
-			const provider = getImageProvider({ id: imageProviderId });
-			if (!provider || !imageApiKey) {
-				toast.error(
-					i18next.t("Please configure an image provider in Settings"),
-				);
-				return;
-			}
+			const { provider, apiKey: providerApiKey } = resolved;
 
 			const { referenceImage, selectedCharacterId } = get();
 
@@ -347,9 +345,9 @@ export const useAIImageGenerationStore = create<AIImageGenerationState>()(
 						prompt: trimmedPrompt,
 						aspectRatio: aspectRatio === "auto" ? undefined : aspectRatio,
 						referenceImageUrl,
-					},
-					apiKey: imageApiKey,
-				});
+						},
+						apiKey: providerApiKey,
+						});
 
 				const newImages: GeneratedImage[] = results.map((result) => ({
 					id: generateUUID(),

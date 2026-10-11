@@ -120,7 +120,7 @@ class StepAudioDenoise(BaseStep):
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=600,
+                timeout=600, encoding="utf-8", errors="replace",
             )
             if result.returncode != 0:
                 stderr = result.stderr or ""
@@ -223,7 +223,7 @@ class StepAudioDenoise(BaseStep):
         from backend.utils.ffmpeg_guard import apply_resource_args
         encode_args = self.FORMAT_ENCODE_ARGS.get(target_fmt, ["-acodec", "pcm_s16le"])
         cmd = apply_resource_args(["ffmpeg", "-y", "-i", src, *encode_args, dst])
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if proc.returncode != 0:
             raise Exception(f"转码失败 ({target_fmt}): {proc.stderr[-300:]}")
 

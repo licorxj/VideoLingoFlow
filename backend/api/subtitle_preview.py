@@ -110,7 +110,7 @@ async def generate_preview(req: PreviewRequest):
                 "-c:v", "libx264", "-preset", "ultrafast", "-crf", "23",
                 output_path,
             ])
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120, encoding="utf-8", errors="replace")
             if result.returncode != 0:
                 raise HTTPException(status_code=500, detail=f"ffmpeg 执行失败: {result.stderr[:500]}")
 

@@ -418,7 +418,7 @@ class BSRoformerSeparation(SeparationBase):
                 "-acodec", "pcm_s16le" if dst_ext == "wav" else "libmp3lame",
                 dst,
             ])
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
             if result.returncode != 0:
                 raise Exception(f"Audio conversion failed: {result.stderr[:300]}")
 
@@ -444,11 +444,11 @@ class BSRoformerSeparation(SeparationBase):
             "-acodec", codec, bg_dst,
         ])
 
-        vocals_res = subprocess.run(vocals_cmd, capture_output=True, text=True, timeout=600)
+        vocals_res = subprocess.run(vocals_cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if vocals_res.returncode != 0:
             raise Exception(f"FFmpeg fallback vocals failed: {vocals_res.stderr[:500]}")
 
-        bg_res = subprocess.run(bg_cmd, capture_output=True, text=True, timeout=600)
+        bg_res = subprocess.run(bg_cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if bg_res.returncode != 0:
             raise Exception(f"FFmpeg fallback background failed: {bg_res.stderr[:500]}")
 

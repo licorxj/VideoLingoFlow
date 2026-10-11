@@ -39,6 +39,11 @@
       "id": "grp_3ca3eb39",
       "name": "AI创作",
       "order": 8
+    },
+    {
+      "id": "grp_91d41035",
+      "name": "发布类",
+      "order": 9
     }
   ],
   "membership": {

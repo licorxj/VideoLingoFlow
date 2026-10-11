@@ -1976,6 +1976,94 @@
         "sdk_extra_args": {}
       },
       "cloud": false
+    },
+    {
+      "id": "agnes",
+      "name": "Agnes AI 生图（云端）",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "cloud": true,
+      "description": "Agnes AI 目前免费的图像生成。支持文生图与图生图。API Key 优先取系统环境变量 AGNES_API_KEY，其次取项目密钥管理器中的同名密钥，建议在密匙管理器中设置多个key以绕过并发限速",
+      "api_source_url": "https://platform.agnes-ai.com",
+      "model_docs_url": "",
+      "balance": null,
+      "config": {
+        "api_url": "https://apihub.agnes-ai.com",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.imagegen.sdk.agnes_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "secret://AGNES_API_KEY",
+        "default_model": "agnes-image-2.5-flash",
+        "model_options": [
+          "agnes-image-2.5-flash"
+        ],
+        "model_metadata": {
+          "agnes-image-2.5-flash": {
+            "modes": [
+              "t2i",
+              "i2i"
+            ],
+            "price": "0",
+            "resolutions": [
+              "1K",
+              "2K",
+              "4K"
+            ],
+            "aspect_ratios": [
+              "1:1",
+              "16:9",
+              "9:16",
+              "4:3",
+              "3:4",
+              "3:2",
+              "2:3",
+              "21:9"
+            ]
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "response_format": "url",
+        "output_format": "",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2img": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2img": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "base_url",
+            "default": "https://apihub.agnes-ai.com",
+            "description": "服务基址（留空用默认，可指向自建网关）"
+          },
+          {
+            "key": "size",
+            "default": "",
+            "description": "直接指定输出尺寸，如 1024x768；留空则由分辨率档位 + 宽高比自动换算"
+          },
+          {
+            "key": "timeout",
+            "default": "180",
+            "description": "单次请求超时（秒）"
+          },
+          {
+            "key": "negative_field",
+            "default": "",
+            "description": "负向提示词字段名；服务端未声明该字段，留空表示不下发"
+          }
+        ],
+        "max_concurrent": 3,
+        "timeout": 300,
+        "sdk_extra_args": {}
+      }
     }
   ]
 }

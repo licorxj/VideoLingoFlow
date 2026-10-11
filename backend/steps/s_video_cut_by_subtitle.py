@@ -32,7 +32,7 @@ def _ffprobe_duration(video_path: str) -> float:
             ["ffprobe", "-v", "error",
              "-show_entries", "format=duration",
              "-of", "default=noprint_wrappers=1:nokey=1", video_path],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+            capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace",
         )
         if r.returncode == 0 and r.stdout.strip():
             return float(r.stdout.strip())

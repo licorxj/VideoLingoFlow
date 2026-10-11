@@ -262,7 +262,7 @@ class MossTranscribeDiarizeLocal(ASRBase):
                 ["ffprobe", "-v", "error",
                  "-show_entries", "format=duration",
                  "-of", "json", path],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace",
             )
             d = _json.loads(out.stdout).get("format", {}).get("duration")
             if d:

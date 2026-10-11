@@ -72,7 +72,7 @@ def _ffmpeg_has_filter(filter_name: str) -> bool:
             [ffmpeg, "-hide_banner", "-filters"],
             capture_output=True,
             text=True,
-            timeout=15,
+            timeout=15, encoding="utf-8", errors="replace",
         )
         if result.returncode != 0:
             return False
@@ -184,7 +184,7 @@ def _adjust_with_ffmpeg(input_path: str, output_path: str, speed_factor: float) 
         logger.info("ffmpeg speed backend=%s speed_factor=%.4f", backend, speed_factor)
         from backend.utils.ffmpeg_guard import apply_resource_args
         result = subprocess.run(
-            apply_resource_args(cmd), capture_output=True, text=True, timeout=120
+            apply_resource_args(cmd), capture_output=True, text=True, timeout=120, encoding="utf-8", errors="replace"
         )
         if result.returncode == 0 and os.path.exists(output_path):
             return True

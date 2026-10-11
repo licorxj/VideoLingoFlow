@@ -49,7 +49,7 @@ def _read_document_text(value: str, task_dir: str) -> str:
             return value
         if os.path.splitext(candidate)[1].lower() not in _TEXT_DOC_EXTS:
             return value
-        with open(candidate, "r", encoding="utf-8", errors="replace") as f:
+        with open(candidate, "r") as f:
             return f.read().strip()
     except OSError:
         return value

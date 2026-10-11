@@ -171,7 +171,7 @@ class S00PlatformDownload(BaseStep):
         try:
             update_result = subprocess.run(
                 [sys.executable, "-m", "yt_dlp", "-U"],
-                capture_output=True, text=True, timeout=20
+                capture_output=True, text=True, timeout=20, encoding="utf-8", errors="replace"
             )
             status = "updated" if update_result.returncode == 0 else "skipped"
             print(f"[S00] yt-dlp update: {status}")

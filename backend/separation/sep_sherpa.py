@@ -49,7 +49,7 @@ class SherpaSpleeterSeparation(SeparationBase):
             "ffmpeg", "-y", "-i", input_path, "-vn",
             "-ac", "2", "-ar", str(SAMPLE_RATE), "-c:a", "pcm_s16le", wav,
         ])
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
         if proc.returncode != 0 or not os.path.exists(wav):
             shutil.rmtree(tmp_dir, ignore_errors=True)
             raise RuntimeError(f"ffmpeg 提取音频失败: {proc.stderr[-400:]}")
@@ -78,7 +78,7 @@ class SherpaSpleeterSeparation(SeparationBase):
         encode = {"mp3": ["-c:a", "libmp3lame", "-q:a", "2"],
                   "flac": ["-c:a", "flac"]}.get(fmt, ["-acodec", "pcm_s16le"])
         cmd = apply_resource_args(["ffmpeg", "-y", "-i", src, *encode, dst])
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=900, encoding="utf-8", errors="replace")
         if proc.returncode != 0:
             raise RuntimeError(f"转码失败 ({fmt}): {proc.stderr[-300:]}")
 

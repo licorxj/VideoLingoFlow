@@ -72,7 +72,7 @@ def reencode_audio(src: str, dst: str, quality: dict, timeout: int = 600,
     from backend.utils.ffmpeg_guard import apply_resource_args
     cmd = apply_resource_args(["ffmpeg", "-y", "-i", src, *ffmpeg_encode_args(quality), dst])
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, encoding="utf-8", errors="replace")
     except subprocess.TimeoutExpired:
         raise Exception(f"音频转码超时（{timeout}s）: {dst}")
     except FileNotFoundError:

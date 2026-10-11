@@ -45,7 +45,7 @@ def _get_duration(file_path: str) -> float:
     """使用 ffprobe 获取视频时长（秒）。"""
     try:
         cmd = ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", file_path]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
         if result.returncode == 0:
             info = json.loads(result.stdout)
             return float(info.get("format", {}).get("duration", 0))
@@ -93,7 +93,7 @@ def _get_keyframe_times(video_path: str) -> list:
             "-show_entries", "frame=pts_time", "-of", "csv=p=0",
             video_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
         if result.returncode == 0:
             times = []
             for line in result.stdout.splitlines():

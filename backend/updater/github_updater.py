@@ -99,7 +99,7 @@ def _run(cmd: list, cwd: Path, timeout: int = 600) -> subprocess.CompletedProces
         text=True,
         timeout=timeout,
         shell=False,
-        stdin=subprocess.DEVNULL,
+        stdin=subprocess.DEVNULL, encoding="utf-8", errors="replace",
     )
 
 
@@ -108,7 +108,7 @@ def _default_branch(git: str, root: Path) -> str:
     try:
         out = subprocess.run(
             [git, "ls-remote", "--symref", REPO_URL, "HEAD"],
-            cwd=str(root), capture_output=True, text=True, timeout=60,
+            cwd=str(root), capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace",
         ).stdout
         for line in out.splitlines():
             if line.startswith("ref:"):
@@ -121,7 +121,7 @@ def _default_branch(git: str, root: Path) -> str:
         try:
             check = subprocess.run(
                 [git, "ls-remote", "--heads", REPO_URL, candidate],
-                cwd=str(root), capture_output=True, text=True, timeout=60,
+                cwd=str(root), capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace",
             ).stdout
             if candidate in check:
                 return candidate

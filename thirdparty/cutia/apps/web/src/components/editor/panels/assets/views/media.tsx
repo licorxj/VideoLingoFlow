@@ -2,7 +2,7 @@
 
 import { useTranslation } from "@i18next-toolkit/nextjs-approuter";
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { MediaDragOverlay } from "@/components/editor/panels/assets/drag-overlay";
 import { DraggableItem } from "@/components/editor/panels/assets/draggable-item";
@@ -40,6 +40,11 @@ import { TIMELINE_CONSTANTS } from "@/constants/timeline-constants";
 import { useEditor } from "@/hooks/use-editor";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { useRevealItem } from "@/hooks/use-reveal-item";
+import {
+	isHostEmbedded,
+	requestHostMaterial,
+	type HostMaterialKind,
+} from "@/lib/host/bridge";
 import { processMediaAssets } from "@/lib/media/processing";
 import { fetchRemoteMediaAsFile } from "@/lib/media/url-import";
 import {
@@ -88,6 +93,48 @@ export function MediaView() {
 	const [isUrlDialogOpen, setIsUrlDialogOpen] = useState(false);
 	const [urlInput, setUrlInput] = useState("");
 	const [isUrlImporting, setIsUrlImporting] = useState(false);
+	const [isLibraryImporting, setIsLibraryImporting] = useState(false);
+	// 是否在 VideoLingo 宿主中运行（素材库导入依赖宿主选择器）
+	const [hostMode, setHostMode] = useState(false);
+	useEffect(() => setHostMode(isHostEmbedded()), []);
+
+	/** 呼起 VideoLingo 素材库选择器，把选中素材直接注入当前项目素材列表。 */
+	const handleLibraryImport = async ({
+		kind,
+	}: {
+		kind: HostMaterialKind;
+	}) => {
+		if (!activeProject) {
+			toast.error(t("No active project"));
+			return;
+		}
+		setIsLibraryImporting(true);
+		try {
+			const materials = await requestHostMaterial({ kind });
+			if (materials.length === 0) return;
+			for (const material of materials) {
+				const response = await fetch(material.url);
+				if (!response.ok) {
+					throw new Error(`素材下载失败 (${response.status})`);
+				}
+				const blob = await response.blob();
+				const file = new File([blob], material.name, {
+					type: blob.type || material.mime || "application/octet-stream",
+				});
+				await processFiles({ files: [file] });
+			}
+			toast.success(t("Media imported successfully"));
+		} catch (error) {
+			console.error("Error importing from VideoLingo library:", error);
+			toast.error(
+				error instanceof Error
+					? error.message
+					: t("Failed to import media from URL"),
+			);
+		} finally {
+			setIsLibraryImporting(false);
+		}
+	};
 
 	const processFiles = async ({ files }: { files: FileList | File[] }) => {
 		if (!files || files.length === 0) return;
@@ -432,6 +479,26 @@ export function MediaView() {
 								<HugeiconsIcon icon={Link04Icon} className="size-4" />
 								{t("From URL")}
 							</DropdownMenuItem>
+							{hostMode && (
+								<>
+									<DropdownMenuItem
+										onClick={() => handleLibraryImport({ kind: "image" })}
+										disabled={isLibraryImporting}
+										className="gap-2"
+									>
+										<HugeiconsIcon icon={Image02Icon} className="size-4" />
+										{t("From VideoLingo Library (Image)")}
+									</DropdownMenuItem>
+									<DropdownMenuItem
+										onClick={() => handleLibraryImport({ kind: "video" })}
+										disabled={isLibraryImporting}
+										className="gap-2"
+									>
+										<HugeiconsIcon icon={Video01Icon} className="size-4" />
+										{t("From VideoLingo Library (Video)")}
+									</DropdownMenuItem>
+								</>
+							)}
 						</DropdownMenuContent>
 					</DropdownMenu>
 					</div>

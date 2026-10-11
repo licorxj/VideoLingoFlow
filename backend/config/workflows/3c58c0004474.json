@@ -153,7 +153,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 914
+        "height": 900
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
@@ -181,8 +181,7 @@
           "json": "output/json_visual_edit_node_3_1790445244596.json"
         },
         "error": "",
-        "workbench_url": "",
-        "duration": 0.08
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
@@ -362,11 +361,12 @@
             }
           ]
         },
-        "error": ""
+        "error": "",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 301
+        "height": 575
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -524,69 +524,77 @@
           "results": "cache/loop_manifest_loop_muktnuvn_52tx.json"
         },
         "error": "",
-        "duration": 31.2,
         "loopProgress": {
           "index": 20,
           "total": 21,
           "done": 21,
           "status": "succeeded"
-        }
+        },
+        "workbench_url": ""
       },
       "measured": {
         "width": 440,
-        "height": 617
+        "height": 267
       },
       "dragHandle": ".wf-node-drag-handle",
       "dragging": false
     },
     {
-      "id": "node_4_1790574675877",
+      "id": "node_1_1791437097386",
       "type": "workflow",
       "position": {
-        "x": 660,
-        "y": -1350
+        "x": 105,
+        "y": -1770
       },
       "selected": true,
       "data": {
-        "nodeType": "opencode_agent",
-        "label": "本地CLI智能体",
+        "nodeType": "pi_agent",
+        "label": "小pi通用智能体",
         "config": {
           "inputCount": 2,
           "outputCount": 2,
-          "cli": "cline",
-          "cli_path": "",
-          "opencode_exe": "",
-          "model": "",
-          "model_free_only": false,
-          "fallback_models": "",
-          "agent": "",
-          "skills": [],
+          "skills": [
+            "free-material-search"
+          ],
           "mcps": [],
-          "auto_approve": true,
-          "thinking": false,
-          "pure": false,
-          "dir_name": "",
-          "timeout": 1800,
-          "instruction": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：使用skill技能搜索在线素材，将用户的搜索意图翻译为英文后再进行搜索。最终按照要求的输出格式返回结果。输入一即为本次需要搜索到素材",
+          "docs_path": "",
+          "external_doc": "",
+          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：使用skill技能搜索在线素材，将用户的搜索意图拆分为英文关键词再进行搜索。最终按照要求的输出格式返回结果。输入一即为本次需要搜索到素材",
           "output_items": [
             {
               "port": "输出1",
-              "type": "text",
-              "desc": ""
+              "type": "json",
+              "desc": "全部素材结果json"
             },
             {
               "port": "输出2",
-              "type": "json",
-              "desc": ""
+              "type": "text",
+              "desc": "第一个素材的url"
             }
           ]
         },
-        "status": "pending",
-        "disableExecute": false
+        "status": "failed",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "节点子进程异常退出(code=1): nistrator\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\asyncio\\base_events.py\", line 691, in run_until_complete\n    return future.result()\n           ^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_pi_agent.py\", line 190, in _execute\n    raise RuntimeError(\nRuntimeError: 智能体未返回约定的任务结束标识 [PI_TASK_DONE]，请检查其输出。Pi 实际输出尾部：I'll start by reading the input file to understand the search requirements.Now I understand the task. Let me probe API connectivity first to build the bes",
+        "outputs": {},
+        "error": "节点子进程异常退出(code=1): nistrator\\AppData\\Local\\Programs\\Python\\Python312\\Lib\\asyncio\\base_events.py\", line 691, in run_until_complete\n    return future.result()\n           ^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_pi_agent.py\", line 190, in _execute\n    raise RuntimeError(\nRuntimeError: 智能体未返回约定的任务结束标识 [PI_TASK_DONE]，请检查其输出。Pi 实际输出尾部：I'll start by reading the input file to understand the search requirements.Now I understand the task. Let me probe API connectivity first to build the bes",
+        "duration": 306.95,
+        "logLines": [
+          "[step_worker] step_inputs keys=['input_1']",
+          "[step_worker] node_config keys=['inputCount', 'outputCount', 'skills', 'mcps', 'docs_path', 'external_doc', 'persona', 'output_items']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\26016b707c9e421581db53c4bd492dd9, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] start node_type=pi_agent node_id=node_1_1791437097386 pid=43556",
+          "[step_worker] step instance created: S_PiAgent",
+          "[step_worker] step_inputs keys=['input_1']",
+          "[step_worker] node_config keys=['inputCount', 'outputCount', 'skills', 'mcps', 'docs_path', 'external_doc', 'persona', 'output_items']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\26016b707c9e421581db53c4bd492dd9, kwargs=['callback', 'cancel_callback'])"
+        ],
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 741
+        "height": 816
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -663,19 +671,19 @@
     {
       "source": "node_2_1789854186142",
       "sourceHandle": "out-text",
-      "target": "node_4_1790574675877",
+      "target": "node_1_1791437097386",
       "targetHandle": "in-input_1",
       "type": "bezier",
       "style": {
-        "stroke": "#8b5cf6",
+        "stroke": "#ef4444",
         "strokeWidth": 2,
         "strokeDasharray": "6 3"
       },
-      "id": "xy-edge__node_2_1789854186142out-text-node_4_1790574675877in-input_1"
+      "id": "xy-edge__node_2_1789854186142out-text-node_1_1791437097386in-input_1"
     }
   ],
   "type": "user",
   "createdAt": "2026-09-20T05:42:32",
-  "updatedAt": "2026-09-28T13:52:59",
-  "revision": 16
+  "updatedAt": "2026-10-08T14:11:52",
+  "revision": 24
 }

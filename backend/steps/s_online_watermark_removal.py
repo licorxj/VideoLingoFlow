@@ -243,7 +243,7 @@ class S_OnlineWatermarkRemoval(BaseStep):
             output_path,
         ])
         try:
-            result = subprocess.run(cmd_copy, capture_output=True, text=True, timeout=1800)
+            result = subprocess.run(cmd_copy, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
         except FileNotFoundError:
             raise RuntimeError("未找到 ffmpeg，请确保已安装并添加到 PATH")
         except subprocess.TimeoutExpired:
@@ -268,7 +268,7 @@ class S_OnlineWatermarkRemoval(BaseStep):
             output_path,
         ]
         try:
-            result2 = subprocess.run(cmd_reencode, capture_output=True, text=True, timeout=1800)
+            result2 = subprocess.run(cmd_reencode, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
         except subprocess.TimeoutExpired:
             raise RuntimeError("ffmpeg 拼接视频超时（1800 秒）")
         if result2.returncode != 0 or not os.path.exists(output_path):

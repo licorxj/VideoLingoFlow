@@ -64,7 +64,7 @@ def get_cuda_version():
     # 方法1: 通过nvidia-smi检测
     try:
         result = subprocess.run(
-            "nvidia-smi", shell=True, capture_output=True, text=True
+            "nvidia-smi", shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
         if result.returncode == 0:
             # 从nvidia-smi输出中提取CUDA版本
@@ -79,7 +79,7 @@ def get_cuda_version():
     # 方法2: 通过nvcc检测
     try:
         result = subprocess.run(
-            "nvcc --version", shell=True, capture_output=True, text=True
+            "nvcc --version", shell=True, capture_output=True, text=True, encoding="utf-8", errors="replace"
         )
         if result.returncode == 0:
             match = re.search(r"release (\d+\.\d+)", result.stdout)

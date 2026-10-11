@@ -269,10 +269,9 @@ export function VideoLingoTaskBridge() {
 		window.parent.postMessage({ type, version: TASK_PROJECT_BRIDGE_VERSION, taskId: taskIdRef.current, ...payload }, window.location.origin);
 	};
 
-	const reportDebug = (hypothesisId: string, msg: string, data: Record<string, unknown> = {}) => {
-		// #region debug-point A-D:bridge-project-load
-		fetch("http://127.0.0.1:7777/event", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ sessionId: "cutia-project-load", runId: "pre-fix", hypothesisId, location: "videolingo-task-bridge.tsx", msg: `[DEBUG] ${msg}`, data, ts: Date.now() }) }).catch(() => {});
-		// #endregion
+	const reportDebug = (_hypothesisId: string, _msg: string, _data: Record<string, unknown> = {}) => {
+		// 本地调试埋点已停用：原实现会向 127.0.0.1:7777 打点，
+		// 未启动监听时每帧刷 ERR_CONNECTION_REFUSED，污染控制台。
 	};
 
 	useEffect(() => {

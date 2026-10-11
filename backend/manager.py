@@ -426,7 +426,7 @@ def _python_ready(python_exe: str, env: dict[str, str]) -> bool:
         capture_output=True,
         text=True,
         timeout=15,
-        env=env,
+        env=env, encoding="utf-8", errors="replace",
     )
     if check.returncode == 0:
         return True
@@ -493,7 +493,7 @@ def _migrate_sqlite(python_exe: str, env: dict[str, str], project_root: str) -> 
         env=env,
         capture_output=True,
         text=True,
-        timeout=90,
+        timeout=90, encoding="utf-8", errors="replace",
     )
     if result.returncode == 0:
         return True
@@ -516,7 +516,7 @@ def _worker_available(python_exe: str, env: dict[str, str], project_root: str, q
         text=True,
         timeout=10,
         cwd=project_root,
-        env=env,
+        env=env, encoding="utf-8", errors="replace",
     )
     return check.returncode == 0 and check.stdout.strip() == "True"
 
@@ -546,7 +546,7 @@ def _prepare_local_runtime() -> tuple[str, dict[str, str]] | None:
                 cleanup = subprocess.run(
                     [python_exe, "-c",
                      "from backend.control_plane.workflow_runtime import cleanup_orphan_workspaces; cleanup_orphan_workspaces()"],
-                    cwd=project_root, env=env, timeout=120, capture_output=True, text=True,
+                    cwd=project_root, env=env, timeout=120, capture_output=True, text=True, encoding="utf-8", errors="replace",
                 )
                 if cleanup.stdout.strip():
                     print(f"[Manager] {cleanup.stdout.strip().splitlines()[-1]}")
@@ -941,7 +941,7 @@ def _kill_port_process(port: int):
     try:
         output = subprocess.run(
             ["netstat", "-ano", "-p", "tcp"],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace",
         ).stdout
         pids: set[int] = set()
         for line in output.splitlines():
@@ -969,7 +969,7 @@ def _get_listener_pids(port: int) -> list[int]:
                 ["netstat", "-ano", "-p", "tcp"],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=10, encoding="utf-8", errors="replace",
             ).stdout
             for line in output.splitlines():
                 parts = line.split()
@@ -983,7 +983,7 @@ def _get_listener_pids(port: int) -> list[int]:
                 ["lsof", "-iTCP", f":{port}", "-sTCP:LISTEN", "-t"],
                 ["ss", "-ltnp", f"sport = :{port}"],
             ):
-                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+                result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
                 if result.returncode != 0:
                     continue
                 for token in result.stdout.replace(",", " ").split():
@@ -1009,14 +1009,14 @@ def _get_process_command_line(pid: int | None) -> str:
                 ],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=10, encoding="utf-8", errors="replace",
             )
             return result.stdout.strip().lower().replace("/", "\\")
         result = subprocess.run(
             ["ps", "-p", str(pid), "-o", "args="],
             capture_output=True,
             text=True,
-            timeout=10,
+            timeout=10, encoding="utf-8", errors="replace",
         )
         return result.stdout.strip().lower()
     except Exception:
@@ -1185,7 +1185,7 @@ def _resolve_node_exe() -> str | None:
 def _node_version_at_least(node_exe: str, major: int, minor: int = 0) -> bool:
     try:
         out = subprocess.run(
-            [node_exe, "--version"], capture_output=True, text=True, timeout=15
+            [node_exe, "--version"], capture_output=True, text=True, timeout=15, encoding="utf-8", errors="replace"
         ).stdout.strip().lstrip("v")
         parts = out.split(".")
         if len(parts) < 2:
@@ -1334,7 +1334,7 @@ def _get_cutia_listener_pid() -> int | None:
                 ["netstat", "-ano", "-p", "tcp"],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=10, encoding="utf-8", errors="replace",
             ).stdout
             for line in output.splitlines():
                 parts = line.split()
@@ -1347,7 +1347,7 @@ def _get_cutia_listener_pid() -> int | None:
                 ["ss", "-ltnp", f"sport = :{CUTIA_PORT}"],
             ):
                 result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=10
+                    cmd, capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace"
                 )
                 if result.returncode != 0:
                     continue
@@ -1374,7 +1374,7 @@ def _is_cutia_process(pid: int | None) -> bool:
                 ],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=10, encoding="utf-8", errors="replace",
             )
             command_line = result.stdout.strip().lower().replace("/", "\\")
         else:
@@ -1382,7 +1382,7 @@ def _is_cutia_process(pid: int | None) -> bool:
                 ["ps", "-p", str(pid), "-o", "args="],
                 capture_output=True,
                 text=True,
-                timeout=10,
+                timeout=10, encoding="utf-8", errors="replace",
             )
             command_line = result.stdout.strip().lower()
         project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))).lower()
@@ -1508,7 +1508,7 @@ def _celery_warm_shutdown(timeout: int = 30) -> bool:
             env=env,
             capture_output=True,
             text=True,
-            timeout=timeout,
+            timeout=timeout, encoding="utf-8", errors="replace",
         )
         if result.returncode != 0:
             print(f"[Manager] Celery 暖停机指令返回非零: {(result.stderr or result.stdout).strip()[:200]}")

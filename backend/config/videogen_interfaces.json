@@ -2363,6 +2363,128 @@
         "timeout": 1800,
         "sdk_extra_args": {}
       }
+    },
+    {
+      "id": "agnes_video",
+      "name": "Agnes AI 生视频（云端）",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "cloud": true,
+      "description": "Agnes AI（apihub.agnes-ai.com）视频生成，OpenAI Videos 兼容 + 异步任务（创建后按 video_id 轮询）。默认模型 agnes-video-2.5-flash（限时免费，仅 720P）。支持文生视频、首帧/首尾帧控制、图片与音频参考。本地参考素材默认自动转 base64 内联提交（图片超过 3MB 先自动压缩），也可配置 upload_endpoint 走对象存储上传网关以获得公网 URL。API Key 优先取系统环境变量 AGNES_API_KEY，其次取项目密钥管理器中的同名密钥，也可在本页显式填写。",
+      "api_source_url": "https://apihub.agnes-ai.com",
+      "model_docs_url": "https://wiki.agnes-ai.com",
+      "balance": null,
+      "config": {
+        "api_url": "https://apihub.agnes-ai.com/v1",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.videogen.sdk.agnes_video_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "secret://AGNES_API_KEY",
+        "default_model": "agnes-video-2.5-flash",
+        "model_options": [
+          "agnes-video-2.5-flash"
+        ],
+        "model_metadata": {
+          "agnes-video-2.5-flash": {
+            "modes": [
+              "txt2video",
+              "img2video",
+              "flf2video",
+              "autovideo"
+            ],
+            "price": "限时免费（原价 $0.025/秒）",
+            "resolutions": [
+              "720P"
+            ],
+            "durations": [
+              4,
+              5,
+              6,
+              7,
+              8,
+              9,
+              10,
+              11,
+              12
+            ],
+            "ratios": [
+              "21:9",
+              "16:9",
+              "4:3",
+              "1:1",
+              "3:4",
+              "9:16"
+            ],
+            "ratio_default": "16:9",
+            "max_ref_images": 5,
+            "max_ref_videos": 0,
+            "max_ref_audios": 3,
+            "supports_audio": false,
+            "default_audio": "model_default",
+            "supports": [
+              "seed"
+            ]
+          }
+        },
+        "model_list_url": "",
+        "model_list_key": "",
+        "balance_endpoint": "",
+        "modes": {
+          "txt2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "img2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "flf2video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "autovideo": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "custom_params": [
+          {
+            "key": "base_url",
+            "default": "https://apihub.agnes-ai.com/v1",
+            "description": "服务基址（自带 /v1；查询端点自动剥离 /v1 走站点根 /agnesapi）"
+          },
+          {
+            "key": "poll_interval",
+            "default": "3",
+            "description": "任务轮询间隔（秒），文档建议 1–2s，默认 3s 以降低限流风险"
+          },
+          {
+            "key": "poll_timeout",
+            "default": "1800",
+            "description": "任务轮询总时长（秒），超时按失败处理"
+          },
+          {
+            "key": "upload_endpoint",
+            "default": "",
+            "description": "本地素材上传网关（multipart，字段名 file）；返回 JSON 中需含 url 字段。留空则本地素材仅支持 http(s) URL"
+          },
+          {
+            "key": "media_fallback",
+            "default": "data_uri",
+            "description": "本地素材无法上传时的策略：data_uri（默认，转 base64 内联提交，图片>3MB 自动压缩）/ error（报错并给出指引）/ ignore（忽略该素材）"
+          },
+          {
+            "key": "seed",
+            "default": "",
+            "description": "随机种子，留空则由服务端随机（同seed 可提高可复现性）"
+          }
+        ],
+        "max_concurrent": 1,
+        "timeout": 1800,
+        "sdk_extra_args": {}
+      }
     }
   ]
 }

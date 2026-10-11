@@ -41,7 +41,7 @@ def _read_mono(path: str, target_sr: int):
             "ffmpeg", "-y", "-i", path, "-vn", "-ac", "1", "-ar", str(target_sr),
             "-c:a", "pcm_s16le", wav,
         ])
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=1800, encoding="utf-8", errors="replace")
         if proc.returncode != 0 or not os.path.exists(wav):
             raise RuntimeError(f"ffmpeg 读取音频失败: {proc.stderr[-400:]}")
         data, sr = sf.read(wav, dtype="float32")

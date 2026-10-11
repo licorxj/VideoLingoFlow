@@ -152,7 +152,7 @@ class DemucsSeparation(SeparationBase):
 
         try:
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout, cwd=output_dir
+                cmd, capture_output=True, text=True, timeout=timeout, cwd=output_dir, encoding="utf-8", errors="replace"
             )
             if result.returncode != 0:
                 detail = (
@@ -261,7 +261,7 @@ class DemucsSeparation(SeparationBase):
 
         try:
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=timeout, cwd=output_dir
+                cmd, capture_output=True, text=True, timeout=timeout, cwd=output_dir, encoding="utf-8", errors="replace"
             )
             if result.returncode != 0:
                 raise Exception(f"Demucs failed: {result.stderr[:1500]}")
@@ -345,7 +345,7 @@ class DemucsSeparation(SeparationBase):
             "import torch; import demucs; print('demucs_runtime_ok')",
         ]
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
         except Exception as exc:
             return {"ok": False, "message": f"Demucs runtime probe failed: {exc}"}
 
@@ -375,7 +375,7 @@ class DemucsSeparation(SeparationBase):
                 "-acodec", "pcm_s16le" if dst_ext == "wav" else "libmp3lame",
                 dst,
             ])
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, encoding="utf-8", errors="replace")
             if result.returncode != 0:
                 raise Exception(f"Audio conversion failed: {result.stderr[:300]}")
 
@@ -400,11 +400,11 @@ class DemucsSeparation(SeparationBase):
             "-acodec", codec, bg_dst,
         ])
 
-        vocals_res = subprocess.run(vocals_cmd, capture_output=True, text=True, timeout=600)
+        vocals_res = subprocess.run(vocals_cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if vocals_res.returncode != 0:
             raise Exception(f"FFmpeg fallback vocals failed: {vocals_res.stderr[:500]}")
 
-        bg_res = subprocess.run(bg_cmd, capture_output=True, text=True, timeout=600)
+        bg_res = subprocess.run(bg_cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         if bg_res.returncode != 0:
             raise Exception(f"FFmpeg fallback background failed: {bg_res.stderr[:500]}")
 

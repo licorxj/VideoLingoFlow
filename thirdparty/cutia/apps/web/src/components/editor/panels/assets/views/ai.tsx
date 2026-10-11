@@ -13,7 +13,12 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { getImageProvider, getVideoProvider } from "@/lib/ai/providers";
+import {
+	getImageProvider,
+	getVideoProvider,
+	isProviderReady,
+} from "@/lib/ai/providers";
+import { isHostEmbedded } from "@/lib/host/bridge";
 import {
 	useAIImageGenerationStore,
 	type AssetStatus,
@@ -195,7 +200,10 @@ function AIImageView() {
 		? getImageProvider({ id: imageProviderId })
 		: null;
 
-	const isConfigured = provider !== null && imageApiKey.length > 0;
+	// VideoLingo 通道无需 Cutia 侧 API Key
+	const isConfigured =
+		isProviderReady({ provider, apiKey: imageApiKey }) ||
+		isHostEmbedded();
 
 	if (!isConfigured) {
 		return (
@@ -500,7 +508,10 @@ function AIVideoView() {
 		? getVideoProvider({ id: videoProviderId })
 		: null;
 
-	const isConfigured = provider !== null && videoApiKey.length > 0;
+	// VideoLingo 通道无需 Cutia 侧 API Key
+	const isConfigured =
+		isProviderReady({ provider, apiKey: videoApiKey }) ||
+		isHostEmbedded();
 
 	if (!isConfigured) {
 		return (

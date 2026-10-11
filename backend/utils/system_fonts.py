@@ -28,7 +28,7 @@ def _fc_fonts() -> list[str]:
         ["fc-list", "--format=%{family}\\n"],
         capture_output=True,
         text=True,
-        timeout=30,
+        timeout=30, encoding="utf-8", errors="replace",
     ).stdout
     fonts: list[str] = []
     for line in out.splitlines():

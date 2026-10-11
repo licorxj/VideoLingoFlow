@@ -2132,7 +2132,7 @@ def export_chapter(project_id: str, body: ChapterExportRequest):
             cmd.extend(["-codec:a", "flac"])
         cmd.append(str(output_path))
         from backend.utils.ffmpeg_guard import apply_resource_args
-        subprocess.run(apply_resource_args(cmd), capture_output=True, text=True, check=True, timeout=300)
+        subprocess.run(apply_resource_args(cmd), capture_output=True, text=True, check=True, timeout=300, encoding="utf-8", errors="replace")
         file_size = output_path.stat().st_size if output_path.exists() else 0
         storage_key = f"projects/{project_id}/exports/{output_path.name}"
         final_path = resolve_storage_key(storage_key)

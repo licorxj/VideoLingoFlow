@@ -6,6 +6,7 @@ import {
 	DEFAULT_EXPERT_ROLE,
 } from "@/lib/ai/agent/expert-roles";
 import { runAgentLoop } from "@/lib/ai/agent/service";
+import { isHostEmbedded } from "@/lib/host/bridge";
 import type {
 	AgentLLMConfig,
 	AgentMessage,
@@ -80,7 +81,8 @@ export const useAgentStore = create<AgentState>()(
 			sendMessage: async (content: string) => {
 				const state = get();
 				if (state.status !== "idle") return;
-				if (!state.config.apiKey) return;
+				// 嵌入主项目时 LLM 走 VideoLingo 路由，不要求本地 API Key
+				if (!state.config.apiKey && !isHostEmbedded()) return;
 
 				const userMessage: AgentMessage = {
 					id: generateUUID(),

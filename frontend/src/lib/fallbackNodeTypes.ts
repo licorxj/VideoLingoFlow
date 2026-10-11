@@ -19506,7 +19506,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "audio_split",
     "name": "音频切割",
     "category": "audio",
-    "description": "将音频按数量或时长切割为多段，支持静音点切割",
+    "description": "将音频按数量或时长切割为多段，或按指定时间段截取单段，支持静音点切割",
     "icon": "Scissors",
     "color": "#0ea5e9",
     "execution_domain": "thread",
@@ -19535,7 +19535,8 @@ export const FALLBACK_NODE_TYPES = [
       "segment_count": 2,
       "segment_duration": 60,
       "use_silence": false,
-      "output_index": 1
+      "output_index": 1,
+      "time_range": ""
     },
     "configFields": [
       {
@@ -19550,6 +19551,10 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "duration",
             "label": "按固定时长"
+          },
+          {
+            "value": "range",
+            "label": "按时间段"
           }
         ]
       },
@@ -19570,17 +19575,37 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half"
       },
       {
+        "key": "time_range",
+        "label": "时间段(秒)",
+        "type": "text",
+        "dependsOn": "split_mode",
+        "dependsValue": "range",
+        "colSpan": "half",
+        "placeholder": "如 30-90",
+        "description": "起止秒数，支持 30-90 / 30~90 / 1:30-2:00"
+      },
+      {
         "key": "use_silence",
         "label": "寻找静音点切割",
         "type": "checkbox",
-        "colSpan": "half"
+        "colSpan": "half",
+        "dependsOn": "split_mode",
+        "dependsValue": [
+          "count",
+          "duration"
+        ]
       },
       {
         "key": "output_index",
         "label": "输出片段序号",
         "type": "text",
         "placeholder": "从1开始",
-        "colSpan": "half"
+        "colSpan": "half",
+        "dependsOn": "split_mode",
+        "dependsValue": [
+          "count",
+          "duration"
+        ]
       }
     ],
     "isBuiltIn": true

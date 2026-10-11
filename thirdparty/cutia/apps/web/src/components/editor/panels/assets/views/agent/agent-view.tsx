@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import type { ExpertRoleId } from "@/lib/ai/agent/expert-roles";
 import { EXPERT_ROLES } from "@/lib/ai/agent/expert-roles";
+import { isHostEmbedded } from "@/lib/host/bridge";
 import { useAgentStore } from "@/stores/agent-store";
 import { AgentChat } from "./agent-chat";
 import { AgentInput } from "./agent-input";
@@ -36,7 +37,8 @@ export function AgentView() {
 	const setExpertRole = useAgentStore((s) => s.setExpertRole);
 	const isBusy = status !== "idle" && status !== "error";
 
-	const isConfigured = Boolean(config.apiKey);
+	// 嵌入主项目时由 VideoLingo 提供 LLM，视为已配置
+	const isConfigured = Boolean(config.apiKey) || isHostEmbedded();
 
 	if (showSettings) {
 		return (

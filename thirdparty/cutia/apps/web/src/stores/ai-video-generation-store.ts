@@ -6,8 +6,8 @@ import {
 	isDevPlaceholderActive,
 	generatePlaceholderVideo,
 } from "@/lib/ai/placeholder";
-import { getVideoProvider } from "@/lib/ai/providers";
-import type { VideoTaskStatus } from "@/lib/ai/providers/types";
+import { resolveVideoProvider } from "@/lib/ai/providers";
+import type { AIVideoProvider, VideoTaskStatus } from "@/lib/ai/providers/types";
 import { pollVideoTask } from "@/lib/ai/providers/seedance";
 import { processMediaAssets } from "@/lib/media/processing";
 import { uploadReferenceImage } from "@/lib/media/upload-reference";
@@ -230,16 +230,16 @@ export const useAIVideoGenerationStore = create<AIVideoGenerationState>()(
 
 			const { videoProviderId, videoApiKey } = useAISettingsStore.getState();
 
-			if (!videoProviderId) {
+			// 嵌入主项目时回落到 VideoLingo 接口层（无需 Cutia 侧 Key）
+			const resolved = resolveVideoProvider({
+				id: videoProviderId,
+				apiKey: videoApiKey,
+			});
+			if (!resolved) {
 				toast.error(i18next.t("Please configure a video provider in Settings"));
 				return;
 			}
-
-			const provider = getVideoProvider({ id: videoProviderId });
-			if (!provider || !videoApiKey) {
-				toast.error(i18next.t("Please configure a video provider in Settings"));
-				return;
-			}
+			const { provider, apiKey: providerApiKey } = resolved;
 
 			const { resolution, referenceImage, selectedCharacterId } = get();
 
@@ -265,7 +265,7 @@ export const useAIVideoGenerationStore = create<AIVideoGenerationState>()(
 						resolution,
 						referenceImageUrl,
 					},
-					apiKey: videoApiKey,
+					apiKey: providerApiKey,
 				});
 
 				const videoId = generateUUID();
@@ -288,7 +288,7 @@ export const useAIVideoGenerationStore = create<AIVideoGenerationState>()(
 					provider,
 					videoId,
 					taskId: submitResult.taskId,
-					apiKey: videoApiKey,
+					apiKey: providerApiKey,
 					characterId: selectedCharacterId,
 				});
 			} catch (error) {
@@ -324,7 +324,7 @@ async function pollAndUpdate({
 	apiKey,
 	characterId,
 }: {
-	provider: ReturnType<typeof getVideoProvider>;
+	provider: AIVideoProvider | null;
 	videoId: string;
 	taskId: string;
 	apiKey: string;

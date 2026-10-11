@@ -43,7 +43,7 @@ def _ffprobe_info(video_path: str):
              "-show_entries", "stream=width,height,codec_type",
              "-show_entries", "format=duration",
              "-of", "json", video_path],
-            capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60,
+            capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace",
         )
         if r.returncode != 0:
             return 0, 0, 0.0

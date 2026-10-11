@@ -29,7 +29,7 @@ def _get_duration(file_path: str) -> float:
             "ffprobe", "-v", "quiet", "-print_format", "json",
             "-show_format", file_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15, encoding="utf-8", errors="replace")
         if result.returncode == 0:
             info = json.loads(result.stdout)
             return float(info.get("format", {}).get("duration", 0))

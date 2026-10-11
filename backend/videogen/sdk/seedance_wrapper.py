@@ -7,7 +7,7 @@ wuli_video_wrapper 一致，返回本地文件路径列表。
 
 支持的 mode（能力类型，按官方文档）：
   txt2video : 文生视频（纯文本）
-  img2video : 图生视频-首帧（1 张参考图, role=first_frame）
+  img2video : 图生视频-首帧（首张参考图 role=first_frame，其余 role=reference_image）
   flf2video : 图生视频-首尾帧（2 张参考图, role=first_frame/last_frame）
   autovideo : 全模态参考生视频（reference_image + reference_video + reference_audio 任意组合）
 

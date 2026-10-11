@@ -6,6 +6,16 @@
   seedance_flf2video   即梦-图生视频（首尾帧，flf2video）
   seedance_autovideo   即梦-全模态参考生视频（autovideo：图+视频+音频）
 
+参考素材输入口（端口声明见 backend/config/builtin_node_types.py 的 _seedance_node）：
+  - seedance_img2video   参考图1~4：参考图1 作首帧（first_frame），参考图2~4 作参考图（reference_image）。
+                          本节点不产生尾帧；需精确指定尾帧请用 seedance_flf2video。
+  - seedance_flf2video   参考图1（首帧） + 参考图2（尾帧），角色固定不可互换，多余的图忽略并告警。
+                          需要额外参考图时请用 seedance_autovideo。
+  - seedance_autovideo   参考图1~5 + 参考视频1~2 + 参考音频1~2（全部以 reference_* 角色提交）
+  每个口都是独立的 type="image"/"video"/"audio" 端口（可接单张素材，也可接上游列表输出口）。
+  后端按端口序号收集（空口跳过、保持顺序），再按实际数量决定提交形态：
+  单张参考图 → 单图模式；多张 → 按 参考图1→5 的顺序组装成列表提交。
+
 产物统一落盘到 <task_dir>/cache/videos，文件名格式：
   <提示词前 15 字符>_<node_id>[_<序号>].<ext>
 
@@ -62,7 +72,14 @@ def _sanitize_prefix(prompt: str) -> str:
 
 
 def _resolve_refs(value, task_dir: str = ""):
-    """把参考素材输入（字符串路径 / 路径列表 / 逗号或 JSON 列表）解析为绝对路径列表。"""
+    """把参考素材输入（字符串路径 / 路径列表 / 逗号或 JSON 列表）解析为素材引用列表。
+
+    解析结果与底层 SDK（``seedance_sdk._resolve_media``）的素材契约一致：
+      - ``http(s)://`` / ``asset://`` / ``data:`` 远程或内联引用原样透传，由 SDK 侧处理；
+      - 本地路径（绝对路径，或相对 task_dir 的产物相对路径）转为绝对路径后交给 SDK
+        （本地视频会由 SDK 先上传方舟换 ``asset://`` 引用）。
+    其余无法定位的条目直接丢弃并告警，不阻塞整条链路。
+    """
     if not value:
         return []
     if isinstance(value, (list, tuple)):
@@ -71,7 +88,12 @@ def _resolve_refs(value, task_dir: str = ""):
         s = value.strip()
         if not s:
             return []
-        if s.startswith("[") or "," in s:
+        low = s.lower()
+        if low.startswith(("http://", "https://", "asset://", "data:")):
+            # 单值直传：远程 URL / asset:// / data URI
+            # （data URI 自身含逗号，不能走下面的逗号分隔逻辑，否则会被拆坏）
+            items = [s]
+        elif s.startswith("[") or "," in s:
             try:
                 items = json.loads(s)
             except Exception:
@@ -87,11 +109,44 @@ def _resolve_refs(value, task_dir: str = ""):
         it = it.strip()
         if not it:
             continue
-        if os.path.isabs(it) and os.path.isfile(it):
+        low = it.lower()
+        if low.startswith(("http://", "https://", "asset://", "data:")):
+            resolved.append(it)
+        elif os.path.isabs(it) and os.path.isfile(it):
             resolved.append(it)
         elif task_dir and os.path.isfile(os.path.join(task_dir, it)):
             resolved.append(os.path.join(task_dir, it))
+        else:
+            logger.warning("Seedance: 忽略无效参考素材 %s", it)
     return resolved
+
+
+# 参考素材输入口 → 收集顺序（与 builtin_node_types.py 的 _seedance_node 端口声明一致）
+IMAGE_PORT_KEYS = [f"image{i}" for i in range(1, 6)]    # 参考图1~5
+VIDEO_PORT_KEYS = [f"video{i}" for i in range(1, 3)]    # 参考视频1~2
+AUDIO_PORT_KEYS = [f"audio{i}" for i in range(1, 3)]    # 参考音频1~2
+# 旧版单一列表口（type="list"，参考图 id 为 "image"）保留兼容，
+# 使拆分前保存的工作流连线在重新执行时仍能取到素材（会追加在编号口之后）。
+LEGACY_IMAGE_PORT_KEYS = ["image"]
+LEGACY_VIDEO_PORT_KEYS = ["video"]
+LEGACY_AUDIO_PORT_KEYS = ["audio"]
+
+
+def _collect_refs(inputs: dict, port_keys, legacy_port_keys, task_dir: str = "") -> list:
+    """按端口顺序收集参考素材：依次读 image1→image5（空口跳过）保持顺序，再补旧版列表口。
+
+    单个端口内若接入的是列表（上游图片列表输出口），会把列表按序摊平到该口的位置，
+    因此最终顺序始终是「参考图1 → 参考图2 → …」，与上游连线顺序一致。
+    """
+    out = []
+    for key in list(port_keys) + list(legacy_port_keys):
+        val = (inputs or {}).get(key)
+        if not val:
+            continue
+        for ref in _resolve_refs(val, task_dir):
+            if ref not in out:
+                out.append(ref)
+    return out
 
 
 def _get_api_key_from_env_or_interface() -> str:
@@ -117,6 +172,72 @@ def _get_api_key_from_env_or_interface() -> str:
     return seedance_sdk._get_api_key("")
 
 
+def _get_seedance_interface_default_model() -> str:
+    """当节点未显式选择模型时，回退到「火山方舟 Seedance」视频接口的默认模型设置。
+
+    与 Seedream 侧同名函数保持一致：接口以 sdk_module 标识（id 为生成型 UUID，不硬编码），
+    优先取接口配置里的 default_model，避免节点硬编码的模型被平台下线后失效。
+    """
+    try:
+        from backend.videogen.videogen_interface_manager import (
+            get_videogen_interface_manager,
+        )
+        mgr = get_videogen_interface_manager()
+        for iface in mgr.get_enabled():
+            cfg = iface.get("config", {}) or {}
+            if cfg.get("sdk_module") == "backend.videogen.sdk.seedance_wrapper":
+                dm = (cfg.get("default_model") or "").strip()
+                if dm:
+                    return dm
+    except Exception as e:
+        logger.warning("读取 Seedance 接口默认模型失败: %s", e)
+    return ""
+
+
+# 平台判定「模型 / 端点不存在或无权限」的错误特征（模型下线、账号未开通都会命中）
+_MODEL_UNAVAILABLE_HINTS = (
+    "InvalidEndpointOrModel.NotFound",
+    "ModelNotOpen",
+    "ModelNotFound",
+    "does not exist or you do not have access",
+)
+
+
+def _is_model_unavailable(exc) -> bool:
+    """判断异常是否为「模型不可用（已下线 / 无权限）」，用于自动回退到可用模型。"""
+    text = str(exc or "")
+    return any(hint.lower() in text.lower() for hint in _MODEL_UNAVAILABLE_HINTS)
+
+
+def _next_model_candidates(current: str, tried) -> list:
+    """模型不可用时按「接口默认模型 → SDK 默认模型」给出回退候选（排除已试过的）。"""
+    from backend.videogen.sdk import seedance_sdk
+
+    tried = {t for t in (list(tried) + [current or ""]) if t}
+    candidates = []
+    for m in (_get_seedance_interface_default_model(), seedance_sdk.DEFAULT_MODEL):
+        if m and m not in tried and m not in candidates:
+            candidates.append(m)
+    return candidates
+
+
+def _describe_seedance_api_error(exc, capability: str = "", ref_count: int = 0) -> str:
+    """把 Seedance 错误翻译成可操作提示（模型不可用 / 多模态混用分别给出后续动作）。"""
+    if _is_model_unavailable(exc):
+        return (
+            f"所选 Seedance 模型不可用（已下线或当前账号无权限）：{exc}。"
+            "请在节点面板重新选择该火山方舟账号下可用的模型；"
+            "若面板仍显示旧模型，请在「视频生成接口」设置中更新默认模型与模型列表。"
+        )
+    if capability == "img2video" and ref_count > 1:
+        return (
+            f"Seedance 图生视频（首帧 + {ref_count - 1} 张参考图）提交失败: {exc}。"
+            "若当前模型不接受首帧与参考图混用，请改用「即梦-图生视频(首尾帧)」节点（2 张图），"
+            "或改用「即梦-全模态参考生视频」节点承载多张参考图。"
+        )
+    return f"Seedance 生成失败: {exc}"
+
+
 def _history_path(task_dir: str, node_id: str) -> str:
     return os.path.join(task_dir, "cache", "seedance", f"{node_id}_params.json")
 
@@ -128,7 +249,8 @@ class S_SeedanceBase(BaseStep):
     # 子类覆盖
     capability = "txt2video"
     need_refs = False
-    ref_ports = 1  # autovideo 用 image/video/audio 多类型输入口
+    # 端口数量由 backend/config/builtin_node_types.py 的 _seedance_node 声明（前端 schema 权威源），
+    # Python 侧不镜像份数，只按端口 id 语义收集（见 IMAGE_PORT_KEYS 等常量）。
 
     def check_artifact(self, task_dir: str) -> bool:
         node_id = getattr(self, "_node_id", "")
@@ -236,7 +358,11 @@ class S_SeedanceBase(BaseStep):
         if not prompt:
             raise ValueError("提示词为空：请连接文本输入，或在面板中开启「自定义提示词」并填写。")
 
-        model = config.get("model") or seedance_wrapper.DEFAULT_MODEL
+        # 模型：节点配置 > 接口配置的默认模型 > SDK 内置默认（避免节点硬编码模型被下线后失效）
+        from backend.videogen.sdk import seedance_sdk
+        model = (config.get("model")
+                 or _get_seedance_interface_default_model()
+                 or seedance_sdk.DEFAULT_MODEL)
         resolution = config.get("resolution") or "720P"
         ratio = config.get("ratio") or "16:9"
         duration = int(config.get("duration", 5) or 5)
@@ -256,34 +382,43 @@ class S_SeedanceBase(BaseStep):
         callback_url = config.get("callback_url")
         poll_timeout = config.get("poll_timeout")
 
-        # 2. 参考素材
+        # 2. 参考素材：按端口序号收集（空口跳过、保持 参考图1→5 的顺序）
         ref_images, ref_videos, ref_audios = [], [], []
         if self.need_refs or self.capability == "autovideo":
             if self.capability == "autovideo":
-                # 参考图列表输入：把传入的列表包装成 image1、image2、… 序列，
-                # 由 build_content 逐个以 reference_image 角色提交（视频/音频同理）
-                ref_images = _resolve_refs(inputs.get("image"), task_dir)
-                ref_videos = _resolve_refs(inputs.get("video"), task_dir)
-                ref_audios = _resolve_refs(inputs.get("audio"), task_dir)
+                # 全模态：参考图 1~5 / 参考视频 1~2 / 参考音频 1~2，任意组合
+                ref_images = _collect_refs(inputs, IMAGE_PORT_KEYS, LEGACY_IMAGE_PORT_KEYS, task_dir)
+                ref_videos = _collect_refs(inputs, VIDEO_PORT_KEYS, LEGACY_VIDEO_PORT_KEYS, task_dir)
+                ref_audios = _collect_refs(inputs, AUDIO_PORT_KEYS, LEGACY_AUDIO_PORT_KEYS, task_dir)
             elif self.capability in ("img2video", "flf2video"):
                 # 支持 image / image1 / image2 ... 多输入口
-                keys = ["image", "image1", "image2", "image3", "image4", "image5"]
-                for k in keys:
-                    v = inputs.get(k)
-                    if v:
-                        ref_images.extend(_resolve_refs(v, task_dir))
-                if self.capability == "img2video" and len(ref_images) > 1:
-                    ref_images = ref_images[:1]
-                if self.capability == "flf2video" and len(ref_images) < 2:
-                    raise ValueError("图生视频-首尾帧需要 2 张参考图（首尾帧）。")
-                if self.capability == "img2video" and not ref_images:
-                    raise ValueError("图生视频-首帧需要 1 张参考图。")
+                ref_images = _collect_refs(inputs, IMAGE_PORT_KEYS, LEGACY_IMAGE_PORT_KEYS, task_dir)
+                if self.capability == "flf2video":
+                    if len(ref_images) < 2:
+                        raise ValueError("图生视频-首尾帧需要 2 张参考图（首帧/尾帧）。")
+                    if len(ref_images) > 2:
+                        logger.warning(
+                            "Seedance 首尾帧仅使用前 2 张参考图（参考图1=首帧 / 参考图2=尾帧），"
+                            "多余的参考图已忽略：%s；如需额外的参考图请改用「即梦-全模态参考生视频」节点。",
+                            ref_images[2:])
+                    ref_images = ref_images[:2]
+                elif not ref_images:
+                    raise ValueError("图生视频-首帧需要至少 1 张参考图。")
+                # img2video 不在此处截断：首帧 + 其余参考图的角色分配由 SDK 的
+                # build_content 完成（参考图1 → first_frame，参考图2~N → reference_image）
             else:
                 # fusion 类（本实现未启用）
-                ref_images = _resolve_refs(inputs.get("image"), task_dir)
+                ref_images = _collect_refs(inputs, IMAGE_PORT_KEYS, LEGACY_IMAGE_PORT_KEYS, task_dir)
 
-        if self.capability == "autovideo" and not (ref_images or ref_videos or ref_audios):
-            raise ValueError("全模态参考生视频需要至少 1 个参考素材（图/视频/音频）。")
+        if self.capability == "autovideo":
+            if not (ref_images or ref_videos or ref_audios):
+                raise ValueError("全模态参考生视频需要至少 1 个参考素材（图/视频/音频）。")
+            # 记录收集结果，便于排查「图接上了但没生效」类问题
+            logger.info(
+                "Seedance autovideo 参考素材：图 %d 张 / 视频 %d 个 / 音频 %d 个（提交形态：%s）",
+                len(ref_images), len(ref_videos), len(ref_audios),
+                "单图模式" if len(ref_images) == 1 else ("无参考图" if not ref_images else "按序列表"),
+            )
 
         api_key = _get_api_key_from_env_or_interface()
 
@@ -294,7 +429,10 @@ class S_SeedanceBase(BaseStep):
             return hist_result
 
         if callback:
-            callback(10, f"Seedance 准备中（{self.capability} / {model}）...")
+            ref_desc = f" / 参考图 {len(ref_images)} 张" if ref_images else ""
+            if self.capability == "autovideo":
+                ref_desc += f" / 参考视频 {len(ref_videos)} 个 / 参考音频 {len(ref_audios)} 个"
+            callback(10, f"Seedance 准备中（{self.capability} / {model}{ref_desc}）...")
 
         # 4. 进度转发
         def on_progress(msg: str):
@@ -338,12 +476,30 @@ class S_SeedanceBase(BaseStep):
         if callback:
             callback(20, "调用 Seedance 接口生成视频...")
 
-        try:
-            detail = seedance_wrapper.generate(
-                prompt=prompt, output_dir=temp_dir, model=model,
-                raise_on_error=True, **kwargs)
-        except Exception as e:
-            raise RuntimeError(f"Seedance 生成失败: {e}") from e
+        detail = None
+        tried_models = []  # 已尝试且判定不可用的模型
+        while True:
+            try:
+                detail = seedance_wrapper.generate(
+                    prompt=prompt, output_dir=temp_dir, model=model,
+                    raise_on_error=True, **kwargs)
+                break
+            except Exception as e:
+                # 模型已下线 / 当前账号无权限：自动回退到接口默认模型重试一次，
+                # 让保存了过期模型 ID 的旧工作流能自愈，不至于整单失败
+                candidates = (_next_model_candidates(model, tried_models)
+                              if _is_model_unavailable(e) else [])
+                if not candidates:
+                    raise RuntimeError(
+                        _describe_seedance_api_error(e, self.capability, len(ref_images))
+                    ) from e
+                failed_model = model
+                tried_models.append(failed_model)
+                model = candidates[0]
+                logger.warning(
+                    "Seedance: 模型 %s 不可用，自动回退到 %s 重试", failed_model, model)
+                if callback:
+                    callback(20, f"模型 {failed_model} 不可用，自动回退到 {model} 重试...")
 
         if not detail or not detail.get("videos"):
             raise RuntimeError("Seedance 未返回任何视频（请检查 API Key / 模型 / 参数）。")
@@ -433,7 +589,6 @@ class S_SeedanceImg2Video(S_SeedanceBase):
     step_name = "即梦-图生视频"
     capability = "img2video"
     need_refs = True
-    ref_ports = 1
 
 
 class S_SeedanceFlf2Video(S_SeedanceBase):
@@ -441,7 +596,6 @@ class S_SeedanceFlf2Video(S_SeedanceBase):
     step_name = "即梦-图生视频(首尾帧)"
     capability = "flf2video"
     need_refs = True
-    ref_ports = 2
 
 
 class S_SeedanceAutoVideo(S_SeedanceBase):
@@ -449,4 +603,3 @@ class S_SeedanceAutoVideo(S_SeedanceBase):
     step_name = "即梦-全模态参考生视频"
     capability = "autovideo"
     need_refs = True
-    ref_ports = 3

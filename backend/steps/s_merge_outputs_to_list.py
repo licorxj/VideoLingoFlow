@@ -6,14 +6,12 @@
 在内存中直接输出（不落盘），供下游节点消费。
 
 输入：动态端口 输入1、输入2 …（any 类型，数量由前端 inputCount 控制）。
-输出：json —— 形如
-    {
-      "items": [
-        {"id": "输入1", "value": "<路径或字符串>", "type": "path|string|json"},
-        {"id": "输入2", "value": "...", "type": "..."}
-      ]
-    }
-其中 type 指示该条目值是文件路径还是普通文本/内联数据。
+输出：json —— **裸列表（数组）**，按输入端口顺序排列各输入的值，例如：
+    ["output/a.mp4", "某段文本", {"k": 1}]
+未连线的端口不会出现；不落盘，内存中直接传递。
+
+注：早期版本输出为 ``{"items":[{id,value,type}]}`` 明细对象，现已改为裸列表；
+    前端预览面板仍兼容读取旧结构。
 """
 import os
 
@@ -59,11 +57,12 @@ class StepMergeOutputsToList(BaseStep):
     def run(self, task_dir, callback=None, cancel_callback=None):
         self._task_dir = task_dir
         items = self._collect()
-        data = {"items": items}
+        # 输出裸列表：按输入端口顺序取各输入的值，便于下游按数组直接消费
+        values = [it.get("value") for it in items]
         if callback:
             try:
-                callback(100, f"已合并 {len(items)} 项")
+                callback(100, f"已合并 {len(values)} 项")
             except Exception:
                 pass
         # 不落盘：直接以内联 JSON 作为输出，在节点间内存传递。
-        return {"outputs": {"json": data}}
+        return {"outputs": {"json": values}}

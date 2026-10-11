@@ -10,7 +10,7 @@ def get_video_duration(path: str) -> float:
     """Get video duration in seconds."""
     cmd = ["ffprobe", "-v", "quiet", "-show_entries", "format=duration", "-of", "csv=p=0", path]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace")
         return float(result.stdout.strip())
     except Exception:
         return 0.0
@@ -48,7 +48,7 @@ def extract_last_frame(video_path: str, output_path: str) -> str:
         output_path,
     ])
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace")
     except FileNotFoundError:
         raise RuntimeError("extract_last_frame: 未找到 ffmpeg，请先安装 ffmpeg。")
     except subprocess.TimeoutExpired:

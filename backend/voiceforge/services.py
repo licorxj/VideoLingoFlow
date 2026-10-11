@@ -121,7 +121,7 @@ def audio_duration(path: Path):
             capture_output=True,
             text=True,
             check=True,
-            timeout=20,
+            timeout=20, encoding="utf-8", errors="replace",
         )
         return float(completed.stdout.strip())
     except Exception:

@@ -46,7 +46,7 @@ def probe_audio_info(path):
                 capture_output=True,
                 text=True,
                 check=True,
-                timeout=20,
+                timeout=20, encoding="utf-8", errors="replace",
             )
             data = json.loads(completed.stdout)
             fmt = data.get("format") or {}

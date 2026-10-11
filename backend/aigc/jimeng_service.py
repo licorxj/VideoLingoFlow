@@ -183,7 +183,7 @@ class JimengService:
             via = "bash"
 
         try:
-            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+            proc = subprocess.run(cmd, capture_output=True, text=True, timeout=600, encoding="utf-8", errors="replace")
         except subprocess.TimeoutExpired as e:
             raise AIGCError("安装即梦 CLI 超时，请检查网络后重试") from e
         except FileNotFoundError as e:

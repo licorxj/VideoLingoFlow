@@ -45,12 +45,10 @@ _CACHE_TTL_SECONDS = 30.0
 # 缓存结构（均为进程内状态，name 为密钥名）：
 #   _cache[name]           = (keys_list, rotate, expire)  密钥列表 + 轮询开关
 #   _index_cache[name]     = (current_index, expire)      手动模式的当前下标（DB 同步）
-#   _rotation_cursor[name] = next_index                   rotate 模式进程内轮询游标
-#   _persisted_index[name] = last_persisted_index          已回写 DB 的游标（节流：至少轮完一圈才回写）
+#   _rotation_cursor[name] = next_index                   rotate 模式进程内轮询游标（每次调用即回写 DB）
 _cache: Dict[str, tuple] = {}
 _index_cache: Dict[str, tuple] = {}
 _rotation_cursor: Dict[str, int] = {}
-_persisted_index: Dict[str, int] = {}
 _cache_lock = threading.Lock()
 _cursor_lock = threading.Lock()
 
@@ -216,8 +214,10 @@ def _next_index(key: str, keys: List[str], rotate: bool) -> int:
 
     - rotate=False（手动模式）：使用 DB 的 current_index（带短缓存），
       可在密钥管理页手动切换使用中的 key。
-    - rotate=True（轮询模式）：进程内原子推进游标，实现 round-robin；
-      游标至少每轮完一圈才回写 DB（节流），重启后可从该位置继续。
+    - rotate=True（轮询模式）：进程内原子推进游标，实现 round-robin。
+      每次调用都立即回写 DB（调用本身耗时秒级，一次小 UPDATE 开销可忽略）。
+      注意：工作流步骤在独立子进程执行（engine/step_runner），进程内游标随进程
+      销毁而丢失，若只在"轮完一圈"后回写，子进程会永远从第 1 个 key 开始。
     """
     if not rotate:
         now = time.monotonic()
@@ -242,18 +242,11 @@ def _next_index(key: str, keys: List[str], rotate: bool) -> int:
                 idx = 0
         _rotation_cursor[key] = idx + 1
 
-    with _cursor_lock:
-        last = _persisted_index.get(key)
-        if last is None or idx - last >= len(keys):
-            _persisted_index[key] = idx
-            should_persist = True
-        else:
-            should_persist = False
-    if should_persist:
-        try:
-            _persist_index(key, idx)
-        except Exception:
-            pass
+    # 立即回写，保证跨进程（子进程/多 worker）轮询连续，且管理页可见真实下标
+    try:
+        _persist_index(key, idx)
+    except Exception:
+        pass
     return idx
 
 
@@ -291,10 +284,8 @@ def invalidate(name: Optional[str] = None) -> None:
     with _cursor_lock:
         if normalized is None:
             _rotation_cursor.clear()
-            _persisted_index.clear()
         else:
             _drop(_rotation_cursor, normalized)
-            _drop(_persisted_index, normalized)
 
 
 def resolve(value: Any) -> Any:

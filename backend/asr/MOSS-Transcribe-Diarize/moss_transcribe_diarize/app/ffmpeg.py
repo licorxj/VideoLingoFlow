@@ -39,7 +39,7 @@ def probe_media(path: str | Path) -> dict[str, Any]:
         "-show_format",
         str(path),
     ]
-    completed = subprocess.run(command, check=True, capture_output=True, text=True)
+    completed = subprocess.run(command, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
     return json.loads(completed.stdout or "{}")
 
 
@@ -90,5 +90,5 @@ def burn_ass_subtitles(
         "+faststart",
         str(output_path),
     ]
-    subprocess.run(command, cwd=str(ass_path.parent), check=True, capture_output=True, text=True)
+    subprocess.run(command, cwd=str(ass_path.parent), check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
     return output_path

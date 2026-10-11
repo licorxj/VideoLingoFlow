@@ -58,7 +58,7 @@ class S11MergeDubVideo(BaseStep):
             r = subprocess.run(
                 ["ffprobe", "-v", "error", "-select_streams", "a",
                  "-show_entries", "stream=index", "-of", "csv=p=0", path],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace",
             )
             return bool(r.stdout.strip())
         except Exception:
@@ -141,7 +141,7 @@ class S11MergeDubVideo(BaseStep):
             callback(40, "合成音视频...")
 
         try:
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600, encoding="utf-8", errors="replace")
             if result.returncode != 0:
                 err = result.stderr[-800:] if result.stderr else "Unknown error"
                 raise Exception(f"ffmpeg 失败：{err}")

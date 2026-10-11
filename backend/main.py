@@ -20,7 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import ClientDisconnect
 from starlette.types import Scope, Receive, Send
 
-from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, musicgen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects, creation_tasks, notifications, agent_ws, dub_check, opencode, file_transit, style_templates
+from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, musicgen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, cutia_bridge, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects, creation_tasks, notifications, agent_ws, dub_check, opencode, file_transit, style_templates
 from backend.api.public_info import APP_VERSION
 from backend.toonflow import api as toonflow_api
 from backend.control_plane import runtime_flags
@@ -179,6 +179,7 @@ app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(editor.router, prefix="/api/editor", tags=["editor"])
 app.include_router(editor_agent.router, prefix="/api/editor", tags=["editor-agent"])
 app.include_router(cutia.router, prefix="/api/cutia", tags=["cutia"])
+app.include_router(cutia_bridge.router, prefix="/api/cutia-bridge", tags=["cutia-bridge"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(credentials.router, prefix="/api/credentials", tags=["credentials"])
 app.include_router(backup.router, prefix="/api/backup", tags=["backup"])

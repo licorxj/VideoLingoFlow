@@ -39,6 +39,7 @@ import {
 	DESCRIPTION_ANALYSIS_PROMPT,
 	STYLE_ANALYSIS_PROMPT,
 } from "@/lib/ai/vision";
+import { isHostEmbedded } from "@/lib/host/bridge";
 import { useAgentStore } from "@/stores/agent-store";
 import {
 	ImageLightbox,
@@ -74,7 +75,7 @@ export function CharacterCreatorDialog({
 	const [isGenerating, setIsGenerating] = useState(false);
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
 	const agentConfig = useAgentStore((s) => s.config);
-	const isAgentConfigured = agentConfig.apiKey.length > 0;
+	const isAgentConfigured = agentConfig.apiKey.length > 0 || isHostEmbedded();
 	const lightbox = useImageLightbox();
 	const [previewImages, setPreviewImages] = useState<
 		Array<{
@@ -98,7 +99,8 @@ export function CharacterCreatorDialog({
 	>(new Map());
 
 	const isProviderConfigured =
-		imageProviderId !== null && imageApiKey.length > 0;
+		(imageProviderId !== null && imageApiKey.length > 0) ||
+		isHostEmbedded();
 
 	const handleGenerateTurnaround = useCallback(async () => {
 		if (!description.trim()) {

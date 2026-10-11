@@ -128,6 +128,7 @@ AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*
 #### 音频处理（`audio`）
 - `audio_cut_by_subtitle`：按字幕切割音频
 - `audio_denoise`：降噪
+- `audio_split`：音频切割
 - `audio_transcode`：音频转码
 - `extract_audio`：音频分离
 - `merge_audio`：配音片段合并对齐
@@ -146,6 +147,7 @@ AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*
 - `subtitle_recognition`：OCR 字幕识别
 - `video_cut_by_subtitle`：按字幕切割视频
 - `video_frame_extract`：视频抽帧
+- `get_video_last_frame`：获取视频尾帧
 - `video_region_composite`：视频区域贴片
 - `video_region_crop`：视频截取区域
 - `video_scale`：视频缩放

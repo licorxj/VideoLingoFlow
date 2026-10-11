@@ -160,7 +160,7 @@ class EditorProjectRepository:
                 capture_output=True,
                 text=True,
                 timeout=15,
-                check=False,
+                check=False, encoding="utf-8", errors="replace",
             )
             if result.returncode != 0:
                 return {}

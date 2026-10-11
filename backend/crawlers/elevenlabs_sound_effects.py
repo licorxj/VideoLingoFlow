@@ -129,7 +129,7 @@ def load_headers_from_request_file(path):
       - 精简 JSON：``{"cookie": "...", "next_action": "...", "x_deployment_id": "..."}``
         （也接受带连字符的键名 ``next-action`` / ``x-deployment-id``）。
     """
-    with open(path, "r", encoding="utf-8", errors="replace") as f:
+    with open(path, "r") as f:
         raw = f.read()
     stripped = raw.lstrip()
     if path.endswith(".json") or stripped.startswith("{") or stripped.startswith("["):
@@ -538,7 +538,7 @@ def main():
 
     # 离线解析模式
     if args.parse_file:
-        with open(args.parse_file, "r", encoding="utf-8", errors="replace") as f:
+        with open(args.parse_file, "r") as f:
             text = f.read()
         obj = parse_docs_from_response(text)
         if not obj or "docs" not in obj:

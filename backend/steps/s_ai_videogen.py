@@ -2,8 +2,11 @@
 
 输入:
   - prompt : 提示词（文本，或 .txt 文件路径，后端自动判断读取）
-  - images : 图片 / 图片列表（路径，单个字符串或数组）
-  - audio  : 音频（路径）；若连接，则强制声音=keep_original
+  - image1~image4 : 参考图 1~4（每个口可接单张图，也可接上游图片列表输出口）
+  - video1~video2 : 参考视频 1~2（全模态参考生视频用）
+  - audio1~audio2 : 参考音频 1~2（全模态参考生视频用）
+  - audio  : 音频（路径）；语义为「保留输入音频原声」，若连接则强制声音=keep_original
+  - images : 旧版单一口（可接图片列表），保留兼容，收集时追加在 参考图1~4 之后
 
 输出:
   - videos : 生成的视频列表（相对路径）
@@ -11,7 +14,19 @@
 
 提示词前缀(prompt_prefix) 会在后端执行时拼接到连线输入的提示词之前，作为最终提示词。
 生成类型(mode) 可由用户显式选择，否则根据已连接的输入自动推断
-（≥2 张图→flf2video，1 张图→img2video，否则 txt2video）。
+（有参考视频/参考音频→autovideo，≥2 张参考图→flf2video，1 张参考图→img2video，否则 txt2video）。
+
+参考图按 mode 匹配（_fit_images_to_mode），使各视频引擎拿到的图与模式语义一致：
+  flf2video : 参考图1=首帧、参考图2=尾帧（多余忽略并告警；不足 2 张报错）
+  img2video : 只取 参考图1 作首帧
+  autovideo : 参考图1~4 全部作为参考图，按顺序提交
+  txt2video : 不使用参考图
+
+视频比例(ratio, 如 16:9 / 9:16)随resolution 一并下发引擎；仅 kieai / seedance 类引擎支持，
+可灵(wuli)由分辨率决定画幅、不接受比例参数。
+
+时长(duration) 支持手动输入：前端下拉首项为「手动输入」，此时 duration 可能是任意正整数
+（含超出模型预设区间/ 小数取整），由 _to_positive_int 宽松解析，非法值回落5。
 """
 import os
 import shutil
@@ -39,6 +54,19 @@ def _read_input_as_text(value, task_dir: str = "") -> str:
     return value.strip()
 
 
+def _to_positive_int(value, default: int) -> int:
+    """宽松取正整数：空值 / 非法值 / 非正数均回落默认值。
+
+    时长支持「手动输入」，节点配置里可能是字符串（如 "7"、"7.0"），
+    非法内容不应让整个任务失败。
+    """
+    try:
+        n = int(float(str(value).strip()))
+    except (TypeError, ValueError):
+        return default
+    return n if n > 0 else default
+
+
 def _resolve_paths(value, task_dir: str = ""):
     """value 可以是路径字符串或路径数组，返回存在的绝对路径列表。"""
     if not value:
@@ -54,6 +82,68 @@ def _resolve_paths(value, task_dir: str = ""):
         elif task_dir and os.path.isfile(os.path.join(task_dir, c)):
             out.append(os.path.join(task_dir, c))
     return out
+
+
+# 参考素材输入口 → 收集顺序（与 builtin_node_types.py 的 ai_video_gen 端口声明一致）
+IMAGE_PORT_KEYS = [f"image{i}" for i in range(1, 5)]    # 参考图1~4
+VIDEO_PORT_KEYS = ["video1", "video2"]                   # 参考视频1~2
+AUDIO_PORT_KEYS = ["audio1", "audio2"]                   # 参考音频1~2
+# 旧版单一口（id="images"，可接图片列表）保留兼容，会追加在编号口之后，
+# 使拆分前保存的工作流连线仍能取到素材。
+LEGACY_IMAGE_PORT_KEYS = ["images"]
+#音视频口无旧版单一口需要兼容。注意「audio」口是「保留原声」语义（声音开关），
+#与参考音频口不同，**不可**作为 LEGACY_AUDIO_PORT_KEYS，否则会把原声误当参考音频。
+LEGACY_VIDEO_PORT_KEYS: list = []
+LEGACY_AUDIO_PORT_KEYS: list = []
+
+
+def _collect_ports(inputs: dict, port_keys, legacy_port_keys, task_dir: str = "") -> list:
+    """按端口顺序收集参考素材：依次读 image1→image4（空口跳过）保持顺序，再补旧版单一口。
+
+    单个端口内若接入的是列表（上游图片列表输出口），会把列表按序摊平到该口的位置，
+    因此最终顺序始终是「参考图1 → 参考图2 → …」，与上游连线顺序一致。
+    """
+    out = []
+    for key in list(port_keys) + list(legacy_port_keys):
+        val = (inputs or {}).get(key)
+        if not val:
+            continue
+        for p in _resolve_paths(val, task_dir):
+            if p not in out:
+                out.append(p)
+    return out
+
+
+def _fit_images_to_mode(images, mode: str) -> list:
+    """按生成类型裁剪参考图，使各引擎拿到的图与模式语义一致。
+
+      flf2video : 参考图1=首帧、参考图2=尾帧（多余忽略并告警；不足 2 张报错）
+      img2video : 只取 参考图1 作首帧（多余忽略并告警）
+      autovideo : 全部保留，按 参考图1→4 顺序作为参考图提交
+      txt2video : 无参考图（忽略并告警）
+    """
+    if not images:
+        return []
+    if mode == "flf2video":
+        if len(images) < 2:
+            raise ValueError(
+                f"首尾帧模式需要 2 张参考图（当前只接收到 {len(images)} 张）："
+                "请把 参考图1、参考图2 分别接到首帧与尾帧。"
+            )
+        if len(images) > 2:
+            logger.warning(
+                "AI生视频：首尾帧模式只使用前 2 张参考图（参考图1=首帧 / 参考图2=尾帧），"
+                "多余的参考图已忽略：%s", images[2:])
+        return images[:2]
+    if mode == "img2video":
+        if len(images) > 1:
+            logger.warning(
+                "AI生视频：单图模式只使用 参考图1 作为首帧，多余的参考图已忽略：%s", images[1:])
+        return images[:1]
+    if mode == "autovideo":
+        return images
+    logger.warning("AI生视频：文生视频模式不使用参考图，%d 张参考图已忽略", len(images))
+    return []
 
 
 class S_AiVideoGen(BaseStep):
@@ -89,7 +179,8 @@ class S_AiVideoGen(BaseStep):
         model = _first(node_config.get("model", ""))
         mode = _first(node_config.get("mode", ""))
         resolution = _first(node_config.get("resolution", "")) or "720P"
-        duration = int(node_config.get("duration", 5) or 5)
+        ratio = _first(node_config.get("ratio", "")) or "16:9"
+        duration = _to_positive_int(node_config.get("duration"), 5)
         num_videos = int(node_config.get("num_videos", 1) or 1)
         sound = _first(node_config.get("sound", "")) or "on"
         negative_prompt = _first(node_config.get("negative_prompt", ""))
@@ -111,10 +202,13 @@ class S_AiVideoGen(BaseStep):
         if not final_prompt:
             raise ValueError("提示词为空，请连接文本/txt 输入或填写提示词前缀。")
 
-        # --- 3. 解析图片 / 音频输入 ---
-        ref_images = _resolve_paths(step_inputs.get("images"), task_dir)
+        # --- 3. 解析参考素材 / 音频输入 ---
+        # 按端口顺序收集（空口跳过、保持顺序），图片兼容旧版 images 列表口
+        ref_images = _collect_ports(step_inputs, IMAGE_PORT_KEYS, LEGACY_IMAGE_PORT_KEYS, task_dir)
+        ref_videos = _collect_ports(step_inputs, VIDEO_PORT_KEYS, LEGACY_VIDEO_PORT_KEYS, task_dir)
+        ref_audios = _collect_ports(step_inputs, AUDIO_PORT_KEYS, LEGACY_AUDIO_PORT_KEYS, task_dir)
+        # 「audio」口是保留原声语义：接听后强制 keep_original
         audio_paths = _resolve_paths(step_inputs.get("audio"), task_dir)
-        ref_videos = _resolve_paths(step_inputs.get("ref_videos"), task_dir)
 
         # 音频输入连接时，强制保留原声
         if audio_paths:
@@ -122,7 +216,8 @@ class S_AiVideoGen(BaseStep):
 
         # --- 4. 推断生成类型(mode) ---
         if not mode:
-            if len(ref_videos) >= 1:
+            if ref_videos or ref_audios:
+                # 有参考视频/音频 → 全模态参考生视频（否则这些素材无接口可用）
                 mode = "autovideo"
             elif len(ref_images) >= 2:
                 mode = "flf2video"
@@ -141,8 +236,31 @@ class S_AiVideoGen(BaseStep):
                 f"模型 {model} 不支持生成类型 {mode}，支持的类型：{', '.join(supported_modes)}"
             )
 
+        # 按生成类型裁剪参考图（首尾帧模式自动把 参考图1/2 匹配为首帧/尾帧）
+        ref_images = _fit_images_to_mode(ref_images, mode)
+
+        # 记录参考素材收集结果，便于排查「口接上了但请求里没带」类问题
+        logger.info(
+            "AI生视频 参考素材：mode=%s 图 %d 张 / 视频 %d 个 / 音频 %d 个（原声口=%s）",
+            mode, len(ref_images), len(ref_videos), len(ref_audios),
+            "已接" if audio_paths else "未接",
+        )
+        if mode != "autovideo" and (ref_videos or ref_audios):
+            logger.warning(
+                "AI生视频：生成类型为 %s，参考视频/音频不会被引擎提交（仅 autovideo 全模态支持）；"
+                "如需使用请把生成类型切换为 autovideo。", mode,
+            )
+
         if callback:
-            callback(20, f"生成视频（{mode}, {model or '默认'}, {resolution}, {duration}s）...")
+            ref_desc = ""
+            if ref_images:
+                ref_desc = (f"，参考图 {len(ref_images)} 张"
+                            + ("（图1=首帧 / 图2=尾帧）" if mode == "flf2video" else ""))
+            if ref_videos:
+                ref_desc += f"，参考视频 {len(ref_videos)} 个"
+            if ref_audios:
+                ref_desc += f"，参考音频 {len(ref_audios)} 个"
+            callback(20, f"生成视频（{mode}, {model or '默认'}, {resolution}, {ratio}, {duration}s{ref_desc}）...")
 
         # --- 5. 获取引擎并生成 ---
         from backend.videogen.videogen_factory import get_videogen_engine
@@ -169,10 +287,12 @@ class S_AiVideoGen(BaseStep):
                 model=model,
                 mode=mode,
                 resolution=resolution,
+                ratio=ratio,
                 duration=duration,
                 num_videos=num_videos,
                 ref_images=ref_images if ref_images else None,
                 ref_videos=ref_videos if ref_videos else None,
+                ref_audios=ref_audios if ref_audios else None,
                 audio=sound,
                 **extra,
             )

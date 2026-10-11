@@ -26,7 +26,11 @@ class VideoGenInterfaceManager:
         return cls._instance
 
     def __init__(self, config_path=None):
-        if self._initialized:
+        # 允许显式传入与当前不同的 config_path（测试/多份配置场景）时重新初始化；
+        # 否则复用已加载的单例状态，避免重复读盘。
+        if getattr(self, "_initialized", False) and (
+            config_path is None or config_path == getattr(self, "config_path", None)
+        ):
             return
         self._initialized = True
         self.config_path = config_path or os.path.join(
@@ -106,7 +110,8 @@ class VideoGenInterfaceManager:
 
     def delete(self, iface_id):
         with self._lock:
-            if iface_id not in self.interfaces:
+            iface = self.interfaces.get(iface_id)
+            if not iface:
                 raise ValueError(f"接口不存在: {iface_id}")
             if iface.get("builtin"):
                 raise ValueError("内置接口不可删除")

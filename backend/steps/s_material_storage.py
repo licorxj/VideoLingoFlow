@@ -108,7 +108,7 @@ class S_MaterialStorage(BaseStep):
             try:
                 out = subprocess.run(
                     [exe, "-v", "error", "-show_entries", "stream=codec_type", "-of", "json", str(path)],
-                    capture_output=True, text=True, timeout=30,
+                    capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace",
                 )
                 payload = json.loads(out.stdout or "{}")
                 types = {s.get("codec_type") for s in payload.get("streams", [])}
@@ -131,7 +131,7 @@ class S_MaterialStorage(BaseStep):
         try:
             out = subprocess.run(
                 [exe, "-v", "error", "-show_entries", "format=duration", "-of", "json", str(path)],
-                capture_output=True, text=True, timeout=30,
+                capture_output=True, text=True, timeout=30, encoding="utf-8", errors="replace",
             )
             d = json.loads(out.stdout or "{}").get("format", {}).get("duration")
             return float(d) if d else None

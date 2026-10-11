@@ -458,7 +458,7 @@ class MDXNetOnnxSeparation(SeparationBase):
             capture_output=True,
             text=True,
             timeout=300,
-            check=True,
+            check=True, encoding="utf-8", errors="replace",
         )
 
     def _run_ffmpeg_fallback(self, audio_path, output_dir, fmt, callback=None):
@@ -471,14 +471,14 @@ class MDXNetOnnxSeparation(SeparationBase):
                 capture_output=True,
                 text=True,
                 timeout=300,
-                check=True,
+                check=True, encoding="utf-8", errors="replace",
             )
             subprocess.run(
                 apply_resource_args(["ffmpeg", "-y", "-i", audio_path, "-af", "pan=stereo|c0=c0-c1|c1=c1-c0", bg_dst]),
                 capture_output=True,
                 text=True,
                 timeout=300,
-                check=True,
+                check=True, encoding="utf-8", errors="replace",
             )
             if callback:
                 callback(95, "FFmpeg fallback done")

@@ -7,7 +7,7 @@ export const SITE_INFO = {
 	url: SITE_URL,
 	openGraphImage: "/icon.svg",
 	twitterImage: "/icon.svg",
-	favicon: "/logos/cutia/svg/logo.svg",
+	favicon: "/cutia/logos/cutia/svg/logo.svg",
 };
 
 export type ExternalTool = {
@@ -19,7 +19,7 @@ export type ExternalTool = {
 
 export const EXTERNAL_TOOLS: ExternalTool[] = [];
 
-export const DEFAULT_LOGO_URL = "/logos/cutia/svg/logo.svg";
+export const DEFAULT_LOGO_URL = "/cutia/logos/cutia/svg/logo.svg";
 
 export const SOCIAL_LINKS = {
 	x: "https://x.com/moonrailgun",

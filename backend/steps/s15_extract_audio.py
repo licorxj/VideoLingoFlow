@@ -64,7 +64,7 @@ class StepExtractAudio(BaseStep):
             result = subprocess.run(
                 ["ffprobe", "-v", "quiet", "-print_format", "json",
                  "-show_streams", "-select_streams", "a:0", video_path],
-                capture_output=True, text=True, timeout=60,
+                capture_output=True, text=True, timeout=60, encoding="utf-8", errors="replace",
             )
             if result.returncode == 0:
                 streams = (json.loads(result.stdout) or {}).get("streams") or []
@@ -176,7 +176,7 @@ class StepExtractAudio(BaseStep):
                 cmd,
                 capture_output=True,
                 text=True,
-                timeout=600,
+                timeout=600, encoding="utf-8", errors="replace",
             )
             if result.returncode != 0:
                 # Filter out ffmpeg version/header info, show actual error

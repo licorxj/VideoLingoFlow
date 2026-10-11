@@ -57,7 +57,7 @@ def _detect_video_orientation(video_path: str) -> str:
             "-of", "json",
             video_path,
         ]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace")
         if result.returncode == 0:
             info = json.loads(result.stdout)
             streams = info.get("streams", [])
