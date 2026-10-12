@@ -1259,30 +1259,35 @@ class ThreadScheduler:
             self._unregister_process(task_id)
 
     def _run_llm_node(self, task_id, nid, prompt_template, node_config, step_inputs, task_dir, cache_dir):
-        """Run an LLM-powered custom node using OpenAI API."""
-        from backend.config import settings
-        prompt = prompt_template
-        for k, v in step_inputs.items():
-            prompt = prompt.replace("{" + k + "}", str(v))
-        for k, v in node_config.items():
-            prompt = prompt.replace("{" + k + "}", str(v))
+        """Run an LLM-powered custom node via unified LLMClient.
+
+        旧的裸 OpenAI 直连依赖 backend.config.settings（该模块已移除），会直接 ImportError，
+        这里改为统一入口：复用配置路由 / 重试 / 请求日志，且同样忽略系统代理。
+        """
+        prompt = str(prompt_template or "")
+        for k, v in (step_inputs or {}).items():
+            prompt = prompt.replace("{" + str(k) + "}", str(v))
+        for k, v in (node_config or {}).items():
+            prompt = prompt.replace("{" + str(k) + "}", str(v))
         try:
-            from openai import OpenAI
-            import httpx
-            # 忽略系统代理（VPN 全局代理），直接连接上游
-            client = OpenAI(
-                api_key=settings.OPENAI_API_KEY, base_url=settings.OPENAI_API_BASE,
-                http_client=httpx.Client(timeout=120, trust_env=False),
+            from backend.llm.llm_client import get_llm_client
+
+            temperature = node_config.get("temperature", 0.7)
+            try:
+                temperature = float(temperature)
+            except (TypeError, ValueError):
+                temperature = None
+            content = get_llm_client().chat(
+                step_name=f"custom_node_{nid}",
+                prompt=prompt,
+                response_json=False,
+                temperature=temperature,
+                model_override=str(node_config.get("model") or ""),
             )
-            response = client.chat.completions.create(
-                model=node_config.get("model", settings.SMALL_MODEL),
-                messages=[{"role": "user", "content": prompt}],
-                temperature=node_config.get("temperature", 0.7),
-            )
+            text = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
             out_path = os.path.join(cache_dir, f"{nid}_llm_output.txt")
-            response = response.choices[0].message.content
             with open(out_path, "w", encoding="utf-8") as f:
-                f.write(response)
+                f.write(text)
             print(f"[Custom:{nid}] LLM output saved")
             return True, None, {"artifacts": [out_path], "outputs": {"text": out_path}}
         except Exception as e:
