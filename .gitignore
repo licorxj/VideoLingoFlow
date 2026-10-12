@@ -98,7 +98,8 @@ backend/auth/secure_config.py
 backend/auth/error_codes.json
 backend/control_plane/workflow_runtime.py
 backend/control_plane/runtime.py
-backend/control_plane/custom_node_runtime.py
+# 注意：backend/control_plane/custom_node_runtime.py 不属于闭源模块，
+# 以源码随仓库分发（编译产物中不应保留副本），由 backend.control_plane 包路径解析。
 
 # 受保护编译产物（分平台二进制）随公开仓库分发（源码已闭源）
 !backend/auth_binaries/cp312/

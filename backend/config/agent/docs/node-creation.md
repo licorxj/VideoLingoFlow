@@ -218,7 +218,7 @@ _STEPS = {
 }
 ```
 
-> 自定义节点**不需要也不生效** `execution_domain` 字段：控制平面只要 `get_step_instance()` 返回 None 就走 `custom_node_runtime`，不再判断执行域（`workflow_runtime._run_node`）。自定义脚本本身已由 `custom_node_runtime` 用 `subprocess.run` 在子进程执行。
+> 自定义节点**不需要也不生效** `execution_domain` 字段：控制平面只要 `get_step_instance()` 返回 None 就走 `custom_node_runtime`，不再判断执行域（`workflow_runtime._run_node`）。自定义脚本本身已由 `custom_node_runtime` 用子进程执行（Windows 下隐藏控制台窗口，环境变量注入项目根 `PYTHONPATH` 与项目虚拟环境 `Scripts`，因此可直接 `import backend...`）；期间每 0.5s 复查取消信号（DB 任务终态 + `cache/.cancel_<task_id>`），命中或超时均 kill 进程树。
 
 `execType` 取值（`control_plane/custom_node_runtime.py`）：
 
@@ -228,7 +228,7 @@ _STEPS = {
 - `shell`：执行 `execCode` 里的 shell 命令（`shell=True`，cwd 为任务目录）。
 - `llm`：以 `execCode` 为提示词（用 `{key}` 占位符替换 `step_inputs` + `node_config`）发起一次 LLM 调用，结果写入 `cache/<node_id>_llm_output.txt`，输出端口固定为 `text`。
 
-运行时环境变量：`TASK_DIR`、`CACHE_DIR`、`NODE_ID`、`NODE_CONFIG_JSON`、`STEP_INPUTS_JSON`、`OUTPUTS_JSON_PATH`，外加 `INPUT_<端口ID大写>`、`CONFIG_<配置KEY大写>`。`execTimeout` 为秒（缺省 300，且必须 ≥1）；产物默认取 `cache/<node_id>_*` 文件。
+运行时环境变量：`TASK_DIR`、`CACHE_DIR`、`NODE_ID`、`NODE_CONFIG_JSON`、`STEP_INPUTS_JSON`、`OUTPUTS_JSON_PATH`，外加 `INPUT_<端口ID大写>`、`CONFIG_<配置KEY大写>`。`execTimeout` 为秒（缺省 300，且必须 ≥1）；产物默认取 `cache/<node_id>_*` 文件，并以**相对任务目录**的路径返回（与内置步骤一致）。
 
 **必过的后端校验**（`backend/config/node_schema.py::validate_node_type_data`，create/update/import 都会调用）：
 
