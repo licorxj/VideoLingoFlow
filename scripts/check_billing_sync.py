@@ -49,6 +49,8 @@ _OPTIONAL_MISSING = frozenset({"backend/__init__.py"})
 
 # ⚠️ 必须与子仓库 .github/workflows/build-release.yml 里的 SOURCE_FILES 逐项一致：
 #    文件清单与**顺序**都参与哈希计算，任何一边改动都要同步另一边。
+# 说明：`backend/control_plane/custom_node_runtime.py` 自 v2.0.23 起从闭源清单移出
+# （改为源码随主仓库分发、不再编译），已从清单中删除；增删模块必须同步子仓库工作流。
 SOURCE_FILES = (
     "backend/auth/cloud_auth_client.py",
     "backend/auth/cloud_auth_service.py",
