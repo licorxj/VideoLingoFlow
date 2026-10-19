@@ -20,7 +20,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import ClientDisconnect
 from starlette.types import Scope, Receive, Send
 
-from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, musicgen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, cutia, cutia_bridge, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects, creation_tasks, notifications, agent_ws, dub_check, opencode, file_transit, style_templates
+from backend.api import materials, tasks, settings, history, batch, llm, ws, tts_interfaces, asr_interfaces, logs, workflows, node_types, community, file_browser, prompts, subtitle_presets, subtitle_preview, imagegen_interfaces, videogen_interfaces, musicgen_interfaces, publish, separation_interfaces, subscription, public_info, editor, editor_agent, voiceforge, voiceforge_ws, control_plane, control_plane_assets, control_plane_workspace, collaboration_ws, pi_rpc, aigc_capabilities, github_update, lcwr, gpu_service, llm_router_update, ocr_interfaces, qm_mail, backup, videodub, credentials, creation_selects, creation_tasks, notifications, agent_ws, dub_check, opencode, file_transit, style_templates, openchatcut, openchatcut_bridge
 from backend.api.public_info import APP_VERSION
 from backend.toonflow import api as toonflow_api
 from backend.control_plane import runtime_flags
@@ -165,10 +165,15 @@ app.add_middleware(RemoteAccessGuard)
 
 app.add_middleware(
     CORSMiddleware,
+    # 剪辑台（OpenChatCut，Vite 应用无 basePath）以自身端口 5199 的独立源打开，
+    # 它对本项目桥接端（/api/openchatcut-bridge）的调用是跨域请求，
+    # 需要显式放行其回环源；端口可由 OPENCHATCUT_PORT 覆盖。
     allow_origins=["http://localhost:11002", "http://127.0.0.1:11002",
                     "http://localhost:11003", "http://127.0.0.1:11003",
                     "http://localhost:11004", "http://127.0.0.1:11004",
-                    "http://localhost:11005", "http://127.0.0.1:11005"],
+                    "http://localhost:11005", "http://127.0.0.1:11005",
+                    f"http://localhost:{os.environ.get('OPENCHATCUT_PORT', '5199')}",
+                    f"http://127.0.0.1:{os.environ.get('OPENCHATCUT_PORT', '5199')}"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -178,8 +183,8 @@ app.add_middleware(
 app.include_router(tasks.router, prefix="/api/tasks", tags=["tasks"])
 app.include_router(editor.router, prefix="/api/editor", tags=["editor"])
 app.include_router(editor_agent.router, prefix="/api/editor", tags=["editor-agent"])
-app.include_router(cutia.router, prefix="/api/cutia", tags=["cutia"])
-app.include_router(cutia_bridge.router, prefix="/api/cutia-bridge", tags=["cutia-bridge"])
+app.include_router(openchatcut.router, tags=["openchatcut"])
+app.include_router(openchatcut_bridge.router, tags=["openchatcut-bridge"])
 app.include_router(settings.router, prefix="/api/settings", tags=["settings"])
 app.include_router(credentials.router, prefix="/api/credentials", tags=["credentials"])
 app.include_router(backup.router, prefix="/api/backup", tags=["backup"])
@@ -232,7 +237,7 @@ app.include_router(llm_router_update.router, tags=["llm-router-update"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["notifications"])
 
 LLM_ROUTER_UPSTREAM = "http://127.0.0.1:8800"
-CUTIA_UPSTREAM = f"http://127.0.0.1:{os.environ.get('CUTIA_PORT', '4100')}"
+OPENCHATCUT_UPSTREAM = f"http://127.0.0.1:{os.environ.get('OPENCHATCUT_PORT', '5199')}"
 HOP_BY_HOP_HEADERS = {
     "connection", "keep-alive", "proxy-authenticate", "proxy-authorization",
     "te", "trailer", "transfer-encoding", "upgrade",
@@ -289,11 +294,11 @@ async def proxy_llm_router(request: Request, path: str):
     )
 
 
-@app.api_route("/cutia", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
-@app.api_route("/cutia/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
-async def proxy_cutia(request: Request, path: str = ""):
-    # cutia 以 basePath=/cutia 构建，需保留 /cutia 前缀转发到 standalone (4100)
-    upstream_url = f"{CUTIA_UPSTREAM}/cutia/{path}" if path else f"{CUTIA_UPSTREAM}/cutia/"
+@app.api_route("/openchatcut", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+@app.api_route("/openchatcut/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD", "OPTIONS"])
+async def proxy_openchatcut(request: Request, path: str = ""):
+    # OpenChatCut 以根路径运行（无 basePath），这里剥掉 /openchatcut 前缀转发到 5199
+    upstream_url = f"{OPENCHATCUT_UPSTREAM}/{path}" if path else f"{OPENCHATCUT_UPSTREAM}/"
     if request.url.query:
         upstream_url = f"{upstream_url}?{request.url.query}"
     client = httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=None, write=60.0, pool=5.0), trust_env=False)
@@ -315,7 +320,7 @@ async def proxy_cutia(request: Request, path: str = ""):
         )
     except httpx.RequestError:
         await client.aclose()
-        raise HTTPException(status_code=502, detail="剪辑工作台（Cutia）服务不可用")
+        raise HTTPException(status_code=502, detail="AI剪辑台（OpenChatCut）服务不可用")
 
     async def stream_response():
         async for chunk in upstream_response.aiter_raw():
@@ -504,6 +509,18 @@ async def startup_event():
             print(f"[Recovery] 启动复位完成: {summary.get('tasks', 0)} 个任务 / {summary.get('nodes', 0)} 个节点已回到等待运行")
         except Exception as e:
             print(f"[Recovery] 启动复位失败（忽略）: {e}")
+
+    # stale 任务周期回收（默认开，CONTROL_PLANE_REAPER=0 关闭）：
+    # worker 崩溃/Redis 丢消息/Celery 硬杀后，DB 里的 queued/running 任务永远不会
+    # 自愈（旧逻辑只在 worker 重启时复位一次），前端无限转圈。守护线程每 60s
+    # 把超龄任务置 interrupted/cancelled + 节点复位 pending，用户可一键重跑。
+    try:
+        from backend.control_plane.stale_reaper import start_stale_reaper
+
+        if start_stale_reaper():
+            print("Stale task reaper started (60s interval)")
+    except Exception as e:
+        print(f"[Recovery] stale reaper 启动失败（忽略）: {e}")
 
 
 @app.on_event("shutdown")

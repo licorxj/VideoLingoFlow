@@ -75,7 +75,7 @@ TS_CONFIG_FIELD_KEYS = {
 }
 TS_KINDS = {"normal", "group", "loop"}
 TS_CATEGORIES = {
-    "io", "preview", "audio", "asset", "video", "cutia", "ai_gen", "music_gen",
+    "io", "preview", "audio", "asset", "video", "ai_gen", "music_gen",
     "translation", "flow_control", "network_request", "aigc", "agi_story",
     "agi_asset", "agi_shot", "agi_render", "agi_data", "agent", "utility", "file",
     "group_node", "hyperframes", "input", "ai", "output", "publish",

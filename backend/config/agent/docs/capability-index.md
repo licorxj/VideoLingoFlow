@@ -26,7 +26,6 @@ VideoLingoFlow（中文：流连视听）是一个**本地优先（local-first�
 | **GPU 服务层（可选）** | `backend/gpu_service/manager.py` | 无独立端口（经 Redis 6379 协调） | 仅在 `GPU_SERVICE_ENABLED=1` 时启动；负责 ASR / 分离类节点的显存 lane 调度 |
 | **Redis** | `redis-server.exe`（项目自带） | **6379** | Celery broker 与 GPU 服务的共享状态/队列后端 |
 | **LLM Router 代理** | `backend/llm_router`（如存在） | **8800** | OpenAI 兼容代理，供客户端把 model 填为"路由策略名" |
-| **Cutia（剪辑）** | `backend/...`（cutia） | **4100** | 视频剪辑/合成相关服务 |
 | **Social 后端** | `social-auto-upload-web-ui`（Flask+Waitress） | **5409** | 社交平台自动发布后端 |
 | **Social 前端（静态）** | 构建产物静态服务 | **5173** | 社交发布 UI（注意：不是主前端 dev server） |
 | **Social MCP** | `npm start` | **5410** | 社交发布 MCP 服务器 |
@@ -48,7 +47,7 @@ python backend/manager.py            # 默认 manager=18001, backend=11001
 python backend/manager.py 18001 11001   # 自定义端口
 ```
 
-`manager.py` 会：准备 venv 环境、启动 Redis、启动 GPU 服务（若启用）、启动 Celery worker、启动主后端 uvicorn、按需启动 social / cutia / llm-router，并维持看门狗自动重启。
+`manager.py` 会：准备 venv 环境、启动 Redis、启动 GPU 服务（若启用）、启动 Celery worker、启动主后端 uvicorn、按需启动 social / llm-router，并维持看门狗自动重启。
 
 ### 1.3 任务执行链路（逻辑层）
 
@@ -138,7 +137,6 @@ AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*
 - `vocal_separation`：人声分离 ·子进程
 
 #### 视频处理（`video`）
-- `cutia`：Cutia 交互剪辑
 - `lcwr_watermark_removal`：LCWR 去水印 ·子进程
 - `merge_dub_video`：音视频合成
 - `merge_sub_video`：字幕烧录
@@ -214,7 +212,6 @@ AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*
 - `audio_asset_library`、`image_asset_library`、`video_asset_library`、`character_asset_library`、`voice_asset_library`、`voice_character`
 
 #### 智能体（`agent`）
-- `editor_agent`：剪辑 AI Agent ·子进程
 - `pi_agent`：小 Pi 通用智能体 ·子进程
 - `opencode_agent`：OpenCode 智能体 ·子进程（驱动本地 opencode CLI 非交互执行一次自动化任务，产物落任务目录）
 

@@ -23,7 +23,7 @@ const About = lazy(() => import("./pages/About"));
 const Logs = lazy(() => import("./pages/Logs"));
 const SocialPublish = lazy(() => import("./pages/SocialPublish"));
 const LLMRouter = lazy(() => import("./pages/llm-router"));
-const EditingWorkbench = lazy(() => import("./pages/EditingWorkbench"));
+const AiEditingDesk = lazy(() => import("./pages/AiEditingDesk"));
 const MaterialLibrary = lazy(() => import("./pages/MaterialLibrary"));
 const CreationCanvas = lazy(() => import("./pages/creation-canvas/CreationCanvas"));
 const Collaboration = lazy(() => import("./pages/Collaboration"));
@@ -115,7 +115,7 @@ export default function App() {
           <Route path="/batch" element={<BatchWorkshop />} />
           <Route path="/history" element={<History />} />
           <Route path="/social" element={<SocialPublish />} />
-          <Route path="/editing" element={<EditingWorkbench />} />
+          <Route path="/ai-editing" element={<AiEditingDesk />} />
           <Route path="/materials" element={<MaterialLibrary />} />
           <Route path="/creation-canvas" element={<CreationCanvas />} />
           <Route path="/voiceforge" element={<VoiceForgeLayout />}>

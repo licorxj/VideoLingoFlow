@@ -1,8 +1,7 @@
-"""工作流步骤：将任意类型素材添加到剪辑工作台的素材库，不写入时间线轨道。
+"""工作流步骤：将任意类型素材添加到剪辑工程的素材库，不写入时间线轨道。
 
-与「添加剪辑素材到轨道」(add_track_media) 行为一致地收集上游素材并恢复剪辑项目，
-但只把素材注册到剪辑仓库（editor/assets.json），不构造时间线元素，供后续剪辑
-操作（人工精修 / 剪辑AI Agent）按需取用。
+收集上游素材并恢复剪辑项目，但只把素材注册到剪辑仓库（editor/assets.json），
+不构造时间线元素，供后续剪辑操作（人工精修 / 剪辑AI Agent）按需取用。
 """
 
 from __future__ import annotations
@@ -33,10 +32,10 @@ _CATEGORY_FROM_MIME = {
 
 
 class S_AddMediaToLibrary(BaseStep):
-    """添加素材到剪辑工作台素材库（不上轨道）。"""
+    """添加素材到剪辑工程素材库（不上轨道）。"""
 
     name = "添加素材到剪辑"
-    description = "将任意类型素材注册到剪辑工作台的素材库（不写入时间线轨道），供后续剪辑操作调用"
+    description = "将任意类型素材注册到剪辑工程的素材库（不写入时间线轨道），供后续剪辑操作调用"
     input_types: list[str] = ["json", "any"]
     output_types: list[str] = ["json"]
 

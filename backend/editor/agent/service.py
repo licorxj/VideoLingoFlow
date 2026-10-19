@@ -30,7 +30,7 @@ from backend.editor.agent.media_tools import (
 from backend.editor.repository import EditorProjectRepository, RevisionConflictError
 from backend.llm.llm_client import get_llm_client
 
-# 移植 cutia runAgentLoop 的轮次上限（原实现为 8 轮，复杂编排任务不够用）
+# Agent 工具循环的轮次上限（参考实现为 8 轮，复杂编排任务不够用）
 MAX_TOOL_ROUNDS = 20
 
 SWITCH_ROLE_TOOL_NAME = "switch_expert_role"

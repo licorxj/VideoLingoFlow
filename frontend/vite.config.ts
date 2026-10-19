@@ -77,9 +77,12 @@ export default defineConfig({
         timeout: 300000,
         proxyTimeout: 300000,
       },
-      "/cutia": {
-        target: "http://127.0.0.1:4100",
+      "/openchatcut": {
+        target: "http://127.0.0.1:5199",
         changeOrigin: true,
+        ws: true,
+        timeout: 300000,
+        proxyTimeout: 300000,
       },
       "/social": {
         target: "http://127.0.0.1:5173",

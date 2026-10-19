@@ -4,7 +4,7 @@
 thirdparty 子项目 git 元数据释放工具（纯标准库）
 
 背景：
-  主仓库分发时，各三方子项目（QM-LocalRouter/cutia/pi/social-auto-upload-web-ui）
+  主仓库分发时，各三方子项目（QM-LocalRouter/pi/social-auto-upload-web-ui）
   自带的 .git 若原样保留，会因"嵌入式 git 仓库"导致其源码/构建产物不随主仓库上传。
   因此分发时将各子项目 .git 打包为 thirdparty/.git-archives/*.git.zip 随仓库携带，
   在「安装」或「更新」入口检测到子项目缺少 .git 时，用本脚本解压释放。
@@ -26,7 +26,6 @@ ARCHIVES = THIRDPARTY / ".git-archives"
 
 PROJECTS = {
     "QM-LocalRouter": "QM-LocalRouter.git.zip",
-    "cutia": "cutia.git.zip",
     "pi": "pi.git.zip",
     "social-auto-upload-web-ui": "social-auto-upload-web-ui.git.zip",
 }

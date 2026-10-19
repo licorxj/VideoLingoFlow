@@ -11,6 +11,7 @@ from backend.steps.s_audio_denoise import StepAudioDenoise
 from backend.steps.s_audio_cut_by_subtitle import StepAudioCutBySubtitle
 from backend.steps.s_audio_split import S_AudioSplit
 from backend.steps.s_get_video_last_frame import S_GetVideoLastFrame
+from backend.steps.s_get_video_info import S_GetVideoInfo
 from backend.steps.s_aigc_comfyui import S_AIGC_ComfyUI
 from backend.steps.s_aigc_runninghub import S_AIGC_RunningHub
 from backend.steps.s_aigc_jimeng import S_AIGC_Jimeng
@@ -22,6 +23,7 @@ from backend.steps.s_agi_comic import (
     S_AGI_ShotExport, S_AGI_ChapterExport,
 )
 from backend.steps.s_agi_data import S_AGI_Query, S_AGI_Write, S_AGI_AssetRegister
+from backend.steps.s_agi_desk import S_DeskProject, S_DeskMaterial, S_DeskEdit, S_DeskExport
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
 from backend.steps.s_asr_result_validate import S_ASRResultValidate
@@ -50,11 +52,11 @@ from backend.steps.s_path_to_title import S_PathToTitle
 from backend.steps.s_file_rename import S_FileRename
 from backend.steps.s_timed_delay import S_TimedDelay
 from backend.steps.s_run_wait import S_RunWait
-from backend.steps.s_editor_agent import S_EditorAgent
 from backend.steps.s_llm_request import S_LLMRequest
 from backend.steps.s_http_request import S_HttpRequest
 from backend.steps.s_file_downloader import S_FileDownloader
 from backend.steps.s_pi_agent import S_PiAgent
+from backend.steps.s_expert_agent import S_ExpertAgent
 from backend.steps.s_opencode_agent import S_OpenCodeAgent
 from backend.steps.s_imagegen import S_ImageGen
 from backend.steps.s_video_frame_extract import S_VideoFrameExtract
@@ -64,6 +66,7 @@ from backend.steps.s_merge_outputs_to_list import StepMergeOutputsToList
 from backend.steps.s_subtitle_position_search import S_SubtitlePositionSearch
 from backend.steps.s_subtitle_recognition import S_SubtitleRecognition
 from backend.steps.s_video_publish import S_VideoPublish
+from backend.steps.s_video_quick_edit import S_VideoQuickEdit
 from backend.steps.s_xiaopai_publish import S_XiaopaiPublish
 from backend.steps.s_resolve_path import S_ResolvePath
 from backend.steps.s_translate_task_name import S_TranslateTaskName
@@ -83,10 +86,6 @@ from backend.steps.s_video_dedupe import S_VideoDedupe
 from backend.steps.s_video_region_crop import S_VideoRegionCrop
 from backend.steps.s_video_region_composite import S_VideoRegionComposite
 from backend.steps.s_add_media_to_library import S_AddMediaToLibrary
-from backend.steps.s_cutia import S_Cutia
-from backend.steps.s_project_init import S_ProjectInit
-from backend.steps.s_track_add_media import S_TrackAddMedia
-from backend.steps.s_cutia_render import S_CutiaRender
 from backend.steps.s_lcwr_watermark_removal import S_LcwrWatermarkRemoval
 from backend.steps.s_media_to_url import S_MediaToUrl
 from backend.steps.s_online_watermark_removal import S_OnlineWatermarkRemoval
@@ -98,6 +97,11 @@ from backend.steps.s_ai_subtitle_correct import S_AiSubtitleCorrect
 from backend.steps.s_homophone_fix import SHomophoneFix
 from backend.steps.s_text_input import StepTextInput
 from backend.steps.s_file_load import StepFileLoad
+from backend.steps.s_media_loader import (
+    StepAudioLoader,
+    StepImageLoader,
+    StepVideoLoader,
+)
 from backend.steps.s_image_mask import S_ImageMask
 from backend.steps.s_srt_to_text import S_SrtToText
 from backend.steps.s_ai_videogen import S_AiVideoGen
@@ -194,7 +198,6 @@ _STEPS = {
     "timed_delay": S_TimedDelay(),
     "s_run_wait": S_RunWait(),
     "run_wait": S_RunWait(),
-    "editor_agent": S_EditorAgent(),
     # Legacy node type aliases
     "s15_extract_audio": StepExtractAudio(),
     "extract_audio": StepExtractAudio(),
@@ -221,6 +224,8 @@ _STEPS = {
     "s_file_downloader": S_FileDownloader(),
     "file_downloader": S_FileDownloader(),
     "pi_agent": S_PiAgent(),
+    "expert_agent": S_ExpertAgent(),
+    "s_expert_agent": S_ExpertAgent(),
     "s_opencode_agent": S_OpenCodeAgent(),
     "opencode_agent": S_OpenCodeAgent(),
     "s_imagegen": S_ImageGen(),
@@ -249,6 +254,10 @@ _STEPS = {
     "agi_query": S_AGI_Query(),
     "agi_write": S_AGI_Write(),
     "agi_asset_register": S_AGI_AssetRegister(),
+    "desk_project": S_DeskProject(),
+    "desk_material": S_DeskMaterial(),
+    "desk_edit": S_DeskEdit(),
+    "desk_export": S_DeskExport(),
     "s_video_frame_extract": S_VideoFrameExtract(),
     "video_frame_extract": S_VideoFrameExtract(),
     "s_video_transcode": S_VideoTranscode(),
@@ -270,6 +279,8 @@ _STEPS = {
     "subtitle_recognition": S_SubtitleRecognition(),
     "s_video_publish": S_VideoPublish(),
     "video_publish": S_VideoPublish(),
+    "s_video_quick_edit": S_VideoQuickEdit(),
+    "video_quick_edit": S_VideoQuickEdit(),
     "s_xiaopai_publish": S_XiaopaiPublish(),
     "xiaopai_publish": S_XiaopaiPublish(),
     "s_resolve_path": S_ResolvePath(),
@@ -304,6 +315,8 @@ _STEPS = {
     "audio_split": S_AudioSplit(),
     "s_get_video_last_frame": S_GetVideoLastFrame(),
     "get_video_last_frame": S_GetVideoLastFrame(),
+    "s_get_video_info": S_GetVideoInfo(),
+    "get_video_info": S_GetVideoInfo(),
     "s_video_clip_intro_outro": S_VideoClipIntroOutro(),
     "video_clip_intro_outro": S_VideoClipIntroOutro(),
     "s_video_dedupe": S_VideoDedupe(),
@@ -312,13 +325,7 @@ _STEPS = {
     "video_region_crop": S_VideoRegionCrop(),
     "s_video_region_composite": S_VideoRegionComposite(),
     "video_region_composite": S_VideoRegionComposite(),
-    "project_init": S_ProjectInit(),
-    "add_track_media": S_TrackAddMedia(),
     "add_media_to_library": S_AddMediaToLibrary(),
-    "s_cutia": S_Cutia(),
-    "cutia": S_Cutia(),
-    "s_cutia_render": S_CutiaRender(),
-    "cutia_render": S_CutiaRender(),
     "s_lcwr_watermark_removal": S_LcwrWatermarkRemoval(),
     "lcwr_watermark_removal": S_LcwrWatermarkRemoval(),
     "s_media_to_url": S_MediaToUrl(),
@@ -335,6 +342,12 @@ _STEPS = {
     "text_input": StepTextInput(),
     "s_file_load": StepFileLoad(),
     "file_load": StepFileLoad(),
+    "s_video_loader": StepVideoLoader(),
+    "video_loader": StepVideoLoader(),
+    "s_image_loader": StepImageLoader(),
+    "image_loader": StepImageLoader(),
+    "s_audio_loader": StepAudioLoader(),
+    "audio_loader": StepAudioLoader(),
     "s_image_mask": S_ImageMask(),
     "image_mask": S_ImageMask(),
     "s_srt_to_text": S_SrtToText(),

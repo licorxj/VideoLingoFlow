@@ -13,7 +13,6 @@ All paths are relative to `PROJECT_ROOT`.
 - Audio extraction and separation: `backend/steps/s15_extract_audio.py`, `backend/steps/s16_vocal_separation.py`, `backend/steps/s17_track_separation.py`.
 - AI generation: `backend/steps/s_aigc_comfyui.py`, `backend/steps/s_aigc_jimeng.py`, `backend/steps/s_aigc_runninghub.py`, `backend/steps/s_imagegen.py`.
 - Utility and integration nodes: `backend/steps/s_http_request.py`, `backend/steps/s_llm_request.py`, `backend/steps/s_json_editor.py`, `backend/steps/s_json_to_text.py`, `backend/steps/s_file_rename.py`, `backend/steps/s_video_publish.py`.
-- Editing and workflow-agent nodes: `backend/steps/s_cutia.py`, `backend/steps/s_editor_agent.py`.
 - HyperFrames video authoring (HTML composition → `npx hyperframes` render): `backend/steps/s_hyperframes_base.py`, `backend/steps/s_hyperframes_creative.py`, `backend/steps/s_hyperframes_render.py`, `backend/steps/s_hyperframes_cli.py`, `backend/steps/s_hyperframes_agent.py`; shared helpers in `backend/utils/hyperframes.py`.
 
 ## Skill Documentation Locations

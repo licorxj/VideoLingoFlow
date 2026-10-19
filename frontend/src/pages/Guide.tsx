@@ -12,8 +12,8 @@ const DOC_FILES = [
   { id: "node-guide", file: "节点新建规范指南.md", label: "节点规范" },
   { id: "interface-guide", file: "接口添加指南.md", label: "接口添加" },
   { id: "dependencies", file: "依赖清单.md", label: "依赖清单" },
+  { id: "ai-editing", file: "AI剪辑台使用说明.md", label: "AI 剪辑台" },
   { id: "collaboration", file: "多人协作功能介绍.md", label: "多人协作" },
-  { id: "editing", file: "剪辑工作台联动说明.md", label: "剪辑联动" },
   { id: "venv-slim", file: "后端虚拟环境瘦身报告.md", label: "环境瘦身" },
 ];
 

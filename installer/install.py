@@ -12,7 +12,7 @@ VideoLingoFlow 跨平台安装主程序（Windows / Linux / macOS）
   4. CUDA 检查:     CUDA < 12.8 时提示安装 CUDA 12.8.2（提供官方链接）并重启安装程序
   5. 后端依赖:      运行 backend/installer.py（按 CUDA 版本装对应 PyTorch 三件套 + 其余依赖）
   6. Node.js 检查:  可选（前端构建/部分第三方项目用）；缺失仅告警（dist 已随仓库分发）
-  7. 第三方扩展:    调用 thirdparty/install_thirdparty.py（CloakBrowser + 三个项目 + pi）
+  7. 第三方扩展:    调用 thirdparty/install_thirdparty.py（CloakBrowser + social + QM-LocalRouter + pi + OpenChatCut）
   8. 配置引导:      补齐 backend/config/config.yaml、.runtime/local_env.bat
                     （已有 local_env.bat 只补齐模板新增键、不覆盖已有值；
                      含本机单卡批量：GPU serial/lane、资源令牌、ffmpeg 线程、引擎空闲超时、batch 并发）

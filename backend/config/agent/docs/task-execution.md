@@ -17,7 +17,7 @@ python backend/manager.py            # 默认 manager=18001, backend=11001
 python backend/manager.py 18001 11001
 ```
 
-`manager.py` 负责：准备 venv（`venv312`）、启动 Redis（6379）、按需启动 GPU 服务、启动 Celery worker（`control_plane_worker`、`voiceforge_worker`）、启动主后端 uvicorn（11001），并按需启动 social / cutia / llm-router，且维持看门狗自动重启。
+`manager.py` 负责：准备 venv（`venv312`）、启动 Redis（6379）、按需启动 GPU 服务、启动 Celery worker（`control_plane_worker`、`voiceforge_worker`）、启动主后端 uvicorn（11001），并按需启动 social / llm-router，且维持看门狗自动重启。
 
 ### 1.1 关键服务与端口
 

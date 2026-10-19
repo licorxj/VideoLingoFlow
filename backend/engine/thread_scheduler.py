@@ -61,6 +61,7 @@ BUILTIN_STEP_REGISTRY = {
     "http_request": ("backend.steps.s_http_request", "S_HttpRequest"),
     "file_downloader": ("backend.steps.s_file_downloader", "S_FileDownloader"),
     "pi_agent": ("backend.steps.s_pi_agent", "S_PiAgent"),
+    "expert_agent": ("backend.steps.s_expert_agent", "S_ExpertAgent"),
     "opencode_agent": ("backend.steps.s_opencode_agent", "S_OpenCodeAgent"),
     "image_gen": ("backend.steps.s_imagegen", "S_ImageGen"),
     "video_frame_extract": ("backend.steps.s_video_frame_extract", "S_VideoFrameExtract"),
@@ -83,8 +84,6 @@ BUILTIN_STEP_REGISTRY = {
     "file_rename": ("backend.steps.s_file_rename", "S_FileRename"),
     "timed_delay": ("backend.steps.s_timed_delay", "S_TimedDelay"),
     "run_wait": ("backend.steps.s_run_wait", "S_RunWait"),
-    "editor_agent": ("backend.steps.s_editor_agent", "S_EditorAgent"),
-    "cutia": ("backend.steps.s_cutia", "S_Cutia"),
     "aigc_comfyui": ("backend.steps.s_aigc_comfyui", "S_AIGC_ComfyUI"),
     "aigc_runninghub": ("backend.steps.s_aigc_runninghub", "S_AIGC_RunningHub"),
     "aigc_jimeng": ("backend.steps.s_aigc_jimeng", "S_AIGC_Jimeng"),
@@ -652,7 +651,7 @@ class ThreadScheduler:
                 task_info["finished_at"] = None
                 self._write_json(task_json, task_info)
                 self._log(task_id, current_step_id or "__task__", 50, str(e), {"status": "waiting", "workbench_url": e.workbench_url})
-                self._log(task_id, "__task__", 50, "Waiting for Cutia export", {"status": "paused"})
+                self._log(task_id, "__task__", 50, "Waiting for manual export", {"status": "paused"})
             except TaskCancelledError as e:
                 print(f"[Scheduler] CANCEL task {task_id}: {e}")
                 self._mark_task_cancelled(task_json, str(e), current_step_id)
@@ -675,27 +674,6 @@ class ThreadScheduler:
                     traceback.print_exc()
 
         self.submit(task_id, _run)
-
-    def resume_waiting_cutia_task(self, task_id):
-        task_dir = os.path.join(TASKS_ROOT, task_id)
-        task_json_path = os.path.join(task_dir, "task.json")
-        workflow_path = os.path.join(task_dir, "workflow.json")
-        try:
-            with open(task_json_path, "r", encoding="utf-8") as f:
-                task_info = json.load(f)
-            with open(workflow_path, "r", encoding="utf-8") as f:
-                workflow = json.load(f)
-        except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
-            return False
-        waiting_nodes = [
-            node_id for node_id, node in task_info.get("nodes", {}).items()
-            if node.get("nodeType") == "cutia" and node.get("status") == "waiting"
-        ]
-        if not waiting_nodes:
-            return False
-        self.resume_task(task_id, workflow)
-        self.execute_workflow(task_id)
-        return True
 
     def execute_single_node(self, task_id, target_node_id, custom_dir=None):
         """Execute only a single node (after checking/updating task state)."""

@@ -107,7 +107,7 @@ export interface LoopWorkflowDefinition extends GroupWorkflowDefinition {
 export interface ConfigField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "reorder-list" | "date" | "time" | "button" | "wf-io-mapping" | "opencode-models";
+  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "reorder-list" | "date" | "time" | "button" | "wf-io-mapping" | "opencode-models" | "desk-ops";
   placeholder?: string;
   options?: { value: string; label: string }[];
   dependsOn?: string;
@@ -151,7 +151,7 @@ export interface ConfigField {
 export interface NodeTypeDef {
   id: string;
   name: string;
-  category: "io" | "preview" | "audio" | "asset" | "video" | "cutia" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "agent" | "utility" | "file" | "group_node" | "hyperframes" | "input" | "ai" | "output" | "publish";
+  category: "io" | "preview" | "audio" | "asset" | "video" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "ai_desk" | "agent" | "utility" | "file" | "group_node" | "hyperframes" | "input" | "ai" | "output" | "publish";
   description: string;
   icon: string;
   color: string;
@@ -226,7 +226,6 @@ export const CATEGORIES = {
   asset: { label: "素材库", color: "#84cc16", icon: "Library" },
   audio: { label: "音频处理节点", color: "#0ea5e9", icon: "Volume2" },
   video: { label: "视频处理节点", color: "#ef4444", icon: "Film" },
-  cutia: { label: "剪辑互通", color: "#fb923c", icon: "Clapperboard" },
   ai_gen: { label: "AI生成类节点", color: "#10b981", icon: "Sparkles" },
   music_gen: { label: "AI音乐", color: "#a78bfa", icon: "Music" },
   translation: { label: "翻译相关节点", color: "#8b5cf6", icon: "Languages" },
@@ -245,6 +244,7 @@ export const CATEGORIES = {
   agi_shot: { label: "漫剧·分镜链", color: "#9333ea", icon: "Clapperboard" },
   agi_render: { label: "漫剧·成片链", color: "#7c3aed", icon: "FileVideo" },
   agi_data: { label: "漫剧·数据链", color: "#0891b2", icon: "Database" },
+  ai_desk: { label: "AI剪辑链", color: "#0ea5e9", icon: "Scissors" },
 } as const;
 
 // ==================== 漫剧链路顺序 ====================
@@ -466,7 +466,7 @@ export function getVisibleOutputs(nodeType: NodeTypeDef, config: Record<string, 
     // "不需要输入" 是常驻占位输出，不受 selectedTypes 影响
     return nodeType.outputs.filter((p) => selectedTypes.includes(p.id) || p.id === "no_input");
   }
-  if (nodeType.id === "pi_agent" || nodeType.id === "opencode_agent") {
+  if (nodeType.id === "pi_agent" || nodeType.id === "expert_agent" || nodeType.id === "opencode_agent") {
     return dynamicPorts(nodeType.outputs, config.outputCount, "output");
   }
   if (nodeType.id === "json_get") {
@@ -494,7 +494,7 @@ export function getNodeInputs(nodeType: NodeTypeDef, config: Record<string, any>
       type: item.type,
     }));
   }
-  if (nodeType.id === "pi_agent" || nodeType.id === "opencode_agent" || nodeType.id === "output_merge_list") {
+  if (nodeType.id === "pi_agent" || nodeType.id === "expert_agent" || nodeType.id === "opencode_agent" || nodeType.id === "output_merge_list") {
     return dynamicPorts(nodeType.inputs, config.inputCount, "input");
   }
   return nodeType.inputs;

@@ -18,6 +18,7 @@ import {
   type WorkflowNode as WFNode, type ConfigField, type PortType,
 } from "@/lib/workflowTypes";
 import { STATUS_CONFIG } from "./nodeStatus";
+import DeskOpsEditor from "./DeskOpsEditor";
 import { NodeElapsedText } from "./NodeElapsedText";
 import LoopContainerCard from "./LoopContainerCard";
 import VoiceSelectPanel from "../VoiceSelectPanel";
@@ -218,7 +219,7 @@ function GroupWorkflowNodeCard({
   return (
     <div className={cn(
       "rounded-2xl border-[3px] bg-card text-card-foreground w-[440px] max-w-[440px] transition-all duration-300",
-      selected ? "border-primary shadow-primary/20 shadow-lg scale-[1.02]" : "border-violet-400/60 shadow-md"
+      selected ? "wf-node-selected scale-[1.02]" : "border-violet-400/60 shadow-md"
     )}>
       {visibleInputs.map((port, i) => (
         <Handle
@@ -939,6 +940,263 @@ function ImageCompare({ config, image1Path, image2Path, taskId, refreshKey }: { 
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** 媒体加载器（视频/图片/音频）的预览窗口。
+ *  - video：播放器 + 底部控制条（播放/暂停 + 进度条 + 时间）+ 右上角放大（全屏）按钮
+ *  - image：直接展示 + 右上角放大（全屏）按钮（Fullscreen API）
+ *  - audio：直接用浏览器原生音频播放器（controls），不做视频化包装，也没有放大按钮
+ * 路径来自卡片内的路径控件，故为用户填写的绝对路径，无需 task_id。 */
+function MediaLoaderPreview({ kind, filePath }: { kind: "video" | "image" | "audio"; filePath?: string }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const src = useStableFileUrl(filePath, "", "loader");
+
+  const formatTime = useCallback((seconds: number) => {
+    const safe = Number.isFinite(seconds) ? Math.max(0, seconds) : 0;
+    const mins = Math.floor(safe / 60);
+    const secs = Math.floor(safe % 60);
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+  }, []);
+
+  useEffect(() => {
+    // 切换文件后复位播放状态
+    setIsPlaying(false);
+    setCurrentTime(0);
+    setDuration(0);
+  }, [filePath]);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", onChange);
+    return () => document.removeEventListener("fullscreenchange", onChange);
+  }, []);
+
+  const togglePlay = useCallback(() => {
+    const el = videoRef.current;
+    if (!el) return;
+    if (el.paused) {
+      void el.play().catch(() => setIsPlaying(false));
+    } else {
+      el.pause();
+    }
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    const node = containerRef.current;
+    if (!node) return;
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    } else {
+      void node.requestFullscreen().catch(() => undefined);
+    }
+  }, []);
+
+  const seek = useCallback((value: number) => {
+    const el = videoRef.current;
+    if (!el) return;
+    try {
+      el.currentTime = value;
+      setCurrentTime(value);
+    } catch {
+      /* 元数据未就绪时忽略 */
+    }
+  }, []);
+
+  // 未选择文件：仅提示
+  if (!filePath) {
+    return (
+      <div className="rounded-md border border-dashed border-border/60 px-2 py-6 text-center text-[11px] text-muted-foreground/70">
+        未选择文件
+      </div>
+    );
+  }
+
+  // 音频：直接用浏览器原生音频播放器（含播放/进度/音量），不做视频化包装，也不需要全屏
+  if (kind === "audio") {
+    return (
+      <div className="space-y-1 rounded-md border border-border/60 bg-muted/30 p-2">
+        <audio
+          controls
+          src={src}
+          preload="metadata"
+          className="w-full"
+          onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        />
+        <div className="truncate text-[10px] text-muted-foreground/70" title={filePath}>
+          {String(filePath).split(/[\\/]/).pop()}
+        </div>
+      </div>
+    );
+  }
+
+  // 图片：直接展示 + 右上角全屏
+  if (kind === "image") {
+    return (
+      <div
+        ref={containerRef}
+        className={`group relative overflow-hidden rounded-md border border-border/60 bg-black/40 ${isFullscreen ? "flex h-full w-full items-center justify-center" : ""}`}
+      >
+        <img
+          src={src}
+          alt="图片预览"
+          draggable={false}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={`w-full ${isFullscreen ? "h-full object-contain" : "max-h-48 object-contain"}`}
+        />
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFullscreen();
+          }}
+          className="absolute top-2 right-2 z-10 w-7 h-7 rounded-md flex items-center justify-center bg-black/55 text-white/85 hover:bg-black/80 hover:text-white transition-colors"
+          title={isFullscreen ? "退出全屏" : "放大预览"}
+          aria-label={isFullscreen ? "退出全屏" : "放大预览"}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </button>
+      </div>
+    );
+  }
+
+  // 视频：播放暂停 + 进度条 + 右上角放大（全屏）按钮
+  return (
+    <div
+      ref={containerRef}
+      className={`group relative overflow-hidden rounded-md border border-border/60 bg-black ${isFullscreen ? "flex h-full w-full flex-col items-center justify-center" : ""}`}
+    >
+      <video
+        ref={videoRef}
+        src={src}
+        playsInline
+        className={`w-full ${isFullscreen ? "h-full object-contain" : "max-h-48 object-contain"}`}
+        onPointerDown={(e) => e.stopPropagation()}
+        onTimeUpdate={(e) => setCurrentTime(e.currentTarget.currentTime)}
+        onLoadedMetadata={(e) => setDuration(e.currentTarget.duration)}
+        onPlay={() => setIsPlaying(true)}
+        onPause={() => setIsPlaying(false)}
+        onEnded={() => setIsPlaying(false)}
+      />
+
+      {/* 右上角：放大（全屏）按钮 —— 常显，避免被误认为缺失 */}
+      <button
+        type="button"
+        onPointerDown={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation();
+          toggleFullscreen();
+        }}
+        className="absolute top-2 right-2 z-10 w-7 h-7 rounded-md flex items-center justify-center bg-black/55 text-white/85 hover:bg-black/80 hover:text-white transition-colors"
+        title={isFullscreen ? "退出全屏" : "放大预览"}
+        aria-label={isFullscreen ? "退出全屏" : "放大预览"}
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+        </svg>
+      </button>
+
+      {/* 底部：播放/暂停 + 进度 + 时间 */}
+      <div
+        className={`absolute bottom-0 left-0 right-0 flex items-center gap-2 px-2.5 py-1.5 bg-gradient-to-t from-black/80 to-transparent pt-4 transition-opacity ${
+          isFullscreen ? "relative bg-transparent pt-0 pb-3" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"
+        }`}
+      >
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            togglePlay();
+          }}
+          className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center bg-white/15 text-white hover:bg-white/25 transition-colors"
+          title={isPlaying ? "暂停" : "播放"}
+          aria-label={isPlaying ? "暂停" : "播放"}
+        >
+          {isPlaying ? (
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
+            </svg>
+          ) : (
+            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M8 5v14l11-7z" />
+            </svg>
+          )}
+        </button>
+        <span className="text-[10px] text-white/80 w-10 shrink-0 font-mono">{formatTime(currentTime)}</span>
+        <input
+          type="range"
+          min={0}
+          max={duration || 0}
+          step={0.1}
+          value={currentTime}
+          onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          onChange={(e) => seek(Number(e.target.value))}
+          className="flex-1 min-w-0 h-1 accent-white/90 cursor-pointer"
+        />
+        <span className="text-[10px] text-white/80 w-10 shrink-0 text-right font-mono">{formatTime(duration)}</span>
+      </div>
+    </div>
+  );
+}
+
+/** 媒体加载器卡片主体：路径加载控件 + 对应类型预览窗口 */
+function MediaLoaderCard({
+  kind,
+  label,
+  filePath,
+  onFilePathChange,
+}: {
+  kind: "video" | "image" | "audio";
+  label: string;
+  filePath: string;
+  onFilePathChange: (next: string) => void;
+}) {
+  return (
+    <div className="px-3 pb-3 pt-1 space-y-2">
+      <div className="flex items-center gap-2">
+        <input
+          type="text"
+          value={filePath}
+          placeholder={`${label}路径，或点击右侧按钮选择`}
+          onChange={(e) => onFilePathChange(e.target.value)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+          className="flex-1 min-w-0 rounded-md border border-border bg-background px-2 py-1.5 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
+        />
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={async (e) => {
+            e.stopPropagation();
+            const filters =
+              kind === "video"
+                ? [["视频文件", "*.mp4;*.mov;*.mkv;*.avi;*.webm;*.flv;*.wmv;*.m4v"], ["所有文件", "*"]]
+                : kind === "image"
+                ? [["图片文件", "*.jpg;*.jpeg;*.png;*.bmp;*.gif;*.webp;*.tif;*.tiff"], ["所有文件", "*"]]
+                : [["音频文件", "*.mp3;*.wav;*.flac;*.aac;*.m4a;*.ogg;*.opus;*.wma"], ["所有文件", "*"]];
+            const p = await nativeFileDialog("file", `选择${label}文件`, filters as [string, string][]);
+            // nativeFileDialog 在 multiple=false 时返回 string，类型上仍是 string | string[]
+            const picked = Array.isArray(p) ? p[0] : p;
+            if (picked) onFilePathChange(picked);
+          }}
+          className="inline-flex items-center gap-1 px-2 py-1.5 rounded-md text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors shrink-0"
+        >
+          <FolderOpen className="w-3.5 h-3.5" /> 加载
+        </button>
+      </div>
+      <MediaLoaderPreview kind={kind} filePath={filePath} />
     </div>
   );
 }
@@ -1676,7 +1934,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
 
   const configFields = (() => {
     const base = (dynamicFields.length > 0 ? dynamicFields : nodeType.configFields) || [];
-    if (nodeType.id !== "pi_agent" && nodeType.id !== "opencode_agent") return base;
+    if (nodeType.id !== "pi_agent" && nodeType.id !== "expert_agent" && nodeType.id !== "opencode_agent") return base;
     return base
       .filter((field: ConfigField) => field.key !== "inputCount" && field.key !== "outputCount")
       .map((field: ConfigField) => {
@@ -1701,12 +1959,20 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   return (
     <>
       <div ref={formRef} className="px-3 pb-3 grid grid-cols-6 gap-x-3 gap-y-2 border-t border-border/50 pt-2">
+        {/* AI剪辑链（ai_desk）取值规则提示：手动输入优先，连线备选 */}
+        {nodeType?.category === "ai_desk" && (
+          <div className="col-span-6 flex items-start gap-1.5 rounded-md bg-ai/5 px-2 py-1.5 text-[10px] leading-relaxed text-ai">
+            <span className="mt-px shrink-0">ⓘ</span>
+            <span>
+              <b>手动输入优先，连线备选</b>：节点上填写的值优先生效；未填写的项才取连线接入的值；两者都为空按无输入处理。
+            </span>
+          </div>
+        )}
         {dynamicLoading && (
           <div className="col-span-2 text-[11px] text-muted-foreground/70 py-1">加载配置中...</div>
         )}
         {configFields.map((field: ConfigField) => {
           if (!isConfigFieldVisible(field, config)) return null;
-
           // Chips / toggle group
           if (field.type === "chips") {
             const selected: string[] = config[field.key] || [];
@@ -2248,6 +2514,23 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
             return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={config} onConfigChange={onConfigChange} followValue={field.followPort ? String((upstreamOutputs as any)?.[field.followPort] ?? "") : ""} onBrowseProject={showBrowse ? onBrowseProject : undefined} /></div>;
           }
 
+          if (field.type === "desk-ops") {
+            // AI剪辑链「剪辑编排」：ops 可视化编辑器（工具下拉 + 按 schema 的参数表单）
+            return (
+              <div key={field.key} className={fieldSpanClass(field)} onPointerDown={(e) => e.stopPropagation()}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <DeskOpsEditor
+                  value={value}
+                  inputPorts={getNodeInputs(nodeType, config).map((p: any) => p.id).filter(Boolean)}
+                  onChange={(ops) => onConfigChange(field.key, ops)}
+                />
+                {field.description && (
+                  <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground/70">{field.description}</p>
+                )}
+              </div>
+            );
+          }
+
           if (field.type === "multiselect") {
             const selectedValues: string[] = Array.isArray(value) ? value : (value ? [String(value)] : []);
             const options = field.options || [];
@@ -2742,6 +3025,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const visibleOutputs = getVisibleOutputs(nodeType, config);
   const visibleInputs = getNodeInputs(nodeType, config);
   const isPiAgent = nodeType.id === "pi_agent";
+  const isExpertAgent = nodeType.id === "expert_agent";
   const isOpenCodeAgent = nodeType.id === "opencode_agent";
   const isSeedance = (nodeType.id || "").startsWith("seedance_");
   const SEEDANCE_MODE_MAP: Record<string, string> = {
@@ -2950,7 +3234,7 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
     <div className={cn(
       "rounded-2xl border-[3px] bg-card text-card-foreground w-[420px] max-w-[420px] transition-all duration-300",
       selected
-        ? "border-primary shadow-primary/20 shadow-lg scale-[1.02]"
+        ? "wf-node-selected scale-[1.02]"
         : status === "completed"
           ? "!border-[5px] border-emerald-400 shadow-[0_0_20px_6px_rgba(16,185,129,0.4),0_0_40px_12px_rgba(16,185,129,0.2)]"
           : "",
@@ -3143,15 +3427,6 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
             )}
           </div>
         )}
-        {nodeType.id === "cutia" && status === "waiting" && nd.workbench_url && (
-          <button
-            onClick={(e) => { e.stopPropagation(); window.location.href = nd.workbench_url; }}
-            className="w-6 h-6 rounded-md flex items-center justify-center bg-amber-500/10 text-amber-700 hover:bg-amber-500/20 transition-colors"
-            title="打开剪辑工作台"
-          >
-            <Clapperboard className="w-3 h-3" />
-          </button>
-        )}
         <div className="flex items-center gap-1.5">
           {hasConfig && (
             expanded
@@ -3225,6 +3500,10 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
                 >
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: p.color || PORT_COLORS[p.type as PortType] }} />
                   {p.label}
+                  {/* AI剪辑链：输入端口为备选来源（手动输入优先） */}
+                  {nodeType?.category === "ai_desk" && (
+                    <span className="text-[9px] opacity-70">·备选</span>
+                  )}
                 </span>
               ))}
             </div>
@@ -3307,6 +3586,31 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
             </button>
           </div>
         </div>
+      )}
+      {/* 媒体加载器（视频/图片/音频）：路径加载控件 + 卡片内预览窗口 */}
+      {nodeType.id === "video_loader" && (
+        <MediaLoaderCard
+          kind="video"
+          label="视频"
+          filePath={String(config.filePath ?? "")}
+          onFilePathChange={(next) => handleConfigChange("filePath", next)}
+        />
+      )}
+      {nodeType.id === "image_loader" && (
+        <MediaLoaderCard
+          kind="image"
+          label="图片"
+          filePath={String(config.filePath ?? "")}
+          onFilePathChange={(next) => handleConfigChange("filePath", next)}
+        />
+      )}
+      {nodeType.id === "audio_loader" && (
+        <MediaLoaderCard
+          kind="audio"
+          label="音频"
+          filePath={String(config.filePath ?? "")}
+          onFilePathChange={(next) => handleConfigChange("filePath", next)}
+        />
       )}
       {/* 图片蒙版：卡片内显示输入图片并打开绘制弹窗 */}
       {nodeType.id === "image_mask" && (
@@ -3880,8 +4184,54 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
         />
       )}
 
-      {/* pi_agent / opencode_agent: 输出产物设置板块 */}
-      {(isPiAgent || isOpenCodeAgent) && expanded && (
+      {/* expert_agent: 输入项说明板块（参照输出产物设置，按输入端口逐条说明） */}
+      {isExpertAgent && expanded && (
+        <div className="px-3 pb-3 border-t border-border/50 pt-2 space-y-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-semibold text-foreground">输入项说明</span>
+            <span className="text-[10px] text-muted-foreground">按输入端口逐条说明上游传入的数据</span>
+          </div>
+          {(() => {
+            const count = Math.min(Math.max(Number(config.inputCount) || 2, 1), 8);
+            const items: { port: string; desc: string }[] = Array.isArray(config.input_items)
+              ? config.input_items.map((item: any, i: number) => ({
+                  port: String(item?.port || `输入${i + 1}`),
+                  desc: String(item?.desc || ""),
+                }))
+              : [];
+            const rows = Array.from({ length: count }, (_, i) => items[i] || { port: `输入${i + 1}`, desc: "" });
+            const updateItem = (index: number, patch: Partial<{ port: string; desc: string }>) => {
+              const next = rows.map((row, i) => (i === index ? { ...row, ...patch } : row));
+              handleConfigChange("input_items", next);
+            };
+            return (
+              <div className="space-y-1.5">
+                {rows.map((row, index) => (
+                  <div key={index} className="flex items-center gap-1.5">
+                    <input
+                      value={row.port}
+                      onChange={(e) => updateItem(index, { port: e.target.value })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="w-20 text-[11px] px-2 py-1 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
+                      placeholder={`输入${index + 1}`}
+                    />
+                    <input
+                      value={row.desc}
+                      onChange={(e) => updateItem(index, { desc: e.target.value })}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      className="min-w-0 flex-1 text-[11px] px-2 py-1 rounded-md border border-border/50 bg-background outline-none focus:border-primary/50"
+                      placeholder={`输入${index + 1} 说明，例如：上游剧本正文`}
+                    />
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* pi_agent / expert_agent / opencode_agent: 输出产物设置板块 */}
+      {(isPiAgent || isExpertAgent || isOpenCodeAgent) && expanded && (
         <div className="px-3 pb-3 border-t border-border/50 pt-2 space-y-2">
           <div className="flex items-center gap-1.5">
             <span className="text-[11px] font-semibold text-foreground">输出产物设置</span>

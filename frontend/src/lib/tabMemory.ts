@@ -1,8 +1,8 @@
 /**
  * 标签页位置记忆
  *
- * 侧边栏的一级标签（如 /voiceforge、/editing）下面还有子路由
- * （/voiceforge/projects/:id、/editing?task=xxx）。默认点击一级标签只会回到
+ * 侧边栏的一级标签（如 /voiceforge）下面还有子路由
+ * （/voiceforge/projects/:id）。默认点击一级标签只会回到
  * 首页，导致用户离开后再回来丢失工作状态。
  *
  * 这里在内存中记录每个一级标签最近一次访问的位置，侧边栏点击时优先跳回该位置。

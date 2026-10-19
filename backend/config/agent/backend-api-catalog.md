@@ -28,7 +28,7 @@ Authentication, registration, subscription, licensing, account, entitlement, and
 - `/api/files`: project file browsing, upload/read/stream, native file dialogs, language data, audio scanning, and trim operations.
 - `/api/editor`: editor project assets, project/character data, saving, streaming, and rendered export upload.
 - `/api/editor/tasks/{task_id}/agent/*`: editor-agent execution, monitoring, approval, cancellation, and events.
-- `/api/cutia/update`: embedded Cutia editor update.
+
 - `/api/voiceforge`: VoiceForge projects, chapters, characters, sentences, text processing, synthesis, exports, cloning, emotion generation, and asset library management.
 
 ## Publishing, Community, and Pi

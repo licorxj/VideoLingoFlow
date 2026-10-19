@@ -26,11 +26,6 @@
       "order": 5
     },
     {
-      "id": "grp_9a885a56",
-      "name": "视频处理",
-      "order": 6
-    },
-    {
       "id": "grp_bac07860",
       "name": "代码生视频",
       "order": 7
@@ -44,12 +39,16 @@
       "id": "grp_91d41035",
       "name": "发布类",
       "order": 9
+    },
+    {
+      "id": "grp_06c85988",
+      "name": "视频剪辑",
+      "order": 10
     }
   ],
   "membership": {
     "5fc0150ea613": "grp_d7395d52",
     "8ed5bc8b526f": "grp_d476d4e1",
-    "51a138986318": "grp_9a885a56",
     "b8260da50145": "grp_d476d4e1",
     "1fdc9c19587d": "grp_a10ef73f",
     "4045976e5994": "grp_c23b4b83",
@@ -59,6 +58,9 @@
     "c86ee83c5580": "grp_bac07860",
     "cb4721cdaba5": "grp_d7395d52",
     "d2a34ec6786f": "grp_3ca3eb39",
-    "agi_chain_template": "grp_3ca3eb39"
+    "agi_chain_template": "grp_3ca3eb39",
+    "51a138986318": "grp_06c85988",
+    "9a5c50909318": "grp_a10ef73f",
+    "f35278930a66": "grp_91d41035"
   }
 }

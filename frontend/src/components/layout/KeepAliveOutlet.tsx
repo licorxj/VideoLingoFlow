@@ -14,10 +14,10 @@ import { KeepAliveActiveContext } from "./keepAliveActive";
  * 需要「保活」的路由前缀。
  *
  * 命中前缀的路由在首次访问后会被缓存：切换走时仅隐藏而不卸载组件树，
- * 再切回来时沿用原来的实例，已加载的数据、展开的面板、滚动位置、
- * iframe（如 Cutia 编辑器）都保持原样，不会重新挂载、不会重新请求。
+ * 再切回来时沿用原来的实例，已加载的数据、展开的面板、滚动位置都保持原样，
+ * 不会重新挂载、不会重新请求。
  */
-const KEEP_ALIVE_PREFIXES = ["/editing", "/voiceforge"];
+const KEEP_ALIVE_PREFIXES = ["/voiceforge"];
 
 /** 同时保活的页面数量上限，超出后按「最久未使用」淘汰 */
 const MAX_CACHED = 6;
@@ -154,7 +154,7 @@ export default function KeepAliveOutlet() {
     return () => window.removeEventListener(DROP_ROUTE_CACHE_EVENT, handleDrop);
   }, []);
 
-  // 同一 pathname 下 search 不同视为两个工作区（例如 /editing?task=xxx）
+  // 同一 pathname 下 search 不同视为两个工作区
   const key = `${location.pathname}${location.search}`;
   const cache = cacheRef.current;
 

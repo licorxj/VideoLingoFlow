@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-09 20:44:53  
-> 节点总数：163　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-19 15:35:06  
+> 节点总数：162　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -19,14 +19,14 @@
 | 漫剧·成片链（`agi_render`） | 2 |
 | 漫剧·数据链（`agi_data`） | 3 |
 | AIGC流程链（`aigc`） | 4 |
-| 智能体（`agent`） | 3 |
+| 智能体（`agent`） | 2 |
 | 流程控制节点（`flow_control`） | 6 |
 | 网络请求类节点（`network_request`） | 7 |
 | 工具类节点（`utility`） | 12 |
 | 文件操作类节点（`file`） | 3 |
 | 组合节点（`group_node`） | 3 |
+| ai_desk（`ai_desk`） | 4 |
 | asset（`asset`） | 9 |
-| cutia（`cutia`） | 4 |
 | hyperframes（`hyperframes`） | 5 |
 | music_gen（`music_gen`） | 10 |
 
@@ -79,11 +79,11 @@
 | 字幕烧录 | `merge_sub_video` | 将字幕烧录到视频 | thread | 视频(`video`*:video); 字幕(`subtitle`*:subtitle); 背景音乐(`audio`:audio); 配音音频(`dub`:audio) | 字幕视频(`video`:video) |
 | 按字幕切割视频 | `video_cut_by_subtitle` | 按 srt 字幕或句子 json 的时间轴切割视频，输出片段清单 json 与各视频片段 | thread | 视频(`video`*:video); SRT字幕(`srt`:subtitle); 句子JSON(`json`:json) | 切割信息(`json`:json); 视频片段清单(`video_segments`:json) |
 | 水印添加 | `watermark` | 为视频添加水印 | thread | 视频(`video`*:video); 水印图片(`image`:image) | 最终视频(`video`:video) |
-| 添加素材到剪辑 | `add_media_to_library` | 将任意类型素材注册到剪辑工作台的素材库（不写入时间线轨道），供后续剪辑操作调用 | thread | 剪辑项目(`project`:json); 素材(`media`:any) | 剪辑项目(`project`:json) |
 | 获取视频尾帧 | `get_video_last_frame` | 获取视频的尾帧图片（默认取最末帧，可设置从尾部偏移秒数跳过片尾） | thread | 视频(`video`*:video) | 尾帧图片(`image`:image); 尾帧信息(`text`:text) |
 | 视频切割 | `video_split` | 将视频按数量或时长切割为多段，支持静音点切割 | thread | 视频(`video`*:video); 音频(`audio`:audio) | 切割片段(`video`:video); 切割信息(`text`:text) |
 | 视频区域贴片 | `video_region_composite` | 将「视频截取区域」产出的局部视频按坐标贴回主视频。贴片大于区域时自动缩放，主/贴片编码不一致时统一重编码后贴合。 | thread | 主视频(`main_video`*:video); 贴片视频(`patch_video`*:video); 贴片坐标(`patch_json`*:json) | 贴合后视频(`video`:video) |
 | 视频去重 | `video_dedupe` | 反平台查重变换：对视频做水平镜像、放大裁切、调速、调色/滤镜、加边框等画面变换以规避重复检测；不删内容，只改画面（ffmpeg 重编码） | thread | 视频(`video`*:video) | 去重视频(`video`:video) |
+| 视频快剪 | `video_quick_edit` | 本地 ffmpeg 视频小工具集：压缩、剪切、合并、提取音频、转格式、转 GIF、截图、改分辨率、调速、去声音、配背景音乐、加文字水印、烧录字幕、旋转翻转、查看信息。先在下拉框选择功能，选中后自动展开对应参数；结果另存到任务目录下的「处理后」文件夹，绝不覆盖原视频。 | thread | 视频(`video`*:video); 合并·视频2(`video_b`:video); 合并·视频3(`video_c`:video); 合并·视频4(`video_d`:video); 背景音乐(`music`:audio); 字幕(`subtitle`:subtitle) | 处理后视频(`video`:video); 结果说明(`result`:text) |
 | 视频截取区域 | `video_region_crop` | 从大分辨率视频中截取指定区域与时段，输出局部视频与坐标 JSON，供「视频区域贴片」节点贴回原视频做局部处理。 | thread | 视频(`video`*:video) | 截取区域视频(`video`:video); 截取坐标(`json`:json) |
 | 视频抽帧 | `video_frame_extract` | 从视频指定时间点提取帧图片，支持避开字幕 | thread | 视频(`video`:video); 字幕(`srt`:subtitle) | 帧图片(`image`:image) |
 | 视频拼接 | `video_concat` | 将主视频/片段1~3/封面图按设定顺序与缩放方式一次性拼装为单个视频；所有片段统一缩放到「主视频」的分辨率与帧率（与片段排序无关），封面图可选插入开头或结尾。 | thread | 主视频(`main`:video); 片段1(`segment1`:video); 片段2(`segment2`:video); 片段3(`segment3`:video); 封面图(`cover`:image) | 拼接视频(`video`:video) |
@@ -197,7 +197,6 @@
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| 剪辑AI Agent | `editor_agent` | 接收上游剪辑项目JSON，按编辑指令对时间线二次精选，输出精选后的剪辑json | process | 剪辑项目(`project`:json); 编辑指令(`text`:text) | 剪辑项目(`project`:json); 运行记录(`artifacts`:json); 执行结果(`result`:text) |
 | 小pi通用智能体 | `pi_agent` | 将小 Pi 以工作流节点方式嵌入工作流：注入任务背景与输入输出契约，发起一次 Pi 会话并执行任务，产物保存到任务 cache 目录 | process | 输入1(`input_1`:any); 输入2(`input_2`:any) | 输出1(`output_1`:any); 输出2(`output_2`:any) |
 | 本地CLI智能体 | `opencode_agent` | 以本机已安装的 CLI 智能体（opencode / mimo / Claude Code / Codex / Cline）非交互执行一次会话，解析事件流并按输出契约收拢产物到任务 cache 目录；各 CLI 的命令与事件协议差异已自动适配 | process | 输入1(`input_1`:any); 输入2(`input_2`:any) | 输出1(`output_1`:any); 输出2(`output_2`:any) |
 
@@ -209,7 +208,7 @@
 | 定时执行 | `timed_delay` | 等待指定时间后继续执行，支持时间点和倒计时两种模式 | thread | 输入(`any`:any) | 输出(`any`:any) |
 | 工作流执行器 | `workflow_runner` | 容器化执行一个已存在的工作流：把子工作流的输入映射为本节点输入，把拓扑终点节点的输出作为本节点输出。默认在当前任务目录下新建独立子目录执行，避免与父流程文件互相污染 | thread | 输入1(`in_1`:any); 输入2(`in_2`:any); 输入3(`in_3`:any); 输入4(`in_4`:any) | 输出1(`out_1`:any); 输出2(`out_2`:any); 输出3(`out_3`:any); 输出4(`out_4`:any); 输出汇总(`result`:json); 产物列表(`artifacts`:json) |
 | 循环 | `loop` | 接收一个列表作为迭代对象，逐条取出驱动循环体内的子流程执行；每次迭代的产物按序号记录在 manifest 清单中（选中若干已连线节点后创建循环体） | thread | 迭代对象(`items`:json) | 产物清单(`results`:json); 迭代总数(`count`:json) |
-| 获取任务信息 | `get_task_info` | 从 task.json 与输入节点配置读取任务元信息并作为文本输出：任务名称、输入语音、输出语言、变量1、变量2，供下游节点使用 | thread | 输入(`any`:any) | 任务名称(`task_name`:text); 输入语言(`input_language`:text); 输出语言(`output_language`:text); 变量1(`var1`:text); 变量2(`var2`:text) |
+| 获取任务信息 | `get_task_info` | 从 task.json 与输入节点配置读取任务元信息并作为文本输出：任务名称、输入语音、输出语言、变量1、变量2、任务目录（当前任务文件夹的绝对路径），供下游节点使用 | thread | 输入(`any`:any) | 任务名称(`task_name`:text); 输入语言(`input_language`:text); 输出语言(`output_language`:text); 变量1(`var1`:text); 变量2(`var2`:text); 任务目录(`task_dir`:filepath) |
 | 运行等待 | `run_wait` | 开启后等待指定时长，超时可选择抛出错误或标记完成继续；关闭则跳过并透传输入。进入等待时会发送系统通知提醒用户。 | thread | 输入(`input`:any) | 输出(`output`:any) |
 
 ### 网络请求类节点（`network_request`）
@@ -257,6 +256,15 @@
 | 组合 | `groupnode_mu37s0wv` | 组合（组合节点） | — | 音频分离 / 视频(`gin_1`:video) | — |
 | 语音识别 | `groupnode_mty81wvt` | 语音识别（组合节点） | — | ASR后处理 / 对齐音源(`gin_1`:audio); ASR后处理 / 人声音源(`gin_2`:audio); 语音识别 (ASR) / ASR音源(`gin_3`:audio) | — |
 
+### ai_desk（`ai_desk`）
+
+| 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
+|------|----|------|-------|---------|---------|
+| 剪辑台渲染导出 | `desk_export` | AI剪辑链·第4步【出片】：把剪辑台工程渲染为成片（occ render，无头出 MP4/WebM/MOV），或导出剪映/CapCut 草稿交给剪映精修；可选把成片登记为创作项目资产。上游：project（串接前面各步）。下游：render 端口 → 归档/发布类节点 | process | 剪辑台项目ID(`project`:any); 创作项目ID(回登资产)(`creation_id`:any); 章节ID(回登资产)(`chapter_id`:any) | 剪辑台项目ID(`project`:text); 导出模式(`mode`:text); 成片/草稿(`render`:video); 演练计划(dry-run)(`plan`:text) |
+| 剪辑素材导入 | `desk_material` | AI剪辑链·第2步【素材进场】：把本地素材（视频/图片/音频，单个/多个/整个目录）导入剪辑台媒体池，并按声明式配置放到时间线轨道上（V1/V2 视频轨、A1/A2 音频轨）。上游：连入上游产物文件路径（单个 path 或多个 paths），或已入库的 asset_ids；同时连入 project。下游：asset_ids / clip_ids / project 端口 →「剪辑编排」 | process | 剪辑台项目ID(`project`:any); 单个素材路径(`path`:filepath); 素材路径(多个)(`paths`:json); 素材目录(整目录导入)(`folder`:text); 已入库素材ID(可选)(`asset_ids`:json) | 剪辑台项目ID(`project`:text); 素材ID列表(`asset_ids`:json); 片段ID列表(`clip_ids`:json); 执行摘要(`plan`:text) |
+| 剪辑编排 | `desk_edit` | AI剪辑链·第3步【编排】：两种模式。ops 模式：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数。ai_script 模式：读出 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交（语义剪辑）。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」 | process | 剪辑台项目ID(`project`:any); 素材ID列表(可选)(`asset_ids`:json); 片段ID列表(可选)(`clip_ids`:json); 工具调用ops(可选)(`ops`:json); AI剪辑指令(可选)(`instruction`:text) | 剪辑台项目ID(`project`:text); 执行结果(JSON)(`result`:json); 最后一步结果(`last`:json); 执行摘要(`plan`:text) |
+| 新建剪辑工程 | `desk_project` | AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点 | process | 任意输入(`name`:any) | 剪辑台项目ID(`project`:text); 工程名称(`name`:text); 执行摘要(`plan`:text) |
+
 ### asset（`asset`）
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
@@ -270,15 +278,6 @@
 | 角色素材库 | `character_asset_library` | 从公共角色库选择角色（记录角色ID），执行时回查角色详情并把多视角图文件夹复制到工作目录；输出素材路径（图片文件夹）与角色全信息 JSON。 | process | 来源(`any`:any) | 素材路径(图片文件夹)(`path`:filepath); 素材全信息JSON(`info`:json) |
 | 音色素材库 | `voice_asset_library` | 从晴沐配音谷音色库选择音色（记录音色ID），执行时回查音色详情并把设计样音复制到工作目录；输出素材路径（试听音频）与音色全信息 JSON。 | process | 来源(`any`:any) | 素材路径(试听音频)(`audio`:audio); 素材全信息JSON(`info`:json) |
 | 音频素材库 | `audio_asset_library` | 从 URL、本地路径或晴沐配音谷素材库（ID）获取音频素材，下载/复制到当前工作文件夹；输出素材路径与素材全信息 JSON。 | process | 来源(`any`:any) | 素材路径(`audio`:audio); 素材全信息JSON(`info`:json) |
-
-### cutia（`cutia`）
-
-| 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
-|------|----|------|-------|---------|---------|
-| 剪辑渲染 | `cutia_render` | 接收上游精选后的剪辑项目JSON，无头加载并渲染导出成片，无需人工打开剪辑工作台 | thread | 剪辑项目(`project`:json) | 渲染成片(`video`:video) |
-| 剪辑项目初始化 | `project_init` | 收集上游素材并构造初始剪辑JSON（默认时间线骨架+素材清单），供「Cutia 交互剪辑」接力整理筛选 | thread | 视频(`video`:video); 音频(`audio`:audio); 图片(`image`:image); 字幕(`subtitle`:subtitle) | 初始剪辑项目(`project`:json) |
-| 推送到剪辑台 | `cutia` | 将剪辑项目JSON推送到剪辑工作台并发起系统提醒，等待剪辑后透传输出（素材编排由上游「剪辑项目初始化」完成） | thread | 剪辑项目(`project`:json) | 剪辑项目(`project`:json) |
-| 添加剪辑素材到轨道 | `add_track_media` | 接收任意类型素材，按所选类型添加到剪辑项目轨道（可新建轨道/轨道尾部/自定义插入点），输出剪辑项目JSON | thread | 剪辑项目(`project`:json); 素材(`media`:any) | 剪辑项目(`project`:json) |
 
 ### hyperframes（`hyperframes`）
 

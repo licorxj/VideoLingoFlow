@@ -52,7 +52,7 @@
 
 ### 4. Agent 即节点，随意编排
 
-框架把 Agent 实现为**内置节点类型**（`pi_agent` 通用智能体节点、`editor_agent` 剪辑智能体节点）。你可以把 Agent 直接拖进画布，与普通能力节点混合连线——**Agent 既是对话助手，也是流水线上的一个节点**，前一步的产物可以喂给 Agent，Agent 的输出再交给后续节点处理。文字指令驱动 + 节点编排，两种范式无缝融合。
+框架把 Agent 实现为**内置节点类型**（`pi_agent` 通用智能体节点）。你可以把 Agent 直接拖进画布，与普通能力节点混合连线——**Agent 既是对话助手，也是流水线上的一个节点**，前一步的产物可以喂给 Agent，Agent 的输出再交给后续节点处理。文字指令驱动 + 节点编排，两种范式无缝融合。
 
 ### 5. 百变任务，批量与调度
 
@@ -110,7 +110,7 @@ VideoLingoFlow/
 │   ├── aigc/                 # AIGC 服务（ComfyUI/即梦/RunningHub）
 │   ├── publish/              # 多平台发布（Social MCP 客户端）
 │   ├── pi_rpc/               # 小 Pi 智能体桥接（会话管理、RPC 客户端）
-│   ├── editor/               # 剪辑工作台 + 剪辑 AI Agent
+│   ├── editor/               # 剪辑工程仓库 + 剪辑 AI Agent
 │   ├── llm/ asr/ tts/ imagegen/ separation/  # 各能力域
 │   ├── main.py               # FastAPI 入口
 │   └── manager.py            # 进程管理器（端口 18001）
@@ -122,7 +122,7 @@ VideoLingoFlow/
 ├── docs/                     # 知识库文档（智能体与开发者指南）
 ├── deploy/                   # Docker 生产/集群部署（docker-compose、api.Dockerfile、nginx、TLS、.env.example）
 ├── cloudflare/               # 共享社区 Worker（src/index.js + wrangler.toml）
-├── thirdparty/               # 第三方组件（pi、cutia、social 等）
+├── thirdparty/               # 第三方组件（pi、social 等）
 ├── install.bat / install.sh
 ├── start.bat / start.sh        # 通用一键启动（开发模式）
 └── start-prod.bat / start-prod.sh  # 生产模式一键启动
@@ -156,7 +156,7 @@ VideoLingoFlow/
 | Social 后端 / MCP | http://127.0.0.1:5409 / 5410 | 5409 / 5410 |
 | Social 前端 | http://localhost:5173 | 5173 |
 | LLM Router | http://127.0.0.1:8800 | 8800 |
-| Cutia 编辑器 | http://127.0.0.1:4100 | 4100 |
+
 | Redis | 127.0.0.1:6379 | 6379 |
 
 浏览器访问 http://127.0.0.1:11001/ 进入工作台。
@@ -285,7 +285,7 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 | [docs/节点新建规范指南.md](docs/节点新建规范指南.md) | 新建节点四件套、执行域判定、产物命名、输入注入、Checklist | 新增自定义节点 |
 | [docs/接口添加指南.md](docs/接口添加指南.md) | 接口体系（ASR/TTS/生图/分离/AIGC）、数据模型、四件套、新增接口规范 | 添加或扩展能力接口 |
 | [docs/多人协作功能介绍.md](docs/多人协作功能介绍.md) | 局域网/远程协作、权限体系、资源中心、审计 | 多人协同与远程办公 |
-| [docs/剪辑工作台联动说明.md](docs/剪辑工作台联动说明.md) | 剪辑工作台与节点流水线联动、剪辑 Agent | 使用剪辑能力 |
+| [docs/AI剪辑台使用说明.md](docs/AI剪辑台使用说明.md) | AI 剪辑台启动配置、剪辑 Agent 使用、工程回写工作流 | 使用剪辑能力 |
 | [docs/依赖清单.md](docs/依赖清单.md) | 三大系统依赖声明、平台适配、安装入口 | 依赖管理与排障 |
 | [docs/快速开始.md](docs/快速开始.md) | 从零搭建运行环境 | 首次安装 |
 | [docs/node_catalog.md](docs/node_catalog.md) | 全部节点的分组、名称、描述、输入/输出接口一览 | 查阅可用节点与接口 |
@@ -303,4 +303,4 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 ## 许可与致谢
 
 - **本项目（VideoLingoFlow 自有代码与文档）采用 [CC BY-NC 4.0](LICENSE)（署名-非商业性使用 4.0）许可，不可用于商业用途。** 如需商业使用，请事先取得著作权人书面授权（详见 `LICENSE`）。
-- 工作流编辑器基于 `@xyflow/react`；集成开源组件 social-auto-upload-web-ui、QM-LocalRouter、Cutia、Pi、VoiceForge，这些第三方组件保留其各自目录内声明的许可（如 MIT），与本项目的非商业声明互不冲突，使用时应同时遵守其原有许可。
+- 工作流编辑器基于 `@xyflow/react`；集成开源组件 social-auto-upload-web-ui、QM-LocalRouter、Pi、VoiceForge，这些第三方组件保留其各自目录内声明的许可（如 MIT），与本项目的非商业声明互不冲突，使用时应同时遵守其原有许可。

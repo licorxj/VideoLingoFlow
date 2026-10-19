@@ -631,7 +631,7 @@ class EditorProjectRepository:
     def restore_snapshot(self, task_id: str, data: dict[str, Any], updated_by: str = "workflow") -> dict[str, Any]:
         """恢复上游节点导出的剪辑项目快照，作为本任务剪辑器的当前状态。
 
-        用于「剪辑 JSON 接力」链路：Cutia 交互剪辑 → 剪辑AI Agent → 剪辑渲染。
+        用于「剪辑 JSON 接力」链路：上游交互节点 → 剪辑AI Agent → 剪辑渲染。
         之间以剪辑项目 JSON 文件传递数据，各步骤执行前先恢复上游快照，
         确保严格按数据流顺序处理，而非依赖仓库残留状态。
         快照格式与 :meth:`snapshot` 输出一致：``{"project": ..., "assets": [...]}``。
@@ -671,7 +671,7 @@ class EditorProjectRepository:
             return self.snapshot(task_id)
 
     def reset_project(self, task_id: str) -> None:
-        """彻底清空剪辑工作台的仓库数据，使下一次 import_assets 从零重新初始化。
+        """彻底清空剪辑工程的仓库数据，使下一次 import_assets 从零重新初始化。
 
         删除项目（project.json）、素材记录（assets.json）、角色（characters.json）
         与外部素材副本目录（editor/media/），避免工作流重跑时素材增量叠加、

@@ -50,7 +50,7 @@ SOCIAL_FRONTEND_PORT = 5173
 CONTROL_PLANE_SOFT_SHUTDOWN_TIMEOUT = int(os.environ.get("CONTROL_PLANE_SOFT_SHUTDOWN_TIMEOUT", "300"))
 SOCIAL_MCP_PORT = 5410
 LLM_ROUTER_PORT = 8800
-CUTIA_PORT = 4100
+OPENCHATCUT_PORT = 5199
 REDIS_PORT = 6379
 REDIS_BIN_DIR = os.environ.get("VOICEFORGE_REDIS_BIN", r"C:\Program Files\Redis")
 VOICEFORGE_REDIS_URL = os.environ.get("VOICEFORGE_REDIS_URL", f"redis://127.0.0.1:{REDIS_PORT}/2")
@@ -73,8 +73,8 @@ _social_mcp_process: subprocess.Popen | None = None
 _social_mcp_start_time: float = 0
 _llm_router_process: subprocess.Popen | None = None
 _llm_router_start_time: float = 0
-_cutia_process: subprocess.Popen | None = None
-_cutia_start_time: float = 0
+_openchatcut_process: subprocess.Popen | None = None
+_openchatcut_start_time: float = 0
 _voiceforge_worker_process: subprocess.Popen | None = None
 _voiceforge_worker_start_time: float = 0
 _control_plane_worker_process: subprocess.Popen | None = None
@@ -213,7 +213,7 @@ def _watchdog_tick():
         ("social_frontend", _social_frontend_process, start_social_frontend, SOCIAL_FRONTEND_PORT, _social_frontend_start_time),
         ("social_mcp", _social_mcp_process, start_social_mcp, SOCIAL_MCP_PORT, _social_mcp_start_time),
         ("llm_router", _llm_router_process, start_llm_router, LLM_ROUTER_PORT, _llm_router_start_time),
-        ("cutia", _cutia_process, start_cutia, CUTIA_PORT, _cutia_start_time),
+        ("openchatcut", _openchatcut_process, start_openchatcut, None, _openchatcut_start_time),
         ("voiceforge_worker", _voiceforge_worker_process, start_voiceforge_worker, None, _voiceforge_worker_start_time),
         ("control_plane_worker", _control_plane_worker_process, start_control_plane_worker, None, _control_plane_worker_start_time),
         ("gpu_service", _gpu_service_process, start_gpu_service, None, _gpu_service_start_time),
@@ -602,8 +602,6 @@ def start_backend():
     project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     python_exe = _get_python()
     env = _setup_env()
-    # 无头剪辑渲染器需要与后端同源访问 /cutia 代理，故把主后端端口透传给子进程
-    env["VIDEOLINGO_BACKEND_PORT"] = str(BACKEND_PORT)
 
     listener_host = _listener_host(env)
     cmd = [
@@ -1195,251 +1193,241 @@ def _node_version_at_least(node_exe: str, major: int, minor: int = 0) -> bool:
         return False
 
 
-@_serialized
-def start_cutia():
-    """Start the Cutia editor on port 4100.
 
-    运行模式由环境变量 CUTIA_STANDALONE 控制（推荐用于小体积分发）:
-      - "1"/"true"/"yes"/"on" -> 生产 standalone 服务 (node apps/web/server.js)。
-        运行时仅需 apps/web/standalone 内自带的精简 node_modules，无需完整 node_modules。
-      - 未设置时: 若 standalone 产物存在且完整 node_modules 已被裁剪 -> 自动 standalone；
-        否则走默认 dev 服务 (bun run dev:web)，需要完整 node_modules。
-    绑定地址可用 CUTIA_HOST 覆盖（默认 127.0.0.1）。
+
+# --------------------------------------------------------------------------- #
+# OpenChatCut（AI剪辑台，thirdparty/openchatcut，AGPL 独立进程，不改源码）
+# --------------------------------------------------------------------------- #
+
+
+def _openchatcut_dir() -> str:
+    return os.path.join(
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "thirdparty", "openchatcut",
+    )
+
+
+def _openchatcut_settings() -> tuple[int, bool]:
+    """读取「AI剪辑台」设置：(端口, 是否启用)。
+
+    manager 是独立进程，直读 config.yaml；读取失败时回退默认值 5199 / 启用。
+    环境变量 OPENCHATCUT_DISABLED=1 可强制关闭自动启动。
     """
-    global _cutia_process, _cutia_start_time
+    port = OPENCHATCUT_PORT
+    enabled = True
+    try:
+        from backend.config.config_manager import config as _config
+
+        value = _config.get("openchatcut.port", port)
+        try:
+            port = int(value)
+        except (TypeError, ValueError):
+            pass
+        enabled = bool(_config.get("openchatcut.enabled", True))
+    except Exception:
+        pass
+    if os.environ.get("OPENCHATCUT_DISABLED", "").strip().lower() in ("1", "true", "yes", "on"):
+        enabled = False
+    return port, enabled
+
+
+def _openchatcut_npm() -> str:
+    """解析 npm：优先 node 同目录的 npm(.cmd)，回退 PATH 探测。"""
+    node_exe = _resolve_node_exe()
+    if node_exe:
+        sibling = os.path.join(
+            os.path.dirname(node_exe), "npm.cmd" if os.name == "nt" else "npm"
+        )
+        if os.path.isfile(sibling):
+            return sibling
+    found = shutil.which("npm") or shutil.which("npm.cmd")
+    return found or "npm"
+
+
+@_serialized
+def start_openchatcut():
+    """启动 OpenChatCut 编辑器（npm run dev，默认 5199）。
+
+    合规边界：不修改其源码，运行参数来自其官方 .env.local（由主项目
+    「AI剪辑台」设置页注入）。node_modules 缺失（未安装依赖）时跳过并提示。
+    """
+    global _openchatcut_process, _openchatcut_start_time
+
+    port, enabled = _openchatcut_settings()
+    if not enabled:
+        return
 
     with _lock:
-        if _cutia_process is not None and _cutia_process.poll() is None:
-            print("[Manager] Cutia already running, skipping start")
+        if _openchatcut_process is not None and _openchatcut_process.poll() is None:
+            print("[Manager] OpenChatCut already running, skipping start")
             return
 
-    if _check_port(CUTIA_PORT):
-        print("[Manager] Cutia port is already in use, skipping start")
+    if _check_port(port):
+        print("[Manager] OpenChatCut port is already in use, skipping start")
         return
 
-    project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    cutia_dir = os.path.join(project_root, "thirdparty", "cutia", "apps", "web")
-    if not os.path.isdir(cutia_dir):
-        print("[Manager] Cutia directory not found, skipping")
+    occ_dir = _openchatcut_dir()
+    if not os.path.isdir(occ_dir):
+        print("[Manager] OpenChatCut directory not found, skipping")
+        return
+    if not os.path.isdir(os.path.join(occ_dir, "node_modules")):
+        print("[Manager] OpenChatCut 依赖未安装（thirdparty/openchatcut/node_modules 缺失），跳过启动；"
+              "请先在 thirdparty/openchatcut 下执行 npm install")
         return
 
-    cutia_root = os.path.join(project_root, "thirdparty", "cutia")
-    standalone_root = os.path.join(cutia_dir, "standalone")
-    server_js = os.path.join(standalone_root, "apps", "web", "server.js")
-    has_standalone = os.path.isfile(server_js)
-    has_full_nm = os.path.isdir(os.path.join(cutia_root, "node_modules"))
+    npm_cmd = _openchatcut_npm()
+    # isolated-dev 模式下 profile 的 settings.env 一旦存在，上游 vite 不再读取
+    # .env.local，进程 env 是该模式官方设计的注入通道；此处把「AI剪辑台」设置
+    # 生成的同一组变量注入子进程（.env.local 仍会写入，供 dev:shared / 桌面端使用）。
+    child_env = os.environ.copy()
+    try:
+        from backend.config.config_manager import config as _occ_cfg
+        from backend.config.openchatcut_settings import merge_defaults as _occ_merge
+        from backend.config.openchatcut_settings import resolved_env_pairs as _occ_pairs
 
-    standalone_env = str(os.environ.get("CUTIA_STANDALONE", "")).strip().lower()
-    force_dev = str(os.environ.get("CUTIA_FORCE_DEV", "")).strip().lower() in ("1", "true", "yes", "on")
-    if standalone_env:
-        standalone = standalone_env in ("1", "true", "yes", "on")
-    elif force_dev:
-        standalone = False
-    else:
-        # 默认优先 standalone 生产服务：dev 模式（Turbopack 按需编译）在无头渲染场景下，
-        # chunk 编译会阻塞请求导致 /cutia 代理返回 502、页面脚本加载不全而整体卡死。
-        # 需要热更新调试前端时，设置 CUTIA_FORCE_DEV=1（或 CUTIA_STANDALONE=0）回退 dev。
-        standalone = has_standalone
+        _occ_stored = _occ_cfg.get("openchatcut", {}) or {}
+        for _key, _value in _occ_pairs(_occ_merge(_occ_stored)).items():
+            child_env[_key] = _value
+    except Exception as exc:
+        print(f"[Manager] OpenChatCut env 注入跳过（将仅依赖 .env.local）: {exc}")
 
-    bun_cmd = os.environ.get("BUN_CMD", "bun")
+    # 启动模式：优先跑构建产物（dist/，安装时已 npm run build），
+    # 复用上游官方生产服务（desktop/embedded-server.ts，含全部服务端能力：
+    # /api、/llm、外部 MCP 等），不修改其源码，仅新增启动器 thirdparty/openchatcut_prod_server.mts。
+    # dist 缺失（未构建 / 构建失败）时回退 dev server，保证「装完依赖也能用」。
+    dist_index = os.path.join(occ_dir, "dist", "index.html")
+    runner = os.path.join(os.path.dirname(occ_dir), "openchatcut_prod_server.mts")
+    tsx_cli = os.path.join(occ_dir, "node_modules", "tsx", "dist", "cli.mjs")
+    use_build = os.path.isfile(dist_index) and os.path.isfile(runner) and os.path.isfile(tsx_cli)
 
-    if standalone:
-        if not has_standalone:
-            print(f"[Manager] Standalone 服务不存在: {server_js}")
-            print("[Manager] 回退到 dev 模式。请先构建 cutia 生成 standalone 产物（运行 thirdparty\\pack-cutia-standalone.bat）。")
-            standalone = False
-        else:
-            node_exe = _resolve_node_exe()
-            if not node_exe:
-                print("[Manager] 未找到 Node.js；standalone 模式需要 Node >= 20.9。回退到 dev 模式（需 bun）。")
-                standalone = False
-            elif not _node_version_at_least(node_exe, 20, 9):
-                print(f"[Manager] Node.js 版本过低（{node_exe}）；standalone 需 >= 20.9。回退到 dev 模式。")
-                standalone = False
-
-    if standalone:
-        host = os.environ.get("CUTIA_HOST", "127.0.0.1")
-        print(f"[Manager] 启动 Cutia (standalone): node apps/web/server.js (port {CUTIA_PORT}, host {host})")
-        env = os.environ.copy()
-        env["PORT"] = str(CUTIA_PORT)
-        env["HOSTNAME"] = host
+    if use_build:
+        node_exe = _resolve_node_exe() or "node"
+        print(f"[Manager] Starting OpenChatCut: 生产模式（dist 构建产物, port {port}）")
         try:
             if os.name == "nt":
-                # 隐藏窗口启动；cwd 必须为 standalone 根目录，server.js 路径相对 standalone 根
-                cmd = f'cmd /K "cd /d "{standalone_root}" && "{node_exe}" apps/web/server.js"'
+                cmd = f'cmd /c "cd /d "{occ_dir}" && "{node_exe}" "{tsx_cli}" "{runner}" "{occ_dir}""'
                 proc = subprocess.Popen(
                     cmd,
-                    cwd=standalone_root,
-                    env=env,
+                    cwd=occ_dir,
+                    env=child_env,
                     shell=True,
                     creationflags=CREATE_HIDDEN,
                 )
             else:
                 proc = subprocess.Popen(
-                    [node_exe, "apps/web/server.js"],
-                    cwd=standalone_root,
-                    env=env,
+                    [node_exe, tsx_cli, runner, occ_dir],
+                    cwd=occ_dir,
+                    env=child_env,
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                     start_new_session=True,
                 )
-            _assign_to_job(proc)
-            with _lock:
-                _cutia_process = proc
-                _cutia_start_time = time.time()
-            _desired["cutia"] = True
-            print(f"[Manager] Cutia (standalone) 已启动, PID={proc.pid}")
         except Exception as e:
-            print(f"[Manager] 启动 Cutia (standalone) 失败: {e}")
-        return
+            print(f"[Manager] Failed to start OpenChatCut (prod): {e}")
+            return
+    else:
+        # 上游 vite 未配置 server.host，默认绑 localhost（本机解析到 ::1），与主项目
+        # 全站 127.0.0.1 约定（反代/端口探测）不符；经 CLI 参数绑定 127.0.0.1（不改其源码）。
+        print(f"[Manager] Starting OpenChatCut: dev 模式（dist 缺失, npm run dev, port {port}）")
+        try:
+            if os.name == "nt":
+                cmd = f'cmd /c "cd /d "{occ_dir}" && "{npm_cmd}" run dev -- --host 127.0.0.1"'
+                proc = subprocess.Popen(
+                    cmd,
+                    cwd=occ_dir,
+                    env=child_env,
+                    shell=True,
+                    creationflags=CREATE_HIDDEN,
+                )
+            else:
+                proc = subprocess.Popen(
+                    [npm_cmd, "run", "dev", "--", "--host", "127.0.0.1"],
+                    cwd=occ_dir,
+                    env=child_env,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+        except Exception as e:
+            print(f"[Manager] Failed to start OpenChatCut (dev): {e}")
+            return
 
-    # dev 模式（默认）
-    print(f"[Manager] Starting Cutia: bun run dev:web (port {CUTIA_PORT})")
     try:
-        if os.name == "nt":
-            # Windows: 隐藏窗口启动 cmd（bun dev:web 在前台运行，无可见控制台窗口）
-            cmd = f'cmd /K "cd /d "{cutia_root}" && "{bun_cmd}" run dev:web"'
-            proc = subprocess.Popen(
-                cmd,
-                cwd=cutia_root,
-                env=os.environ.copy(),
-                shell=True,
-                creationflags=CREATE_HIDDEN,
-            )
-        else:
-            # POSIX (Linux/macOS): 直接以 argv 列表启动, 无需 shell
-            proc = subprocess.Popen(
-                [bun_cmd, "run", "dev:web"],
-                cwd=cutia_root,
-                env=os.environ.copy(),
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
-            )
         _assign_to_job(proc)
         with _lock:
-            _cutia_process = proc
-            _cutia_start_time = time.time()
-        _desired["cutia"] = True
-        print(f"[Manager] Cutia started, PID={proc.pid}")
+            _openchatcut_process = proc
+            _openchatcut_start_time = time.time()
+        _desired["openchatcut"] = True
+        print(f"[Manager] OpenChatCut started, PID={proc.pid}")
     except Exception as e:
-        print(f"[Manager] Failed to start Cutia: {e}")
-
-
-def _get_cutia_listener_pid() -> int | None:
-    """返回监听 CUTIA_PORT 的进程 PID (跨平台)。"""
-    try:
-        if os.name == "nt":
-            output = subprocess.run(
-                ["netstat", "-ano", "-p", "tcp"],
-                capture_output=True,
-                text=True,
-                timeout=10, encoding="utf-8", errors="replace",
-            ).stdout
-            for line in output.splitlines():
-                parts = line.split()
-                if len(parts) >= 5 and parts[1].rsplit(":", 1)[-1] == str(CUTIA_PORT):
-                    return int(parts[-1])
-        else:
-            # POSIX: 优先 lsof, 回退 ss
-            for cmd in (
-                ["lsof", "-iTCP", f":{CUTIA_PORT}", "-sTCP:LISTEN", "-t"],
-                ["ss", "-ltnp", f"sport = :{CUTIA_PORT}"],
-            ):
-                result = subprocess.run(
-                    cmd, capture_output=True, text=True, timeout=10, encoding="utf-8", errors="replace"
-                )
-                if result.returncode != 0:
-                    continue
-                for token in result.stdout.split():
-                    if token.isdigit():
-                        return int(token)
-    except Exception:
-        return None
-    return None
-
-
-def _is_cutia_process(pid: int | None) -> bool:
-    """判断 PID 是否为 cutia (apps/web, 含 next) 进程 (跨平台)。"""
-    if pid is None:
-        return False
-    try:
-        if os.name == "nt":
-            result = subprocess.run(
-                [
-                    "powershell",
-                    "-NoProfile",
-                    "-Command",
-                    f"(Get-CimInstance Win32_Process -Filter 'ProcessId = {pid}').CommandLine",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10, encoding="utf-8", errors="replace",
-            )
-            command_line = result.stdout.strip().lower().replace("/", "\\")
-        else:
-            result = subprocess.run(
-                ["ps", "-p", str(pid), "-o", "args="],
-                capture_output=True,
-                text=True,
-                timeout=10, encoding="utf-8", errors="replace",
-            )
-            command_line = result.stdout.strip().lower()
-        project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__))).lower()
-        cutia_dir = os.path.join(project_root, "thirdparty", "cutia", "apps", "web").lower()
-        # standalone 模式的进程命令行为 ".../apps/web/standalone/apps/web/server.js"，
-        # 不含 "next" 字样，需用 "standalone" / "server.js" 一并识别。
-        return cutia_dir in command_line and (
-            "next" in command_line
-            or "standalone" in command_line
-            or "server.js" in command_line
-        )
-    except Exception:
-        return False
-
-
-def _stop_external_cutia() -> bool:
-    pid = _get_cutia_listener_pid()
-    if not _is_cutia_process(pid):
-        return False
-    try:
-        if os.name == "nt":
-            subprocess.run(
-                ["taskkill", "/F", "/T", "/PID", str(pid)],
-                capture_output=True,
-                timeout=10,
-            )
-        else:
-            os.kill(pid, signal.SIGTERM)
-        return True
-    except Exception:
-        return False
+        print(f"[Manager] Failed to start OpenChatCut: {e}")
 
 
 @_serialized
-def stop_cutia():
-    """Stop the Cutia process managed by this manager."""
-    global _cutia_process, _cutia_start_time
-    _desired["cutia"] = False
+def _kill_orphan_openchatcut(port: int):
+    """清理未纳入跟踪的 OpenChatCut 实例（手工启动、或 manager 重启后遗留的子进程）。
+
+    没有它的话，"重启剪辑台" 会对这类实例空操作（stop 找不到进程、start 又因端口
+    占用跳过），导致 .env.local 的新配置永远不生效。命令行不含 openchatcut 的
+    监听进程一律不杀，避免误伤占用同端口的其他程序。
+    """
+    for pid in _get_listener_pids(port):
+        cmdline = ""
+        try:
+            probe = subprocess.run(
+                ["powershell", "-NoProfile", "-Command",
+                 f"(Get-CimInstance Win32_Process -Filter \"ProcessId={pid}\").CommandLine"],
+                capture_output=True, text=True, timeout=15, encoding="utf-8", errors="replace",
+            )
+            cmdline = (probe.stdout or "").strip()
+        except Exception as e:
+            print(f"[Manager] Failed to inspect PID={pid}: {e}")
+        if "openchatcut" not in cmdline.lower():
+            print(f"[Manager] Port {port} held by unrelated process PID={pid}, skip killing")
+            continue
+        print(f"[Manager] Stopping orphan OpenChatCut PID={pid} on port {port}...")
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)], capture_output=True, timeout=15)
+
+
+def stop_openchatcut():
+    """Stop the OpenChatCut dev process managed by this manager."""
+    global _openchatcut_process, _openchatcut_start_time
+    _desired["openchatcut"] = False
 
     with _lock:
-        proc = _cutia_process
-        _cutia_process = None
-        _cutia_start_time = 0
+        proc = _openchatcut_process
+        _openchatcut_process = None
+        _openchatcut_start_time = 0
+
+    port, _enabled = _openchatcut_settings()
 
     if proc is None:
-        if not _stop_external_cutia():
-            print("[Manager] No controllable Cutia process to stop")
-            return
-    else:
-        print(f"[Manager] Stopping Cutia PID={proc.pid}...")
-        _kill_existing_process(proc)
+        print("[Manager] No tracked OpenChatCut process, falling back to port cleanup")
+        _kill_orphan_openchatcut(port)
+        for _ in range(20):
+            if _check_port(port):
+                time.sleep(0.5)
+            else:
+                break
+        return
+
+    print(f"[Manager] Stopping OpenChatCut PID={proc.pid}...")
+    _kill_existing_process(proc)
     for _ in range(20):
-        if _check_port(CUTIA_PORT):
+        if _check_port(port):
             time.sleep(0.5)
         else:
             break
-    print("[Manager] Cutia stopped")
+    print("[Manager] OpenChatCut stopped")
+
+
+@_serialized
+def restart_openchatcut_only():
+    """Restart only the OpenChatCut editor."""
+    print("[Manager] Restarting OpenChatCut...")
+    stop_openchatcut()
+    time.sleep(1)
+    start_openchatcut()
 
 
 @_serialized
@@ -1747,15 +1735,6 @@ def restart_voiceforge_worker():
 
 
 @_serialized
-def restart_cutia_only():
-    """Restart only the Cutia editor."""
-    print("[Manager] Restarting Cutia...")
-    stop_cutia()
-    time.sleep(1)
-    start_cutia()
-
-
-@_serialized
 def restart_llm_router_only():
     """Restart only the LLM Router."""
     print("[Manager] Restarting LLM Router...")
@@ -1772,7 +1751,7 @@ def stop_all():
     stop_social_frontend()
     stop_social_mcp()
     stop_llm_router()
-    stop_cutia()
+    stop_openchatcut()
     stop_voiceforge_worker()
     stop_control_plane_worker()
     stop_gpu_service()
@@ -1792,7 +1771,6 @@ def restart_backend():
     start_social_backend()
     start_social_frontend()
     start_llm_router()
-    start_cutia()
     start_voiceforge_worker()
     start_control_plane_worker()
 
@@ -1844,6 +1822,23 @@ def restart_social_mcp_only():
     start_social_mcp()
 
 
+def _proc_status(proc, start_time, port=None):
+    """统一进程状态判定：包装进程存活 / 已退出但端口仍在监听（如 npm→vite）。"""
+    if proc is None:
+        if port is not None and _check_port(port):
+            return {"status": "running", "pid": None, "uptime": 0, "managed": False}
+        return {"status": "stopped", "pid": None, "uptime": 0}
+    poll = proc.poll()
+    if poll is None:
+        uptime = time.time() - start_time if start_time else 0
+        return {"status": "running", "pid": proc.pid, "uptime": round(uptime, 1), "managed": True}
+    else:
+        # Process wrapper exited, but the actual server may still be running (e.g. npm→vite)
+        if port is not None and _check_port(port):
+            return {"status": "running", "pid": proc.pid, "uptime": round(time.time() - start_time, 1) if start_time else 0, "managed": True}
+        return {"status": "stopped", "pid": proc.pid, "exitCode": poll, "uptime": 0}
+
+
 def get_status() -> dict:
     """Get all backend statuses."""
     with _lock:
@@ -1852,31 +1847,10 @@ def get_status() -> dict:
         social_fe_proc = _social_frontend_process
         mcp_proc = _social_mcp_process
         llm_router_proc = _llm_router_process
-        cutia_proc = _cutia_process
+        openchatcut_proc = _openchatcut_process
         voiceforge_worker_proc = _voiceforge_worker_process
         control_plane_worker_proc = _control_plane_worker_process
         gpu_service_proc = _gpu_service_process
-
-    def _proc_status(proc, start_time, port=None):
-        if proc is None:
-            if port is not None and _check_port(port):
-                pid = _get_cutia_listener_pid() if port == CUTIA_PORT else None
-                return {
-                    "status": "running",
-                    "pid": pid,
-                    "uptime": 0,
-                    "managed": port == CUTIA_PORT and _is_cutia_process(pid),
-                }
-            return {"status": "stopped", "pid": None, "uptime": 0}
-        poll = proc.poll()
-        if poll is None:
-            uptime = time.time() - start_time if start_time else 0
-            return {"status": "running", "pid": proc.pid, "uptime": round(uptime, 1), "managed": True}
-        else:
-            # Process wrapper exited, but the actual server may still be running (e.g. npm→vite)
-            if port is not None and _check_port(port):
-                return {"status": "running", "pid": proc.pid, "uptime": round(time.time() - start_time, 1) if start_time else 0, "managed": True}
-            return {"status": "stopped", "pid": proc.pid, "exitCode": poll, "uptime": 0}
 
     try:
         import sys as _sys
@@ -1894,7 +1868,7 @@ def get_status() -> dict:
         "social_frontend": {**_proc_status(social_fe_proc, _social_frontend_start_time, SOCIAL_FRONTEND_PORT), "port": SOCIAL_FRONTEND_PORT},
         "social_mcp": {**_proc_status(mcp_proc, _social_mcp_start_time, SOCIAL_MCP_PORT), "port": SOCIAL_MCP_PORT},
         "llm_router": {**_proc_status(llm_router_proc, _llm_router_start_time, LLM_ROUTER_PORT), "port": LLM_ROUTER_PORT},
-        "cutia": {**_proc_status(cutia_proc, _cutia_start_time, CUTIA_PORT), "port": CUTIA_PORT},
+        "openchatcut": _openchatcut_status(openchatcut_proc, _openchatcut_start_time),
         "voiceforge_redis": {
             "status": "running" if _check_port(REDIS_PORT) else "stopped",
             "port": REDIS_PORT,
@@ -1906,6 +1880,18 @@ def get_status() -> dict:
         "gpu_service": {**_proc_status(gpu_service_proc, _gpu_service_start_time), "port": None},
         "pi_agent": pi_status,
     }
+
+
+def _openchatcut_status(proc, start_time: float) -> dict:
+    """OpenChatCut 状态：端口来自「AI剪辑台」设置，兼容外部启动的实例。"""
+    port, enabled = _openchatcut_settings()
+    status = _proc_status(proc, start_time)
+    if status.get("status") != "running" and _check_port(port):
+        status = {"status": "running", "pid": None, "uptime": 0, "managed": False}
+    status["port"] = port
+    status["enabled"] = enabled
+    status["deps"] = os.path.isdir(os.path.join(_openchatcut_dir(), "node_modules"))
+    return status
 
 
 def _check_port(port: int, host: str = "127.0.0.1") -> bool:
@@ -1969,9 +1955,6 @@ class ManagerHandler(BaseHTTPRequestHandler):
         elif self.path == "/manager/restart-llm-router":
             self._send_json({"status": "restarting"})
             threading.Thread(target=restart_llm_router_only, daemon=True).start()
-        elif self.path == "/manager/restart-cutia":
-            self._send_json({"status": "restarting"})
-            threading.Thread(target=restart_cutia_only, daemon=True).start()
         elif self.path == "/manager/restart-voiceforge-worker":
             self._send_json({"status": "restarting"})
             threading.Thread(target=restart_voiceforge_worker, daemon=True).start()
@@ -1996,9 +1979,15 @@ class ManagerHandler(BaseHTTPRequestHandler):
         elif self.path == "/manager/start-llm-router":
             self._send_json({"status": "starting"})
             threading.Thread(target=start_llm_router, daemon=True).start()
-        elif self.path == "/manager/start-cutia":
+        elif self.path == "/manager/start-openchatcut":
             self._send_json({"status": "starting"})
-            threading.Thread(target=start_cutia, daemon=True).start()
+            threading.Thread(target=start_openchatcut, daemon=True).start()
+        elif self.path == "/manager/restart-openchatcut":
+            self._send_json({"status": "restarting"})
+            threading.Thread(target=restart_openchatcut_only, daemon=True).start()
+        elif self.path == "/manager/stop-openchatcut":
+            self._send_json({"status": "stopping"})
+            threading.Thread(target=stop_openchatcut, daemon=True).start()
         elif self.path == "/manager/start-voiceforge-worker":
             self._send_json({"status": "starting"})
             threading.Thread(target=start_voiceforge_worker, daemon=True).start()
@@ -2032,9 +2021,6 @@ class ManagerHandler(BaseHTTPRequestHandler):
         elif self.path == "/manager/stop-llm-router":
             self._send_json({"status": "stopping"})
             threading.Thread(target=stop_llm_router, daemon=True).start()
-        elif self.path == "/manager/stop-cutia":
-            self._send_json({"status": "stopping"})
-            threading.Thread(target=stop_cutia, daemon=True).start()
         elif self.path == "/manager/stop-voiceforge-worker":
             self._send_json({"status": "stopping"})
             threading.Thread(target=stop_voiceforge_worker, daemon=True).start()
@@ -2062,7 +2048,7 @@ def _start_all_services():
         start_social_backend,
         start_social_frontend,
         start_llm_router,
-        start_cutia,
+        start_openchatcut,
         start_voiceforge_worker,
         start_control_plane_worker,
         start_gpu_service,
@@ -2104,7 +2090,7 @@ def main():
     print(f"  API listener : {listener_host}:{BACKEND_PORT}")
     print(f"  Manager listener : {LOCAL_HOST}:{MANAGER_PORT}")
     print(f"  LLM Router   : {LLM_ROUTER_PORT}")
-    print(f"  Cutia        : {CUTIA_PORT}")
+    print(f"  OpenChatCut  : {_openchatcut_settings()[0]}")
     print(f"  VoiceForge Redis : {VOICEFORGE_REDIS_URL}")
     if _lan_mode_enabled(env):
         print("  WARNING: LAN mode has no authentication or TLS; trusted LAN only.")

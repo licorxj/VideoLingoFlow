@@ -52,7 +52,7 @@ Pi supports six roles (General / Node Creation / Workflow Orchestration / Task E
 
 ### 4. Agent-as-a-Node — Orchestrate Freely
 
-The framework implements Agents as **built-in node types** (`pi_agent` general agent node, `editor_agent` editing agent node). You can drag an Agent directly onto the canvas and wire it with regular capability nodes — **the Agent is both a conversation assistant and a step in the pipeline**. Outputs from previous steps feed into the Agent, and the Agent's output flows to downstream nodes. Text-command-driven execution and visual orchestration merge seamlessly.
+The framework implements Agents as **built-in node types** (`pi_agent` general agent node). You can drag an Agent directly onto the canvas and wire it with regular capability nodes — **the Agent is both a conversation assistant and a step in the pipeline**. Outputs from previous steps feed into the Agent, and the Agent's output flows to downstream nodes. Text-command-driven execution and visual orchestration merge seamlessly.
 
 ### 5. Infinite Tasks with Batch & Scheduling
 
@@ -110,7 +110,7 @@ VideoLingoFlow/
 │   ├── aigc/                 # AIGC services (ComfyUI/Jimeng/RunningHub)
 │   ├── publish/              # Multi-platform publishing (Social MCP client)
 │   ├── pi_rpc/               # 小π Agent bridge (session management, RPC client)
-│   ├── editor/               # Editing workbench + editing AI Agent
+│   ├── editor/               # Editing project repo + editing AI Agent
 │   ├── llm/ asr/ tts/ imagegen/ separation/  # Capability domains
 │   ├── main.py               # FastAPI entry
 │   └── manager.py            # Process manager (port 18001)
@@ -122,7 +122,7 @@ VideoLingoFlow/
 ├── docs/                     # Knowledge base docs (agent & developer guides)
 ├── deploy/                   # Docker production/cluster deployment (docker-compose, api.Dockerfile, nginx, TLS, .env.example)
 ├── cloudflare/               # Community Worker (src/index.js + wrangler.toml)
-├── thirdparty/               # Third-party components (pi, cutia, social, etc.)
+├── thirdparty/               # Third-party components (pi, social, etc.)
 ├── install.bat / install.sh
 ├── start.bat / start.sh        # One-click start (dev mode)
 └── start-prod.bat / start-prod.sh  # One-click start (production mode)
@@ -156,7 +156,7 @@ Run `start.bat` (or `bash start.sh` on Linux/macOS). Manager runs Alembic migrat
 | Social backend / MCP | http://127.0.0.1:5409 / 5410 | 5409 / 5410 |
 | Social frontend | http://localhost:5173 | 5173 |
 | LLM Router | http://127.0.0.1:8800 | 8800 |
-| Cutia editor | http://127.0.0.1:4100 | 4100 |
+
 | Redis | 127.0.0.1:6379 | 6379 |
 
 Open http://127.0.0.1:11001/ in your browser to enter the workbench.
@@ -285,7 +285,7 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 | [docs/节点新建规范指南.md](docs/节点新建规范指南.md) | Four-piece custom node convention, execution domain, artifact naming, input injection, checklist | Add custom nodes |
 | [docs/接口添加指南.md](docs/接口添加指南.md) | Interface domains (ASR/TTS/imagegen/separation/AIGC), data models, four-piece convention | Add or extend capability interfaces |
 | [docs/多人协作功能介绍.md](docs/多人协作功能介绍.md) | LAN/remote collaboration, permissions, resource center, audit | Multi-user & remote work |
-| [docs/剪辑工作台联动说明.md](docs/剪辑工作台联动说明.md) | Editing workbench & pipeline integration, editing Agent | Use editing capabilities |
+| [docs/AI剪辑台使用说明.md](docs/AI剪辑台使用说明.md) | AI editing desk setup, editing Agent usage, project write-back to workflows | Use editing capabilities |
 | [docs/依赖清单.md](docs/依赖清单.md) | Dependency declarations for the three systems, platform adaptation, install entries | Dependency management |
 | [docs/快速开始.md](docs/快速开始.md) | Set up a working environment from scratch | First-time install |
 | [docs/node_catalog.md](docs/node_catalog.md) | Overview of all nodes: category, name, description, inputs/outputs | Browse available nodes & ports |
@@ -303,4 +303,4 @@ docker compose -f deploy/docker-compose.yml --env-file .env up -d --force-recrea
 ## License & Credits
 
 - **This project (VideoLingoFlow's own source code and documentation) is licensed under [CC BY-NC 4.0](LICENSE) (Attribution-NonCommercial 4.0). Commercial use is NOT permitted.** For any commercial use, obtain prior written permission from the copyright holder (see `LICENSE`).
-- The workflow editor is built on `@xyflow/react`; it integrates open-source components social-auto-upload-web-ui, QM-LocalRouter, Cutia, Pi, and VoiceForge. These third-party components retain their respective licenses (e.g., MIT) as declared in their own directories and are not affected by this project's non-commercial notice — follow their original licenses when using them.
+- The workflow editor is built on `@xyflow/react`; it integrates open-source components social-auto-upload-web-ui, QM-LocalRouter, Pi, and VoiceForge. These third-party components retain their respective licenses (e.g., MIT) as declared in their own directories and are not affected by this project's non-commercial notice — follow their original licenses when using them.

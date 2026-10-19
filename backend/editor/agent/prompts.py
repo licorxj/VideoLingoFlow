@@ -1,8 +1,8 @@
 """剪辑 AI Agent 的提示词与专家角色体系。
 
-能力移植自 cutia（thirdparty/cutia）浏览器端剪辑智能体：
-  - apps/web/src/lib/ai/agent/expert-roles.ts（专家角色与 Director 编排）
-  - apps/web/src/lib/ai/agent/system-prompt.ts（能力与准则）
+能力参考早期浏览器端剪辑智能体实现：
+  - 专家角色与 Director 编排（expert-roles）
+  - 能力与准则（system-prompt）
 
 保留其角色体系、编排流程与文本单位约定；工具说明改为适配 VideoLingo
 后端项目仓库（直接操作 project.json）。
@@ -25,7 +25,7 @@ EXPERT_ROLE_LABELS = {
     "storytelling": "叙事导演",
 }
 
-# ---- 文本字号约定（与 cutia 渲染内核一致）------------------------------------
+# ---- 文本字号约定（与渲染内核一致）--------------------------------------------
 # 渲染时 actual_px = fontSize x (canvasHeight / 90)，因此字号是相对单位而非像素。
 FONT_SIZE_HINT = (
     "Font size is a relative unit: rendered px = fontSize x (canvasHeight / 90). "
@@ -279,7 +279,7 @@ def build_system_prompt(
 ) -> str:
     """按当前项目状态与专家角色构建系统提示词。
 
-    与 cutia 一致：每轮循环都重新构建，使角色切换与项目变更即时生效。
+    每轮循环都重新构建，使角色切换与项目变更即时生效。
     """
     role = role_id if role_id in EXPERT_ROLE_PROMPTS else DEFAULT_EXPERT_ROLE
     role_addition = (

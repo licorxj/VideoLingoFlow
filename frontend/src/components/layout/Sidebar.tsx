@@ -23,7 +23,10 @@ import {
   Mic2,
   Store,
   Sparkles,
+  Library,
+  Boxes,
 } from "lucide-react";
+import SkillMcpPickerDialog, { type PickerKind } from "@/components/workflow/SkillMcpPickerDialog";
 
 const NAV_GROUPS = [
   [
@@ -34,7 +37,7 @@ const NAV_GROUPS = [
   [
     { to: "/materials", icon: Images, label: "素材库" },
     { to: "/creation-canvas", icon: Sparkles, label: "创作画布" },
-    { to: "/editing", icon: Clapperboard, label: "剪辑工作台" },
+    { to: "/ai-editing", icon: Sparkles, label: "AI剪辑台" },
     { to: "/voiceforge", icon: Mic2, label: "晴沐配音谷" },
     { to: "/social", icon: Share2, label: "多平台发布" },
   ],
@@ -50,6 +53,12 @@ const NAV_GROUPS = [
   ],
 ];
 
+// 「小π智助」标识下方的本机库入口：点击后弹窗展示列表
+const LIBRARY_LINKS = [
+  { kind: "skills", label: "技能库", tip: "查看本机已安装的技能库", icon: Library },
+  { kind: "packs", label: "专家库", tip: "查看本机已安装的专家团", icon: Boxes },
+] as const;
+
 export default function Sidebar({ collapsed, agentState }: { collapsed: boolean; agentState: "closed" | "booting" | "open" | "minimized" }) {
   const location = useLocation();
   const [services, setServices] = useState<Record<string, { status: string; port?: number; managed?: boolean }>>({});
@@ -58,6 +67,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
   const [shuttingDownAll, setShuttingDownAll] = useState(false);
   const [restartingBackendAll, setRestartingBackendAll] = useState(false);
   const [piJump, setPiJump] = useState(false);
+  const [libraryKind, setLibraryKind] = useState<PickerKind | null>(null);
   const [hiddenRoutes, setHiddenRoutes] = useState<Set<string>>(() => {
     const set = new Set<string>();
     try {
@@ -191,6 +201,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
   }, [fetchStatus]);
 
   return (
+    <>
     <aside
       className={cn(
         "bg-[hsl(var(--surface))] border-r border-[hsl(var(--surface-border))] flex flex-col py-3 relative z-10 transition-all duration-300",
@@ -275,6 +286,20 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             </span>
             <span className="block w-full text-[21px] font-bold bg-gradient-to-r from-purple-500 to-violet-400 bg-clip-text text-transparent">小π智助</span>
           </button>
+          {/* 本机库入口：技能库 / 专家库，点击弹窗展示列表 */}
+          <div className="grid grid-cols-2 gap-1.5">
+            {LIBRARY_LINKS.map((link) => { const Icon = link.icon; return (
+              <button
+                key={link.kind}
+                type="button"
+                onClick={() => setLibraryKind(link.kind)}
+                title={link.tip}
+                className="flex items-center justify-center gap-1 rounded-lg border border-[hsl(var(--surface-border))] bg-background/60 px-2 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+              >
+                <Icon className="h-3.5 w-3.5" />{link.label}
+              </button>
+            ); })}
+          </div>
           {/* 横线：位于 Agent 按钮之下、服务列表之上 */}
           <div className="border-t border-[hsl(var(--surface-border))]" />
 
@@ -338,15 +363,16 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             onStop={() => stopService("manager/stop-llm-router", "llm_router")}
           />
 
+          {/* AI剪辑台（OpenChatCut，独立 Node 进程，端口来自「AI剪辑台」设置） */}
           <ServiceRow
-            icon={Scissors}
-            label="Cutia"
-            port={services.cutia?.port}
-            status={services.cutia?.status}
-            restarting={restartingSvc === "cutia"}
-            stopping={stoppingSvc === "cutia"}
-            onRestart={() => restartService("manager/restart-cutia", "cutia")}
-            onStop={() => stopService("manager/stop-cutia", "cutia")}
+            icon={Clapperboard}
+            label="AI剪辑台"
+            port={services.openchatcut?.port}
+            status={services.openchatcut?.status}
+            restarting={restartingSvc === "openchatcut"}
+            stopping={stoppingSvc === "openchatcut"}
+            onRestart={() => restartService("manager/restart-openchatcut", "openchatcut")}
+            onStop={() => stopService("manager/stop-openchatcut", "openchatcut")}
           />
 
           <button
@@ -418,10 +444,33 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
           )}
           {(agentState === "open" || agentState === "minimized") && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" />}
         </button>
-      )}
-    </aside>
-  );
-}
+        )}
+        {/* 折叠态：本机库入口（图标按钮） */}
+        <div className="mb-3 flex flex-col items-center gap-1">
+          {LIBRARY_LINKS.map((link) => { const Icon = link.icon; return (
+            <button
+              key={link.kind}
+              type="button"
+              onClick={() => setLibraryKind(link.kind)}
+              title={link.tip}
+              className="grid h-8 w-8 place-items-center rounded-lg border border-[hsl(var(--surface-border))] bg-background/60 text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              <Icon className="h-4 w-4" />
+            </button>
+          ); })}
+        </div>
+      </aside>
+      <SkillMcpPickerDialog
+        kind={libraryKind ?? "skills"}
+        open={libraryKind !== null}
+        selected={[]}
+        label={libraryKind === "packs" ? "专家团" : "可调用 Skill"}
+        onConfirm={() => setLibraryKind(null)}
+        onClose={() => setLibraryKind(null)}
+      />
+    </>
+    );
+  }
 
 function ServiceRow({
   icon: Icon,

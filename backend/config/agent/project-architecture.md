@@ -18,7 +18,7 @@ VideoLingoFlow (Chinese name: 流连视听) is a local-first AI video localizati
 - `backend/config/`: YAML/JSON configuration, node schemas, workflow definitions, subtitle presets, and this agent knowledge directory.
 - `data/`: mutable local runtime data, assets, databases, workspace files, session data, and generated outputs.
 - `data/workspace/`: default safe workspace for Pi sessions and generated task materials.
-- `thirdparty/`: vendored Pi, QM-LocalRouter, Cutia, and social publishing integrations.
+- `thirdparty/`: vendored Pi, QM-LocalRouter, and social publishing integrations.
 - `scripts/`: operational tooling, including LLM Router helpers and backup scripts.
 - `.runtime/`: local runtime environment definitions.
 - `deploy/`: Docker Compose, Nginx, and production deployment assets.

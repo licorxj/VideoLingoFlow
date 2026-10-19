@@ -6342,638 +6342,6 @@ export const FALLBACK_NODE_TYPES = [
     "isBuiltIn": true
   },
   {
-    "id": "editor_agent",
-    "name": "剪辑AI Agent",
-    "category": "agent",
-    "description": "接收上游剪辑项目JSON，按编辑指令对时间线二次精选，输出精选后的剪辑json",
-    "icon": "Clapperboard",
-    "color": "#10b981",
-    "execution_domain": "process",
-    "inputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      },
-      {
-        "id": "text",
-        "label": "编辑指令",
-        "type": "text"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      },
-      {
-        "id": "artifacts",
-        "label": "运行记录",
-        "type": "json"
-      },
-      {
-        "id": "result",
-        "label": "执行结果",
-        "type": "text"
-      }
-    ],
-    "defaultConfig": {
-      "instruction": "",
-      "expert_role": "auto"
-    },
-    "configFields": [
-      {
-        "key": "instruction",
-        "label": "编辑指令",
-        "type": "textarea",
-        "placeholder": "例如：将配音加入时间线并添加开场标题"
-      },
-      {
-        "key": "expert_role",
-        "label": "专家角色",
-        "type": "select",
-        "options": [
-          {
-            "value": "auto",
-            "label": "自动导演"
-          },
-          {
-            "value": "general",
-            "label": "通用剪辑"
-          },
-          {
-            "value": "design",
-            "label": "视觉设计"
-          },
-          {
-            "value": "audio",
-            "label": "音频编辑"
-          },
-          {
-            "value": "editing",
-            "label": "剪辑顾问"
-          },
-          {
-            "value": "storytelling",
-            "label": "叙事导演"
-          }
-        ]
-      },
-      {
-        "key": "imagegen_iface_id",
-        "label": "生图接口",
-        "type": "api-select",
-        "colSpan": "half",
-        "apiEndpoint": "/api/imagegen-interfaces/enabled",
-        "placeholder": "自动（按能力选择）"
-      },
-      {
-        "key": "imagegen_model",
-        "label": "生图模型",
-        "type": "api-select",
-        "colSpan": "half",
-        "dependsOn": "imagegen_iface_id",
-        "apiEndpoint": "/api/imagegen-interfaces/{imagegen_iface_id}/models-for-node?mode=txt2img",
-        "placeholder": "跟随接口默认"
-      },
-      {
-        "key": "videogen_iface_id",
-        "label": "生视频接口",
-        "type": "api-select",
-        "colSpan": "half",
-        "apiEndpoint": "/api/videogen-interfaces/enabled",
-        "placeholder": "自动（按能力选择）"
-      },
-      {
-        "key": "videogen_model",
-        "label": "生视频模型",
-        "type": "api-select",
-        "colSpan": "half",
-        "dependsOn": "videogen_iface_id",
-        "apiEndpoint": "/api/videogen-interfaces/{videogen_iface_id}/models-for-node?mode=t2v",
-        "placeholder": "跟随接口默认"
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
-    "id": "project_init",
-    "name": "剪辑项目初始化",
-    "category": "cutia",
-    "description": "收集上游素材并构造初始剪辑JSON（默认时间线骨架+素材清单），供「Cutia 交互剪辑」接力整理筛选",
-    "icon": "Clapperboard",
-    "color": "#0ea5e9",
-    "execution_domain": "thread",
-    "inputs": [
-      {
-        "id": "video",
-        "label": "视频",
-        "type": "video"
-      },
-      {
-        "id": "audio",
-        "label": "音频",
-        "type": "audio"
-      },
-      {
-        "id": "image",
-        "label": "图片",
-        "type": "image"
-      },
-      {
-        "id": "subtitle",
-        "label": "字幕",
-        "type": "subtitle"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "project",
-        "label": "初始剪辑项目",
-        "type": "json"
-      }
-    ],
-    "defaultConfig": {
-      "arrange_tracks": true
-    },
-    "configFields": [
-      {
-        "key": "arrange_tracks",
-        "label": "是否将素材加入轨道",
-        "type": "checkbox",
-        "colSpan": "half",
-        "description": "关闭时只导入素材清单，不自动编排到时间线"
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
-    "id": "add_media_to_library",
-    "name": "添加素材到剪辑",
-    "category": "video",
-    "description": "将任意类型素材注册到剪辑工作台的素材库（不写入时间线轨道），供后续剪辑操作调用",
-    "icon": "LibraryBig",
-    "color": "#0d9488",
-    "execution_domain": "thread",
-    "inputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      },
-      {
-        "id": "media",
-        "label": "素材",
-        "type": "any"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      }
-    ],
-    "defaultConfig": {},
-    "configFields": [],
-    "isBuiltIn": true
-  },
-  {
-    "id": "add_track_media",
-    "name": "添加剪辑素材到轨道",
-    "category": "cutia",
-    "description": "接收任意类型素材，按所选类型添加到剪辑项目轨道（可新建轨道/轨道尾部/自定义插入点），输出剪辑项目JSON",
-    "icon": "Layers",
-    "color": "#8b5cf6",
-    "execution_domain": "thread",
-    "inputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      },
-      {
-        "id": "media",
-        "label": "素材",
-        "type": "any"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      }
-    ],
-    "defaultConfig": {
-      "media_type": "video",
-      "new_track": false,
-      "track_name": "",
-      "insert_mode": "end",
-      "insert_time": 0,
-      "static_duration": 3,
-      "pos_x": 0,
-      "pos_y": 0,
-      "scale": 1,
-      "rotate": 0,
-      "opacity": 1,
-      "volume": 1,
-      "muted": false,
-      "content": "",
-      "font_size": 5,
-      "font_family": "Arial",
-      "color": "#ffffff",
-      "background_color": "rgba(0, 0, 0, 0.7)",
-      "text_align": "center",
-      "font_weight": "normal"
-    },
-    "configFields": [
-      {
-        "key": "media_type",
-        "label": "素材类型",
-        "type": "select",
-        "options": [
-          {
-            "value": "video",
-            "label": "视频"
-          },
-          {
-            "value": "audio",
-            "label": "音频"
-          },
-          {
-            "value": "image",
-            "label": "图片"
-          },
-          {
-            "value": "text",
-            "label": "文字"
-          }
-        ]
-      },
-      {
-        "key": "new_track",
-        "label": "新建轨道添加",
-        "type": "checkbox",
-        "colSpan": "half"
-      },
-      {
-        "key": "track_name",
-        "label": "新轨道名称",
-        "type": "text",
-        "colSpan": "half",
-        "dependsOn": "new_track",
-        "placeholder": "留空自动命名"
-      },
-      {
-        "key": "insert_mode",
-        "label": "插入时间点",
-        "type": "select",
-        "options": [
-          {
-            "value": "end",
-            "label": "插入到轨道尾部"
-          },
-          {
-            "value": "custom",
-            "label": "自定义插入点时间"
-          }
-        ]
-      },
-      {
-        "key": "insert_time",
-        "label": "插入点时间（秒）",
-        "type": "number",
-        "min": 0,
-        "step": 0.1,
-        "colSpan": "half",
-        "dependsOn": "insert_mode",
-        "dependsValue": "custom"
-      },
-      {
-        "key": "static_duration",
-        "label": "素材时长（秒）",
-        "type": "number",
-        "min": 0.1,
-        "step": 0.1,
-        "colSpan": "half",
-        "placeholder": "仅图片/文字生效",
-        "dependsOn": "media_type",
-        "dependsValue": [
-          "image",
-          "text"
-        ]
-      },
-      {
-        "key": "pos_x",
-        "label": "X 坐标",
-        "type": "number",
-        "step": 1,
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": [
-          "video",
-          "image",
-          "text"
-        ]
-      },
-      {
-        "key": "pos_y",
-        "label": "Y 坐标",
-        "type": "number",
-        "step": 1,
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": [
-          "video",
-          "image",
-          "text"
-        ]
-      },
-      {
-        "key": "scale",
-        "label": "缩放",
-        "type": "number",
-        "min": 0.1,
-        "step": 0.1,
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": [
-          "video",
-          "image"
-        ]
-      },
-      {
-        "key": "rotate",
-        "label": "旋转（度）",
-        "type": "number",
-        "step": 1,
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": [
-          "video",
-          "image"
-        ]
-      },
-      {
-        "key": "opacity",
-        "label": "不透明度",
-        "type": "number",
-        "min": 0,
-        "max": 1,
-        "step": 0.05,
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": [
-          "video",
-          "image"
-        ]
-      },
-      {
-        "key": "volume",
-        "label": "音量",
-        "type": "number",
-        "min": 0,
-        "max": 2,
-        "step": 0.1,
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": "audio"
-      },
-      {
-        "key": "muted",
-        "label": "静音",
-        "type": "checkbox",
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": "audio"
-      },
-      {
-        "key": "content",
-        "label": "文字内容",
-        "type": "textarea",
-        "dependsOn": "media_type",
-        "dependsValue": "text"
-      },
-      {
-        "key": "font_size",
-        "label": "字号",
-        "type": "number",
-        "min": 1,
-        "step": 1,
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": "text"
-      },
-      {
-        "key": "font_family",
-        "label": "字体",
-        "type": "text",
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": "text"
-      },
-      {
-        "key": "color",
-        "label": "文字颜色",
-        "type": "text",
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": "text",
-        "placeholder": "#ffffff"
-      },
-      {
-        "key": "background_color",
-        "label": "背景颜色",
-        "type": "text",
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": "text",
-        "placeholder": "rgba(0, 0, 0, 0.7)"
-      },
-      {
-        "key": "text_align",
-        "label": "对齐方式",
-        "type": "select",
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": "text",
-        "options": [
-          {
-            "value": "left",
-            "label": "左对齐"
-          },
-          {
-            "value": "center",
-            "label": "居中"
-          },
-          {
-            "value": "right",
-            "label": "右对齐"
-          }
-        ]
-      },
-      {
-        "key": "font_weight",
-        "label": "字重",
-        "type": "select",
-        "colSpan": "half",
-        "dependsOn": "media_type",
-        "dependsValue": "text",
-        "options": [
-          {
-            "value": "normal",
-            "label": "常规"
-          },
-          {
-            "value": "bold",
-            "label": "加粗"
-          }
-        ]
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
-    "id": "cutia",
-    "name": "推送到剪辑台",
-    "category": "cutia",
-    "description": "将剪辑项目JSON推送到剪辑工作台并发起系统提醒，等待剪辑后透传输出（素材编排由上游「剪辑项目初始化」完成）",
-    "icon": "Clapperboard",
-    "color": "#14b8a6",
-    "execution_domain": "thread",
-    "inputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      }
-    ],
-    "defaultConfig": {
-      "wait_seconds": 600
-    },
-    "configFields": [
-      {
-        "key": "wait_seconds",
-        "label": "等待剪辑时间（秒）",
-        "type": "number",
-        "min": 0,
-        "colSpan": "half"
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
-    "id": "cutia_render",
-    "name": "剪辑渲染",
-    "category": "cutia",
-    "description": "接收上游精选后的剪辑项目JSON，无头加载并渲染导出成片，无需人工打开剪辑工作台",
-    "icon": "Clapperboard",
-    "color": "#f97316",
-    "execution_domain": "thread",
-    "inputs": [
-      {
-        "id": "project",
-        "label": "剪辑项目",
-        "type": "json"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "video",
-        "label": "渲染成片",
-        "type": "video"
-      }
-    ],
-    "defaultConfig": {
-      "export_format": "mp4",
-      "quality": "high",
-      "fps": 0,
-      "include_audio": true,
-      "browser_channel": "",
-      "timeout_minutes": 60
-    },
-    "configFields": [
-      {
-        "key": "export_format",
-        "label": "导出格式",
-        "type": "select",
-        "options": [
-          {
-            "value": "mp4",
-            "label": "MP4 (H.264)"
-          },
-          {
-            "value": "webm",
-            "label": "WebM (VP9)"
-          }
-        ]
-      },
-      {
-        "key": "quality",
-        "label": "画质",
-        "type": "select",
-        "options": [
-          {
-            "value": "low",
-            "label": "低（体积最小）"
-          },
-          {
-            "value": "medium",
-            "label": "中（均衡）"
-          },
-          {
-            "value": "high",
-            "label": "高（推荐）"
-          },
-          {
-            "value": "very_high",
-            "label": "极高（体积最大）"
-          }
-        ]
-      },
-      {
-        "key": "fps",
-        "label": "帧率",
-        "type": "number",
-        "min": 0,
-        "max": 60,
-        "colSpan": "half",
-        "placeholder": "0 表示跟随项目设置"
-      },
-      {
-        "key": "include_audio",
-        "label": "包含音频",
-        "type": "checkbox",
-        "colSpan": "half"
-      },
-      {
-        "key": "browser_channel",
-        "label": "浏览器通道",
-        "type": "text",
-        "colSpan": "half",
-        "placeholder": "留空用内置 Chromium；需要 H.264 可填 chrome"
-      },
-      {
-        "key": "timeout_minutes",
-        "label": "超时（分钟）",
-        "type": "number",
-        "min": 1,
-        "max": 720,
-        "colSpan": "half"
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
     "id": "video_frame_extract",
     "name": "视频抽帧",
     "category": "video",
@@ -9193,7 +8561,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "get_task_info",
     "name": "获取任务信息",
     "category": "flow_control",
-    "description": "从 task.json 与输入节点配置读取任务元信息并作为文本输出：任务名称、输入语音、输出语言、变量1、变量2，供下游节点使用",
+    "description": "从 task.json 与输入节点配置读取任务元信息并作为文本输出：任务名称、输入语音、输出语言、变量1、变量2、任务目录（当前任务文件夹的绝对路径），供下游节点使用",
     "icon": "Info",
     "color": "#6366f1",
     "execution_domain": "thread",
@@ -9230,6 +8598,11 @@ export const FALLBACK_NODE_TYPES = [
         "id": "var2",
         "label": "变量2",
         "type": "text"
+      },
+      {
+        "id": "task_dir",
+        "label": "任务目录",
+        "type": "filepath"
       }
     ],
     "defaultConfig": {},
@@ -12582,6 +11955,681 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "full",
         "placeholder": "留空则不使用",
         "description": "透传给封面生图接口的 negative_prompt"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "desk_project",
+    "name": "新建剪辑工程",
+    "category": "ai_desk",
+    "description": "AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点",
+    "icon": "FolderPlus",
+    "color": "#0ea5e9",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "name",
+        "label": "任意输入",
+        "type": "any"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "text"
+      },
+      {
+        "id": "name",
+        "label": "工程名称",
+        "type": "text"
+      },
+      {
+        "id": "plan",
+        "label": "执行摘要",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "name": "",
+      "size": "",
+      "fps": "",
+      "use_task_output_dir": false,
+      "data_dir": ""
+    },
+    "configFields": [
+      {
+        "key": "name",
+        "label": "工程名称",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "建议带日期/批次，如 20261018_产品解说",
+        "description": "在剪辑台里显示的名字；手动输入优先，未填时取连线值"
+      },
+      {
+        "key": "size",
+        "label": "画布尺寸",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "默认(1920x1080)"
+          },
+          {
+            "value": "1920x1080",
+            "label": "1920x1080 横屏"
+          },
+          {
+            "value": "1080x1920",
+            "label": "1080x1920 竖屏"
+          },
+          {
+            "value": "1080x1080",
+            "label": "1080x1080 方形"
+          },
+          {
+            "value": "3840x2160",
+            "label": "3840x2160 4K"
+          }
+        ],
+        "description": "新建工程的画布大小"
+      },
+      {
+        "key": "fps",
+        "label": "帧率",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "默认(30)"
+          },
+          {
+            "value": "24",
+            "label": "24"
+          },
+          {
+            "value": "25",
+            "label": "25"
+          },
+          {
+            "value": "30",
+            "label": "30"
+          },
+          {
+            "value": "60",
+            "label": "60"
+          }
+        ]
+      },
+      {
+        "key": "use_task_output_dir",
+        "label": "使用本任务文件夹",
+        "type": "switch",
+        "colSpan": "full",
+        "description": "勾选后以「本任务目录/output」作为剪辑台数据目录（每次任务数据互相隔离，便于溯源与清理）；不勾选则用剪辑台默认数据目录"
+      },
+      {
+        "key": "data_dir",
+        "label": "剪辑台数据目录",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "留空用剪辑台默认位置（occ where 可查）",
+        "description": "仅当剪辑台配置了自定义数据目录、且未勾选「使用本任务文件夹」时才需要填写"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "desk_material",
+    "name": "剪辑素材导入",
+    "category": "ai_desk",
+    "description": "AI剪辑链·第2步【素材进场】：把本地素材（视频/图片/音频，单个/多个/整个目录）导入剪辑台媒体池，并按声明式配置放到时间线轨道上（V1/V2 视频轨、A1/A2 音频轨）。上游：连入上游产物文件路径（单个 path 或多个 paths），或已入库的 asset_ids；同时连入 project。下游：asset_ids / clip_ids / project 端口 →「剪辑编排」",
+    "icon": "Import",
+    "color": "#0ea5e9",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "any"
+      },
+      {
+        "id": "path",
+        "label": "单个素材路径",
+        "type": "filepath"
+      },
+      {
+        "id": "paths",
+        "label": "素材路径(多个)",
+        "type": "json"
+      },
+      {
+        "id": "folder",
+        "label": "素材目录(整目录导入)",
+        "type": "text"
+      },
+      {
+        "id": "asset_ids",
+        "label": "已入库素材ID(可选)",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "text"
+      },
+      {
+        "id": "asset_ids",
+        "label": "素材ID列表",
+        "type": "json"
+      },
+      {
+        "id": "clip_ids",
+        "label": "片段ID列表",
+        "type": "json"
+      },
+      {
+        "id": "plan",
+        "label": "执行摘要",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "project": "",
+      "path": "",
+      "paths": "",
+      "folder": "",
+      "asset_ids": "",
+      "add_to_track": true,
+      "track": "V1",
+      "clip_type": "",
+      "from_frame": 0,
+      "duration_frames": 0,
+      "dry_run": true,
+      "use_task_output_dir": false,
+      "data_dir": "",
+      "timeout": 1800
+    },
+    "configFields": [
+      {
+        "key": "project",
+        "label": "剪辑台项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/openchatcut/projects",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "project",
+        "colSpan": "full",
+        "description": "目标剪辑台工程；手动输入优先，未填时取连线值"
+      },
+      {
+        "key": "path",
+        "label": "单个素材路径",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "单个文件绝对路径；手动输入优先，也可用 path 端口连线",
+        "description": "只需导入一个文件时用它（比 paths 更直接）"
+      },
+      {
+        "key": "paths",
+        "label": "素材路径(多个)",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "每行一个绝对路径；也可用 paths 端口连线",
+        "description": "视频/图片/音频均可；相对路径会按任务目录解析；手动输入优先"
+      },
+      {
+        "key": "folder",
+        "label": "素材目录",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "留空则不按目录导入",
+        "description": "整目录递归导入受支持的媒体文件；手动输入优先"
+      },
+      {
+        "key": "asset_ids",
+        "label": "已入库素材ID",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "JSON 数组或换行分隔；填写则跳过导入",
+        "description": "素材已在剪辑台媒体池时，直接给 ID 上轨；手动输入优先"
+      },
+      {
+        "key": "add_to_track",
+        "label": "导入后上轨",
+        "type": "switch",
+        "colSpan": "half",
+        "description": "关闭则只入库，不上时间线"
+      },
+      {
+        "key": "track",
+        "label": "目标轨道",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "V1",
+        "description": "视频轨 V1/V2…，音频轨 A1/A2…"
+      },
+      {
+        "key": "clip_type",
+        "label": "片段类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "自动(按素材)"
+          },
+          {
+            "value": "video",
+            "label": "视频"
+          },
+          {
+            "value": "image",
+            "label": "图片"
+          },
+          {
+            "value": "audio",
+            "label": "音频"
+          }
+        ]
+      },
+      {
+        "key": "from_frame",
+        "label": "起始帧",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "0 = 追加到轨道末尾"
+      },
+      {
+        "key": "duration_frames",
+        "label": "占用帧数",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "0 = 用素材自身时长；多个素材时按此帧数依次排列"
+      },
+      {
+        "key": "dry_run",
+        "label": "仅演练（不落盘）",
+        "type": "switch",
+        "colSpan": "half",
+        "description": "开启时只导入并回计划，不写时间线"
+      },
+      {
+        "key": "use_task_output_dir",
+        "label": "使用本任务文件夹",
+        "type": "switch",
+        "colSpan": "full",
+        "description": "勾选后以「本任务目录/output」作为剪辑台数据目录（每次任务数据互相隔离，便于溯源与清理）；不勾选则用剪辑台默认数据目录"
+      },
+      {
+        "key": "data_dir",
+        "label": "剪辑台数据目录",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "留空用剪辑台默认位置",
+        "description": "仅当剪辑台配置了自定义数据目录时才需要填写"
+      },
+      {
+        "key": "timeout",
+        "label": "超时(秒)",
+        "type": "number",
+        "colSpan": "half",
+        "min": 60,
+        "max": 7200,
+        "step": 60
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "desk_edit",
+    "name": "剪辑编排",
+    "category": "ai_desk",
+    "description": "AI剪辑链·第3步【编排】：两种模式。ops 模式：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数。ai_script 模式：读出 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交（语义剪辑）。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」",
+    "icon": "Wand2",
+    "color": "#0ea5e9",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "any"
+      },
+      {
+        "id": "asset_ids",
+        "label": "素材ID列表(可选)",
+        "type": "json"
+      },
+      {
+        "id": "clip_ids",
+        "label": "片段ID列表(可选)",
+        "type": "json"
+      },
+      {
+        "id": "ops",
+        "label": "工具调用ops(可选)",
+        "type": "json"
+      },
+      {
+        "id": "instruction",
+        "label": "AI剪辑指令(可选)",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "text"
+      },
+      {
+        "id": "result",
+        "label": "执行结果(JSON)",
+        "type": "json"
+      },
+      {
+        "id": "last",
+        "label": "最后一步结果",
+        "type": "json"
+      },
+      {
+        "id": "plan",
+        "label": "执行摘要",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "project": "",
+      "mode": "ops",
+      "ops": "",
+      "instruction": "",
+      "dry_run": true,
+      "use_task_output_dir": false,
+      "data_dir": "",
+      "timeout": 1800
+    },
+    "configFields": [
+      {
+        "key": "project",
+        "label": "剪辑台项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/openchatcut/projects",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "project",
+        "colSpan": "full",
+        "description": "目标剪辑台工程；手动输入优先，未填时取连线值"
+      },
+      {
+        "key": "mode",
+        "label": "编排模式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "ops",
+            "label": "工具调用（ops 数组）"
+          },
+          {
+            "value": "ai_script",
+            "label": "AI 语义剪辑（timeline.md）"
+          }
+        ],
+        "description": "ops：精确控制每一步；ai_script：用自然语言描述改动"
+      },
+      {
+        "key": "ops",
+        "label": "ops 工具调用",
+        "type": "desk-ops",
+        "colSpan": "full",
+        "description": "点「+ 添加工具调用」逐条选择工具并填写参数；参数支持引用上游输入（{{input.xxx}}）与上一个工具的结果（{{prev.xxx}}）"
+      },
+      {
+        "key": "instruction",
+        "label": "AI 剪辑指令",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "例：删掉所有语气词，把第3段移到最前",
+        "description": "仅 ai_script 模式：自然语言描述要做的剪辑改动；手动输入优先，未填时取连线值"
+      },
+      {
+        "key": "dry_run",
+        "label": "仅演练（不落盘）",
+        "type": "switch",
+        "colSpan": "full",
+        "description": "ops 模式：不加 --apply；ai_script 模式：只做到预校验不提交"
+      },
+      {
+        "key": "use_task_output_dir",
+        "label": "使用本任务文件夹",
+        "type": "switch",
+        "colSpan": "full",
+        "description": "勾选后以「本任务目录/output」作为剪辑台数据目录（每次任务数据互相隔离，便于溯源与清理）；不勾选则用剪辑台默认数据目录"
+      },
+      {
+        "key": "data_dir",
+        "label": "剪辑台数据目录",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "留空用剪辑台默认位置"
+      },
+      {
+        "key": "timeout",
+        "label": "超时(秒)",
+        "type": "number",
+        "colSpan": "half",
+        "min": 60,
+        "max": 7200,
+        "step": 60
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "desk_export",
+    "name": "剪辑台渲染导出",
+    "category": "ai_desk",
+    "description": "AI剪辑链·第4步【出片】：把剪辑台工程渲染为成片（occ render，无头出 MP4/WebM/MOV），或导出剪映/CapCut 草稿交给剪映精修；可选把成片登记为创作项目资产。上游：project（串接前面各步）。下游：render 端口 → 归档/发布类节点",
+    "icon": "FileVideo",
+    "color": "#0ea5e9",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "any"
+      },
+      {
+        "id": "creation_id",
+        "label": "创作项目ID(回登资产)",
+        "type": "any"
+      },
+      {
+        "id": "chapter_id",
+        "label": "章节ID(回登资产)",
+        "type": "any"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "text"
+      },
+      {
+        "id": "mode",
+        "label": "导出模式",
+        "type": "text"
+      },
+      {
+        "id": "render",
+        "label": "成片/草稿",
+        "type": "video"
+      },
+      {
+        "id": "plan",
+        "label": "演练计划(dry-run)",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "project": "",
+      "mode": "render",
+      "out_name": "",
+      "resolution": "",
+      "fps": "",
+      "codec": "",
+      "draft_name": "",
+      "dry_run": true,
+      "use_task_output_dir": false,
+      "data_dir": "",
+      "timeout": 1800,
+      "creation_id": "",
+      "chapter_id": ""
+    },
+    "configFields": [
+      {
+        "key": "project",
+        "label": "剪辑台项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/openchatcut/projects",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "project",
+        "colSpan": "full",
+        "description": "目标剪辑台工程；手动输入优先，未填时取连线值"
+      },
+      {
+        "key": "mode",
+        "label": "导出模式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "render",
+            "label": "渲染成片（occ render）"
+          },
+          {
+            "value": "jiangying",
+            "label": "剪映草稿（occ export jianying）"
+          }
+        ],
+        "description": "渲染成片：无头出 MP4；剪映草稿：导出到剪映/CapCut 精修"
+      },
+      {
+        "key": "dry_run",
+        "label": "仅演练（不落盘）",
+        "type": "switch",
+        "colSpan": "half",
+        "description": "开启时只输出渲染计划，不写文件也不登记资产；确认无误后关闭再跑一次正式出片"
+      },
+      {
+        "key": "out_name",
+        "label": "输出文件名",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空自动生成 desk_render_<节点>.mp4"
+      },
+      {
+        "key": "resolution",
+        "label": "输出分辨率",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "跟随工程"
+          },
+          {
+            "value": "480P",
+            "label": "480P"
+          },
+          {
+            "value": "720P",
+            "label": "720P"
+          },
+          {
+            "value": "1080P",
+            "label": "1080P"
+          }
+        ]
+      },
+      {
+        "key": "fps",
+        "label": "帧率",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空跟随工程"
+      },
+      {
+        "key": "codec",
+        "label": "编码",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空跟随工程（h264/h265 等）"
+      },
+      {
+        "key": "draft_name",
+        "label": "剪映草稿名",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "仅 jianying 模式；留空用项目名",
+        "description": "仅导出剪映草稿模式生效"
+      },
+      {
+        "key": "creation_id",
+        "label": "回登创作项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/list",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "creation_id",
+        "colSpan": "half",
+        "description": "可选：把成片登记为该创作项目的 chapter_render 资产；手动输入优先，未填时取连线值"
+      },
+      {
+        "key": "chapter_id",
+        "label": "回登章节",
+        "type": "api-select",
+        "apiEndpoint": "/api/creation/{creation_id}/chapters",
+        "optionLabel": "title",
+        "optionValue": "id",
+        "followPort": "chapter_id",
+        "colSpan": "half",
+        "description": "可选：资产挂到该章节下；手动输入优先，未填时取连线值"
+      },
+      {
+        "key": "use_task_output_dir",
+        "label": "使用本任务文件夹",
+        "type": "switch",
+        "colSpan": "full",
+        "description": "勾选后以「本任务目录/output」作为剪辑台数据目录（每次任务数据互相隔离，便于溯源与清理）；不勾选则用剪辑台默认数据目录"
+      },
+      {
+        "key": "data_dir",
+        "label": "剪辑台数据目录",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "留空用剪辑台默认位置（occ where 可查）",
+        "description": "仅当剪辑台配置了自定义数据目录时才需要填写"
+      },
+      {
+        "key": "timeout",
+        "label": "超时(秒)",
+        "type": "number",
+        "colSpan": "half",
+        "min": 60,
+        "max": 7200,
+        "step": 60
       }
     ],
     "isBuiltIn": true
@@ -19648,6 +19696,624 @@ export const FALLBACK_NODE_TYPES = [
         "type": "text",
         "colSpan": "half",
         "placeholder": "0 = 取最末帧"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "video_quick_edit",
+    "name": "视频快剪",
+    "category": "video",
+    "description": "本地 ffmpeg 视频小工具集：压缩、剪切、合并、提取音频、转格式、转 GIF、截图、改分辨率、调速、去声音、配背景音乐、加文字水印、烧录字幕、旋转翻转、查看信息。先在下拉框选择功能，选中后自动展开对应参数；结果另存到任务目录下的「处理后」文件夹，绝不覆盖原视频。",
+    "icon": "Scissors",
+    "color": "#ef4444",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "video",
+        "label": "视频",
+        "type": "video",
+        "required": true
+      },
+      {
+        "id": "video_b",
+        "label": "合并·视频2",
+        "type": "video"
+      },
+      {
+        "id": "video_c",
+        "label": "合并·视频3",
+        "type": "video"
+      },
+      {
+        "id": "video_d",
+        "label": "合并·视频4",
+        "type": "video"
+      },
+      {
+        "id": "music",
+        "label": "背景音乐",
+        "type": "audio"
+      },
+      {
+        "id": "subtitle",
+        "label": "字幕",
+        "type": "subtitle"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "video",
+        "label": "处理后视频",
+        "type": "video"
+      },
+      {
+        "id": "result",
+        "label": "结果说明",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "action": "",
+      "compress_mode": "size",
+      "size_mb": 100,
+      "compress_quality": "中",
+      "audio_quality": "中",
+      "cut_start": "0",
+      "cut_mode": "end",
+      "cut_end": "1:00",
+      "cut_length": "30",
+      "precise": false,
+      "convert_to": "mp4",
+      "gif_start": "0",
+      "gif_mode": "length",
+      "gif_length": "3",
+      "gif_end": "10",
+      "gif_width": 480,
+      "gif_fps": 12,
+      "snap_mode": "cover",
+      "snap_at": "0:10",
+      "snap_every": 10,
+      "resize_to": "1080P",
+      "rate": 1.5,
+      "keep_voice": false,
+      "music_volume": 30,
+      "text": "",
+      "text_pos": "右下",
+      "text_size": "中",
+      "opacity": 80,
+      "subtitle_size": "中",
+      "rotate_how": "右转90"
+    },
+    "configFields": [
+      {
+        "key": "action",
+        "label": "功能",
+        "type": "select",
+        "colSpan": "full",
+        "options": [
+          {
+            "label": "查看视频信息",
+            "value": "info"
+          },
+          {
+            "label": "压缩视频",
+            "value": "compress"
+          },
+          {
+            "label": "剪切片段",
+            "value": "cut"
+          },
+          {
+            "label": "合并多个视频",
+            "value": "merge"
+          },
+          {
+            "label": "提取音频(MP3)",
+            "value": "audio"
+          },
+          {
+            "label": "转格式(MP4/MOV/MKV)",
+            "value": "convert"
+          },
+          {
+            "label": "转 GIF 动图",
+            "value": "gif"
+          },
+          {
+            "label": "截图",
+            "value": "snapshot"
+          },
+          {
+            "label": "改分辨率",
+            "value": "resize"
+          },
+          {
+            "label": "调速(快放/慢放)",
+            "value": "speed"
+          },
+          {
+            "label": "去除声音",
+            "value": "mute"
+          },
+          {
+            "label": "添加背景音乐",
+            "value": "bgm"
+          },
+          {
+            "label": "加文字水印",
+            "value": "text"
+          },
+          {
+            "label": "烧录字幕",
+            "value": "subtitle"
+          },
+          {
+            "label": "旋转/翻转",
+            "value": "rotate"
+          }
+        ],
+        "description": "选择要执行的视频处理功能；选中后下方自动展开该功能对应的参数"
+      },
+      {
+        "key": "compress_mode",
+        "label": "压缩方式",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "compress",
+        "options": [
+          {
+            "label": "按大小(如压到100MB)",
+            "value": "size"
+          },
+          {
+            "label": "按画质(高/中/低)",
+            "value": "quality"
+          }
+        ]
+      },
+      {
+        "key": "size_mb",
+        "label": "目标大小(MB)",
+        "type": "number",
+        "min": 1,
+        "max": 8192,
+        "colSpan": "half",
+        "dependsOn": "compress_mode",
+        "dependsValue": "size",
+        "placeholder": "例如 100"
+      },
+      {
+        "key": "compress_quality",
+        "label": "画质",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "compress_mode",
+        "dependsValue": "quality",
+        "options": [
+          {
+            "label": "高（几乎无损）",
+            "value": "高"
+          },
+          {
+            "label": "中（推荐）",
+            "value": "中"
+          },
+          {
+            "label": "低（最小体积）",
+            "value": "低"
+          }
+        ]
+      },
+      {
+        "key": "cut_start",
+        "label": "开始时间",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "cut",
+        "placeholder": "0 / 1:30 / 1分30秒"
+      },
+      {
+        "key": "cut_mode",
+        "label": "结束方式",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "cut",
+        "options": [
+          {
+            "label": "到指定结束时间",
+            "value": "end"
+          },
+          {
+            "label": "从开始取一段时长",
+            "value": "length"
+          }
+        ]
+      },
+      {
+        "key": "cut_end",
+        "label": "结束时间",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "cut_mode",
+        "dependsValue": "end",
+        "placeholder": "如 3:00"
+      },
+      {
+        "key": "cut_length",
+        "label": "时长",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "cut_mode",
+        "dependsValue": "length",
+        "placeholder": "如 30秒 / 1:00"
+      },
+      {
+        "key": "precise",
+        "label": "精确模式(逐帧·较慢)",
+        "type": "toggle",
+        "colSpan": "full",
+        "dependsOn": "action",
+        "dependsValue": "cut",
+        "description": "开启后重新压缩、切点准确到每一帧；关闭为快速模式（不重压，开头可能早一点点）"
+      },
+      {
+        "key": "audio_quality",
+        "label": "音质",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "audio",
+        "options": [
+          {
+            "label": "高(320k)",
+            "value": "高"
+          },
+          {
+            "label": "中(192k)",
+            "value": "中"
+          },
+          {
+            "label": "低(96k·单声道)",
+            "value": "低"
+          }
+        ]
+      },
+      {
+        "key": "convert_to",
+        "label": "转为格式",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "convert",
+        "options": [
+          {
+            "label": "MP4（推荐）",
+            "value": "mp4"
+          },
+          {
+            "label": "MOV",
+            "value": "mov"
+          },
+          {
+            "label": "MKV",
+            "value": "mkv"
+          }
+        ]
+      },
+      {
+        "key": "gif_start",
+        "label": "开始时间",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "gif",
+        "placeholder": "0 / 1:30"
+      },
+      {
+        "key": "gif_mode",
+        "label": "结束方式",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "gif",
+        "options": [
+          {
+            "label": "取一段时长",
+            "value": "length"
+          },
+          {
+            "label": "到指定结束时间",
+            "value": "end"
+          }
+        ]
+      },
+      {
+        "key": "gif_length",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 1,
+        "max": 600,
+        "colSpan": "half",
+        "dependsOn": "gif_mode",
+        "dependsValue": "length",
+        "placeholder": "默认10"
+      },
+      {
+        "key": "gif_end",
+        "label": "结束时间",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "gif_mode",
+        "dependsValue": "end",
+        "placeholder": "如 3:00"
+      },
+      {
+        "key": "gif_width",
+        "label": "宽度(像素)",
+        "type": "number",
+        "min": 100,
+        "max": 1920,
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "gif",
+        "placeholder": "320~480 常用"
+      },
+      {
+        "key": "gif_fps",
+        "label": "帧率(fps)",
+        "type": "number",
+        "min": 2,
+        "max": 30,
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "gif",
+        "placeholder": "10~15"
+      },
+      {
+        "key": "snap_mode",
+        "label": "截图方式",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "snapshot",
+        "options": [
+          {
+            "label": "封面(默认位置)",
+            "value": "cover"
+          },
+          {
+            "label": "指定时间点",
+            "value": "at"
+          },
+          {
+            "label": "每隔几秒一张",
+            "value": "every"
+          }
+        ]
+      },
+      {
+        "key": "snap_at",
+        "label": "时间点",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "snap_mode",
+        "dependsValue": "at",
+        "placeholder": "如 1:23"
+      },
+      {
+        "key": "snap_every",
+        "label": "间隔(秒)",
+        "type": "number",
+        "min": 1,
+        "max": 600,
+        "colSpan": "half",
+        "dependsOn": "snap_mode",
+        "dependsValue": "every",
+        "placeholder": "如 10"
+      },
+      {
+        "key": "resize_to",
+        "label": "目标分辨率",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "resize",
+        "options": [
+          {
+            "label": "4K",
+            "value": "4K"
+          },
+          {
+            "label": "2K",
+            "value": "2K"
+          },
+          {
+            "label": "1080P",
+            "value": "1080P"
+          },
+          {
+            "label": "720P",
+            "value": "720P"
+          },
+          {
+            "label": "480P",
+            "value": "480P"
+          },
+          {
+            "label": "360P",
+            "value": "360P"
+          }
+        ]
+      },
+      {
+        "key": "rate",
+        "label": "速度倍数(0.5~4)",
+        "type": "number",
+        "min": 0.5,
+        "max": 4,
+        "step": 0.1,
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "speed",
+        "placeholder": "1.5 = 快放"
+      },
+      {
+        "key": "keep_voice",
+        "label": "保留原声",
+        "type": "toggle",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "bgm",
+        "description": "开启：原声+背景音乐混合；关闭：用背景音乐替换原声"
+      },
+      {
+        "key": "music_volume",
+        "label": "背景音乐音量(%)",
+        "type": "slider",
+        "min": 1,
+        "max": 200,
+        "step": 1,
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "bgm",
+        "placeholder": "如 30"
+      },
+      {
+        "key": "text",
+        "label": "文字内容",
+        "type": "text",
+        "colSpan": "full",
+        "dependsOn": "action",
+        "dependsValue": "text",
+        "placeholder": "如 @我的店铺（最多60字）"
+      },
+      {
+        "key": "text_pos",
+        "label": "位置",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "text",
+        "options": [
+          {
+            "label": "右下",
+            "value": "右下"
+          },
+          {
+            "label": "左下",
+            "value": "左下"
+          },
+          {
+            "label": "右上",
+            "value": "右上"
+          },
+          {
+            "label": "左上",
+            "value": "左上"
+          },
+          {
+            "label": "中间",
+            "value": "中间"
+          },
+          {
+            "label": "底部",
+            "value": "底部"
+          },
+          {
+            "label": "顶部",
+            "value": "顶部"
+          }
+        ]
+      },
+      {
+        "key": "text_size",
+        "label": "大小",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "text",
+        "options": [
+          {
+            "label": "大",
+            "value": "大"
+          },
+          {
+            "label": "中",
+            "value": "中"
+          },
+          {
+            "label": "小",
+            "value": "小"
+          }
+        ]
+      },
+      {
+        "key": "opacity",
+        "label": "不透明度(%)",
+        "type": "slider",
+        "min": 10,
+        "max": 100,
+        "step": 5,
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "text",
+        "placeholder": "80"
+      },
+      {
+        "key": "subtitle_size",
+        "label": "字幕大小",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "subtitle",
+        "options": [
+          {
+            "label": "大",
+            "value": "大"
+          },
+          {
+            "label": "中",
+            "value": "中"
+          },
+          {
+            "label": "小",
+            "value": "小"
+          }
+        ]
+      },
+      {
+        "key": "rotate_how",
+        "label": "方式",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "action",
+        "dependsValue": "rotate",
+        "options": [
+          {
+            "label": "向右转 90°",
+            "value": "右转90"
+          },
+          {
+            "label": "向左转 90°",
+            "value": "左转90"
+          },
+          {
+            "label": "旋转 180°",
+            "value": "180"
+          },
+          {
+            "label": "水平翻转(镜像)",
+            "value": "水平翻转"
+          },
+          {
+            "label": "垂直翻转",
+            "value": "垂直翻转"
+          }
+        ]
       }
     ],
     "isBuiltIn": true

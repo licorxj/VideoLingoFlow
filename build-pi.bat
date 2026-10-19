@@ -2,29 +2,29 @@
 chcp 936 >nul 2>&1
 setlocal EnableDelayedExpansion
 cd /d %~dp0
-title VideoLingoLc ¹¹½¨¹¤¾ß - pi
+title VideoLingoLc æ„å»ºå·¥å…· - pi
 
 echo ============================================================
-echo   VideoLingoLc µÚÈı·½×é¼ş¹¹½¨£¨pi£©
-echo   ±¾½Å±¾ÓÃÓÚÔÚ·Ö·¢°æÖĞÖØĞÂ°²×°ÒÀÀµ²¢¹¹½¨ pi£º
-echo     - pi : npm install + npm run build (²ú³ö coding-agent/dist/cli.js)
-echo   ËµÃ÷£ºpi µÄ cli.js ÓÉ npm run build Éú³É£¬È±ÒÀÀµÊ±Ğ¡ÅÉ»áÌáÊ¾¡£
-echo   ÓÃ·¨£ºbuild-pi.bat [--force]
+echo   VideoLingoLc ç¬¬ä¸‰æ–¹ç»„ä»¶æ„å»ºï¼ˆpiï¼‰
+echo   æœ¬è„šæœ¬ç”¨äºåœ¨åˆ†å‘ç‰ˆä¸­é‡æ–°å®‰è£…ä¾èµ–å¹¶æ„å»º piï¼š
+echo     - pi : npm install + npm run build (äº§å‡º coding-agent/dist/cli.js)
+echo   è¯´æ˜ï¼špi çš„ cli.js ç”± npm run build ç”Ÿæˆï¼Œç¼ºä¾èµ–æ—¶å°æ´¾ä¼šæç¤ºã€‚
+echo   ç”¨æ³•ï¼šbuild-pi.bat [--force]
 echo ============================================================
 
-rem ---- ²ÎÊı½âÎö ----
+rem ---- å‚æ•°è§£æ ----
 set "FORCE="
 :parse_args
 if "%~1"=="" goto :args_done
 if /I "%~1"=="--force" ( set "FORCE=1" & shift & goto :parse_args )
 if /I "%~1"=="--help" ( goto :usage_exit )
 if /I "%~1"=="-h" ( goto :usage_exit )
-echo [WARN] ºöÂÔÎ´Öª²ÎÊı: %~1
+echo [WARN] å¿½ç•¥æœªçŸ¥å‚æ•°: %~1
 shift
 goto :parse_args
 :args_done
 
-rem ---- Ì½²â node / npm ----
+rem ---- æ¢æµ‹ node / npm ----
 set "NODE_EXE="
 for /f "tokens=*" %%i in ('where node 2^>nul') do if not defined NODE_EXE set "NODE_EXE=%%i"
 set "NPM_EXE="
@@ -41,28 +41,28 @@ if defined NODE_EXE (
 )
 
 echo.
-echo [»·¾³] node : !NODE_VER!  (pi ĞèÒª ^>= 22.19)
-echo [»·¾³] npm  : !NPM_EXE!
+echo [ç¯å¢ƒ] node : !NODE_VER!  (pi éœ€è¦ ^>= 22.19)
+echo [ç¯å¢ƒ] npm  : !NPM_EXE!
 echo.
 
 set "PI_RC=0"
 
 rem ---- pi ----
 if not defined NODE_EXE (
-  echo [ERROR] Î´ÕÒµ½ node£¬pi ĞèÒª Node.js ^>= 22.19
+  echo [ERROR] æœªæ‰¾åˆ° nodeï¼Œpi éœ€è¦ Node.js ^>= 22.19
   set "PI_RC=1"
   goto :done
 )
 if not defined NPM_EXE (
-  echo [ERROR] Î´ÕÒµ½ npm£¬ÎŞ·¨¹¹½¨ pi
+  echo [ERROR] æœªæ‰¾åˆ° npmï¼Œæ— æ³•æ„å»º pi
   set "PI_RC=1"
   goto :done
 )
 if !NODE_MAJOR! LSS 22 (
-  echo [WARN] Node Ö÷°æ±¾Îª !NODE_MAJOR!£¨!NODE_VER!£©£¬pi ÒªÇó ^>= 22.19£¬¹¹½¨»òÔËĞĞ¿ÉÄÜÊ§°Ü£¬½¨ÒéÉı¼¶ Node¡£
+  echo [WARN] Node ä¸»ç‰ˆæœ¬ä¸º !NODE_MAJOR!ï¼ˆ!NODE_VER!ï¼‰ï¼Œpi è¦æ±‚ ^>= 22.19ï¼Œæ„å»ºæˆ–è¿è¡Œå¯èƒ½å¤±è´¥ï¼Œå»ºè®®å‡çº§ Nodeã€‚
 )
 if not exist "%~dp0thirdparty\pi" (
-  echo [WARN] thirdparty\pi ²»´æÔÚ£¬Ìø¹ı
+  echo [WARN] thirdparty\pi ä¸å­˜åœ¨ï¼Œè·³è¿‡
   set "PI_RC=2"
   goto :done
 )
@@ -75,35 +75,35 @@ if defined FORCE (
   call npm install --ignore-scripts --prefer-offline
 )
 if errorlevel 1 (
-  echo [ERROR] pi ÒÀÀµ°²×°Ê§°Ü
+  echo [ERROR] pi ä¾èµ–å®‰è£…å¤±è´¥
   popd
   set "PI_RC=1"
   goto :done
 )
-echo [pi] npm run build £¨ÖØ½¨¸÷°ü dist£¬º¬ coding-agent/dist/cli.js£¬¿ÉÄÜºÄÊ±Êı·ÖÖÓ£©...
+echo [pi] npm run build ï¼ˆé‡å»ºå„åŒ… distï¼Œå« coding-agent/dist/cli.jsï¼Œå¯èƒ½è€—æ—¶æ•°åˆ†é’Ÿï¼‰...
 call npm run build
 set "PI_RC=!errorlevel!"
 popd
 if !PI_RC! neq 0 (
-  echo [ERROR] pi ¹¹½¨Ê§°Ü£¬Çë²é¿´ÉÏ·½Êä³ö¡£
+  echo [ERROR] pi æ„å»ºå¤±è´¥ï¼Œè¯·æŸ¥çœ‹ä¸Šæ–¹è¾“å‡ºã€‚
 ) else (
-  echo [OK] pi ¹¹½¨Íê³É
+  echo [OK] pi æ„å»ºå®Œæˆ
 )
 
 goto :done
 
 :usage_exit
-echo ÓÃ·¨: build-pi.bat [--force]
-echo   --force   Ç¿ÖÆÖØĞÂ°²×°ÒÀÀµ£¨ºöÂÔÒÑ´æÔÚµÄ node_modules£©
+echo ç”¨æ³•: build-pi.bat [--force]
+echo   --force   å¼ºåˆ¶é‡æ–°å®‰è£…ä¾èµ–ï¼ˆå¿½ç•¥å·²å­˜åœ¨çš„ node_modulesï¼‰
 pause
 exit /b 0
 
 :done
 echo.
 echo ============================================================
-echo   ¹¹½¨½á¹û»ã×Ü
-echo     pi : %PI_RC%   (0=³É¹¦, 1=Ê§°Ü, 2=Ìø¹ı/²»´æÔÚ)
+echo   æ„å»ºç»“æœæ±‡æ€»
+echo     pi : %PI_RC%   (0=æˆåŠŸ, 1=å¤±è´¥, 2=è·³è¿‡/ä¸å­˜åœ¨)
 echo ============================================================
-echo Íê³Éºó¿ÉÔËĞĞ start-prod.bat Æô¶¯£¨ºó¶Ë»á×Ô¶¯Æô¶¯ cutia Óë pi£©¡£
+echo å®Œæˆåå¯è¿è¡Œ start-prod.bat å¯åŠ¨ï¼ˆåç«¯ä¼šè‡ªåŠ¨å¯åŠ¨ piï¼‰ã€‚
 pause
 exit /b 0

@@ -74,7 +74,7 @@ tts:
 
 # ============ ASR ============
 asr:
-  engine: moss
+  engine: sherpa_onnx
 
   post_process:
     diarization:
@@ -152,9 +152,9 @@ audio:
   bitrate: 320
   bit_depth: 32
 imagegen:
-  method: kieai
-  default_t2i_model: "gpt-image-2-text-to-image"
-  default_i2i_model: "gpt-image-2-image-to-image"
+  method: agnes
+  default_t2i_model: "agnes-image-2.5-flash"
+  default_i2i_model: "agnes-image-2.5-flash"
 separation:
   method: demucs
   model: htdemucs
@@ -178,10 +178,45 @@ aigc:
     use_wsl: false
     timeout: 120
 videogen:
-  method: kieai_video
-  default_t2v_model: 'generate-veo3-1-video'
-  default_i2v_model: 'bytedance/seedance-2-mini'
-  default_v2v_model: 'bytedance/seedance-2-mini'
+  method: agnes_video
+  default_t2v_model: 'agnes-video-2.5-flash'
+  default_i2v_model: 'agnes-video-2.5-flash'
+  default_v2v_model: ''
   v2v_interface: kieai_video
   t2v_interface: kieai_video
   i2v_interface: seedance_video
+openchatcut:
+  enabled: true
+  host: 127.0.0.1
+  port: 5199
+  llm:
+    base_url: http://localhost:8800/v1
+    provider: openai
+    api_key: vide******ingo
+    model: vlf-agent
+  image:
+    base_url: http://127.0.0.1:11001/api/openchatcut-bridge/v1
+    api_key: vide******ingo
+    model: ''
+    interface_id: agnes
+    txt2img_model: agnes-image-2.5-flash
+    img2img_model: agnes-image-2.5-flash
+  tts:
+    base_url: ''
+    api_key: vlf-******UaSo
+    model: ''
+    interface_id: 8dc074bb
+  video:
+    base_url: ''
+    api_key: ''
+    model: ''
+  mcp:
+    token: '***'
+  agent_import_roots: Y:\VideoLingoLc\control_plane_workspaces
+  media_dir: ''
+voiceforge:
+  text:
+    source_limit: 10000
+  synthesis:
+    concurrency: 5
+    retry_count: 1

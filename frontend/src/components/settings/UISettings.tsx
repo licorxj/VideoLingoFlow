@@ -15,7 +15,6 @@ import {
   History,
   Eye,
   EyeOff,
-  Clapperboard,
   Mic2,
   Share2,
   Users,
@@ -87,7 +86,6 @@ export default function UISettings() {
   const [reduceMotion, setReduceMotion] = useState(false);
   const [showMeshGradient, setShowMeshGradient] = useState(true);
   const [navIconsVisible, setNavIconsVisible] = useState(true);
-  const [navEditing, setNavEditing] = useState(true);
   const [navVoiceForge, setNavVoiceForge] = useState(true);
   const [navSocial, setNavSocial] = useState(true);
   const [navCollaboration, setNavCollaboration] = useState(true);
@@ -109,7 +107,6 @@ export default function UISettings() {
     setReduceMotion(loadLocal("vl_reduce_motion", false));
     setShowMeshGradient(loadLocal("vl_mesh_gradient", true));
     setNavIconsVisible(loadLocal("vl_nav_icons", true));
-    setNavEditing(loadLocal("vl_nav_editing", true));
     setNavVoiceForge(loadLocal("vl_nav_voiceforge", true));
     setNavSocial(loadLocal("vl_nav_social", true));
     setNavCollaboration(loadLocal("vl_nav_collaboration", true));
@@ -185,7 +182,6 @@ export default function UISettings() {
     emit("nav_icons_visible", v);
   };
 
-  const applyNavEditing = (v: boolean) => { setNavEditing(v); saveLocal("vl_nav_editing", v); emit("nav_hidden_editing", !v); };
   const applyNavVoiceForge = (v: boolean) => { setNavVoiceForge(v); saveLocal("vl_nav_voiceforge", v); emit("nav_hidden_voiceforge", !v); };
   const applyNavSocial = (v: boolean) => { setNavSocial(v); saveLocal("vl_nav_social", v); emit("nav_hidden_social", !v); };
   const applyNavCollaboration = (v: boolean) => { setNavCollaboration(v); saveLocal("vl_nav_collaboration", v); emit("nav_hidden_collaboration", !v); };
@@ -421,13 +417,6 @@ export default function UISettings() {
         <p className="text-xs text-muted-foreground">
           "关闭后对应标签将从导航栏中隐藏"
         </p>
-        <ToggleRow
-          icon={Clapperboard}
-          title="剪辑工作台"
-          desc="视频剪辑与时间线编辑"
-          checked={navEditing}
-          onChange={applyNavEditing}
-        />
         <ToggleRow
           icon={Mic2}
           title="晴沐配音谷"

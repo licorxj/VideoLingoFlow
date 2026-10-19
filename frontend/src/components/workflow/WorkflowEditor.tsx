@@ -17,7 +17,7 @@ import ContextMenu from "./ContextMenu";
 import QuickConnectMenu, { type QuickConnectRequest } from "./QuickConnectMenu";
 import {
   Save, FolderOpen, Play, Trash2, RotateCcw, FileText, Loader2,
-  Plus, Workflow as WorkflowIcon, Clock, CheckCircle2, Pause, Square, Copy,
+  Plus, Workflow as WorkflowIcon, Clock, CheckCircle2, Pause, Square, Copy, Undo2, Redo2,
   ChevronDown, ChevronUp, RefreshCw, Eye, Crosshair, LocateFixed, X, Share2, Layers3, Group, Ungroup, Settings2, CornerDownRight, Spline, Minus, LayoutGrid, Repeat, Search,
 } from "lucide-react";
 import client from "@/api/client";
@@ -36,14 +36,25 @@ import { getSubscriptionError, isDeviceLimitError, isSubscriptionBlocked, getQuo
 import { useSubscriptionStore } from "@/stores/subscriptionStore";
 import ExecutionModeModal, { type ExecutionMode } from "./ExecutionModeModal";
 import { createNodeType } from "@/api/nodeTypes";
+import {
+  loadPersistedClipboard, loadSharedClipboard, persistClipboard, persistSharedClipboard,
+  subscribeSharedClipboard,
+  type WorkflowClipboardPayload,
+} from "@/lib/workflowClipboard";
+import {
+  cloneSnapshot, preserveRuntimeFields, snapshotFingerprint,
+  type CanvasSnapshot, type HistoryEntry,
+} from "@/lib/workflowHistory";
 
 const nodeTypes = { workflow: WorkflowNodeComponent };
 const edgeTypes = { bezier: BezierEdge };
 let nodeIdCounter = 0;
 const getNextId = () => "node_" + (++nodeIdCounter) + "_" + Date.now();
 
-// 为粘贴生成唯一 id，避免与画布现有节点/边冲突
-const genPasteId = () => "n_" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+// 为粘贴生成唯一 id，避免与画布现有节点/边冲突（带自增计数，防止同一毫秒内批量粘贴撞号）
+let pasteIdCounter = 0;
+const genPasteId = () =>
+  "n_" + Date.now().toString(36) + "_" + (++pasteIdCounter).toString(36) + Math.random().toString(36).slice(2, 6);
 
 // 复制组合/循环节点时，重映射其内部节点与内部连线 id，避免执行时冲突
 function remapContainerInnerIds(node: any) {
@@ -127,8 +138,7 @@ function ensureNodePositions(nodes: any[]): any[] {
   );
 }
 
-/** 从鼠标/触摸事件中取屏幕坐标（React Flow 的连线回调给的是原生事件） */
-function getEventClientPoint(event: MouseEvent | TouchEvent): { x: number; y: number } | null {
+/** 从鼠标/触摸事件中取屏幕坐标（React Flow 的连线回调给的是原生事件） */function getEventClientPoint(event: MouseEvent | TouchEvent): { x: number; y: number } | null {
   if (!event) return null;
   if ("touches" in event || "changedTouches" in event) {
     const touch = (event as TouchEvent).changedTouches?.[0] || (event as TouchEvent).touches?.[0];
@@ -136,6 +146,21 @@ function getEventClientPoint(event: MouseEvent | TouchEvent): { x: number; y: nu
   }
   const mouse = event as MouseEvent;
   return { x: mouse.clientX, y: mouse.clientY };
+}
+
+/**
+ * 快捷键是否应让位给浏览器：焦点落在可编辑控件上时，Ctrl+C/V/A/Z、Delete 等
+ * 必须走浏览器原生行为，否则会出现「输入框里粘贴不了 / 无法撤销输入」的问题。
+ * 除常规表单元素外，还要覆盖 contenteditable（含嵌套）与 ARIA 文本控件。
+ */
+function isEditableTarget(target: EventTarget | null): boolean {
+  const el = target as HTMLElement | null;
+  if (!el || typeof el.tagName !== "string") return false;
+  const tag = el.tagName;
+  if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
+  if (el.isContentEditable) return true;
+  if (typeof el.closest === "function" && el.closest('[contenteditable="true"], [role="textbox"], [role="combobox"]')) return true;
+  return false;
 }
 
 function runtimeStatus(status: string | undefined) {
@@ -235,8 +260,6 @@ const NODE_TYPE_LABELS: Record<string, string> = {
   path_to_title: "路径转标题",
   image_gen: "封面生成",
   publish: "发布",
-  cutia: "剪辑",
-  cutia_render: "剪辑渲染",
   s_resolve_path: "路径解析",
   s_file_rename: "文件重命名",
   s_sentence_preprocess: "句预处理",
@@ -410,6 +433,124 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   useCanvasWheelGuard(reactFlowWrapper);
   const [reactFlowInstance, setReactFlowInstance] = useState<ReactFlowInstance<any, any> | null>(null);
   const reactFlowInstanceRef = useRef<ReactFlowInstance<any, any> | null>(null);
+
+  // ── 撤销 / 重做（Ctrl/Cmd+Shift+Z 撤销，Ctrl/Cmd+Shift+Y 重做）────────────────
+  // 快照式历史栈：命中上限后丢弃最旧的 80 步。记录时机由「画布变化」驱动并去抖，
+  // 这样新增/删除/连线/拖拽/改参数/组合解散都能回退，而不需要逐个操作点埋点。
+  const HISTORY_LIMIT = 80;
+  const HISTORY_DEBOUNCE_MS = 260;
+  const historyRef = useRef<HistoryEntry[]>([]);
+  const historyIndexRef = useRef(-1);
+  const applyingHistoryRef = useRef(false);
+  const dragInProgressRef = useRef(false);
+  const historyTimerRef = useRef<number | null>(null);
+  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
+
+  const syncHistoryButtons = useCallback(() => {
+    const idx = historyIndexRef.current;
+    setHistoryState({
+      canUndo: idx > 0,
+      canRedo: idx >= 0 && idx < historyRef.current.length - 1,
+    });
+  }, []);
+
+  /** 取画布快照：优先读 ReactFlow store（含刚 setNodes 进去、尚未 re-render 的改动） */
+  const captureCanvas = useCallback((): CanvasSnapshot => {
+    const rf = reactFlowInstanceRef.current;
+    const liveNodes = typeof rf?.getNodes === "function" ? rf.getNodes() : nodesRef.current;
+    const liveEdges = typeof rf?.getEdges === "function" ? rf.getEdges() : edgesRef.current;
+    return cloneSnapshot({ nodes: liveNodes, edges: liveEdges });
+  }, []);
+
+  const commitHistory = useCallback(() => {
+    // 正在由 undo/redo 还原画布：不要再记一步，否则会把自己当成新编辑
+    if (applyingHistoryRef.current) return;
+    const snap = captureCanvas();
+    const fingerprint = snapshotFingerprint(snap);
+    const list = historyRef.current;
+    const idx = historyIndexRef.current;
+    // 指纹没变 = 只有选中态或运行态变化（点选、任务刷新），不值得占一步
+    if (idx >= 0 && idx < list.length && list[idx].fingerprint === fingerprint) return;
+    const next = list.slice(0, idx + 1);
+    next.push({ ...snap, fingerprint });
+    while (next.length > HISTORY_LIMIT) next.shift();
+    historyRef.current = next;
+    historyIndexRef.current = next.length - 1;
+    syncHistoryButtons();
+  }, [captureCanvas, syncHistoryButtons]);
+
+  /** 把当前画布设为历史基线：载入/新建/清空工作流时调用，旧栈作废 */
+  const resetHistory = useCallback(() => {
+    if (historyTimerRef.current !== null) {
+      window.clearTimeout(historyTimerRef.current);
+      historyTimerRef.current = null;
+    }
+    applyingHistoryRef.current = false;
+    const snap = captureCanvas();
+    historyRef.current = [{ ...snap, fingerprint: snapshotFingerprint(snap) }];
+    historyIndexRef.current = 0;
+    syncHistoryButtons();
+  }, [captureCanvas, syncHistoryButtons]);
+
+  const applyHistory = useCallback((targetIdx: number) => {
+    const list = historyRef.current;
+    const entry = list[targetIdx];
+    if (!entry) return;
+    if (historyTimerRef.current !== null) {
+      window.clearTimeout(historyTimerRef.current);
+      historyTimerRef.current = null;
+    }
+    const rf = reactFlowInstanceRef.current;
+    const currentNodes = typeof rf?.getNodes === "function" ? rf.getNodes() : nodesRef.current;
+    const restoredNodes = preserveRuntimeFields(entry.nodes, currentNodes);
+    const restoredEdges = JSON.parse(JSON.stringify(entry.edges || []));
+    // 抑制下一次「变化监听」，避免把这次还原自身压成新的一步
+    applyingHistoryRef.current = true;
+    historyIndexRef.current = targetIdx;
+    setNodes(restoredNodes);
+    setEdges(restoredEdges);
+    syncHistoryButtons();
+  }, [setNodes, setEdges, syncHistoryButtons]);
+
+  const undo = useCallback(() => {
+    if (historyIndexRef.current <= 0) return;
+    applyHistory(historyIndexRef.current - 1);
+  }, [applyHistory]);
+
+  const redo = useCallback(() => {
+    if (historyIndexRef.current >= historyRef.current.length - 1) return;
+    applyHistory(historyIndexRef.current + 1);
+  }, [applyHistory]);
+
+  // setNodes/setEdges 由 useNodesState 直接写入 ReactFlow store，getNodes() 立刻可读到，
+  // 故载入工作流后可以同帧建立基线，无须等一帧
+  const resetHistoryRef = useRef(resetHistory);
+  useEffect(() => { resetHistoryRef.current = resetHistory; }, [resetHistory]);
+
+  // 首次挂载：以 store 里的初始画布为历史基线（否则第一次编辑后无步可撤销）
+  useEffect(() => {
+    if (historyRef.current.length === 0) resetHistoryRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** 画布变化 → 去抖后记一步（拖拽中的连续 position 变化合并为一步） */
+  useEffect(() => {
+    if (applyingHistoryRef.current) {
+      // 本次变化来自 undo/redo：解除抑制并跳过记录（effect 一定会跑到，故在此复位）
+      applyingHistoryRef.current = false;
+      return;
+    }
+    if (dragInProgressRef.current) return;
+    if (historyTimerRef.current !== null) window.clearTimeout(historyTimerRef.current);
+    historyTimerRef.current = window.setTimeout(() => {
+      historyTimerRef.current = null;
+      commitHistory();
+    }, HISTORY_DEBOUNCE_MS);
+  }, [nodes, edges, commitHistory]);
+
+  useEffect(() => () => {
+    if (historyTimerRef.current !== null) window.clearTimeout(historyTimerRef.current);
+  }, []);
   // 右键菜单点选节点后的“粘附光标”放置模式：节点跟随鼠标，再次点击落入画布
   const [placingNode, setPlacingNode] = useState<NodeTypeDef | null>(null);
   const [placingPos, setPlacingPos] = useState({ x: 0, y: 0 });
@@ -419,6 +560,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   const dragCloneRef = useRef<{ srcId: string; startPos: { x: number; y: number } } | null>(null);
 
   const onNodeDragStart = useCallback((event: any, node: any) => {
+    // 拖拽期间不逐帧记历史（position 每帧都在变），拖完再统一记一步
+    dragInProgressRef.current = true;
     const ctrl = event?.ctrlKey || event?.metaKey;
     if (!ctrl) return;
     dragCloneRef.current = { srcId: node.id, startPos: { ...node.position } };
@@ -448,8 +591,13 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   }, [setNodes]);
 
   const onNodeDragStop = useCallback((_event: any, node: any) => {
+    dragInProgressRef.current = false;
     const info = dragCloneRef.current;
-    if (!info || info.srcId !== node.id) return;
+    if (!info || info.srcId !== node.id) {
+      // 普通拖拽：立刻记一步（Ctrl+克隆的 setNodes 已同步写入 ReactFlow store）
+      commitHistory();
+      return;
+    }
     dragCloneRef.current = null;
     const srcId = info.srcId;
     const newId = genPasteId();
@@ -483,7 +631,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         }));
       return [...eds, ...newEdges];
     });
-  }, [setNodes, setEdges]);
+    commitHistory();
+  }, [setNodes, setEdges, commitHistory]);
 
   const [savedWorkflows, setSavedWorkflows] = useState<SavedWorkflow[]>([]);
   const [loadingList, setLoadingList] = useState(false);
@@ -693,6 +842,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         saveCurrentId(undefined);
         setNodes([]);
         setEdges([]);
+        resetHistoryRef.current();
       }
     } catch (err) {
       console.error("Failed to delete workflow:", err);
@@ -774,6 +924,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
             }
             if (task.edges) setEdges(task.edges);
             fitViewToAll();
+            // 载入的是另一个画布（任务工作流）：重建历史基线，避免跨画布撤销
+            resetHistoryRef.current();
           });
         }
       }).catch(console.error);
@@ -805,6 +957,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         autoSaveDirtyRef.current = false;
         setNodes(wf.nodes || []);
         setEdges(wf.edges || []);
+        // 切换工作流后重建历史基线，否则能撤销回上一个画布的内容
+        resetHistoryRef.current();
         // 载入工作流后自动适配视角：缩放显示全部并居中
         fitViewToAll();
 
@@ -907,6 +1061,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     const inputNode = createDefaultInputNode();
     setNodes(inputNode ? [inputNode] : []);
     setEdges([]);
+    resetHistoryRef.current();
   }, [setNodes, setEdges, createDefaultInputNode, detachTaskRuntime]);
 
   const onConnect = useCallback((connection: Connection) => {
@@ -1070,24 +1225,50 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   }, [setNodes, setEdges]);
 
   // 剪贴板：复制/粘贴节点（含连线、组合/循环内部节点）
-  const [clipboard, setClipboard] = useState<{ nodes: any[]; edges: any[] }>({ nodes: [], edges: [] });
+  // 内存 state 初始化时从 sessionStorage 恢复，使刷新/路由跳回后仍可粘贴
+  // 初始化顺序：本标签页 sessionStorage 优先（可能比共享层更新），
+  // 都没有时退回 localStorage 共享层（别的标签页复制的节点）
+  const [clipboard, setClipboard] = useState<WorkflowClipboardPayload>(
+    () => loadPersistedClipboard() ?? loadSharedClipboard() ?? { nodes: [], edges: [] }
+  );
+
+  // 其它标签页复制了节点 → 同步进来，实现跨标签页粘贴（不经过系统剪贴板）
+  useEffect(() => subscribeSharedClipboard((payload) => {
+    setClipboard(payload);
+    persistClipboard(payload);
+  }), []);
   const copySelected = useCallback(() => {
-    const selectedNodes = nodes.filter((n) => n.selected);
+    // 优先取 ReactFlow 实例里的最新快照：updateNodeData 的改动可能尚未同步回 state，
+    // 否则会复制到旧数据（保存/执行路径同样用 getNodes() 兜底）
+    const rf = reactFlowInstanceRef.current;
+    const rfNodes = typeof rf?.getNodes === "function" ? rf.getNodes() : null;
+    const rfEdges = typeof rf?.getEdges === "function" ? rf.getEdges() : null;
+    const allNodes: any[] = rfNodes && rfNodes.length ? rfNodes : nodes;
+    const allEdges: any[] = rfEdges && rfEdges.length ? rfEdges : edges;
+    const selectedNodes = allNodes.filter((n: any) => n.selected);
     if (selectedNodes.length === 0) return;
-    const selectedNodeIds = new Set(selectedNodes.map((n) => n.id));
+    const selectedNodeIds = new Set(selectedNodes.map((n: any) => n.id));
     // 复制选中边，以及两端都在选中节点集合内的内部连线
-    const relatedEdges = edges.filter(
-      (e) => e.selected || (selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target))
+    const relatedEdges = allEdges.filter(
+      (e: any) => e.selected || (selectedNodeIds.has(e.source) && selectedNodeIds.has(e.target))
     );
-    setClipboard({
+    const payload: WorkflowClipboardPayload = {
       nodes: JSON.parse(JSON.stringify(selectedNodes)),
       edges: JSON.parse(JSON.stringify(relatedEdges)),
-    });
+    };
+    setClipboard(payload);
+    // 落 sessionStorage（同标签页刷新/跳路由后可用）与 localStorage（跨标签页共享）。
+    // 注意：绝不写系统剪贴板，否则用户复制到系统剪贴板里的文字会被节点 JSON 覆盖。
+    persistClipboard(payload);
+    persistSharedClipboard(payload);
   }, [nodes, edges]);
   const pasteClipboard = useCallback(() => {
-    if (clipboard.nodes.length === 0) return;
+    // 数据全部来自本地三层存储，不再读系统剪贴板 —— 读系统剪贴板需要授权且
+    // 失败时会误把「粘贴普通文字」的操作变成粘节点，这里彻底去掉该路径
+    const source = clipboard.nodes.length ? clipboard : loadPersistedClipboard() ?? clipboard;
+    if (!source || source.nodes.length === 0) return false;
     const idMap: Record<string, string> = {};
-    const newNodes = clipboard.nodes.map((n: any) => {
+    const newNodes = source.nodes.map((n: any) => {
       const newId = genPasteId();
       idMap[n.id] = newId;
       // 组合/循环节点：内部节点与内部连线重新赋值 id，避免执行冲突
@@ -1099,7 +1280,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         selected: false,
       };
     });
-    const newEdges = clipboard.edges.map((e: any) => ({
+    const newEdges = source.edges.map((e: any) => ({
       ...e,
       id: genPasteId(),
       source: idMap[e.source] ?? e.source,
@@ -1108,6 +1289,7 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     }));
     setNodes((nds) => [...nds, ...newNodes]);
     setEdges((eds) => [...eds, ...newEdges]);
+    return true;
   }, [clipboard, setNodes, setEdges]);
   const selectAll = useCallback(() => {
     setNodes((nds) => nds.map((n) => ({ ...n, selected: true })));
@@ -1384,22 +1566,29 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   // 全局快捷键
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName;
-      const isInput = tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || (e.target as HTMLElement).isContentEditable;
-      if (isInput) return;
+      // 焦点在输入框/可编辑区域时完全让位给浏览器，否则会吞掉原生复制粘贴与撤销
+      if (isEditableTarget(e.target)) return;
       const ctrl = e.ctrlKey || e.metaKey;
       if (e.key === "Delete" || e.key === "Backspace") { deleteSelected(); e.preventDefault(); }
       else if (ctrl && e.key.toLowerCase() === "g") { handleGroupSelected(); e.preventDefault(); }
       else if (ctrl && e.shiftKey && e.key.toLowerCase() === "l") { handleCreateLoop(); e.preventDefault(); }
-      else if (ctrl && e.key === "c") { copySelected(); e.preventDefault(); }
-      else if (ctrl && e.key === "v") { pasteClipboard(); e.preventDefault(); }
+      else if (ctrl && !e.shiftKey && e.key.toLowerCase() === "c") { copySelected(); e.preventDefault(); }
+      // 粘贴：只有本地确实存着节点时才拦截，否则完全不 preventDefault，
+      // 保证浏览器/输入框的原生粘贴行为不受影响
+      else if (ctrl && !e.shiftKey && e.key.toLowerCase() === "v") {
+        if (clipboard.nodes.length > 0) e.preventDefault();
+        pasteClipboard();
+      }
+      // 撤销/重做：Ctrl+Z 留给浏览器与输入框，画布内改用 Ctrl+Shift+Z / Ctrl+Shift+Y
+      else if (ctrl && e.shiftKey && e.key.toLowerCase() === "z") { undo(); e.preventDefault(); }
+      else if (ctrl && e.shiftKey && e.key.toLowerCase() === "y") { redo(); e.preventDefault(); }
       else if (ctrl && e.shiftKey && e.key === "S") { setSaveAsModalOpen(true); e.preventDefault(); }
       else if (ctrl && e.key === "s") { handleSave(); e.preventDefault(); }
       else if (ctrl && e.key === "a") { selectAll(); e.preventDefault(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [deleteSelected, handleGroupSelected, handleCreateLoop, copySelected, pasteClipboard, handleSave, selectAll]);
+  }, [deleteSelected, handleGroupSelected, handleCreateLoop, copySelected, pasteClipboard, clipboard.nodes.length, undo, redo, handleSave, selectAll]);
 
   const handleSaveAs = async () => {
     setSaveAsName(workflowName || "未命名工作流");
@@ -1517,10 +1706,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
         data: {
           ...n.data,
           status: status || "pending",
-          // Preserve real-time WebSocket progress when the backend also shows "running"
-          // but task.json has a stale/zero progress value. Intermediate progress (e.g. 30, 50, 70)
-          // is only sent via WebSocket, not persisted to task.json, so task.json may lag behind.
-          // When status is completed/failed/cancelled, always use backend values (authoritative).
+          // running 期间保留更细的进度：WS 事件流每次回调都推，REST/task.json 按 ≥5%
+          // 节流落库，两者可能差几个百分点；终态一律以后端为准（权威）。
           progress: (status === "running" && (ninfo.progress || 0) < (n.data?.progress || 0))
             ? n.data.progress
             : (ninfo.progress || 0),
@@ -2236,6 +2423,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                 }
                 setPackOpen(true);
               }} />
+              <Btn icon={Undo2} label={"撤销"} onClick={undo} disabled={!historyState.canUndo} />
+              <Btn icon={Redo2} label={"重做"} onClick={redo} disabled={!historyState.canRedo} />
               <Btn icon={RotateCcw} label={"\u6e05\u7a7a"} onClick={handleClear} />
               <button
                 onClick={handleGroupSelected}
@@ -2471,8 +2660,10 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
                 <span className="text-muted-foreground">保存 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + S</kbd></span>
                 <span className="text-muted-foreground">另存为 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + Shift + S</kbd></span>
                 <span className="text-muted-foreground">复制 / 粘贴 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + C/V</kbd></span>
+                <span className="col-span-2 text-muted-foreground/70">支持跨画布、跨工作流、跨标签页与刷新后粘贴，不占用系统剪贴板</span>
                 <span className="text-muted-foreground">全选 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + A</kbd></span>
                 <span className="text-muted-foreground">组合 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + G</kbd></span>
+                <span className="text-muted-foreground">撤销 / 重做 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Ctrl/Cmd + Shift + Z/Y</kbd></span>
                 <span className="text-muted-foreground">删除 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Delete / Backspace</kbd></span>
                 <span className="text-muted-foreground">框选 <kbd className="ml-1 rounded border border-border bg-muted px-1 py-0.5 text-foreground">Shift + 鼠标拖拽</kbd></span>
               </div>
@@ -2908,11 +3099,11 @@ const WORKFLOW_SHARE_CATEGORIES = [
   { value: "工具工作流", label: "工具工作流" },
 ];
 
-function Btn({ icon: Icon, label, onClick, loading }: { icon: any; label: string; onClick: () => void; loading?: boolean }) {
+function Btn({ icon: Icon, label, onClick, loading, disabled, title }: { icon: any; label: string; onClick: () => void; loading?: boolean; disabled?: boolean; title?: string }) {
   return (
-    <button onClick={onClick} disabled={loading}
+    <button onClick={onClick} disabled={loading || disabled}
       className="flex items-center gap-1 px-2 py-2 text-xs font-semibold text-foreground border border-border rounded-md hover:bg-secondary/60 hover:border-primary/40 transition-all disabled:opacity-50"
-      title={label}>
+      title={title || label}>
       {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : <Icon className="w-3 h-3" />}{label}
     </button>
   );
