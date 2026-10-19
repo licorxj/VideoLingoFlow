@@ -151,12 +151,13 @@ dist-ssr/
 thirdparty/cloakbrowser/
 thirdparty/bun/
 thirdparty/**/node_modules/
-# cutia standalone 部署产物（Windows 原生）随仓库分发，供 Windows / 整合包用户免构建直接使用。
-# 注意：standalone 内部含精简 node_modules 与嵌套 .next/static，必须显式 re-include；而又因
-# git 无法 re-include「被忽略目录」的子文件，故此处只忽略 app 自身的 .next（锚定一层），而非递归
-# 忽略所有 .next，从而让 standalone 内部的嵌套 .next/static 可被追踪。
-!thirdparty/cutia/apps/web/standalone/
-!thirdparty/cutia/apps/web/standalone/**
+# OpenChatCut（AI剪辑台）是第三方 AGPL-3.0-or-later 项目，源码不随本仓库分发：
+# 由 thirdparty/install_thirdparty.py → ensure_openchatcut() 在安装时从上游拷贝并 npm install。
+# 整目录忽略，防止误执行 git add -A 把 AGPL 源码并入公开仓库（合规风险）；
+# 其 .env.local 亦含本机接口配置，同样不应外发。
+thirdparty/openchatcut/
+# 本机安装/构建 OpenChatCut 时产生的日志
+thirdparty/openchatcut-*.err
 thirdparty/*/apps/web/.next/
 thirdparty/**/.turbo/
 thirdparty/**/.cache/
