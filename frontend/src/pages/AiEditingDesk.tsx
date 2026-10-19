@@ -517,7 +517,9 @@ export default function AiEditingDesk() {
                 variant={depsReady && !installing ? "outline" : "ai"}
                 size="sm"
                 className={cn(!depsReady && !installing && "animate-pulse-glow")}
-                disabled={installing}
+                // 剪辑台已部署（项目 + 依赖齐备）时置灰，无需重复安装
+                disabled={installing || (!!status?.repo && depsReady)}
+                title={!!status?.repo && depsReady ? "剪辑台已安装，无需重复安装" : undefined}
                 onClick={installDesk}
               >
                 {installing ? <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" /> : <PackagePlus className="mr-1.5 h-3.5 w-3.5" />}
