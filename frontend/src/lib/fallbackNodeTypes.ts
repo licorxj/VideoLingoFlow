@@ -294,6 +294,82 @@ export const FALLBACK_NODE_TYPES = [
     "isBuiltIn": true
   },
   {
+    "id": "specified_node_package",
+    "name": "指定调用节点包",
+    "category": "io",
+    "description": "在卡片上指定要调用的节点（分组 + 节点，可加减任意数量），后端按选择顺序把它们组装成一份「节点调用参考提示词」，从「提示词」端口输出给下游智能体使用（不落盘）。",
+    "icon": "Boxes",
+    "color": "#3b82f6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "any",
+        "label": "输入",
+        "type": "any",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "id": "prompt",
+        "label": "提示词",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "packages": [
+        {
+          "group": "",
+          "node": ""
+        },
+        {
+          "group": "",
+          "node": ""
+        }
+      ]
+    },
+    "configFields": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "specified_workflow",
+    "name": "指定调用工作流",
+    "category": "io",
+    "description": "在卡片上指定要调用的工作流（分组 + 工作流，可加减任意数量），后端按选择顺序把它们组装成一份「工作流调用参考提示词」，从「提示词」端口输出给下游智能体使用（不落盘）。",
+    "icon": "Workflow",
+    "color": "#3b82f6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "any",
+        "label": "输入",
+        "type": "any",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "id": "prompt",
+        "label": "提示词",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "workflows": [
+        {
+          "group": "",
+          "workflow": ""
+        },
+        {
+          "group": "",
+          "workflow": ""
+        }
+      ]
+    },
+    "configFields": [],
+    "isBuiltIn": true
+  },
+  {
     "id": "image_mask",
     "name": "图片蒙版",
     "category": "ai_gen",
@@ -5282,7 +5358,8 @@ export const FALLBACK_NODE_TYPES = [
     "defaultConfig": {
       "enabled": false,
       "position": "bottom-right",
-      "opacity": 0.5
+      "opacity": 50,
+      "size": 0.2
     },
     "configFields": [
       {
@@ -5319,9 +5396,23 @@ export const FALLBACK_NODE_TYPES = [
       },
       {
         "key": "opacity",
-        "label": "透明度",
-        "type": "text",
-        "placeholder": "0.5"
+        "label": "不透明度(%)",
+        "type": "slider",
+        "min": 10,
+        "max": 100,
+        "step": 5,
+        "placeholder": "50",
+        "description": "数字越小越透明，100 为完全不透明；也可填 0~1 的小数（旧流程兼容）"
+      },
+      {
+        "key": "size",
+        "label": "大小(占视频宽度比例)",
+        "type": "slider",
+        "min": 0.05,
+        "max": 1,
+        "step": 0.05,
+        "placeholder": "0.2",
+        "description": "水印宽度占视频宽度的比例(0~1)；后端会据此等比缩放水印图片后再叠加"
       }
     ],
     "isBuiltIn": true
@@ -12294,7 +12385,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "desk_edit",
     "name": "剪辑编排",
     "category": "ai_desk",
-    "description": "AI剪辑链·第3步【编排】：两种模式。ops 模式：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数。ai_script 模式：读出 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交（语义剪辑）。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」",
+    "description": "AI剪辑链·第3步【编排】：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数，精确控制每一步。语义化「一句话剪辑」请用旁边的「AI剪辑」节点。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」或「AI剪辑」",
     "icon": "Wand2",
     "color": "#0ea5e9",
     "execution_domain": "process",
@@ -12318,11 +12409,6 @@ export const FALLBACK_NODE_TYPES = [
         "id": "ops",
         "label": "工具调用ops(可选)",
         "type": "json"
-      },
-      {
-        "id": "instruction",
-        "label": "AI剪辑指令(可选)",
-        "type": "text"
       }
     ],
     "outputs": [
@@ -12349,8 +12435,103 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "defaultConfig": {
       "project": "",
-      "mode": "ops",
       "ops": "",
+      "dry_run": true,
+      "use_task_output_dir": false,
+      "data_dir": "",
+      "timeout": 1800
+    },
+    "configFields": [
+      {
+        "key": "project",
+        "label": "剪辑台项目",
+        "type": "api-select",
+        "apiEndpoint": "/api/openchatcut/projects",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "followPort": "project",
+        "colSpan": "full",
+        "description": "目标剪辑台工程；手动输入优先，未填时取连线值"
+      },
+      {
+        "key": "ops",
+        "label": "ops 工具调用",
+        "type": "desk-ops",
+        "colSpan": "full",
+        "description": "点「+ 添加工具调用」逐条选择工具并填写参数；参数支持引用上游输入（{{input.xxx}}）与上一个工具的结果（{{prev.xxx}}）"
+      },
+      {
+        "key": "dry_run",
+        "label": "仅演练（不落盘）",
+        "type": "switch",
+        "colSpan": "full",
+        "description": "开启时不加 --apply，只输出执行计划；确认无误后关闭再正式执行"
+      },
+      {
+        "key": "use_task_output_dir",
+        "label": "使用本任务文件夹",
+        "type": "switch",
+        "colSpan": "full",
+        "description": "勾选后以「本任务目录/output」作为剪辑台数据目录（每次任务数据互相隔离，便于溯源与清理）；不勾选则用剪辑台默认数据目录"
+      },
+      {
+        "key": "data_dir",
+        "label": "剪辑台数据目录",
+        "type": "text",
+        "colSpan": "full",
+        "placeholder": "留空用剪辑台默认位置"
+      },
+      {
+        "key": "timeout",
+        "label": "超时(秒)",
+        "type": "number",
+        "colSpan": "half",
+        "min": 60,
+        "max": 7200,
+        "step": 60
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "desk_ai_cut",
+    "name": "AI剪辑",
+    "category": "ai_desk",
+    "description": "AI剪辑链·AI 语义剪辑：读取时间线 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交。与「剪辑编排」互补：编排节点精确控制每一步工具调用，本节点面向「一句话说清要什么改动」的语义剪辑。上游：project（新建工程/素材导入/编排）。下游：project →「剪辑台渲染导出」或继续「剪辑编排」",
+    "icon": "Sparkles",
+    "color": "#0ea5e9",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "any"
+      },
+      {
+        "id": "instruction",
+        "label": "AI剪辑指令(可选)",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "project",
+        "label": "剪辑台项目ID",
+        "type": "text"
+      },
+      {
+        "id": "result",
+        "label": "执行结果(JSON)",
+        "type": "json"
+      },
+      {
+        "id": "plan",
+        "label": "执行摘要",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "project": "",
       "instruction": "",
       "dry_run": true,
       "use_task_output_dir": false,
@@ -12370,43 +12551,19 @@ export const FALLBACK_NODE_TYPES = [
         "description": "目标剪辑台工程；手动输入优先，未填时取连线值"
       },
       {
-        "key": "mode",
-        "label": "编排模式",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "ops",
-            "label": "工具调用（ops 数组）"
-          },
-          {
-            "value": "ai_script",
-            "label": "AI 语义剪辑（timeline.md）"
-          }
-        ],
-        "description": "ops：精确控制每一步；ai_script：用自然语言描述改动"
-      },
-      {
-        "key": "ops",
-        "label": "ops 工具调用",
-        "type": "desk-ops",
-        "colSpan": "full",
-        "description": "点「+ 添加工具调用」逐条选择工具并填写参数；参数支持引用上游输入（{{input.xxx}}）与上一个工具的结果（{{prev.xxx}}）"
-      },
-      {
         "key": "instruction",
         "label": "AI 剪辑指令",
         "type": "textarea",
         "colSpan": "full",
         "placeholder": "例：删掉所有语气词，把第3段移到最前",
-        "description": "仅 ai_script 模式：自然语言描述要做的剪辑改动；手动输入优先，未填时取连线值"
+        "description": "自然语言描述要做的剪辑改动；手动输入优先，未填时取连线值"
       },
       {
         "key": "dry_run",
         "label": "仅演练（不落盘）",
         "type": "switch",
         "colSpan": "full",
-        "description": "ops 模式：不加 --apply；ai_script 模式：只做到预校验不提交"
+        "description": "开启时只做到预校验不提交，输出编辑差异；确认无误后关闭再正式执行"
       },
       {
         "key": "use_task_output_dir",
@@ -12959,7 +13116,7 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "model": "bernini",
+      "model": "sttn",
       "lcwr_base_url": "http://localhost:1120",
       "regions": [],
       "skip_head_sec": 0.0,
@@ -12992,12 +13149,12 @@ export const FALLBACK_NODE_TYPES = [
             "label": "DiffuEraser（扩散模型）"
           },
           {
-            "value": "bernini",
-            "label": "Bernini（旗舰）"
+            "value": "effecterase",
+            "label": "EffectErase（效果消除，CC BY-NC 非商用）"
           },
           {
-            "value": "online",
-            "label": "LCWR在线模型"
+            "value": "e2fgvi",
+            "label": "E2FGVI（视频补全，CC BY-NC 非商用）"
           }
         ]
       },
@@ -13061,11 +13218,11 @@ export const FALLBACK_NODE_TYPES = [
         "options": [
           {
             "value": "from_end",
-            "label": "从末尾向前数"
+            "label": "从末尾向前数（from_end）"
           },
           {
-            "value": "from_head",
-            "label": "从开头向后数"
+            "value": "from_start",
+            "label": "从开头向后数（from_start）"
           }
         ]
       }
@@ -15919,14 +16076,19 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
         "type": "audio"
       },
       {
-        "id": "audios",
-        "label": "音频列表",
-        "type": "json"
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
       },
       {
         "id": "params",
@@ -15935,7 +16097,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -15945,22 +16106,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=txt2music",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=txt2music",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -15978,6 +16136,13 @@ export const FALLBACK_NODE_TYPES = [
         "dependsOn": "custom_prompt_enabled",
         "dependsValue": true,
         "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "custom_mode",
+        "label": "自定义模式",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "官方 custom_mode：开启后提示词/歌词严格作为歌词内容，并启用人声性别/时长等高级参数；默认关闭（智能生成）"
       },
       {
         "key": "style",
@@ -16110,14 +16275,19 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
         "type": "audio"
       },
       {
-        "id": "audios",
-        "label": "音频列表",
-        "type": "json"
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
       },
       {
         "id": "params",
@@ -16126,7 +16296,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -16135,22 +16304,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=instrumental",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=instrumental",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -16168,6 +16334,13 @@ export const FALLBACK_NODE_TYPES = [
         "dependsOn": "custom_prompt_enabled",
         "dependsValue": true,
         "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "custom_mode",
+        "label": "自定义模式",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "官方 custom_mode：开启后启用人声性别/时长等高级参数"
       },
       {
         "key": "style",
@@ -16246,6 +16419,11 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
         "id": "text",
         "label": "歌词文本",
         "type": "text"
@@ -16257,7 +16435,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -16265,22 +16442,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=lyrics",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=lyrics",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -16328,11 +16502,16 @@ export const FALLBACK_NODE_TYPES = [
     "id": "music_extend",
     "name": "AI音乐-音乐扩展",
     "category": "music_gen",
-    "description": "对已有曲目做续写扩展：从上游音乐节点的参数 JSON 取 audio_id（也可直接填 audio_id），可指定续写起点与续写提示词。",
+    "description": "对已有曲目做续写扩展：连接上游音乐节点的「Task ID」或「生成参数JSON」获取 audio_id（也可直接填 audio_id），可指定续写起点与续写提示词。",
     "icon": "Repeat",
     "color": "#a78bfa",
     "execution_domain": "process",
     "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
       {
         "id": "json",
         "label": "上游音乐参数JSON",
@@ -16346,14 +16525,19 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
         "type": "audio"
       },
       {
-        "id": "audios",
-        "label": "音频列表",
-        "type": "json"
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
       },
       {
         "id": "params",
@@ -16362,7 +16546,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -16370,22 +16553,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=extend",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=extend",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -16409,7 +16589,7 @@ export const FALLBACK_NODE_TYPES = [
         "label": "音频ID",
         "type": "text",
         "colSpan": "half",
-        "description": "留空则自动从上游参数 JSON 中读取 audio_id",
+        "description": "留空则自动从上游参数 JSON / Task ID 反查 audio_id",
         "placeholder": "上游传入时留空"
       },
       {
@@ -16419,6 +16599,13 @@ export const FALLBACK_NODE_TYPES = [
         "min": 0,
         "colSpan": "half",
         "description": "从原曲的第 N 秒开始续写"
+      },
+      {
+        "key": "custom_mode",
+        "label": "自定义模式",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "官方 custom_mode：开启后启用人声性别等续写高级参数"
       },
       {
         "key": "default_param_flag",
@@ -16514,7 +16701,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "music_cover",
     "name": "AI音乐-翻唱/风格迁移",
     "category": "music_gen",
-    "description": "上传参考音频并按提示词 / 风格做翻唱或风格迁移。参考音频从连线 audio 输入（本地文件自动上传）。",
+    "description": "上传参考音频并按提示词 / 风格做翻唱或风格迁移。参考音频从连线 audio 输入（本地文件自动上传）；也可连接上游音乐节点的「Task ID」按任务音轨翻唱。",
     "icon": "Disc",
     "color": "#a78bfa",
     "execution_domain": "process",
@@ -16525,6 +16712,11 @@ export const FALLBACK_NODE_TYPES = [
         "type": "audio"
       },
       {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
         "id": "text",
         "label": "风格/提示词",
         "type": "text"
@@ -16532,14 +16724,19 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
         "type": "audio"
       },
       {
-        "id": "audios",
-        "label": "音频列表",
-        "type": "json"
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
       },
       {
         "id": "params",
@@ -16548,7 +16745,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -16556,22 +16752,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=cover",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=cover",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -16704,14 +16897,19 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
         "type": "audio"
       },
       {
-        "id": "audios",
-        "label": "音频列表",
-        "type": "json"
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
       },
       {
         "id": "params",
@@ -16720,7 +16918,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -16728,22 +16925,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=add_instrumental",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=add_instrumental",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -16864,14 +17058,19 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
         "type": "audio"
       },
       {
-        "id": "audios",
-        "label": "音频列表",
-        "type": "json"
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
       },
       {
         "id": "params",
@@ -16880,7 +17079,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -16888,22 +17086,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=add_vocals",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=add_vocals",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -17005,7 +17200,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "music_separate",
     "name": "AI音乐-人声分离",
     "category": "music_gen",
-    "description": "对已有曲目做分轨分离（人声 / 伴奏 / 鼓 / 贝斯等）。可接上游音频文件，也可从上游参数 JSON 取 task_id / audio_id。",
+    "description": "对已有曲目做分轨分离。可接上游音乐节点的「Task ID」/ 参数 JSON，也可直接连音频文件上传分离。",
     "icon": "Scissors",
     "color": "#a78bfa",
     "execution_domain": "process",
@@ -17013,6 +17208,11 @@ export const FALLBACK_NODE_TYPES = [
       {
         "id": "text",
         "label": "提示词 / 歌词",
+        "type": "text"
+      },
+      {
+        "id": "task_id",
+        "label": "Task ID",
         "type": "text"
       },
       {
@@ -17028,14 +17228,19 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
         "type": "audio"
       },
       {
-        "id": "audios",
-        "label": "音频列表",
-        "type": "json"
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
       },
       {
         "id": "params",
@@ -17044,7 +17249,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -17052,22 +17256,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=separate",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=separate",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -17089,10 +17290,31 @@ export const FALLBACK_NODE_TYPES = [
       {
         "key": "stem_type",
         "label": "分离类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "separate_vocal",
+            "label": "人声 + 伴奏（2轨）"
+          },
+          {
+            "value": "split_stem",
+            "label": "多轨分离（人声/鼓/贝斯等最多12轨）"
+          },
+          {
+            "value": "split_stem_advanced",
+            "label": "提取指定音轨（高级）"
+          }
+        ],
+        "description": "留空默认人声 + 伴奏两轨分离"
+      },
+      {
+        "key": "stem_name",
+        "label": "目标音轨名",
         "type": "text",
         "colSpan": "half",
-        "placeholder": "all / vocals / instrumental / drums / bass",
-        "description": "留空默认 all（分离为人声 + 伴奏）"
+        "placeholder": "如：Lead Vocal / Drum Kit / Bass",
+        "description": "仅「提取指定音轨（高级）」时生效"
       },
       {
         "key": "poll_timeout",
@@ -17110,11 +17332,16 @@ export const FALLBACK_NODE_TYPES = [
     "id": "music_to_wav",
     "name": "AI音乐-转WAV",
     "category": "music_gen",
-    "description": "把已有曲目转换为 WAV 无损格式：从上游音乐节点的参数 JSON 取 task_id / audio_id。",
+    "description": "把已有曲目转换为 WAV 无损格式：连接上游音乐节点的「Task ID」或「生成参数JSON」获取 task_id / audio_id。",
     "icon": "FileAudio",
     "color": "#a78bfa",
     "execution_domain": "process",
     "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
       {
         "id": "json",
         "label": "上游音乐参数JSON",
@@ -17123,8 +17350,18 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "WAV音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
         "type": "audio"
       },
       {
@@ -17134,7 +17371,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -17142,22 +17378,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=to_wav",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=to_wav",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -17194,14 +17427,19 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "outputs": [
       {
-        "id": "audio",
-        "label": "音频",
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
         "type": "audio"
       },
       {
-        "id": "audios",
-        "label": "音频列表",
-        "type": "json"
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
       },
       {
         "id": "params",
@@ -17210,7 +17448,6 @@ export const FALLBACK_NODE_TYPES = [
       }
     ],
     "defaultConfig": {
-      "interface": "",
       "model": "",
       "custom_prompt_enabled": false,
       "custom_prompt": "",
@@ -17218,22 +17455,19 @@ export const FALLBACK_NODE_TYPES = [
     },
     "configFields": [
       {
-        "key": "interface",
-        "label": "音乐接口",
-        "type": "api-select",
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/enabled",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "placeholder": "跟随全局默认接口"
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
       },
       {
         "key": "model",
         "label": "模型",
         "type": "api-select",
         "colSpan": "half",
-        "apiEndpoint": "/api/musicgen-interfaces/{interface}/models-for-node?mode=upload_extend",
-        "dependsOn": "interface",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=upload_extend",
         "placeholder": "跟随接口默认模型"
       },
       {
@@ -17251,6 +17485,13 @@ export const FALLBACK_NODE_TYPES = [
         "dependsOn": "custom_prompt_enabled",
         "dependsValue": true,
         "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "custom_mode",
+        "label": "自定义模式",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "官方 custom_mode：开启后启用人声性别等续写高级参数"
       },
       {
         "key": "continue_at",
@@ -17345,6 +17586,2095 @@ export const FALLBACK_NODE_TYPES = [
         "max": 3600,
         "colSpan": "half",
         "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_persona",
+    "name": "AI音乐-Persona生成",
+    "category": "music_gen",
+    "description": "为已生成的曲目创建 Persona（歌手人格）：连接上游音乐节点的「Task ID」/ 参数 JSON，同步返回 persona_id，可填入「文生音乐 / 音乐扩展」的高级参数 persona_id 定制音色风格。",
+    "icon": "UserRound",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "persona_id",
+        "label": "Persona ID",
+        "type": "text"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=persona",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "name",
+        "label": "Persona名称",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空自动取提示词前 30 字"
+      },
+      {
+        "key": "style",
+        "label": "补充风格标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "description",
+        "label": "人物描述",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "描述该歌手的音色 / 风格特点（必填）"
+      },
+      {
+        "key": "vocal_start",
+        "label": "分析起点(秒)",
+        "type": "number",
+        "colSpan": "half",
+        "description": "与终点差 10~30 秒"
+      },
+      {
+        "key": "vocal_end",
+        "label": "分析终点(秒)",
+        "type": "number",
+        "colSpan": "half"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_replace_section",
+    "name": "AI音乐-片段替换",
+    "category": "music_gen",
+    "description": "替换歌曲中的片段（10 秒～全曲 50%）：连接上游音乐节点的「Task ID」/ 参数 JSON，或直接连音频文件；需提供完整歌词与替换起止时间。",
+    "icon": "PencilLine",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio",
+        "label": "待替换音频",
+        "type": "audio"
+      },
+      {
+        "id": "text",
+        "label": "替换内容提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=replace_section",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "tags",
+        "label": "风格标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "title",
+        "label": "歌曲标题",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "infill_start_s",
+        "label": "替换起点(秒)",
+        "type": "number",
+        "colSpan": "half"
+      },
+      {
+        "key": "infill_end_s",
+        "label": "替换终点(秒)",
+        "type": "number",
+        "colSpan": "half"
+      },
+      {
+        "key": "full_lyrics",
+        "label": "完整歌词",
+        "type": "textarea",
+        "colSpan": "full",
+        "description": "整首歌词（含修改段落，必填）"
+      },
+      {
+        "key": "section_lyrics",
+        "label": "被替换段歌词",
+        "type": "textarea",
+        "colSpan": "full"
+      },
+      {
+        "key": "negative_tags",
+        "label": "反向标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "vocal_gender",
+        "label": "人声性别",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "m",
+            "label": "男声"
+          },
+          {
+            "value": "f",
+            "label": "女声"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_video",
+    "name": "AI音乐-音乐视频MV",
+    "category": "music_gen",
+    "description": "为已生成的曲目生成音乐可视化 MP4：连接上游音乐节点的「Task ID」/ 参数 JSON。",
+    "icon": "Video",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "video_1",
+        "label": "视频MP4",
+        "type": "video"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=music_video",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "author",
+        "label": "封面署名",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "domain_name",
+        "label": "底部水印文字",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_timestamped",
+    "name": "AI音乐-时间戳歌词",
+    "category": "music_gen",
+    "description": "获取曲目的逐词时间戳歌词（卡拉OK同步）：连接上游音乐节点的「Task ID」/ 参数 JSON，输出对齐 JSON 供字幕工具消费。",
+    "icon": "Captions",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "text",
+        "label": "时间戳歌词JSON",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=timestamped",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_sounds",
+    "name": "AI音乐-音效生成",
+    "category": "music_gen",
+    "description": "生成音效 / 循环环境音（推荐 V6_WILD 模型）。提示词可来自连线文本输入或节点内自定义。",
+    "icon": "Volume2",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词 / 歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600,
+      "sound_key": "Any"
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=sounds",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "sound_loop",
+        "label": "无缝循环",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "grab_lyrics",
+        "label": "抓取歌词字幕",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "sound_tempo",
+        "label": "BPM",
+        "type": "number",
+        "colSpan": "half",
+        "description": "1~300，留空自动"
+      },
+      {
+        "key": "sound_key",
+        "label": "调性",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "Any",
+            "label": "自动"
+          },
+          {
+            "value": "C",
+            "label": "C"
+          },
+          {
+            "value": "C#",
+            "label": "C#"
+          },
+          {
+            "value": "D",
+            "label": "D"
+          },
+          {
+            "value": "D#",
+            "label": "D#"
+          },
+          {
+            "value": "E",
+            "label": "E"
+          },
+          {
+            "value": "F",
+            "label": "F"
+          },
+          {
+            "value": "F#",
+            "label": "F#"
+          },
+          {
+            "value": "G",
+            "label": "G"
+          },
+          {
+            "value": "G#",
+            "label": "G#"
+          },
+          {
+            "value": "A",
+            "label": "A"
+          },
+          {
+            "value": "A#",
+            "label": "A#"
+          },
+          {
+            "value": "B",
+            "label": "B"
+          },
+          {
+            "value": "Cm",
+            "label": "Cm"
+          },
+          {
+            "value": "C#m",
+            "label": "C#m"
+          },
+          {
+            "value": "Dm",
+            "label": "Dm"
+          },
+          {
+            "value": "D#m",
+            "label": "D#m"
+          },
+          {
+            "value": "Em",
+            "label": "Em"
+          },
+          {
+            "value": "Fm",
+            "label": "Fm"
+          },
+          {
+            "value": "F#m",
+            "label": "F#m"
+          },
+          {
+            "value": "Gm",
+            "label": "Gm"
+          },
+          {
+            "value": "G#m",
+            "label": "G#m"
+          },
+          {
+            "value": "Am",
+            "label": "Am"
+          },
+          {
+            "value": "A#m",
+            "label": "A#m"
+          },
+          {
+            "value": "Bm",
+            "label": "Bm"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_mashup",
+    "name": "AI音乐-混音",
+    "category": "music_gen",
+    "description": "把两段音频混音成一首（官方 Mashup）：连接 audio1 + audio2 两个音频输入口（本地文件自动上传）。",
+    "icon": "Merge",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "audio1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "text",
+        "label": "风格/提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600,
+      "duration": "20"
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=mashup",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "style",
+        "label": "混音风格",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "title",
+        "label": "标题",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "colSpan": "half",
+        "description": "10~360，默认 20"
+      },
+      {
+        "key": "vocal_gender",
+        "label": "人声性别",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "m",
+            "label": "男声"
+          },
+          {
+            "value": "f",
+            "label": "女声"
+          }
+        ]
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_boost_style",
+    "name": "AI音乐-风格增强",
+    "category": "music_gen",
+    "description": "改写 / 增强风格描述：输入风格描述（连线文本或节点内自定义），输出增强后的风格文本，可串回「文生音乐」的风格参数。",
+    "icon": "Sparkles",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词 / 歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "text",
+        "label": "增强后风格",
+        "type": "text"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=boost_style",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt_enabled",
+        "label": "使用节点内提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "关闭时使用上游连线的文本输入；开启后优先使用下方「自定义提示词」"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "dependsOn": "custom_prompt_enabled",
+        "dependsValue": true,
+        "placeholder": "输入提示词 / 歌词 / 风格描述（开启「使用节点内提示词」后生效）"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_cover_art",
+    "name": "AI音乐-封面生成",
+    "category": "music_gen",
+    "description": "为已生成的曲目生成 2 张封面图：连接上游音乐节点的「Task ID」/ 参数 JSON。",
+    "icon": "Image",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "image_1",
+        "label": "封面图1",
+        "type": "image"
+      },
+      {
+        "id": "image_2",
+        "label": "封面图2",
+        "type": "image"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=cover_art",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_voice_clone",
+    "name": "AI音乐-Suno音色克隆",
+    "category": "music_gen",
+    "description": "Suno Voice 三步链（免费）：上传人声样本 → 生成验证短语 → 创建音色 → 校验可用性，输出 voice_id（可填入生成/扩展节点的 Persona Model 高级参数）。",
+    "icon": "Mic2",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "audio",
+        "label": "人声样本",
+        "type": "audio"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "voice_id",
+        "label": "Voice ID",
+        "type": "text"
+      },
+      {
+        "id": "is_available",
+        "label": "可用性",
+        "type": "text"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=voice_clone",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "vocal_start_s",
+        "label": "人声起点(秒)",
+        "type": "number",
+        "colSpan": "half"
+      },
+      {
+        "key": "vocal_end_s",
+        "label": "人声终点(秒)",
+        "type": "number",
+        "colSpan": "half"
+      },
+      {
+        "key": "language",
+        "label": "语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "不指定"
+          },
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "hi",
+            "label": "印地语"
+          },
+          {
+            "value": "ru",
+            "label": "俄语"
+          }
+        ]
+      },
+      {
+        "key": "singer_skill_level",
+        "label": "演唱水平",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "beginner",
+            "label": "入门"
+          },
+          {
+            "value": "intermediate",
+            "label": "进阶"
+          },
+          {
+            "value": "advanced",
+            "label": "高级"
+          },
+          {
+            "value": "professional",
+            "label": "专业"
+          }
+        ]
+      },
+      {
+        "key": "voice_name",
+        "label": "音色名称",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "style",
+        "label": "风格标签",
+        "type": "text",
+        "colSpan": "half"
+      },
+      {
+        "key": "description",
+        "label": "音色描述",
+        "type": "textarea",
+        "colSpan": "full"
+      },
+      {
+        "key": "verify_url",
+        "label": "验证录音URL",
+        "type": "text",
+        "colSpan": "full",
+        "description": "用户朗读验证短语的录音；留空则复用人声样本"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_midi",
+    "name": "AI音乐-音频转MIDI",
+    "category": "music_gen",
+    "description": "从「人声分离」任务的 stems 生成 MIDI 音符数据（免费）：连接分离节点的「Task ID」输出，输出音符 JSON（pitch/start/end/velocity）。",
+    "icon": "FileJson",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "text",
+        "label": "MIDI音符JSON",
+        "type": "json"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=midi",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "audio_id",
+        "label": "指定 Stem ID",
+        "type": "text",
+        "colSpan": "half",
+        "description": "留空 = 所有 stems"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "music_recovery",
+    "name": "AI音乐-音频恢复",
+    "category": "music_gen",
+    "description": "恢复历史任务的音频链接（链接过期时使用）：连接原音乐节点的「Task ID」输出。",
+    "icon": "Clock",
+    "color": "#a78bfa",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "json",
+        "label": "上游音乐参数JSON",
+        "type": "json"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "task_id",
+        "label": "Task ID",
+        "type": "text"
+      },
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "custom_prompt_enabled": false,
+      "custom_prompt": "",
+      "poll_timeout": 600
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754",
+        "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/default/models-for-node?mode=recovery",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "poll_timeout",
+        "label": "轮询超时(秒)",
+        "type": "number",
+        "min": 60,
+        "max": 3600,
+        "colSpan": "half",
+        "description": "生成任务最长等待时间，超时视为失败"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "step_music_txt2music",
+    "name": "免费AI音乐-文生音乐",
+    "category": "music_step",
+    "description": "ACE-Step 1.5 标签模式：按提示词描述生成完整歌曲（可选提供歌词，未提供时由 LM 创作）。官方标价 $0 免费；提示词与歌词分开接入，节点自定义输入优先于连线输入。",
+    "icon": "Music",
+    "color": "#22c55e",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      },
+      {
+        "id": "lyrics",
+        "label": "歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "cloud",
+      "custom_prompt": "",
+      "custom_lyrics": "",
+      "lm_optimize": true,
+      "thinking": false,
+      "duration": "30",
+      "audio_format": "mp3",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://acemusic.ai/api-key"
+      },
+      {
+        "key": "btn_download_pack",
+        "label": "下载整合包",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://pan.quark.cn/s/f4b561117d63"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "local",
+            "label": "step-music（本地整合包）"
+          },
+          {
+            "value": "cloud",
+            "label": "免费在线模型（获取key）"
+          }
+        ],
+        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+        "description": "节点自定义输入优先于接入输入"
+      },
+      {
+        "key": "custom_lyrics",
+        "label": "自定义歌词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "支持 [Verse] / [Chorus] 等结构标记；填写后优先于连线输入的歌词",
+        "description": "节点自定义输入优先于接入输入"
+      },
+      {
+        "key": "lm_optimize",
+        "label": "LM优化提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
+      },
+      {
+        "key": "thinking",
+        "label": "LM深度思考",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 600,
+        "colSpan": "half",
+        "description": "10~600 秒，留空由 LM 自动决定"
+      },
+      {
+        "key": "bpm",
+        "label": "曲速 BPM",
+        "type": "number",
+        "min": 30,
+        "max": 300,
+        "colSpan": "half",
+        "description": "30~300，留空自动决定"
+      },
+      {
+        "key": "key_scale",
+        "label": "调性",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：C Major / A Minor",
+        "description": "留空自动决定"
+      },
+      {
+        "key": "vocal_language",
+        "label": "演唱语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          }
+        ],
+        "description": "歌词演唱语言；纯音乐节点忽略"
+      },
+      {
+        "key": "audio_format",
+        "label": "音频格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "wav",
+            "label": "WAV（无损）"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC（无损）"
+          },
+          {
+            "value": "opus",
+            "label": "Opus"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          }
+        ]
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "colSpan": "half",
+        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "step_music_natural",
+    "name": "免费AI音乐-自然语言创作",
+    "category": "music_step",
+    "description": "ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。",
+    "icon": "Sparkles",
+    "color": "#22c55e",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "cloud",
+      "custom_prompt": "",
+      "custom_lyrics": "",
+      "lm_optimize": true,
+      "thinking": false,
+      "duration": "30",
+      "audio_format": "mp3",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://acemusic.ai/api-key"
+      },
+      {
+        "key": "btn_download_pack",
+        "label": "下载整合包",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://pan.quark.cn/s/f4b561117d63"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "local",
+            "label": "step-music（本地整合包）"
+          },
+          {
+            "value": "cloud",
+            "label": "免费在线模型（获取key）"
+          }
+        ],
+        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+        "description": "节点自定义输入优先于接入输入"
+      },
+      {
+        "key": "lm_optimize",
+        "label": "LM优化提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
+      },
+      {
+        "key": "thinking",
+        "label": "LM深度思考",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 600,
+        "colSpan": "half",
+        "description": "10~600 秒，留空由 LM 自动决定"
+      },
+      {
+        "key": "bpm",
+        "label": "曲速 BPM",
+        "type": "number",
+        "min": 30,
+        "max": 300,
+        "colSpan": "half",
+        "description": "30~300，留空自动决定"
+      },
+      {
+        "key": "key_scale",
+        "label": "调性",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：C Major / A Minor",
+        "description": "留空自动决定"
+      },
+      {
+        "key": "vocal_language",
+        "label": "演唱语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          }
+        ],
+        "description": "歌词演唱语言；纯音乐节点忽略"
+      },
+      {
+        "key": "audio_format",
+        "label": "音频格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "wav",
+            "label": "WAV（无损）"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC（无损）"
+          },
+          {
+            "value": "opus",
+            "label": "Opus"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          }
+        ]
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "colSpan": "half",
+        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "step_music_lyrics2music",
+    "name": "免费AI音乐-歌词生音乐",
+    "category": "music_step",
+    "description": "ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。",
+    "icon": "FileText",
+    "color": "#22c55e",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      },
+      {
+        "id": "lyrics",
+        "label": "歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "cloud",
+      "custom_prompt": "",
+      "custom_lyrics": "",
+      "lm_optimize": true,
+      "thinking": false,
+      "duration": "30",
+      "audio_format": "mp3",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://acemusic.ai/api-key"
+      },
+      {
+        "key": "btn_download_pack",
+        "label": "下载整合包",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://pan.quark.cn/s/f4b561117d63"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "local",
+            "label": "step-music（本地整合包）"
+          },
+          {
+            "value": "cloud",
+            "label": "免费在线模型（获取key）"
+          }
+        ],
+        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+        "description": "节点自定义输入优先于接入输入"
+      },
+      {
+        "key": "custom_lyrics",
+        "label": "自定义歌词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "支持 [Verse] / [Chorus] 等结构标记；填写后优先于连线输入的歌词",
+        "description": "节点自定义输入优先于接入输入（本节点歌词必填）"
+      },
+      {
+        "key": "lm_optimize",
+        "label": "LM优化提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
+      },
+      {
+        "key": "thinking",
+        "label": "LM深度思考",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 600,
+        "colSpan": "half",
+        "description": "10~600 秒，留空由 LM 自动决定"
+      },
+      {
+        "key": "bpm",
+        "label": "曲速 BPM",
+        "type": "number",
+        "min": 30,
+        "max": 300,
+        "colSpan": "half",
+        "description": "30~300，留空自动决定"
+      },
+      {
+        "key": "key_scale",
+        "label": "调性",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：C Major / A Minor",
+        "description": "留空自动决定"
+      },
+      {
+        "key": "vocal_language",
+        "label": "演唱语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          }
+        ],
+        "description": "歌词演唱语言；纯音乐节点忽略"
+      },
+      {
+        "key": "audio_format",
+        "label": "音频格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "wav",
+            "label": "WAV（无损）"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC（无损）"
+          },
+          {
+            "value": "opus",
+            "label": "Opus"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          }
+        ]
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "colSpan": "half",
+        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "step_music_instrumental",
+    "name": "免费AI音乐-纯音乐",
+    "category": "music_step",
+    "description": "ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。官方标价 $0 免费；适合视频配乐。",
+    "icon": "Music",
+    "color": "#22c55e",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "model": "cloud",
+      "custom_prompt": "",
+      "custom_lyrics": "",
+      "lm_optimize": true,
+      "thinking": false,
+      "duration": "30",
+      "audio_format": "mp3",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://acemusic.ai/api-key"
+      },
+      {
+        "key": "btn_download_pack",
+        "label": "下载整合包",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://pan.quark.cn/s/f4b561117d63"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "local",
+            "label": "step-music（本地整合包）"
+          },
+          {
+            "value": "cloud",
+            "label": "免费在线模型（获取key）"
+          }
+        ],
+        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+        "description": "节点自定义输入优先于接入输入"
+      },
+      {
+        "key": "lm_optimize",
+        "label": "LM优化提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
+      },
+      {
+        "key": "thinking",
+        "label": "LM深度思考",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 600,
+        "colSpan": "half",
+        "description": "10~600 秒，留空由 LM 自动决定"
+      },
+      {
+        "key": "bpm",
+        "label": "曲速 BPM",
+        "type": "number",
+        "min": 30,
+        "max": 300,
+        "colSpan": "half",
+        "description": "30~300，留空自动决定"
+      },
+      {
+        "key": "key_scale",
+        "label": "调性",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如：C Major / A Minor",
+        "description": "留空自动决定"
+      },
+      {
+        "key": "vocal_language",
+        "label": "演唱语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          }
+        ],
+        "description": "歌词演唱语言；纯音乐节点忽略"
+      },
+      {
+        "key": "audio_format",
+        "label": "音频格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "wav",
+            "label": "WAV（无损）"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC（无损）"
+          },
+          {
+            "value": "opus",
+            "label": "Opus"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          }
+        ]
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "colSpan": "half",
+        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
       }
     ],
     "isBuiltIn": true
@@ -19755,23 +22085,23 @@ export const FALLBACK_NODE_TYPES = [
     ],
     "defaultConfig": {
       "action": "",
-      "compress_mode": "size",
+      "compress_mode": "",
       "size_mb": 100,
       "compress_quality": "中",
       "audio_quality": "中",
       "cut_start": "0",
-      "cut_mode": "end",
+      "cut_mode": "",
       "cut_end": "1:00",
       "cut_length": "30",
       "precise": false,
       "convert_to": "mp4",
       "gif_start": "0",
-      "gif_mode": "length",
+      "gif_mode": "",
       "gif_length": "3",
       "gif_end": "10",
       "gif_width": 480,
       "gif_fps": 12,
-      "snap_mode": "cover",
+      "snap_mode": "",
       "snap_at": "0:10",
       "snap_every": 10,
       "resize_to": "1080P",
@@ -19862,6 +22192,7 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half",
         "dependsOn": "action",
         "dependsValue": "compress",
+        "placeholder": "请选择压缩方式",
         "options": [
           {
             "label": "按大小(如压到100MB)",
@@ -19922,6 +22253,7 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half",
         "dependsOn": "action",
         "dependsValue": "cut",
+        "placeholder": "请选择结束方式",
         "options": [
           {
             "label": "到指定结束时间",
@@ -20020,6 +22352,7 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half",
         "dependsOn": "action",
         "dependsValue": "gif",
+        "placeholder": "请选择结束方式",
         "options": [
           {
             "label": "取一段时长",
@@ -20080,6 +22413,7 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half",
         "dependsOn": "action",
         "dependsValue": "snapshot",
+        "placeholder": "请选择截图方式",
         "options": [
           {
             "label": "封面(默认位置)",

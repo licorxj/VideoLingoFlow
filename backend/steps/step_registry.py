@@ -23,7 +23,7 @@ from backend.steps.s_agi_comic import (
     S_AGI_ShotExport, S_AGI_ChapterExport,
 )
 from backend.steps.s_agi_data import S_AGI_Query, S_AGI_Write, S_AGI_AssetRegister
-from backend.steps.s_agi_desk import S_DeskProject, S_DeskMaterial, S_DeskEdit, S_DeskExport
+from backend.steps.s_agi_desk import S_DeskProject, S_DeskMaterial, S_DeskEdit, S_DeskAiCut, S_DeskExport
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
 from backend.steps.s_asr_result_validate import S_ASRResultValidate
@@ -97,6 +97,8 @@ from backend.steps.s_ai_subtitle_correct import S_AiSubtitleCorrect
 from backend.steps.s_homophone_fix import SHomophoneFix
 from backend.steps.s_text_input import StepTextInput
 from backend.steps.s_file_load import StepFileLoad
+from backend.steps.s_specified_node_package import StepSpecifiedNodePackage
+from backend.steps.s_specified_workflow import StepSpecifiedWorkflow
 from backend.steps.s_media_loader import (
     StepAudioLoader,
     StepImageLoader,
@@ -126,6 +128,11 @@ from backend.steps.s_musicgen import (
     S_MusicTxt2Music, S_MusicInstrumental, S_MusicLyrics, S_MusicExtend,
     S_MusicCover, S_MusicAddInstrumental, S_MusicAddVocals,
     S_MusicSeparate, S_MusicToWav, S_MusicUploadExtend,
+    S_MusicPersona, S_MusicReplaceSection, S_MusicVideo, S_MusicTimestamped,
+    S_MusicSounds, S_MusicMashup, S_MusicBoostStyle, S_MusicCoverArt,
+    S_MusicVoiceClone, S_MusicMidi, S_MusicRecovery,
+    S_StepMusicTxt2Music, S_StepMusicNatural, S_StepMusicLyrics2Music,
+    S_StepMusicInstrumental,
 )
 from backend.steps.s_kie_image_upscale import S_KieImageUpscale
 from backend.steps.s_kie_video_upscale import S_KieVideoUpscale
@@ -257,6 +264,7 @@ _STEPS = {
     "desk_project": S_DeskProject(),
     "desk_material": S_DeskMaterial(),
     "desk_edit": S_DeskEdit(),
+    "desk_ai_cut": S_DeskAiCut(),
     "desk_export": S_DeskExport(),
     "s_video_frame_extract": S_VideoFrameExtract(),
     "video_frame_extract": S_VideoFrameExtract(),
@@ -342,6 +350,10 @@ _STEPS = {
     "text_input": StepTextInput(),
     "s_file_load": StepFileLoad(),
     "file_load": StepFileLoad(),
+    "specified_node_package": StepSpecifiedNodePackage(),
+    "s_specified_node_package": StepSpecifiedNodePackage(),
+    "specified_workflow": StepSpecifiedWorkflow(),
+    "s_specified_workflow": StepSpecifiedWorkflow(),
     "s_video_loader": StepVideoLoader(),
     "video_loader": StepVideoLoader(),
     "s_image_loader": StepImageLoader(),
@@ -422,6 +434,36 @@ _STEPS = {
     "s_music_to_wav": S_MusicToWav(),
     "music_upload_extend": S_MusicUploadExtend(),
     "s_music_upload_extend": S_MusicUploadExtend(),
+    "music_persona": S_MusicPersona(),
+    "s_music_persona": S_MusicPersona(),
+    "music_replace_section": S_MusicReplaceSection(),
+    "s_music_replace_section": S_MusicReplaceSection(),
+    "music_video": S_MusicVideo(),
+    "s_music_video": S_MusicVideo(),
+    "music_timestamped": S_MusicTimestamped(),
+    "s_music_timestamped": S_MusicTimestamped(),
+    "music_sounds": S_MusicSounds(),
+    "s_music_sounds": S_MusicSounds(),
+    "music_mashup": S_MusicMashup(),
+    "s_music_mashup": S_MusicMashup(),
+    "music_boost_style": S_MusicBoostStyle(),
+    "s_music_boost_style": S_MusicBoostStyle(),
+    "music_cover_art": S_MusicCoverArt(),
+    "s_music_cover_art": S_MusicCoverArt(),
+    "music_voice_clone": S_MusicVoiceClone(),
+    "s_music_voice_clone": S_MusicVoiceClone(),
+    "music_midi": S_MusicMidi(),
+    "s_music_midi": S_MusicMidi(),
+    "music_recovery": S_MusicRecovery(),
+    "s_music_recovery": S_MusicRecovery(),
+    "step_music_txt2music": S_StepMusicTxt2Music(),
+    "s_step_music_txt2music": S_StepMusicTxt2Music(),
+    "step_music_natural": S_StepMusicNatural(),
+    "s_step_music_natural": S_StepMusicNatural(),
+    "step_music_lyrics2music": S_StepMusicLyrics2Music(),
+    "s_step_music_lyrics2music": S_StepMusicLyrics2Music(),
+    "step_music_instrumental": S_StepMusicInstrumental(),
+    "s_step_music_instrumental": S_StepMusicInstrumental(),
     # KIE AI 图片高清放大（直接调用 kieai_sdk，置于 AI生成类节点 分组）
     "kie_image_upscale": S_KieImageUpscale(),
     "s_kie_image_upscale": S_KieImageUpscale(),

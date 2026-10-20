@@ -105,6 +105,50 @@ BUILTIN_NODE_TYPES = [
         },
     },
     {
+        "id": "specified_node_package",
+        "name": "指定调用节点包",
+        "execution_domain": "thread",
+        "category": "io",
+        "description": "在卡片上指定要调用的节点（分组 + 节点，可加减任意数量），后端按选择顺序把它们组装成一份「节点调用参考提示词」，从「提示词」端口输出给下游智能体使用（不落盘）。",
+        "icon": "Boxes",
+        "color": "#3b82f6",
+        "inputs": [
+            {"id": "any", "label": "输入", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "prompt", "label": "提示词", "type": "text"},
+        ],
+        "defaultConfig": {
+            "packages": [
+                {"group": "", "node": ""},
+                {"group": "", "node": ""},
+            ],
+        },
+        "configFields": [],
+    },
+    {
+        "id": "specified_workflow",
+        "name": "指定调用工作流",
+        "execution_domain": "thread",
+        "category": "io",
+        "description": "在卡片上指定要调用的工作流（分组 + 工作流，可加减任意数量），后端按选择顺序把它们组装成一份「工作流调用参考提示词」，从「提示词」端口输出给下游智能体使用（不落盘）。",
+        "icon": "Workflow",
+        "color": "#3b82f6",
+        "inputs": [
+            {"id": "any", "label": "输入", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "prompt", "label": "提示词", "type": "text"},
+        ],
+        "defaultConfig": {
+            "workflows": [
+                {"group": "", "workflow": ""},
+                {"group": "", "workflow": ""},
+            ],
+        },
+        "configFields": [],
+    },
+    {
         "id": "image_mask",
         "name": "图片蒙版",
         "execution_domain": "thread",
@@ -1795,7 +1839,7 @@ BUILTIN_NODE_TYPES = [
             {"id": "image", "label": "水印图片", "type": "image"},
         ],
         "outputs": [{"id": "video", "label": "最终视频", "type": "video"}],
-        "defaultConfig": {"enabled": False, "position": "bottom-right", "opacity": 0.5},
+        "defaultConfig": {"enabled": False, "position": "bottom-right", "opacity": 50, "size": 0.2},
         "configFields": [
             {"key": "enabled", "label": "启用水印", "type": "checkbox"},
             {"key": "position", "label": "位置", "type": "select", "options": [
@@ -1805,7 +1849,8 @@ BUILTIN_NODE_TYPES = [
                 {"value": "bottom-right", "label": "右下角"},
                 {"value": "center", "label": "居中"},
             ]},
-            {"key": "opacity", "label": "透明度", "type": "text", "placeholder": "0.5"},
+            {"key": "opacity", "label": "不透明度(%)", "type": "slider", "min": 10, "max": 100, "step": 5, "placeholder": "50", "description": "数字越小越透明，100 为完全不透明；也可填 0~1 的小数（旧流程兼容）"},
+            {"key": "size", "label": "大小(占视频宽度比例)", "type": "slider", "min": 0.05, "max": 1, "step": 0.05, "placeholder": "0.2", "description": "水印宽度占视频宽度的比例(0~1)；后端会据此等比缩放水印图片后再叠加"},
         ],
     },
     {
@@ -4168,7 +4213,7 @@ BUILTIN_NODE_TYPES = [
         "name": "剪辑编排",
         "execution_domain": "process",
         "category": "ai_desk",
-        "description": "AI剪辑链·第3步【编排】：两种模式。ops 模式：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数。ai_script 模式：读出 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交（语义剪辑）。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」",
+        "description": "AI剪辑链·第3步【编排】：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数，精确控制每一步。语义化「一句话剪辑」请用旁边的「AI剪辑」节点。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」或「AI剪辑」",
         "icon": "Wand2",
         "color": "#0ea5e9",
         "inputs": [
@@ -4176,7 +4221,6 @@ BUILTIN_NODE_TYPES = [
             {"id": "asset_ids", "label": "素材ID列表(可选)", "type": "json"},
             {"id": "clip_ids", "label": "片段ID列表(可选)", "type": "json"},
             {"id": "ops", "label": "工具调用ops(可选)", "type": "json"},
-            {"id": "instruction", "label": "AI剪辑指令(可选)", "type": "text"},
         ],
         "outputs": [
             {"id": "project", "label": "剪辑台项目ID", "type": "text"},
@@ -4185,17 +4229,43 @@ BUILTIN_NODE_TYPES = [
             {"id": "plan", "label": "执行摘要", "type": "text"},
         ],
         "defaultConfig": {
-            "project": "", "mode": "ops", "ops": "", "instruction": "",
+            "project": "", "ops": "",
             "dry_run": True, "use_task_output_dir": False, "data_dir": "", "timeout": 1800,
         },
         "configFields": [
             {"key": "project", "label": "剪辑台项目", "type": "api-select", "apiEndpoint": "/api/openchatcut/projects", "optionLabel": "name", "optionValue": "id", "followPort": "project", "colSpan": "full", "description": "目标剪辑台工程；手动输入优先，未填时取连线值"},
-            {"key": "mode", "label": "编排模式", "type": "select", "colSpan": "half", "options": [
-                {"value": "ops", "label": "工具调用（ops 数组）"},
-                {"value": "ai_script", "label": "AI 语义剪辑（timeline.md）"}], "description": "ops：精确控制每一步；ai_script：用自然语言描述改动"},
             {"key": "ops", "label": "ops 工具调用", "type": "desk-ops", "colSpan": "full", "description": "点「+ 添加工具调用」逐条选择工具并填写参数；参数支持引用上游输入（{{input.xxx}}）与上一个工具的结果（{{prev.xxx}}）"},
-            {"key": "instruction", "label": "AI 剪辑指令", "type": "textarea", "colSpan": "full", "placeholder": "例：删掉所有语气词，把第3段移到最前", "description": "仅 ai_script 模式：自然语言描述要做的剪辑改动；手动输入优先，未填时取连线值"},
-            {"key": "dry_run", "label": "仅演练（不落盘）", "type": "switch", "colSpan": "full", "description": "ops 模式：不加 --apply；ai_script 模式：只做到预校验不提交"},
+            {"key": "dry_run", "label": "仅演练（不落盘）", "type": "switch", "colSpan": "full", "description": "开启时不加 --apply，只输出执行计划；确认无误后关闭再正式执行"},
+            {"key": "use_task_output_dir", "label": "使用本任务文件夹", "type": "switch", "colSpan": "full", "description": "勾选后以「本任务目录/output」作为剪辑台数据目录（每次任务数据互相隔离，便于溯源与清理）；不勾选则用剪辑台默认数据目录"},
+            {"key": "data_dir", "label": "剪辑台数据目录", "type": "text", "colSpan": "full", "placeholder": "留空用剪辑台默认位置"},
+            {"key": "timeout", "label": "超时(秒)", "type": "number", "colSpan": "half", "min": 60, "max": 7200, "step": 60},
+        ],
+    },
+    {
+        "id": "desk_ai_cut",
+        "name": "AI剪辑",
+        "execution_domain": "process",
+        "category": "ai_desk",
+        "description": "AI剪辑链·AI 语义剪辑：读取时间线 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交。与「剪辑编排」互补：编排节点精确控制每一步工具调用，本节点面向「一句话说清要什么改动」的语义剪辑。上游：project（新建工程/素材导入/编排）。下游：project →「剪辑台渲染导出」或继续「剪辑编排」",
+        "icon": "Sparkles",
+        "color": "#0ea5e9",
+        "inputs": [
+            {"id": "project", "label": "剪辑台项目ID", "type": "any"},
+            {"id": "instruction", "label": "AI剪辑指令(可选)", "type": "text"},
+        ],
+        "outputs": [
+            {"id": "project", "label": "剪辑台项目ID", "type": "text"},
+            {"id": "result", "label": "执行结果(JSON)", "type": "json"},
+            {"id": "plan", "label": "执行摘要", "type": "text"},
+        ],
+        "defaultConfig": {
+            "project": "", "instruction": "",
+            "dry_run": True, "use_task_output_dir": False, "data_dir": "", "timeout": 1800,
+        },
+        "configFields": [
+            {"key": "project", "label": "剪辑台项目", "type": "api-select", "apiEndpoint": "/api/openchatcut/projects", "optionLabel": "name", "optionValue": "id", "followPort": "project", "colSpan": "full", "description": "目标剪辑台工程；手动输入优先，未填时取连线值"},
+            {"key": "instruction", "label": "AI 剪辑指令", "type": "textarea", "colSpan": "full", "placeholder": "例：删掉所有语气词，把第3段移到最前", "description": "自然语言描述要做的剪辑改动；手动输入优先，未填时取连线值"},
+            {"key": "dry_run", "label": "仅演练（不落盘）", "type": "switch", "colSpan": "full", "description": "开启时只做到预校验不提交，输出编辑差异；确认无误后关闭再正式执行"},
             {"key": "use_task_output_dir", "label": "使用本任务文件夹", "type": "switch", "colSpan": "full", "description": "勾选后以「本任务目录/output」作为剪辑台数据目录（每次任务数据互相隔离，便于溯源与清理）；不勾选则用剪辑台默认数据目录"},
             {"key": "data_dir", "label": "剪辑台数据目录", "type": "text", "colSpan": "full", "placeholder": "留空用剪辑台默认位置"},
             {"key": "timeout", "label": "超时(秒)", "type": "number", "colSpan": "half", "min": 60, "max": 7200, "step": 60},
@@ -4358,7 +4428,7 @@ BUILTIN_NODE_TYPES = [
             {"id": "image", "label": "图片", "type": "image"},
         ],
         "defaultConfig": {
-            "model": "bernini",
+            "model": "sttn",
             "lcwr_base_url": "http://localhost:1120",
             "regions": [],
             "skip_head_sec": 0.0,
@@ -4374,8 +4444,8 @@ BUILTIN_NODE_TYPES = [
                 {"value": "sttn", "label": "STTN（时空张量）"},
                 {"value": "propainter", "label": "ProPainter（高质量）"},
                 {"value": "diffueraser", "label": "DiffuEraser（扩散模型）"},
-                {"value": "bernini", "label": "Bernini（旗舰）"},
-                {"value": "online", "label": "LCWR在线模型"},
+                {"value": "effecterase", "label": "EffectErase（效果消除，CC BY-NC 非商用）"},
+                {"value": "e2fgvi", "label": "E2FGVI（视频补全，CC BY-NC 非商用）"},
             ]},
             {"key": "lcwr_base_url", "label": "LCWR API 地址", "type": "text", "placeholder": "http://localhost:1120"},
             {"key": "aspect_ratio", "label": "视频比例（未接入视频时）", "type": "select", "options": [
@@ -4389,8 +4459,8 @@ BUILTIN_NODE_TYPES = [
             {"key": "skip_head_sec", "label": "片头跳过(秒)", "type": "number", "min": 0, "step": 0.5, "colSpan": "half"},
             {"key": "skip_tail_sec", "label": "片尾跳过(秒)", "type": "number", "min": 0, "step": 0.5, "colSpan": "half"},
             {"key": "skip_tail_mode", "label": "片尾计算方式", "type": "select", "options": [
-                {"value": "from_end", "label": "从末尾向前数"},
-                {"value": "from_head", "label": "从开头向后数"},
+                {"value": "from_end", "label": "从末尾向前数（from_end）"},
+                {"value": "from_start", "label": "从开头向后数（from_start）"},
             ]},
         ],
     },
@@ -5395,17 +5465,62 @@ _DURATION_OPTIONS = [
     {"value": "240", "label": "240 秒"},
 ]
 
+# replace-section / mashup 的官方人声性别枚举（m / f）
+_MF_GENDER_OPTIONS = [
+    {"value": "m", "label": "男声"},
+    {"value": "f", "label": "女声"},
+]
+
+# Suno Voice 语言枚举
+_VOICE_LANG_OPTIONS = [
+    {"value": "", "label": "不指定"},
+    {"value": "en", "label": "英语"}, {"value": "zh", "label": "中文"},
+    {"value": "es", "label": "西班牙语"}, {"value": "fr", "label": "法语"},
+    {"value": "pt", "label": "葡萄牙语"}, {"value": "de", "label": "德语"},
+    {"value": "ja", "label": "日语"}, {"value": "ko", "label": "韩语"},
+    {"value": "hi", "label": "印地语"}, {"value": "ru", "label": "俄语"},
+]
+
+_SINGER_LEVEL_OPTIONS = [
+    {"value": "beginner", "label": "入门"},
+    {"value": "intermediate", "label": "进阶"},
+    {"value": "advanced", "label": "高级"},
+    {"value": "professional", "label": "专业"},
+]
+
+_SOUND_KEY_OPTIONS = [
+    {"value": "Any", "label": "自动"},
+    {"value": "C", "label": "C"}, {"value": "C#", "label": "C#"},
+    {"value": "D", "label": "D"}, {"value": "D#", "label": "D#"},
+    {"value": "E", "label": "E"}, {"value": "F", "label": "F"},
+    {"value": "F#", "label": "F#"}, {"value": "G", "label": "G"},
+    {"value": "G#", "label": "G#"}, {"value": "A", "label": "A"},
+    {"value": "A#", "label": "A#"}, {"value": "B", "label": "B"},
+    {"value": "Cm", "label": "Cm"}, {"value": "C#m", "label": "C#m"},
+    {"value": "Dm", "label": "Dm"}, {"value": "D#m", "label": "D#m"},
+    {"value": "Em", "label": "Em"}, {"value": "Fm", "label": "Fm"},
+    {"value": "F#m", "label": "F#m"}, {"value": "Gm", "label": "Gm"},
+    {"value": "G#m", "label": "G#m"}, {"value": "Am", "label": "Am"},
+    {"value": "A#m", "label": "A#m"}, {"value": "Bm", "label": "Bm"},
+]
+
+
+_MUSIC_KEY_URL = "https://kie.ai?ref=1ef5b0d4df5fc43ae85034755f9bf754"
+
 
 def _music_common_fields(capability: str, extra=None):
-    """音乐节点通用面板：接口 + 模型（模型按能力模式过滤，从接口配置动态获取）。"""
+    """音乐节点通用面板（KieAI/Suno 专用节点）：
+
+    不设「音乐接口」选择（接口由全局默认解析），保留模型下拉（按能力模式过滤），
+    首行提供「获取API key」外链按钮跳转 KIE 官网注册。
+    """
     fields = [
-        {"key": "interface", "label": "音乐接口", "type": "api-select", "colSpan": "half",
-         "apiEndpoint": f"{MUSIC_IFACE_API}/enabled",
-         "optionLabel": "name", "optionValue": "id",
-         "placeholder": "跟随全局默认接口"},
+        {"key": "btn_get_key", "label": "获取API key", "type": "button", "colSpan": "half",
+         "url": _MUSIC_KEY_URL,
+         "description": "前往 KIE 官网注册并获取 API Key（填入【全局设置 → 密钥管理器】，密钥名称 KIEAI_API_KEY）"},
         {"key": "model", "label": "模型", "type": "api-select", "colSpan": "half",
-         "apiEndpoint": f"{MUSIC_IFACE_API}/{{interface}}/models-for-node?mode={capability}",
-         "dependsOn": "interface", "placeholder": "跟随接口默认模型"},
+         "apiEndpoint": f"{MUSIC_IFACE_API}/default/models-for-node?mode={capability}",
+         "placeholder": "跟随接口默认模型"},
     ]
     if extra:
         fields.extend(extra)
@@ -5442,7 +5557,6 @@ def _music_node(node_id, name, description, capability, icon="Music",
     )
 
     default = {
-        "interface": "",
         "model": "",
         "custom_prompt_enabled": False,
         "custom_prompt": "",
@@ -5452,8 +5566,9 @@ def _music_node(node_id, name, description, capability, icon="Music",
         default.update(extra_default)
 
     outs = outputs or [
-        {"id": "audio", "label": "音频", "type": "audio"},
-        {"id": "audios", "label": "音频列表", "type": "json"},
+        {"id": "task_id", "label": "Task ID", "type": "text"},
+        {"id": "audio_1", "label": "音频1", "type": "audio"},
+        {"id": "audio_2", "label": "音频2", "type": "audio"},
         {"id": "params", "label": "生成参数JSON", "type": "json"},
     ]
 
@@ -5479,6 +5594,8 @@ _MUSIC_NODES = [
         "txt2music", icon="Music",
         extra_default={"instrumental": False, "duration": "60"},
         extra_fields=[
+            {"key": "custom_mode", "label": "自定义模式", "type": "toggle", "colSpan": "half",
+             "description": "官方 custom_mode：开启后提示词/歌词严格作为歌词内容，并启用人声性别/时长等高级参数；默认关闭（智能生成）"},
             {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half",
              "placeholder": "如：pop, cinematic, lo-fi"},
             {"key": "title", "label": "歌曲标题", "type": "text", "colSpan": "half"},
@@ -5496,6 +5613,8 @@ _MUSIC_NODES = [
         "instrumental", icon="Music2",
         extra_default={"duration": "60"},
         extra_fields=[
+            {"key": "custom_mode", "label": "自定义模式", "type": "toggle", "colSpan": "half",
+             "description": "官方 custom_mode：开启后启用人声性别/时长等高级参数"},
             {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half",
              "placeholder": "如：piano, ambient, epic"},
             {"key": "title", "label": "曲目标题", "type": "text", "colSpan": "half"},
@@ -5509,6 +5628,7 @@ _MUSIC_NODES = [
         "根据主题描述生成歌词文本（不产出音频）。主题可来自连线文本输入或节点内自定义；输出歌词文本供「文生音乐」等节点使用。",
         "lyrics", icon="ListMusic",
         outputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
             {"id": "text", "label": "歌词文本", "type": "text"},
             {"id": "params", "label": "生成参数JSON", "type": "json"},
         ],
@@ -5519,17 +5639,20 @@ _MUSIC_NODES = [
         ]),
     _music_node(
         "music_extend", "AI音乐-音乐扩展",
-        "对已有曲目做续写扩展：从上游音乐节点的参数 JSON 取 audio_id（也可直接填 audio_id），可指定续写起点与续写提示词。",
+        "对已有曲目做续写扩展：连接上游音乐节点的「Task ID」或「生成参数JSON」获取 audio_id（也可直接填 audio_id），可指定续写起点与续写提示词。",
         "extend", icon="Repeat",
         inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
             {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
             {"id": "text", "label": "续写提示词", "type": "text"},
         ],
         extra_fields=[
             {"key": "audio_id", "label": "音频ID", "type": "text", "colSpan": "half",
-             "description": "留空则自动从上游参数 JSON 中读取 audio_id", "placeholder": "上游传入时留空"},
+             "description": "留空则自动从上游参数 JSON / Task ID 反查 audio_id", "placeholder": "上游传入时留空"},
             {"key": "continue_at", "label": "续写起点(秒)", "type": "number", "min": 0, "colSpan": "half",
              "description": "从原曲的第 N 秒开始续写"},
+            {"key": "custom_mode", "label": "自定义模式", "type": "toggle", "colSpan": "half",
+             "description": "官方 custom_mode：开启后启用人声性别等续写高级参数"},
             {"key": "default_param_flag", "label": "沿用原曲参数", "type": "toggle", "colSpan": "half"},
             {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half"},
             {"key": "title", "label": "歌曲标题", "type": "text", "colSpan": "half"},
@@ -5540,10 +5663,11 @@ _MUSIC_NODES = [
         ]),
     _music_node(
         "music_cover", "AI音乐-翻唱/风格迁移",
-        "上传参考音频并按提示词 / 风格做翻唱或风格迁移。参考音频从连线 audio 输入（本地文件自动上传）。",
+        "上传参考音频并按提示词 / 风格做翻唱或风格迁移。参考音频从连线 audio 输入（本地文件自动上传）；也可连接上游音乐节点的「Task ID」按任务音轨翻唱。",
         "cover", icon="Disc",
         inputs=[
             {"id": "audio", "label": "参考音频", "type": "audio"},
+            {"id": "task_id", "label": "Task ID", "type": "text"},
             {"id": "text", "label": "风格/提示词", "type": "text"},
         ],
         extra_fields=[
@@ -5592,24 +5716,37 @@ _MUSIC_NODES = [
         ]),
     _music_node(
         "music_separate", "AI音乐-人声分离",
-        "对已有曲目做分轨分离（人声 / 伴奏 / 鼓 / 贝斯等）。可接上游音频文件，也可从上游参数 JSON 取 task_id / audio_id。",
+        "对已有曲目做分轨分离。可接上游音乐节点的「Task ID」/ 参数 JSON，也可直接连音频文件上传分离。",
         "separate", icon="Scissors",
         inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
             {"id": "audio", "label": "待分离音频", "type": "audio"},
             {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
         ],
         extra_fields=[
-            {"key": "stem_type", "label": "分离类型", "type": "text", "colSpan": "half",
-             "placeholder": "all / vocals / instrumental / drums / bass",
-             "description": "留空默认 all（分离为人声 + 伴奏）"},
+            {"key": "stem_type", "label": "分离类型", "type": "select", "colSpan": "half",
+             "options": [
+                 {"value": "separate_vocal", "label": "人声 + 伴奏（2轨）"},
+                 {"value": "split_stem", "label": "多轨分离（人声/鼓/贝斯等最多12轨）"},
+                 {"value": "split_stem_advanced", "label": "提取指定音轨（高级）"},
+             ],
+             "description": "留空默认人声 + 伴奏两轨分离"},
+            {"key": "stem_name", "label": "目标音轨名", "type": "text", "colSpan": "half",
+             "placeholder": "如：Lead Vocal / Drum Kit / Bass",
+             "description": "仅「提取指定音轨（高级）」时生效"},
         ]),
     _music_node(
         "music_to_wav", "AI音乐-转WAV",
-        "把已有曲目转换为 WAV 无损格式：从上游音乐节点的参数 JSON 取 task_id / audio_id。",
+        "把已有曲目转换为 WAV 无损格式：连接上游音乐节点的「Task ID」或「生成参数JSON」获取 task_id / audio_id。",
         "to_wav", icon="FileAudio", prompt=False,
-        inputs=[{"id": "json", "label": "上游音乐参数JSON", "type": "json"}],
+        inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+        ],
         outputs=[
-            {"id": "audio", "label": "WAV音频", "type": "audio"},
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "audio_1", "label": "音频1", "type": "audio"},
+            {"id": "audio_2", "label": "音频2", "type": "audio"},
             {"id": "params", "label": "生成参数JSON", "type": "json"},
         ]),
     _music_node(
@@ -5621,6 +5758,8 @@ _MUSIC_NODES = [
             {"id": "text", "label": "续写提示词", "type": "text"},
         ],
         extra_fields=[
+            {"key": "custom_mode", "label": "自定义模式", "type": "toggle", "colSpan": "half",
+             "description": "官方 custom_mode：开启后启用人声性别等续写高级参数"},
             {"key": "continue_at", "label": "续写起点(秒)", "type": "number", "min": 0, "colSpan": "half"},
             {"key": "default_param_flag", "label": "沿用原曲参数", "type": "toggle", "colSpan": "half"},
             {"key": "style", "label": "音乐风格", "type": "text", "colSpan": "half"},
@@ -5630,8 +5769,328 @@ _MUSIC_NODES = [
             {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
              "options": _VOCAL_GENDER_OPTIONS},
         ]),
+    # ── 官方能力补全节点 ──────────────────────────────────────────────────
+    _music_node(
+        "music_persona", "AI音乐-Persona生成",
+        "为已生成的曲目创建 Persona（歌手人格）：连接上游音乐节点的「Task ID」/ 参数 JSON，同步返回 persona_id，可填入「文生音乐 / 音乐扩展」的高级参数 persona_id 定制音色风格。",
+        "persona", icon="UserRound", prompt=False,
+        inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+        ],
+        outputs=[
+            {"id": "persona_id", "label": "Persona ID", "type": "text"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ],
+        extra_fields=[
+            {"key": "name", "label": "Persona名称", "type": "text", "colSpan": "half",
+             "placeholder": "留空自动取提示词前 30 字"},
+            {"key": "style", "label": "补充风格标签", "type": "text", "colSpan": "half"},
+            {"key": "description", "label": "人物描述", "type": "textarea", "colSpan": "full",
+             "placeholder": "描述该歌手的音色 / 风格特点（必填）"},
+            {"key": "vocal_start", "label": "分析起点(秒)", "type": "number", "colSpan": "half",
+             "description": "与终点差 10~30 秒"},
+            {"key": "vocal_end", "label": "分析终点(秒)", "type": "number", "colSpan": "half"},
+        ]),
+    _music_node(
+        "music_replace_section", "AI音乐-片段替换",
+        "替换歌曲中的片段（10 秒～全曲 50%）：连接上游音乐节点的「Task ID」/ 参数 JSON，或直接连音频文件；需提供完整歌词与替换起止时间。",
+        "replace_section", icon="PencilLine",
+        inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "audio", "label": "待替换音频", "type": "audio"},
+            {"id": "text", "label": "替换内容提示词", "type": "text"},
+        ],
+        extra_fields=[
+            {"key": "tags", "label": "风格标签", "type": "text", "colSpan": "half"},
+            {"key": "title", "label": "歌曲标题", "type": "text", "colSpan": "half"},
+            {"key": "infill_start_s", "label": "替换起点(秒)", "type": "number", "colSpan": "half"},
+            {"key": "infill_end_s", "label": "替换终点(秒)", "type": "number", "colSpan": "half"},
+            {"key": "full_lyrics", "label": "完整歌词", "type": "textarea", "colSpan": "full",
+             "description": "整首歌词（含修改段落，必填）"},
+            {"key": "section_lyrics", "label": "被替换段歌词", "type": "textarea", "colSpan": "full"},
+            {"key": "negative_tags", "label": "反向标签", "type": "text", "colSpan": "half"},
+            {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
+             "options": _MF_GENDER_OPTIONS},
+        ]),
+    _music_node(
+        "music_video", "AI音乐-音乐视频MV",
+        "为已生成的曲目生成音乐可视化 MP4：连接上游音乐节点的「Task ID」/ 参数 JSON。",
+        "music_video", icon="Video", prompt=False,
+        inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+        ],
+        outputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "video_1", "label": "视频MP4", "type": "video"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ],
+        extra_fields=[
+            {"key": "author", "label": "封面署名", "type": "text", "colSpan": "half"},
+            {"key": "domain_name", "label": "底部水印文字", "type": "text", "colSpan": "half"},
+        ]),
+    _music_node(
+        "music_timestamped", "AI音乐-时间戳歌词",
+        "获取曲目的逐词时间戳歌词（卡拉OK同步）：连接上游音乐节点的「Task ID」/ 参数 JSON，输出对齐 JSON 供字幕工具消费。",
+        "timestamped", icon="Captions", prompt=False,
+        inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+        ],
+        outputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "text", "label": "时间戳歌词JSON", "type": "json"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ]),
+    _music_node(
+        "music_sounds", "AI音乐-音效生成",
+        "生成音效 / 循环环境音（推荐 V6_WILD 模型）。提示词可来自连线文本输入或节点内自定义。",
+        "sounds", icon="Volume2",
+        extra_default={"sound_key": "Any"},
+        extra_fields=[
+            {"key": "sound_loop", "label": "无缝循环", "type": "toggle", "colSpan": "half"},
+            {"key": "grab_lyrics", "label": "抓取歌词字幕", "type": "toggle", "colSpan": "half"},
+            {"key": "sound_tempo", "label": "BPM", "type": "number", "colSpan": "half",
+             "description": "1~300，留空自动"},
+            {"key": "sound_key", "label": "调性", "type": "select", "colSpan": "half",
+             "options": _SOUND_KEY_OPTIONS},
+        ]),
+    _music_node(
+        "music_mashup", "AI音乐-混音",
+        "把两段音频混音成一首（官方 Mashup）：连接 audio1 + audio2 两个音频输入口（本地文件自动上传）。",
+        "mashup", icon="Merge",
+        inputs=[
+            {"id": "audio1", "label": "音频1", "type": "audio"},
+            {"id": "audio2", "label": "音频2", "type": "audio"},
+            {"id": "text", "label": "风格/提示词", "type": "text"},
+        ],
+        extra_default={"duration": "20"},
+        extra_fields=[
+            {"key": "style", "label": "混音风格", "type": "text", "colSpan": "half"},
+            {"key": "title", "label": "标题", "type": "text", "colSpan": "half"},
+            {"key": "duration", "label": "时长(秒)", "type": "number", "colSpan": "half",
+             "description": "10~360，默认 20"},
+            {"key": "vocal_gender", "label": "人声性别", "type": "select", "colSpan": "half",
+             "options": _MF_GENDER_OPTIONS},
+        ]),
+    _music_node(
+        "music_boost_style", "AI音乐-风格增强",
+        "改写 / 增强风格描述：输入风格描述（连线文本或节点内自定义），输出增强后的风格文本，可串回「文生音乐」的风格参数。",
+        "boost_style", icon="Sparkles",
+        outputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "text", "label": "增强后风格", "type": "text"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ]),
+    _music_node(
+        "music_cover_art", "AI音乐-封面生成",
+        "为已生成的曲目生成 2 张封面图：连接上游音乐节点的「Task ID」/ 参数 JSON。",
+        "cover_art", icon="Image", prompt=False,
+        inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+        ],
+        outputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "image_1", "label": "封面图1", "type": "image"},
+            {"id": "image_2", "label": "封面图2", "type": "image"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ]),
+    _music_node(
+        "music_voice_clone", "AI音乐-Suno音色克隆",
+        "Suno Voice 三步链（免费）：上传人声样本 → 生成验证短语 → 创建音色 → 校验可用性，输出 voice_id（可填入生成/扩展节点的 Persona Model 高级参数）。",
+        "voice_clone", icon="Mic2", prompt=False,
+        inputs=[{"id": "audio", "label": "人声样本", "type": "audio"}],
+        outputs=[
+            {"id": "voice_id", "label": "Voice ID", "type": "text"},
+            {"id": "is_available", "label": "可用性", "type": "text"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ],
+        extra_fields=[
+            {"key": "vocal_start_s", "label": "人声起点(秒)", "type": "number", "colSpan": "half"},
+            {"key": "vocal_end_s", "label": "人声终点(秒)", "type": "number", "colSpan": "half"},
+            {"key": "language", "label": "语言", "type": "select", "colSpan": "half",
+             "options": _VOICE_LANG_OPTIONS},
+            {"key": "singer_skill_level", "label": "演唱水平", "type": "select", "colSpan": "half",
+             "options": _SINGER_LEVEL_OPTIONS},
+            {"key": "voice_name", "label": "音色名称", "type": "text", "colSpan": "half"},
+            {"key": "style", "label": "风格标签", "type": "text", "colSpan": "half"},
+            {"key": "description", "label": "音色描述", "type": "textarea", "colSpan": "full"},
+            {"key": "verify_url", "label": "验证录音URL", "type": "text", "colSpan": "full",
+             "description": "用户朗读验证短语的录音；留空则复用人声样本"},
+        ]),
+    _music_node(
+        "music_midi", "AI音乐-音频转MIDI",
+        "从「人声分离」任务的 stems 生成 MIDI 音符数据（免费）：连接分离节点的「Task ID」输出，输出音符 JSON（pitch/start/end/velocity）。",
+        "midi", icon="FileJson", prompt=False,
+        inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+        ],
+        outputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "text", "label": "MIDI音符JSON", "type": "json"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ],
+        extra_fields=[
+            {"key": "audio_id", "label": "指定 Stem ID", "type": "text", "colSpan": "half",
+             "description": "留空 = 所有 stems"},
+        ]),
+    _music_node(
+        "music_recovery", "AI音乐-音频恢复",
+        "恢复历史任务的音频链接（链接过期时使用）：连接原音乐节点的「Task ID」输出。",
+        "recovery", icon="Clock", prompt=False,
+        inputs=[
+            {"id": "task_id", "label": "Task ID", "type": "text"},
+            {"id": "json", "label": "上游音乐参数JSON", "type": "json"},
+        ]),
 ]
 BUILTIN_NODE_TYPES.extend(_MUSIC_NODES)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 免费 AI音乐 step music（ACE-Step 1.5，MIT 许可 / 官方标价 $0）
+#
+# 独立分组 music_step；请求契约与 KieAI/Suno 本质不同，走独立 SDK 分路
+# （acestep_music 接口 → backend.musicgen.sdk.acestep_music_wrapper，
+#  cloud=OpenRouter 兼容同步 / native=本地整合包轮询）。
+#
+# 节点约定：
+#   · 提示词与歌词分开接入（text / lyrics 两个输入口）
+#   · 节点自定义输入（提示词 / 歌词）直接优先于连线输入
+#   · LM 优化提示词（5Hz LM 思维链增强）作为设置项放在每个节点上
+#   · 模型选择与模型参数（步数 / CFG / 温度等）放在接口 JSON
+#     （backend/config/musicgen_interfaces.json → acestep_music）
+# ─────────────────────────────────────────────────────────────────────────────
+_STEP_MUSIC_IFACE = "acestep_music"
+_STEP_MUSIC_KEY_URL = "https://acemusic.ai/api-key"
+
+_STEP_MUSIC_LANG_OPTIONS = [
+    {"value": "en", "label": "英语"},
+    {"value": "zh", "label": "中文"},
+    {"value": "ja", "label": "日语"},
+    {"value": "ko", "label": "韩语"},
+    {"value": "es", "label": "西班牙语"},
+    {"value": "fr", "label": "法语"},
+    {"value": "de", "label": "德语"},
+    {"value": "pt", "label": "葡萄牙语"},
+]
+
+_STEP_MUSIC_FORMAT_OPTIONS = [
+    {"value": "mp3", "label": "MP3"},
+    {"value": "wav", "label": "WAV（无损）"},
+    {"value": "flac", "label": "FLAC（无损）"},
+    {"value": "opus", "label": "Opus"},
+    {"value": "aac", "label": "AAC"},
+]
+
+# 模型选择两项：本地整合包 / 免费在线模型（值传给 wrapper 决定契约分路）
+_STEP_MUSIC_MODEL_OPTIONS = [
+    {"value": "local", "label": "step-music（本地整合包）"},
+    {"value": "cloud", "label": "免费在线模型（获取key）"},
+]
+
+_STEP_MUSIC_PACK_URL = "https://pan.quark.cn/s/f4b561117d63"
+
+
+def _step_music_node(node_id, name, description, capability, icon="Music",
+                     with_lyrics=True, prompt_required=True):
+    """免费音乐 step music 节点工厂。"""
+    ins = [{"id": "text", "label": "提示词", "type": "text"}]
+    if with_lyrics:
+        ins.append({"id": "lyrics", "label": "歌词", "type": "text"})
+
+    fields = [
+        {"key": "btn_get_key", "label": "获取API key", "type": "button", "colSpan": "half",
+         "url": _STEP_MUSIC_KEY_URL},
+        {"key": "btn_download_pack", "label": "下载整合包", "type": "button", "colSpan": "half",
+         "url": _STEP_MUSIC_PACK_URL},
+        {"key": "model", "label": "模型", "type": "select", "colSpan": "half",
+         "options": _STEP_MUSIC_MODEL_OPTIONS,
+         "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"},
+        {"key": "custom_prompt", "label": "自定义提示词", "type": "textarea", "colSpan": "full",
+         "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+         "description": "节点自定义输入优先于接入输入"},
+    ]
+    if with_lyrics:
+        fields.append(
+            {"key": "custom_lyrics", "label": "自定义歌词", "type": "textarea", "colSpan": "full",
+             "placeholder": "支持 [Verse] / [Chorus] 等结构标记；填写后优先于连线输入的歌词",
+             "description": "节点自定义输入优先于接入输入" + (
+                 "（本节点歌词必填）" if not prompt_required else "")})
+    fields.extend([
+        {"key": "lm_optimize", "label": "LM优化提示词", "type": "toggle", "colSpan": "half",
+         "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词"
+                        "（质量更高、耗时略增）；关闭则按原文生成"},
+        {"key": "thinking", "label": "LM深度思考", "type": "toggle", "colSpan": "half",
+         "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"},
+        {"key": "duration", "label": "时长(秒)", "type": "number", "min": 10, "max": 600,
+         "colSpan": "half", "description": "10~600 秒，留空由 LM 自动决定"},
+        {"key": "bpm", "label": "曲速 BPM", "type": "number", "min": 30, "max": 300,
+         "colSpan": "half", "description": "30~300，留空自动决定"},
+        {"key": "key_scale", "label": "调性", "type": "text", "colSpan": "half",
+         "placeholder": "如：C Major / A Minor", "description": "留空自动决定"},
+        {"key": "vocal_language", "label": "演唱语言", "type": "select", "colSpan": "half",
+         "options": _STEP_MUSIC_LANG_OPTIONS,
+         "description": "歌词演唱语言；纯音乐节点忽略"},
+        {"key": "audio_format", "label": "音频格式", "type": "select", "colSpan": "half",
+         "options": _STEP_MUSIC_FORMAT_OPTIONS},
+        {"key": "seed", "label": "随机种子", "type": "number", "colSpan": "half",
+         "description": "留空随机；固定种子 + 相同参数可复现同一首歌"},
+    ])
+
+    return {
+        "id": node_id,
+        "name": name,
+        "execution_domain": "process",
+        "category": "music_step",
+        "description": description,
+        "icon": icon,
+        "color": "#22c55e",
+        "inputs": ins,
+        "outputs": [
+            {"id": "audio_1", "label": "音频1", "type": "audio"},
+            {"id": "audio_2", "label": "音频2", "type": "audio"},
+            {"id": "params", "label": "生成参数JSON", "type": "json"},
+        ],
+        "defaultConfig": {
+            "model": "cloud",
+            "custom_prompt": "",
+            "custom_lyrics": "",
+            "lm_optimize": True,
+            "thinking": False,
+            "duration": "30",
+            "audio_format": "mp3",
+            "poll_timeout": 900,
+        },
+        "configFields": fields,
+    }
+
+
+_STEP_MUSIC_NODES = [
+    _step_music_node(
+        "step_music_txt2music", "免费AI音乐-文生音乐",
+        "ACE-Step 1.5 标签模式：按提示词描述生成完整歌曲（可选提供歌词，未提供时由 LM 创作）。"
+        "官方标价 $0 免费；提示词与歌词分开接入，节点自定义输入优先于连线输入。",
+        "step_txt2music", icon="Music"),
+    _step_music_node(
+        "step_music_natural", "免费AI音乐-自然语言创作",
+        "ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），"
+        "LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。",
+        "step_natural", icon="Sparkles", with_lyrics=False),
+    _step_music_node(
+        "step_music_lyrics2music", "免费AI音乐-歌词生音乐",
+        "ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），"
+        "支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。",
+        "step_lyrics2music", icon="FileText", prompt_required=False),
+    _step_music_node(
+        "step_music_instrumental", "免费AI音乐-纯音乐",
+        "ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。"
+        "官方标价 $0 免费；适合视频配乐。",
+        "step_instrumental", icon="Music", with_lyrics=False),
+]
+BUILTIN_NODE_TYPES.extend(_STEP_MUSIC_NODES)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

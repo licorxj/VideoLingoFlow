@@ -1,13 +1,14 @@
 """AI剪辑链（OpenChatCut / 剪辑台）节点 —— 分组 ``ai_desk``。
 
-面向**通用剪辑任务**（不限漫剧/AIGC 项目）：四个节点覆盖
-「新建工程 → 素材进场 → 编排剪辑 → 渲染导出」整条链路，全部经官方 ``occ`` CLI
+面向**通用剪辑任务**（不限漫剧/AIGC 项目）：五个节点覆盖
+「新建工程 → 素材进场 → 编排剪辑 / AI 剪辑 → 渲染导出」整条链路，全部经官方 ``occ`` CLI
 无头执行（不需要打开剪辑台页面）。节点之间以 **剪辑台项目 ID** 串联：
 每个节点都有 ``project`` 输入/输出端口，把项目 ID 一路传到底。
 
     desk_project   新建剪辑工程（occ project new，输出新项目 ID）
     desk_material  素材导入 + 上轨（import_asset(s)/import_folder → edit_item adds）
-    desk_edit      剪辑编排（AI 语义剪辑 read_script→LLM→apply_script + ops 批量工具调用）
+    desk_edit      剪辑编排（ops 声明式批量工具调用）
+    desk_ai_cut    AI 剪辑（AI 语义剪辑：read_script → LLM → apply_script）
     desk_export    渲染导出（occ render 无头出片 / export jianying 剪映草稿）
 
 无人值守约束（OpenChatCut 侧设计）：
@@ -386,14 +387,15 @@ class S_DeskMaterial(BaseStep):
 
 
 # --------------------------------------------------------------------------- #
-# 节点 2：剪辑编排（AI 语义剪辑 + ops 批量工具调用）
+# 节点 2：剪辑编排（ops 声明式批量工具调用）
 # --------------------------------------------------------------------------- #
 class S_DeskEdit(BaseStep):
-    """剪辑编排：AI 语义剪辑（read_script → LLM → apply_script）或 ops 批量调用剪辑台工具。
+    """剪辑编排：ops 批量调用剪辑台工具。
 
     ops 是声明式数组，每项 ``{"tool": "<工具名>", "args": {...}}``；参数里可用
     ``{{input.xxx}}`` 引用本节点输入、``{{prev.xxx}}`` 引用上一个 op 的结果，
     从而在一个节点内完成「读时间线 → 找片段 → 改时序 → 加模板」这类串联操作。
+    AI 语义剪辑已剥离为独立节点 ``desk_ai_cut``（AI剪辑）。
     """
 
     step_id = "desk_edit"
@@ -414,13 +416,7 @@ class S_DeskEdit(BaseStep):
         data_dir, timeout = _preflight(cfg, task_dir)
         dry_run = bool(cfg.get("dry_run", True))
 
-        mode = str(cfg.get("mode") or "ops").strip().lower()
-        if mode not in ("ops", "ai_script"):
-            raise RuntimeError(f"不支持的编排模式: {mode}（可选 ops / ai_script）")
-
         step_check_cancel(cancel_callback)
-        if mode == "ai_script":
-            return self._run_ai_script(task_dir, nid, project, data_dir, timeout, dry_run, cfg, inp, callback, cancel_callback)
         return self._run_ops(task_dir, nid, project, data_dir, timeout, dry_run, cfg, inp, callback, cancel_callback)
 
     # ---- ops 模式 ----
@@ -475,11 +471,39 @@ class S_DeskEdit(BaseStep):
             },
         }
 
-    # ---- AI 语义剪辑模式 ----
-    def _run_ai_script(self, task_dir, nid, project, data_dir, timeout, dry_run, cfg, inp, callback, cancel_callback):
+# --------------------------------------------------------------------------- #
+# 节点 3：AI 剪辑（AI 语义剪辑，自「剪辑编排」剥离的独立节点）
+# --------------------------------------------------------------------------- #
+class S_DeskAiCut(BaseStep):
+    """AI 剪辑：读取 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交。
+
+    与「剪辑编排（desk_edit）」的 ops 精确逐步控制互补：本节点面向
+    「一句话说清要什么改动」的语义剪辑场景，由 LLM 直接编辑 timeline.md。
+    """
+
+    step_id = "desk_ai_cut"
+    step_name = "AI剪辑"
+    dependencies = []
+
+    def check_artifact(self, task_dir: str) -> bool:
+        return os.path.isfile(_cache_path(task_dir, _node_id(self), _PREFIX))
+
+    def validate_inputs(self, task_dir: str) -> bool:
+        return True
+
+    def run(self, task_dir: str, callback=None, cancel_callback=None) -> dict:
+        cfg = _cfg(self)
+        inp = _inputs(self)
+        nid = _node_id(self)
+        project = _project_of(cfg, inp)
+        data_dir, timeout = _preflight(cfg, task_dir)
+        dry_run = bool(cfg.get("dry_run", True))
+
         instruction = _first(cfg, inp, "instruction")
         if not instruction:
-            raise RuntimeError("缺少剪辑指令（instruction）：在配置里说明要让剪辑台做什么改动，或连接上游输入")
+            raise RuntimeError("缺少剪辑指令（instruction）：在配置里用自然语言说明要让剪辑台做什么改动，或连接上游输入")
+
+        step_check_cancel(cancel_callback)
 
         if callback:
             callback(10, "读取当前时间线（timeline.md）…")
@@ -528,13 +552,13 @@ class S_DeskEdit(BaseStep):
         if dry_run:
             diff = json.dumps(preview.data, ensure_ascii=False)[:3000] if preview.data else ""
             cache = _write_cache(task_dir, nid, _PREFIX, {
-                "project": project, "dry_run": True, "mode": "ai_script", "preview": diff,
+                "project": project, "dry_run": True, "mode": "ai_cut", "preview": diff,
             })
             if callback:
                 callback(100, "演练完成：校验通过但未写入（关闭 dry_run 后正式提交）")
             return {
                 "artifacts": [cache],
-                "outputs": {"project": project, "result": diff, "last": "", "plan": "read_script → llm edit → apply_script(preview)"},
+                "outputs": {"project": project, "result": diff, "plan": "read_script → llm edit → apply_script(preview)"},
             }
 
         if callback:
@@ -547,7 +571,7 @@ class S_DeskEdit(BaseStep):
         if not applied.ok:
             raise RuntimeError(f"提交剪辑失败：{applied.message}\n提示：{_hint_for(applied.message) or '并发写冲突时重试即可'}")
         cache = _write_cache(task_dir, nid, _PREFIX, {
-            "project": project, "dry_run": False, "mode": "ai_script",
+            "project": project, "dry_run": False, "mode": "ai_cut",
             "result": json.dumps(applied.data, ensure_ascii=False)[:2000],
         })
         if callback:
@@ -557,7 +581,6 @@ class S_DeskEdit(BaseStep):
             "outputs": {
                 "project": project,
                 "result": json.dumps(applied.data, ensure_ascii=False)[:3000],
-                "last": "",
                 "plan": "read_script → llm edit → apply_script(apply)",
             },
         }

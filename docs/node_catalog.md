@@ -1,13 +1,13 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-19 15:35:06  
-> 节点总数：162　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-20 17:21:21  
+> 节点总数：180　（带 `*` 的接口为必填项）
 
 ## 总览
 
 | 分组 | 节点数 |
 |------|-------|
-| 输入输出节点（`io`） | 5 |
+| 输入输出节点（`io`） | 7 |
 | 预览节点（`preview`） | 4 |
 | 音频处理节点（`audio`） | 11 |
 | 视频处理节点（`video`） | 19 |
@@ -25,10 +25,11 @@
 | 工具类节点（`utility`） | 12 |
 | 文件操作类节点（`file`） | 3 |
 | 组合节点（`group_node`） | 3 |
-| ai_desk（`ai_desk`） | 4 |
+| ai_desk（`ai_desk`） | 5 |
 | asset（`asset`） | 9 |
 | hyperframes（`hyperframes`） | 5 |
-| music_gen（`music_gen`） | 10 |
+| music_gen（`music_gen`） | 21 |
+| music_step（`music_step`） | 4 |
 
 ## 节点详情
 
@@ -37,6 +38,8 @@
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
 | 产物文件归档 | `archive_artifacts` | 将上游多个产物文件归档到指定目录，支持复制/剪切、新建子文件夹、重命名与自动序号 | thread | 产物输入(`any`:any) | 归档路径(`output`:any) |
+| 指定调用工作流 | `specified_workflow` | 在卡片上指定要调用的工作流（分组 + 工作流，可加减任意数量），后端按选择顺序把它们组装成一份「工作流调用参考提示词」，从「提示词」端口输出给下游智能体使用（不落盘）。 | thread | 输入(`any`:any) | 提示词(`prompt`:text) |
+| 指定调用节点包 | `specified_node_package` | 在卡片上指定要调用的节点（分组 + 节点，可加减任意数量），后端按选择顺序把它们组装成一份「节点调用参考提示词」，从「提示词」端口输出给下游智能体使用（不落盘）。 | thread | 输入(`any`:any) | 提示词(`prompt`:text) |
 | 文件加载 | `file_load` | 在卡片上选择或输入文件路径，输出该文件的绝对路径（不落盘） | thread | 输入(`any`:any) | 文件路径(`filepath`:any) |
 | 文本输入框 | `text_input` | 提供一个大文本输入框，将其内容作为文本输出给下游（不落盘） | thread | 输入(`any`:any) | 文本(`text`:text) |
 | 输入 | `input` | 导入文件或URL | thread | — | 视频(`video`:video); 音频(`audio`:audio); 字幕(`subtitle`:subtitle); URL(`url`:url); 文件路径(`filepath`:any); 文本(`text`:text); 不需要输入(`no_input`:any) |
@@ -260,9 +263,10 @@
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
+| AI剪辑 | `desk_ai_cut` | AI剪辑链·AI 语义剪辑：读取时间线 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交。与「剪辑编排」互补：编排节点精确控制每一步工具调用，本节点面向「一句话说清要什么改动」的语义剪辑。上游：project（新建工程/素材导入/编排）。下游：project →「剪辑台渲染导出」或继续「剪辑编排」 | process | 剪辑台项目ID(`project`:any); AI剪辑指令(可选)(`instruction`:text) | 剪辑台项目ID(`project`:text); 执行结果(JSON)(`result`:json); 执行摘要(`plan`:text) |
 | 剪辑台渲染导出 | `desk_export` | AI剪辑链·第4步【出片】：把剪辑台工程渲染为成片（occ render，无头出 MP4/WebM/MOV），或导出剪映/CapCut 草稿交给剪映精修；可选把成片登记为创作项目资产。上游：project（串接前面各步）。下游：render 端口 → 归档/发布类节点 | process | 剪辑台项目ID(`project`:any); 创作项目ID(回登资产)(`creation_id`:any); 章节ID(回登资产)(`chapter_id`:any) | 剪辑台项目ID(`project`:text); 导出模式(`mode`:text); 成片/草稿(`render`:video); 演练计划(dry-run)(`plan`:text) |
 | 剪辑素材导入 | `desk_material` | AI剪辑链·第2步【素材进场】：把本地素材（视频/图片/音频，单个/多个/整个目录）导入剪辑台媒体池，并按声明式配置放到时间线轨道上（V1/V2 视频轨、A1/A2 音频轨）。上游：连入上游产物文件路径（单个 path 或多个 paths），或已入库的 asset_ids；同时连入 project。下游：asset_ids / clip_ids / project 端口 →「剪辑编排」 | process | 剪辑台项目ID(`project`:any); 单个素材路径(`path`:filepath); 素材路径(多个)(`paths`:json); 素材目录(整目录导入)(`folder`:text); 已入库素材ID(可选)(`asset_ids`:json) | 剪辑台项目ID(`project`:text); 素材ID列表(`asset_ids`:json); 片段ID列表(`clip_ids`:json); 执行摘要(`plan`:text) |
-| 剪辑编排 | `desk_edit` | AI剪辑链·第3步【编排】：两种模式。ops 模式：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数。ai_script 模式：读出 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交（语义剪辑）。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」 | process | 剪辑台项目ID(`project`:any); 素材ID列表(可选)(`asset_ids`:json); 片段ID列表(可选)(`clip_ids`:json); 工具调用ops(可选)(`ops`:json); AI剪辑指令(可选)(`instruction`:text) | 剪辑台项目ID(`project`:text); 执行结果(JSON)(`result`:json); 最后一步结果(`last`:json); 执行摘要(`plan`:text) |
+| 剪辑编排 | `desk_edit` | AI剪辑链·第3步【编排】：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数，精确控制每一步。语义化「一句话剪辑」请用旁边的「AI剪辑」节点。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」或「AI剪辑」 | process | 剪辑台项目ID(`project`:any); 素材ID列表(可选)(`asset_ids`:json); 片段ID列表(可选)(`clip_ids`:json); 工具调用ops(可选)(`ops`:json) | 剪辑台项目ID(`project`:text); 执行结果(JSON)(`result`:json); 最后一步结果(`last`:json); 执行摘要(`plan`:text) |
 | 新建剪辑工程 | `desk_project` | AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点 | process | 任意输入(`name`:any) | 剪辑台项目ID(`project`:text); 工程名称(`name`:text); 执行摘要(`plan`:text) |
 
 ### asset（`asset`）
@@ -293,13 +297,33 @@
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| AI音乐-上传并扩展 | `music_upload_extend` | 上传本地音频并续写扩展：参考音频从连线 audio 输入，可指定续写起点与提示词。 | process | 本地音频(`audio`:audio); 续写提示词(`text`:text) | 音频(`audio`:audio); 音频列表(`audios`:json); 生成参数JSON(`params`:json) |
-| AI音乐-人声分离 | `music_separate` | 对已有曲目做分轨分离（人声 / 伴奏 / 鼓 / 贝斯等）。可接上游音频文件，也可从上游参数 JSON 取 task_id / audio_id。 | process | 提示词 / 歌词(`text`:text); 待分离音频(`audio`:audio); 上游音乐参数JSON(`json`:json) | 音频(`audio`:audio); 音频列表(`audios`:json); 生成参数JSON(`params`:json) |
-| AI音乐-文生音乐 | `music_txt2music` | 根据提示词 / 歌词生成完整歌曲（含人声）。提示词可来自连线文本输入或节点内自定义；产物为音频。 | process | 提示词 / 歌词(`text`:text) | 音频(`audio`:audio); 音频列表(`audios`:json); 生成参数JSON(`params`:json) |
-| AI音乐-歌词生成 | `music_lyrics` | 根据主题描述生成歌词文本（不产出音频）。主题可来自连线文本输入或节点内自定义；输出歌词文本供「文生音乐」等节点使用。 | process | 提示词 / 歌词(`text`:text) | 歌词文本(`text`:text); 生成参数JSON(`params`:json) |
-| AI音乐-添加人声 | `music_add_vocals` | 为伴奏 /  instrumental 轨道添加人声：上传音频并提供歌词或演唱提示词。 | process | 伴奏音频(`audio`:audio); 歌词/演唱提示(`text`:text) | 音频(`audio`:audio); 音频列表(`audios`:json); 生成参数JSON(`params`:json) |
-| AI音乐-添加伴奏 | `music_add_instrumental` | 为人声 / 干声轨道添加伴奏：上传音频后生成带伴奏的完整曲目。 | process | 人声音频(`audio`:audio); 标题/标签(`text`:text) | 音频(`audio`:audio); 音频列表(`audios`:json); 生成参数JSON(`params`:json) |
-| AI音乐-纯音乐 | `music_instrumental` | 根据风格描述生成无人声的纯音乐 / 伴奏。提示词可来自连线文本输入或节点内自定义。 | process | 提示词 / 歌词(`text`:text) | 音频(`audio`:audio); 音频列表(`audios`:json); 生成参数JSON(`params`:json) |
-| AI音乐-翻唱/风格迁移 | `music_cover` | 上传参考音频并按提示词 / 风格做翻唱或风格迁移。参考音频从连线 audio 输入（本地文件自动上传）。 | process | 参考音频(`audio`:audio); 风格/提示词(`text`:text) | 音频(`audio`:audio); 音频列表(`audios`:json); 生成参数JSON(`params`:json) |
-| AI音乐-转WAV | `music_to_wav` | 把已有曲目转换为 WAV 无损格式：从上游音乐节点的参数 JSON 取 task_id / audio_id。 | process | 上游音乐参数JSON(`json`:json) | WAV音频(`audio`:audio); 生成参数JSON(`params`:json) |
-| AI音乐-音乐扩展 | `music_extend` | 对已有曲目做续写扩展：从上游音乐节点的参数 JSON 取 audio_id（也可直接填 audio_id），可指定续写起点与续写提示词。 | process | 上游音乐参数JSON(`json`:json); 续写提示词(`text`:text) | 音频(`audio`:audio); 音频列表(`audios`:json); 生成参数JSON(`params`:json) |
+| AI音乐-Persona生成 | `music_persona` | 为已生成的曲目创建 Persona（歌手人格）：连接上游音乐节点的「Task ID」/ 参数 JSON，同步返回 persona_id，可填入「文生音乐 / 音乐扩展」的高级参数 persona_id 定制音色风格。 | process | Task ID(`task_id`:text); 上游音乐参数JSON(`json`:json) | Persona ID(`persona_id`:text); 生成参数JSON(`params`:json) |
+| AI音乐-Suno音色克隆 | `music_voice_clone` | Suno Voice 三步链（免费）：上传人声样本 → 生成验证短语 → 创建音色 → 校验可用性，输出 voice_id（可填入生成/扩展节点的 Persona Model 高级参数）。 | process | 人声样本(`audio`:audio) | Voice ID(`voice_id`:text); 可用性(`is_available`:text); 生成参数JSON(`params`:json) |
+| AI音乐-上传并扩展 | `music_upload_extend` | 上传本地音频并续写扩展：参考音频从连线 audio 输入，可指定续写起点与提示词。 | process | 本地音频(`audio`:audio); 续写提示词(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-人声分离 | `music_separate` | 对已有曲目做分轨分离。可接上游音乐节点的「Task ID」/ 参数 JSON，也可直接连音频文件上传分离。 | process | 提示词 / 歌词(`text`:text); Task ID(`task_id`:text); 待分离音频(`audio`:audio); 上游音乐参数JSON(`json`:json) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-封面生成 | `music_cover_art` | 为已生成的曲目生成 2 张封面图：连接上游音乐节点的「Task ID」/ 参数 JSON。 | process | Task ID(`task_id`:text); 上游音乐参数JSON(`json`:json) | Task ID(`task_id`:text); 封面图1(`image_1`:image); 封面图2(`image_2`:image); 生成参数JSON(`params`:json) |
+| AI音乐-文生音乐 | `music_txt2music` | 根据提示词 / 歌词生成完整歌曲（含人声）。提示词可来自连线文本输入或节点内自定义；产物为音频。 | process | 提示词 / 歌词(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-时间戳歌词 | `music_timestamped` | 获取曲目的逐词时间戳歌词（卡拉OK同步）：连接上游音乐节点的「Task ID」/ 参数 JSON，输出对齐 JSON 供字幕工具消费。 | process | Task ID(`task_id`:text); 上游音乐参数JSON(`json`:json) | Task ID(`task_id`:text); 时间戳歌词JSON(`text`:json); 生成参数JSON(`params`:json) |
+| AI音乐-歌词生成 | `music_lyrics` | 根据主题描述生成歌词文本（不产出音频）。主题可来自连线文本输入或节点内自定义；输出歌词文本供「文生音乐」等节点使用。 | process | 提示词 / 歌词(`text`:text) | Task ID(`task_id`:text); 歌词文本(`text`:text); 生成参数JSON(`params`:json) |
+| AI音乐-混音 | `music_mashup` | 把两段音频混音成一首（官方 Mashup）：连接 audio1 + audio2 两个音频输入口（本地文件自动上传）。 | process | 音频1(`audio1`:audio); 音频2(`audio2`:audio); 风格/提示词(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-添加人声 | `music_add_vocals` | 为伴奏 /  instrumental 轨道添加人声：上传音频并提供歌词或演唱提示词。 | process | 伴奏音频(`audio`:audio); 歌词/演唱提示(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-添加伴奏 | `music_add_instrumental` | 为人声 / 干声轨道添加伴奏：上传音频后生成带伴奏的完整曲目。 | process | 人声音频(`audio`:audio); 标题/标签(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-片段替换 | `music_replace_section` | 替换歌曲中的片段（10 秒～全曲 50%）：连接上游音乐节点的「Task ID」/ 参数 JSON，或直接连音频文件；需提供完整歌词与替换起止时间。 | process | Task ID(`task_id`:text); 待替换音频(`audio`:audio); 替换内容提示词(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-纯音乐 | `music_instrumental` | 根据风格描述生成无人声的纯音乐 / 伴奏。提示词可来自连线文本输入或节点内自定义。 | process | 提示词 / 歌词(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-翻唱/风格迁移 | `music_cover` | 上传参考音频并按提示词 / 风格做翻唱或风格迁移。参考音频从连线 audio 输入（本地文件自动上传）；也可连接上游音乐节点的「Task ID」按任务音轨翻唱。 | process | 参考音频(`audio`:audio); Task ID(`task_id`:text); 风格/提示词(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-转WAV | `music_to_wav` | 把已有曲目转换为 WAV 无损格式：连接上游音乐节点的「Task ID」或「生成参数JSON」获取 task_id / audio_id。 | process | Task ID(`task_id`:text); 上游音乐参数JSON(`json`:json) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-音乐扩展 | `music_extend` | 对已有曲目做续写扩展：连接上游音乐节点的「Task ID」或「生成参数JSON」获取 audio_id（也可直接填 audio_id），可指定续写起点与续写提示词。 | process | Task ID(`task_id`:text); 上游音乐参数JSON(`json`:json); 续写提示词(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-音乐视频MV | `music_video` | 为已生成的曲目生成音乐可视化 MP4：连接上游音乐节点的「Task ID」/ 参数 JSON。 | process | Task ID(`task_id`:text); 上游音乐参数JSON(`json`:json) | Task ID(`task_id`:text); 视频MP4(`video_1`:video); 生成参数JSON(`params`:json) |
+| AI音乐-音效生成 | `music_sounds` | 生成音效 / 循环环境音（推荐 V6_WILD 模型）。提示词可来自连线文本输入或节点内自定义。 | process | 提示词 / 歌词(`text`:text) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-音频恢复 | `music_recovery` | 恢复历史任务的音频链接（链接过期时使用）：连接原音乐节点的「Task ID」输出。 | process | Task ID(`task_id`:text); 上游音乐参数JSON(`json`:json) | Task ID(`task_id`:text); 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| AI音乐-音频转MIDI | `music_midi` | 从「人声分离」任务的 stems 生成 MIDI 音符数据（免费）：连接分离节点的「Task ID」输出，输出音符 JSON（pitch/start/end/velocity）。 | process | Task ID(`task_id`:text); 上游音乐参数JSON(`json`:json) | Task ID(`task_id`:text); MIDI音符JSON(`text`:json); 生成参数JSON(`params`:json) |
+| AI音乐-风格增强 | `music_boost_style` | 改写 / 增强风格描述：输入风格描述（连线文本或节点内自定义），输出增强后的风格文本，可串回「文生音乐」的风格参数。 | process | 提示词 / 歌词(`text`:text) | Task ID(`task_id`:text); 增强后风格(`text`:text); 生成参数JSON(`params`:json) |
+
+### music_step（`music_step`）
+
+| 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
+|------|----|------|-------|---------|---------|
+| 免费AI音乐-文生音乐 | `step_music_txt2music` | ACE-Step 1.5 标签模式：按提示词描述生成完整歌曲（可选提供歌词，未提供时由 LM 创作）。官方标价 $0 免费；提示词与歌词分开接入，节点自定义输入优先于连线输入。 | process | 提示词(`text`:text); 歌词(`lyrics`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| 免费AI音乐-歌词生音乐 | `step_music_lyrics2music` | ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。 | process | 提示词(`text`:text); 歌词(`lyrics`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| 免费AI音乐-纯音乐 | `step_music_instrumental` | ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。官方标价 $0 免费；适合视频配乐。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| 免费AI音乐-自然语言创作 | `step_music_natural` | ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
