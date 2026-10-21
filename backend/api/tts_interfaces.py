@@ -103,7 +103,8 @@ async def list_enabled(mode: str = ""):
     modes = [m.strip() for m in (mode or "").split(",") if m.strip()]
     if modes:
         interfaces = [i for i in interfaces if any(m in infer_tts_interface_modes(i) for m in modes)]
-    return {"interfaces": interfaces}
+    # get_enabled() 已解析 secret:// 为明文密钥，下发前必须脱敏（与 GET / 、GET /{id} 一致）
+    return {"interfaces": mask_deep(interfaces)}
 
 
 @router.get("/by-mode/{mode}")
@@ -112,7 +113,7 @@ async def list_by_mode(mode: str):
     mgr = get_tts_interface_manager()
     enabled = mgr.get_enabled()
     filtered = [i for i in enabled if mode in infer_tts_interface_modes(i)]
-    return {"interfaces": filtered, "mode": mode}
+    return {"interfaces": mask_deep(filtered), "mode": mode}
 
 
 @router.get("/{iface_id}")

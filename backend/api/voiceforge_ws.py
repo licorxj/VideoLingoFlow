@@ -127,9 +127,9 @@ def project_snapshot(project_id: str) -> dict:
         queued = stat.get("queued", 0)
         error = stat.get("error", 0)
 
-        # 当前在途合成任务（任务泵口径：running + 已投递排队），用于 ETA 与并发展示
+        # 当前在途合成任务（任务泵口径：running + 已投递排队；句子合成与情绪片段合成统一计数），用于 ETA 与并发展示
         in_flight = conn.execute(
-            "SELECT COUNT(*) AS c FROM vf_tasks WHERE task_type='synthesize_sentence' "
+            "SELECT COUNT(*) AS c FROM vf_tasks WHERE task_type IN ('synthesize_sentence', 'synthesize_voice_emotion') "
             "AND (status='running' OR (status='queued' AND dispatched=1))"
         ).fetchone()["c"]
 

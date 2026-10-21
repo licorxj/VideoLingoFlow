@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Loader2, Play, RefreshCw, Save, Sparkles, Trash2, UserRound, Volume2 } from "lucide-react";
 import { VoiceForgeCapability, VoiceForgeEmotionTag, VoiceForgeVoice, voiceForgeApi } from "@/api/voiceforge";
+import { fillEmotionSuggestions, friendlyValidationMessage } from "@/components/voiceforge/emotionFill";
 import { getWebSocketUrl } from "@/api/ws";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ const activeStatuses = new Set(["queued", "running"]);
 function messageOf(error: any, fallback: string) {
   const detail = error?.response?.data?.detail;
   if (typeof detail === "string") return detail;
-  if (Array.isArray(detail)) return detail.map((item) => typeof item === "string" ? item : item?.msg || "请求参数无效").join("；") || fallback;
+  if (Array.isArray(detail)) return detail.map((item) => friendlyValidationMessage(item, "请求参数无效")).join("；") || fallback;
   return error?.message || fallback;
 }
 
@@ -90,8 +91,8 @@ export function BatchEmotionDesignDialog({ voices, open, onOpenChange, onSaved }
       const state = states[voice.id];
       if (!state?.items.length) return;
       try {
-        const result = await voiceForgeApi.fillVoiceEmotions(voice.id, { emotions: state.items.map((item) => item.emotion), character_background: background, interface_id: interfaceId });
-        const suggestions = result.data.tasks || [];
+        // 分块请求：单个音色情绪数超过 20 时自动拆块，避免触发后端单次上限
+        const suggestions = await fillEmotionSuggestions(voice.id, state.items.map((item) => item.emotion), background, interfaceId);
         setStates((current) => ({ ...current, [voice.id]: { ...current[voice.id], items: current[voice.id].items.map((item) => { const suggestion = suggestions.find((candidate) => candidate.emotion === item.emotion); return suggestion ? { ...item, text: suggestion.text, instruct: suggestion.instruct } : item; }) } }));
       } catch (err: any) {
         setStates((current) => ({ ...current, [voice.id]: { ...current[voice.id], status: "error", error: messageOf(err, "AI 填充失败") } }));

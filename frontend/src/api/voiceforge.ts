@@ -251,7 +251,7 @@ export const voiceForgeApi = {
   previewVoice: (data: Record<string, unknown>) => client.post("/api/voiceforge/voices/preview", data),
   previewVoiceBatch: (data: Record<string, unknown>) => client.post("/api/voiceforge/voices/preview-batch", data),
   cleanupVoicePreviews: (storageKeys: string[]) => client.post("/api/voiceforge/voices/preview-cleanup", { storage_keys: storageKeys }),
-  aiFillVoiceParams: (data: { intent: string; language: string; gender: string; age: string; pitch_label: string; dialect: string }) => client.post("/api/voiceforge/voices/ai-fill-params", data),
+  aiFillVoiceParams: (data: { intent: string; language: string; gender: string; age: string; pitch_label: string; dialect: string }) => client.post("/api/voiceforge/voices/ai-fill-params", data, { timeout: 180000 }),
   voicePreviewUrl: (storageKey: string) => `/api/voiceforge/voices/preview-file?storage_key=${encodeURIComponent(storageKey)}`,
   voiceFileUrl: (voiceId: string, storageKey: string) => `/api/voiceforge/voices/${voiceId}/file?storage_key=${encodeURIComponent(storageKey)}`,
   emotionTags: () => client.get("/api/voiceforge/emotion-tags"),

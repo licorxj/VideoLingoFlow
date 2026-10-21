@@ -304,7 +304,7 @@ export function VoiceForgeSettingsPanel() {
               <Brain className="h-4 w-4 text-primary" />配音谷各 AI 能力的模型与温度
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              留空表示继承默认模型（当前：{defaultModel || "未设置"}）。模型名称对应大模型路由器中的策略名或自定义模型名。
+              留空表示继承默认模型（当前：{defaultModel || "未设置"}）。使用大模型路由器时需填写路由器中的「策略名」（如 vlf-01）；直接填写模型名仅在使用自定义 LLM 接口（未走路由器）时有效。
             </p>
           </div>
 

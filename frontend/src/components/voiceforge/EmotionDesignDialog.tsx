@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 import { Check, Loader2, Play, RefreshCw, Save, Sparkles, Trash2 } from "lucide-react";
 import { VoiceForgeCapability, VoiceForgeEmotionTag, VoiceForgeEmotionTask, VoiceForgeVoice, voiceForgeApi } from "@/api/voiceforge";
+import { fillEmotionSuggestions, friendlyValidationMessage } from "@/components/voiceforge/emotionFill";
 import { getWebSocketUrl } from "@/api/ws";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,7 @@ function getErrorMessage(error: any, fallback: string) {
       if (typeof item === "string") return item;
       if (item && typeof item === "object") {
         const field = Array.isArray(item.loc) ? item.loc.filter((value: unknown) => value !== "body").join(".") : "";
-        return field ? `${field}：${item.msg || "参数无效"}` : item.msg || "请求参数无效";
+        return field ? `${field}：${friendlyValidationMessage(item, "参数无效")}` : friendlyValidationMessage(item, "请求参数无效");
       }
       return "请求参数无效";
     }).filter(Boolean);
@@ -123,8 +124,8 @@ export function EmotionDesignDialog({ voice, open, onOpenChange, onSaved }: { vo
     setBusy("fill");
     setError("");
     try {
-      const result = await voiceForgeApi.fillVoiceEmotions(voice.id, { emotions: selected, character_background: background, interface_id: interfaceId });
-      const suggestions = result.data.tasks;
+      // 分块请求：全选 36 个情绪时自动拆成多块，避免超过后端单次 20 个上限
+      const suggestions = await fillEmotionSuggestions(voice.id, selected, background, interfaceId);
       setItems((current) => current.map((item) => {
         const suggestion = suggestions.find((candidate) => candidate.emotion === item.emotion);
         return suggestion ? { ...item, text: suggestion.text, instruct: suggestion.instruct, interfaceId } : item;

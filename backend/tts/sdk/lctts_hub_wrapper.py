@@ -1,6 +1,6 @@
 """LCTTS 管家 本地 API 封装（sdk 型 TTS 接口）。
 
-调用 LCTTS 管家（统一 TTS API 管家 / LcTTS Hub）的本地 HTTP 服务（默认端口 5199）：
+调用 LCTTS 管家（统一 TTS API 管家 / LcTTS Hub）的本地 HTTP 服务（默认端口 5190）：
 
     POST /api/tts?model=<引擎名>                    统一合成入口（参数原样透传引擎）
     GET  /api/hub/engines/{model}/params            拉取该引擎支持的参数表与端点模板
@@ -18,7 +18,7 @@ audio8 / auk 等）。管家会自动拉起 / 复用目标引擎进程（含首�
   - 原生语速（引擎参数含 ``speed`` 时生效，否则忽略）
 
 请求体字段名与引擎 API 完全一致（经管家原样透传），与项目 TTS 工厂的请求参数解耦。
-管家即接口，无额外认证；本封装默认连接本机 127.0.0.1:5199。
+管家即接口，无额外认证；本封装默认连接本机 127.0.0.1:5190。
 """
 import json
 import logging
@@ -30,7 +30,7 @@ from backend.tts.tts_interface_manager import finalize_tts_output
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_API_URL = "http://127.0.0.1:5199"
+DEFAULT_API_URL = "http://127.0.0.1:5190"
 DEFAULT_MODEL = "voxcpm"
 DEFAULT_POLL_INTERVAL = 2.0
 

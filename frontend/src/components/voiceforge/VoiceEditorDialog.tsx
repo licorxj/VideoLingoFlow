@@ -39,6 +39,25 @@ const ages = ["儿童", "少年", "青年", "中年", "老年"];
 const pitches = ["极低", "低", "中", "高", "极高"];
 const dialects = ["普通话", "东北话", "北京话", "天津话", "河北话", "山东话", "河南话", "陕西话", "山西话", "甘肃话", "宁夏话", "青海话", "新疆话", "四川话", "重庆话", "贵州话", "云南话", "湖南话", "湖北话", "江西话", "安徽话", "江苏话", "上海话", "吴语", "浙江话", "福建话", "闽南话", "粤语", "客家话", "广西话", "桂林话", "潮汕话", "海南话", "台湾腔", "港式普通话"];
 
+// AI 填充失败时提取可读原因：后端 detail（含 502 真实异常）> 校验数组 > 网络/超时信息
+function aiFillErrorMessage(error: any, fallback: string) {
+  const detail = error?.response?.data?.detail;
+  if (typeof detail === "string" && detail) return detail;
+  if (Array.isArray(detail)) {
+    const messages = detail.map((item: any) => {
+      if (typeof item === "string") return item;
+      if (item && typeof item === "object") {
+        const field = Array.isArray(item.loc) ? item.loc.filter((value: unknown) => value !== "body").join(".") : "";
+        return field ? `${field}：${item.msg || "参数无效"}` : item.msg || "请求参数无效";
+      }
+      return "请求参数无效";
+    }).filter(Boolean);
+    if (messages.length) return messages.join("；");
+  }
+  if (typeof error?.message === "string" && error.message) return error.message;
+  return fallback;
+}
+
 export function VoiceEditorDialog({ open, voice, initialMode = "preset_voice", capabilities, onOpenChange, onSaved }: { open: boolean; voice?: VoiceForgeVoice | null; initialMode?: string; capabilities: VoiceForgeCapability[]; onOpenChange: (open: boolean) => void; onSaved: () => void }) {
   const [name, setName] = useState("");
   const [interfaceId, setInterfaceId] = useState("");
@@ -137,7 +156,7 @@ export function VoiceEditorDialog({ open, voice, initialMode = "preset_voice", c
       setText(suggestion.preview_text);
       setAiIntentOpen(false);
     } catch (err: any) {
-      setError(err?.response?.data?.detail || "AI 参数填充失败");
+      setError(aiFillErrorMessage(err, "AI 参数填充失败"));
     } finally {
       setAiBusy(false);
     }
@@ -263,7 +282,7 @@ export function VoiceEditorDialog({ open, voice, initialMode = "preset_voice", c
     <Dialog open={aiIntentOpen} onOpenChange={setAiIntentOpen}>
       <DialogContent className="max-w-lg">
         <DialogHeader><DialogTitle>AI 填充音色参数</DialogTitle><DialogDescription>描述角色的性格、职业、音色气质或使用场景。已选择的声音属性将作为固定条件。</DialogDescription></DialogHeader>
-        <textarea value={aiIntent} onChange={(event) => setAiIntent(event.target.value)} className="voice-input min-h-32 resize-none" placeholder="例如：一位冷静专业的女性法制节目主持人，表达清晰、有亲和力..." />
+        <textarea value={aiIntent} onChange={(event) => setAiIntent(event.target.value)} maxLength={1000} className="voice-input min-h-32 resize-none" placeholder="例如：一位冷静专业的女性法制节目主持人，表达清晰、有亲和力..." />
         <DialogFooter><Button variant="outline" onClick={() => setAiIntentOpen(false)}>取消</Button><Button onClick={fillWithAi} disabled={aiBusy || !aiIntent.trim()}>{aiBusy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}生成并填充</Button></DialogFooter>
       </DialogContent>
     </Dialog>

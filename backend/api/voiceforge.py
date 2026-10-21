@@ -339,16 +339,20 @@ _VOICE_AI_ALLOWED_FIELDS = {"name", "description", "design_text", "preview_text"
 
 
 def _voice_ai_result(value):
+    # 数据格式解耦：LLM 偶尔会把单个结果对象包在列表里返回，取首个对象
+    if isinstance(value, list) and len(value) == 1 and isinstance(value[0], dict):
+        value = value[0]
     if not isinstance(value, dict):
-        raise HTTPException(502, "LLM 未返回有效的音色参数")
+        raise HTTPException(502, "LLM 未返回有效的音色参数（返回内容不是 JSON 对象）")
     result = {}
     limits = {"name": 100, "description": 100, "design_text": 2000, "preview_text": 300}
     for field in _VOICE_AI_ALLOWED_FIELDS:
         item = value.get(field, "")
         if isinstance(item, str):
             result[field] = item.strip()[:limits[field]]
-    if not all(result.get(field) for field in _VOICE_AI_ALLOWED_FIELDS):
-        raise HTTPException(502, "LLM 返回的音色参数不完整")
+    missing = [field for field in _VOICE_AI_ALLOWED_FIELDS if not result.get(field)]
+    if missing:
+        raise HTTPException(502, f"LLM 返回的音色参数缺少字段：{', '.join(sorted(missing))}")
     return result
 
 
@@ -371,35 +375,48 @@ class VoiceEmotionTaskInput(BaseModel):
     interface_id: str = Field(min_length=1, max_length=100)
 
 
+# 情绪片段批量上限：预设情绪标签共 36 个，全选场景需覆盖填充/生成/保存整条链路
+EMOTION_BATCH_LIMIT = 50
+
+
 class VoiceEmotionLlmFillRequest(BaseModel):
-    emotions: list[str] = Field(min_length=1, max_length=20)
+    emotions: list[str] = Field(min_length=1, max_length=EMOTION_BATCH_LIMIT)
     character_background: str = Field(default="", max_length=1000)
     interface_id: str = Field(min_length=1, max_length=100)
 
 
 class VoiceEmotionGenerateRequest(BaseModel):
-    tasks: list[VoiceEmotionTaskInput] = Field(min_length=1, max_length=20)
+    tasks: list[VoiceEmotionTaskInput] = Field(min_length=1, max_length=EMOTION_BATCH_LIMIT)
 
 
 class VoiceEmotionSaveRequest(BaseModel):
-    task_ids: list[str] = Field(min_length=1, max_length=20)
+    task_ids: list[str] = Field(min_length=1, max_length=EMOTION_BATCH_LIMIT)
 
 
 def _emotion_suggestions(value, requested):
-    if not isinstance(value, dict) or not isinstance(value.get("tasks"), list):
-        raise HTTPException(502, "LLM 未返回有效的情绪设计结果")
+    # 数据格式解耦：LLM 偶尔直接返回任务列表而非 {"tasks": [...]}，两种形态都接受
+    tasks = value.get("tasks") if isinstance(value, dict) else value
+    if not isinstance(tasks, list):
+        raise HTTPException(502, "LLM 未返回有效的情绪设计结果（返回内容缺少 tasks 数组）")
     requested_set = set(requested)
     result = []
-    for item in value["tasks"]:
+    returned = []
+    for item in tasks:
         if not isinstance(item, dict):
             continue
         emotion = item.get("emotion", "").strip() if isinstance(item.get("emotion"), str) else ""
         text = item.get("text", "").strip() if isinstance(item.get("text"), str) else ""
         instruct = item.get("instruct", "").strip() if isinstance(item.get("instruct"), str) else ""
+        if emotion:
+            returned.append(emotion)
         if emotion in requested_set and text and instruct:
             result.append({"emotion": emotion[:50], "text": text[:500], "instruct": instruct[:1000]})
     if not result:
-        raise HTTPException(502, "LLM 未生成可用的情绪设计结果")
+        detail = (
+            f"LLM 未生成可用的情绪设计结果（请求情绪：{', '.join(requested)[:200]}；"
+            f"实际返回：{', '.join(returned[:20])[:200] or '无'}）"
+        )
+        raise HTTPException(502, detail)
     return result
 
 
@@ -1330,6 +1347,7 @@ def generate_voice_emotions(voice_id: str, data: VoiceEmotionGenerateRequest):
     with session() as conn:
         _one(conn, "SELECT id FROM vf_voices WHERE id = ?", (voice_id,), "音色不存在")
     entries = []
+    created_any = False
     for item in data.tasks:
         _emotion_interface(item.interface_id)
         payload = {"voice_id": voice_id, **item.model_dump()}
@@ -1344,8 +1362,11 @@ def generate_voice_emotions(voice_id: str, data: VoiceEmotionGenerateRequest):
                 entries.append({"task_id": task_id, "emotion": item.emotion, "reused": True})
                 continue
             task_id, _ = create_task(None, "synthesize_voice_emotion", payload, idempotency_key=f"{base_key}:{uuid.uuid4().hex}", voice_id=voice_id)
-        dispatch_task(task_id, "voice")
         entries.append({"task_id": task_id, "emotion": item.emotion})
+        created_any = True
+    if created_any:
+        # 由任务泵按并发上限投递（与句子合成共享额度），避免瞬时打满 TTS 接口
+        pump_pending_tasks()
     return {"tasks": entries, "queue_mode": queue_mode()}
 
 
@@ -1461,7 +1482,8 @@ def ai_fill_voice_params(data: VoiceAiFillRequest):
     except HTTPException:
         raise
     except Exception as exc:
-        raise HTTPException(502, "LLM 音色参数生成暂不可用") from exc
+        # 保留真实原因（超时/路由策略缺失/解析失败等），便于前端直接定位
+        raise HTTPException(502, f"LLM 音色参数生成暂不可用：{exc}") from exc
 
 
 def _generate_voice_preview(data: VoicePreviewRequest):

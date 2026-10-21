@@ -2,10 +2,11 @@
 import json
 import logging
 import os
+import re
 from typing import Callable, Dict, List, Optional, Tuple
 
 from backend.config.config_manager import config
-from backend.steps.base_step import BaseStep, find_artifact
+from backend.steps.base_step import BaseStep, find_artifact, step_check_cancel
 
 logger = logging.getLogger(__name__)
 
@@ -102,64 +103,124 @@ class S08DubTask(BaseStep):
             })
         return entries, False
 
+    @staticmethod
+    def _locate_file(value: str, task_dir: str) -> Optional[str]:
+        """定位字符串对应的文件：先按绝对路径，再按相对 task_dir 解析。"""
+        if not value:
+            return None
+        if os.path.isabs(value) and os.path.isfile(value):
+            return value
+        if task_dir:
+            rel = os.path.join(task_dir, value)
+            if os.path.isfile(rel):
+                return rel
+        return None
+
+    @staticmethod
+    def _looks_like_subtitle(content: str) -> bool:
+        """启发式判断文本是否为字幕：含 ``-->`` 且带形如 00:00:01,000 的时间轴。
+
+        用于识别无扩展名或扩展名不可靠的字幕文件/内联字幕内容，
+        避免它们被当成纯文本按行拆句而丢失时间戳。
+        """
+        sample = (content or "")[:4000]
+        if "-->" not in sample:
+            return False
+        return bool(re.search(r"\d{1,3}:\d{2}(?::\d{2})?\s*[,.]", sample))
+
     @classmethod
-    def _resolve_input(cls, task_dir: str, step_inputs: Optional[Dict] = None) -> Tuple[List[Dict], bool]:
+    def _resolve_payload(cls, value, task_dir: str) -> Tuple[List[Dict], bool]:
+        """把「文件路径 / 字幕文本 / JSON 字符串 / 内存 JSON」统一解析为句子条目。
+
+        判定顺序：
+        1. dict / list：按上游 JSON 结构解析
+        2. 命中文件（.json → JSON；.srt/.vtt 或内容形如字幕 → 保留时间戳；其余按纯文本）
+        3. 非文件：先看是否内联字幕，再尝试 JSON，最后当纯文本按行拆句
+
+        返回 ``(entries, bilingual)``；无法解析出内容时返回 ``([], False)``。
+        """
+        if isinstance(value, (dict, list)):
+            return cls._load_entries_from_json(value)
+        if not isinstance(value, str) or not value.strip():
+            return [], False
+
+        v = value.strip()
+        path = cls._locate_file(v, task_dir)
+        if path:
+            lower = path.lower()
+            if lower.endswith(".json"):
+                with open(path, "r", encoding="utf-8") as f:
+                    return cls._load_entries_from_json(json.load(f))
+            with open(path, "r", encoding="utf-8") as f:
+                content = f.read()
+            # 字幕文件：保留时间戳，双语时上行原文、下行译文
+            if lower.endswith((".srt", ".vtt")) or cls._looks_like_subtitle(content):
+                bilingual = cls._detect_bilingual_srt(content)
+                entries = cls._parse_srt(content, bilingual)
+                if entries:
+                    return entries, bilingual
+            return cls._load_entries_from_text(content)
+
+        # 非文件输入：内联字幕内容 / 内联 JSON / 纯文本
+        if cls._looks_like_subtitle(v):
+            bilingual = cls._detect_bilingual_srt(v)
+            entries = cls._parse_srt(v, bilingual)
+            if entries:
+                return entries, bilingual
+        try:
+            data = json.loads(v)
+        except json.JSONDecodeError:
+            return cls._load_entries_from_text(v)
+        return cls._load_entries_from_json(data)
+
+    @classmethod
+    def _resolve_input(
+        cls,
+        task_dir: str,
+        step_inputs: Optional[Dict] = None,
+        node_cfg: Optional[Dict] = None,
+    ) -> Tuple[List[Dict], bool]:
         """Resolve upstream input into sentence entries.
 
-        输入类型判断：
-        - json 带时间戳的翻译文件 → 走原始处理模式
-        - srt 字幕文件 → 解析时间戳
-        - 文本文件（txt/md 等）→ 按换行拆分为多条句子，时间戳填 null
+        输入优先级（SRT 字幕优先，保证时间戳不丢）：
+        1. ``srt_file`` 连线端口 / 卡片 ``srt_path`` 配置：SRT 或 VTT 字幕
+        2. ``subtitle`` / ``text`` 连线端口：句子时间戳 JSON，也兼容 SRT 路径或字幕内容
+        3. ``text_file`` 连线端口：纯文本文件
+        4. 上游缓存兜底：subtitle_aligned.json → sentences+translation → sentences.json
         """
         step_inputs = step_inputs or {}
+        node_cfg = node_cfg or {}
         cache_dir = os.path.join(task_dir, "cache")
 
-        subtitle_input = step_inputs.get("subtitle") or step_inputs.get("text")
-        # 内存数据（dict / list）直接解析（兼容 ASR / 翻译结果 JSON）
-        if isinstance(subtitle_input, (dict, list)):
-            return cls._load_entries_from_json(subtitle_input)
-        if isinstance(subtitle_input, str) and subtitle_input.strip():
-            v = subtitle_input.strip()
-            # 文件路径（绝对或相对 task_dir）
-            candidates = []
-            if os.path.isabs(v) and os.path.isfile(v):
-                candidates.append(v)
-            rel = os.path.join(task_dir, v)
-            if os.path.isfile(rel):
-                candidates.append(rel)
-            if candidates:
-                p = candidates[0]
-                lower = p.lower()
-                if lower.endswith(".json"):
-                    with open(p, "r", encoding="utf-8") as f:
-                        return cls._load_entries_from_json(json.load(f))
-                if lower.endswith(".srt"):
-                    with open(p, "r", encoding="utf-8") as f:
-                        srt_content = f.read()
-                        is_bilingual = cls._detect_bilingual_srt(srt_content)
-                        return cls._parse_srt(srt_content, is_bilingual), is_bilingual
-                # 文本类文件：按换行拆句，时间戳填 null
-                with open(p, "r", encoding="utf-8") as f:
-                    return cls._load_entries_from_text(f.read())
-            # 内联 JSON 文本
-            try:
-                data = json.loads(v)
-            except json.JSONDecodeError:
-                # 视为纯文本内容
-                return cls._load_entries_from_text(v)
-            return cls._load_entries_from_json(data)
+        # 1) SRT 字幕：连线端口优先于卡片配置
+        for source, raw in (
+            ("srt_file", step_inputs.get("srt_file")),
+            ("srt_path", node_cfg.get("srt_path")),
+        ):
+            if not raw:
+                continue
+            entries, bilingual = cls._resolve_payload(raw, task_dir)
+            if entries:
+                logger.info(
+                    "[DubTask] 使用 SRT 字幕输入(%s): %d 条, 双语=%s", source, len(entries), bilingual
+                )
+                return entries, bilingual
 
+        # 2) 句子时间戳 JSON（兼容 ASR/翻译结果，也兼容 SRT 路径）
+        subtitle_input = step_inputs.get("subtitle") or step_inputs.get("text")
+        if subtitle_input:
+            entries, bilingual = cls._resolve_payload(subtitle_input, task_dir)
+            if entries:
+                return entries, bilingual
+
+        # 3) 文本文件端口
         text_file_input = step_inputs.get("text_file")
         if text_file_input:
-            # 连线注入的路径可能是相对路径（相对 task_dir），需拼接到任务目录再判断
-            if not os.path.isabs(text_file_input):
-                text_file_input = os.path.join(task_dir, text_file_input)
-            if os.path.exists(text_file_input):
-                with open(text_file_input, "r", encoding="utf-8") as f:
-                    return cls._load_entries_from_text(f.read())
-            # 也可能直接传入文本内容
-            return cls._load_entries_from_text(text_file_input)
+            entries, bilingual = cls._resolve_payload(text_file_input, task_dir)
+            if entries:
+                return entries, bilingual
 
+        # 4) 上游缓存兜底
         aligned_path = os.path.join(cache_dir, "subtitle_aligned.json")
         if os.path.exists(aligned_path):
             with open(aligned_path, "r", encoding="utf-8") as f:
@@ -184,65 +245,148 @@ class S08DubTask(BaseStep):
             with open(sentences_path, "r", encoding="utf-8") as f:
                 return cls._load_entries_from_json(json.load(f))
 
+        # 5) 最后兜底：字幕生成步骤产出的 SRT（双语自动识别）
+        srt_path = find_artifact(cache_dir, "subtitles.srt")
+        if srt_path:
+            with open(srt_path, "r", encoding="utf-8") as f:
+                srt_content = f.read()
+            bilingual = cls._detect_bilingual_srt(srt_content)
+            entries = cls._parse_srt(srt_content, bilingual)
+            if entries:
+                logger.info("[DubTask] 回退使用字幕产物 %s: %d 条", srt_path, len(entries))
+                return entries, bilingual
+
         return [], False
 
     @staticmethod
-    def _parse_srt(srt_content: str, is_bilingual: bool = False) -> List[Dict]:
-        """Parse SRT content into entries.
-        
-        Args:
-            srt_content: SRT file content
-            is_bilingual: If True, treat as bilingual subtitle (2nd line is translation)
+    def _srt_ts_to_seconds(value: str) -> float:
+        """把 SRT/VTT 时间戳转为秒。
+
+        支持 ``HH:MM:SS,mmm``（SRT 逗号）、``HH:MM:SS.mmm``（VTT 句点）
+        以及省略小时的 ``MM:SS,mmm``；格式非法时抛 ValueError。
         """
-        entries = []
-        for block in srt_content.strip().split("\n\n"):
-            lines = block.strip().split("\n")
-            if len(lines) < 3:
-                continue
-            ts = lines[1]
-            start_s, end_s = ts.split(" --> ")
-
-            def parse_t(value):
-                value = value.strip().replace(",", ".")
-                parts = value.split(":")
-                return int(parts[0]) * 3600 + int(parts[1]) * 60 + float(parts[2])
-
-            text_lines = lines[2:]
-            entry = {
-                "start": parse_t(start_s),
-                "end": parse_t(end_s),
-                "speaker": 0,
-            }
-            
-            if is_bilingual and len(text_lines) >= 2:
-                # Bilingual subtitle: first line is original, second line is translation
-                entry["text"] = text_lines[0].strip()
-                entry["translated"] = text_lines[1].strip()
-            else:
-                # Single language subtitle
-                entry["text"] = "\n".join(text_lines).strip()
-            
-            entries.append(entry)
-        return entries
+        v = str(value or "").strip().replace(",", ".")
+        if not v:
+            raise ValueError("empty timestamp")
+        parts = v.split(":")
+        if len(parts) == 3:
+            hours, minutes, seconds = parts
+        elif len(parts) == 2:
+            hours, minutes, seconds = "0", parts[0], parts[1]
+        else:
+            raise ValueError(f"invalid timestamp: {value!r}")
+        return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
     @staticmethod
-    def _detect_bilingual_srt(srt_content: str) -> bool:
-        """Detect if SRT content is bilingual subtitle (has 2 lines of text per block)."""
-        blocks = srt_content.strip().split("\n\n")
+    def _iter_subtitle_blocks(content: str):
+        """把字幕文本切分为块，并去掉空块。
+
+        统一 CRLF/CR 为 LF，使 Windows 保存的字幕与 Linux 一致；
+        以一个或多个空行作为块分隔。
+        """
+        text = (content or "").replace("\r\n", "\n").replace("\r", "\n")
+        for block in re.split(r"\n{2,}", text.strip()):
+            lines = block.split("\n")
+            # 去掉块首尾空行，但保留中间空行（双语字幕的多行文本依赖行序）
+            while lines and not lines[0].strip():
+                lines.pop(0)
+            while lines and not lines[-1].strip():
+                lines.pop()
+            if lines:
+                yield lines
+
+    @classmethod
+    def _parse_srt(cls, srt_content: str, is_bilingual: bool = False) -> List[Dict]:
+        """Parse SRT/VTT content into entries.
+
+        兼容以下常见变体，避免单条脏数据导致整体解析失败：
+        - CRLF / CR 换行
+        - 缺失或带序号的块（序号行通过 ``-->`` 定位自动跳过）
+        - VTT 的 ``WEBVTT`` 头、``NOTE``/``STYLE``/``REGION`` 块与时间轴定位参数
+        - 仅 ``MM:SS,mmm`` 两段式时间戳
+
+        Args:
+            srt_content:字幕文本内容（SRT 或 VTT）
+            is_bilingual: 若为 True，则每块两行文本视为双语（上行原文、下行译文）
+        """
+        entries: List[Dict] = []
+        skipped = 0
+        for lines in cls._iter_subtitle_blocks(srt_content):
+            head = lines[0].strip()
+            # 跳过 VTT 头部与元数据块
+            if head.upper().startswith(("WEBVTT", "NOTE", "STYLE", "REGION")):
+                continue
+
+            # 定位时间戳行：序号行是否存在都能正确处理
+            ts_index = -1
+            for i, line in enumerate(lines):
+                if "-->" in line:
+                    ts_index = i
+                    break
+            if ts_index < 0:
+                skipped += 1
+                continue
+
+            start_raw, _, end_raw = lines[ts_index].partition("-->")
+            # VTT 时间戳尾部可能带 align:start position:0% 之类的定位参数
+            end_token = end_raw.strip().split()
+            if not end_token:
+                skipped += 1
+                continue
+            try:
+                start = cls._srt_ts_to_seconds(start_raw)
+                end = cls._srt_ts_to_seconds(end_token[0])
+            except (ValueError, TypeError):
+                skipped += 1
+                continue
+
+            text_lines = [line.strip() for line in lines[ts_index + 1:] if line.strip()]
+            if not text_lines:
+                skipped += 1
+                continue
+
+            entry = {
+                "start": round(start, 4),
+                "end": round(end, 4),
+                "speaker": 0,
+            }
+            if is_bilingual and len(text_lines) >= 2:
+                # 双语字幕：上行原文，下行译文作为朗读文本
+                entry["text"] = text_lines[0]
+                entry["translated"] = text_lines[1]
+            else:
+                entry["text"] = "\n".join(text_lines)
+
+            entries.append(entry)
+
+        if skipped:
+            logger.warning("[DubTask] SRT 解析跳过 %d 个无效字幕块", skipped)
+        return entries
+
+    @classmethod
+    def _detect_bilingual_srt(cls, srt_content: str) -> bool:
+        """检测字幕是否为双语（多数块含 2 行及以上文本）。
+
+        只抽样前 5 个有效块，降低个别块换行差异带来的误判。
+        """
+        blocks = [
+            lines for lines in cls._iter_subtitle_blocks(srt_content)
+            if not lines[0].strip().upper().startswith(("WEBVTT", "NOTE", "STYLE", "REGION"))
+        ]
         if not blocks:
             return False
-        
-        # Check first few blocks to determine if bilingual
+
+        sample = blocks[:5]
         bilingual_count = 0
-        check_count = min(5, len(blocks))
-        
-        for block in blocks[:check_count]:
-            lines = block.strip().split("\n")
-            if len(lines) >= 4:  # index + timestamp + 2 text lines
+        for lines in sample:
+            ts_index = next((i for i, line in enumerate(lines) if "-->" in line), -1)
+            if ts_index < 0:
+                continue
+            if len([line for line in lines[ts_index + 1:] if line.strip()]) >= 2:
                 bilingual_count += 1
-        
-        # If majority of checked blocks have 2+ text lines, consider bilingual
-        return bilingual_count > check_count * 0.5
+
+        # 过半样本块为多行文本才判定为双语
+        return bilingual_count > len(sample) * 0.5
 
     @staticmethod
     def _safe_language_code(value: str) -> str:
@@ -769,27 +913,30 @@ class S08DubTask(BaseStep):
             "options": options,
         }
 
-    def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
+    def run(self, task_dir: str, callback: Optional[Callable] = None,
+            cancel_callback: Optional[Callable] = None) -> dict:
         if callback:
-            callback(10, "解析上游句子时间戳 JSON...")
+            callback(10, "解析上游句子/字幕输入...")
 
         step_inputs = getattr(self, "_step_inputs", {}) or {}
-        entries, is_bilingual = self._resolve_input(task_dir, step_inputs)
+        node_cfg = getattr(self, "_node_config", {}) or {}
+        entries, is_bilingual = self._resolve_input(task_dir, step_inputs, node_cfg)
 
         if not entries:
+            # 兜底：字幕生成步骤产出的 SRT（双语自动识别）
             srt_path = find_artifact(os.path.join(task_dir, "cache"), "subtitles.srt")
             if srt_path and os.path.exists(srt_path):
                 with open(srt_path, "r", encoding="utf-8") as f:
-                    entries = self._parse_srt(f.read())
-                is_bilingual = False
+                    srt_content = f.read()
+                is_bilingual = self._detect_bilingual_srt(srt_content)
+                entries = self._parse_srt(srt_content, is_bilingual)
 
         if not entries:
-            raise RuntimeError("未找到有效的句子时间戳输入数据")
+            raise RuntimeError("未找到有效的句子时间戳/字幕输入数据")
 
         if callback:
             callback(25, f"解析到 {len(entries)} 条数据（{'双语' if is_bilingual else '单语'}）")
 
-        node_cfg = getattr(self, "_node_config", {}) or {}
         # 执行前单句时长检测：任意单句时长小于阈值(秒)直接报错，阈值可由前端配置(默认0.2)
         min_dur_cfg = node_cfg.get("min_sentence_duration")
         try:
@@ -836,6 +983,8 @@ class S08DubTask(BaseStep):
         if enable_speed_reduce:
             if callback:
                 callback(72, "语速预测：估算各句 TTS 朗读时长...")
+            # 72→100 之间是语速预测 LLM 批量（可数分钟），callback 间隙补取消检查点
+            step_check_cancel(cancel_callback)
             try:
                 speed_reduce_stats = self._apply_speed_predict_reduction(
                     segments, read_language, node_cfg, callback
@@ -896,9 +1045,18 @@ class S08DubTask(BaseStep):
 
     def validate_inputs(self, task_dir: str) -> bool:
         cache = os.path.join(task_dir, "cache")
-        # 连线注入的输入（句子时间戳 JSON 或文本文件）也可作为入口
+        # 连线注入的输入（SRT 字幕端口 / 句子时间戳 JSON / 文本文件）也可作为入口
         step_inputs = getattr(self, "_step_inputs", {}) or {}
-        if step_inputs.get("subtitle") or step_inputs.get("text") or step_inputs.get("text_file"):
+        if (
+            step_inputs.get("srt_file")
+            or step_inputs.get("subtitle")
+            or step_inputs.get("text")
+            or step_inputs.get("text_file")
+        ):
+            return True
+        # 卡片上直接指定的 SRT/VTT 字幕文件
+        node_cfg = getattr(self, "_node_config", {}) or {}
+        if str(node_cfg.get("srt_path") or "").strip():
             return True
         return bool(
             find_artifact(cache, "subtitle_aligned.json")

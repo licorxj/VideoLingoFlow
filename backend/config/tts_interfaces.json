@@ -504,7 +504,7 @@
           },
           {
             "key": "inference_timesteps",
-            "default": "6",
+            "default": "7",
             "description": "LocDiT 流匹配迭代步数，默认10"
           },
           {
@@ -1103,7 +1103,7 @@
           "auk"
         ],
         "sdk_extra_args": {
-          "api_url": "http://127.0.0.1:5199",
+          "api_url": "http://127.0.0.1:5190",
           "poll_interval": 2
         },
         "custom_params": [

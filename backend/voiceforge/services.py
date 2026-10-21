@@ -74,10 +74,18 @@ def bump_task_retry(task_id: str):
         pass
 
 
-def pump_pending_tasks(limit: int | None = None) -> int:
-    """按并发上限把排队的句子合成任务投递出去。
+# 受并发上限约束的合成任务类型 → Celery 队列名（句子合成与情绪片段合成统一额度）
+_SYNTHESIS_TASK_QUEUES = {
+    "synthesize_sentence": "synthesis",
+    "synthesize_voice_emotion": "voice",
+}
 
-    - 在途数 = running + 已投递但未开始（queued 且 dispatched=1）
+
+def pump_pending_tasks(limit: int | None = None) -> int:
+    """按并发上限把排队的合成任务投递出去。
+
+    - 在途数 = running + 已投递但未开始（queued 且 dispatched=1），
+      句子合成与情绪片段合成统一计数、共享 voiceforge.synthesis.concurrency 额度
     - 优先 Celery；Worker 不可用时由调用方降级到本地线程池
     - 任何异常都不应影响调用方（任务完成回调），因此全部吞掉
     """
@@ -86,23 +94,27 @@ def pump_pending_tasks(limit: int | None = None) -> int:
         from backend.voiceforge.task_defaults import synthesis_concurrency
 
         cap = limit or synthesis_concurrency()
+        task_types = tuple(_SYNTHESIS_TASK_QUEUES)
+        placeholders = ",".join("?" for _ in task_types)
         with session() as conn:
             inflight = conn.execute(
-                "SELECT COUNT(*) AS total FROM vf_tasks WHERE task_type = 'synthesize_sentence' "
-                "AND (status = 'running' OR (status = 'queued' AND dispatched = 1))"
+                f"SELECT COUNT(*) AS total FROM vf_tasks WHERE task_type IN ({placeholders}) "
+                "AND (status = 'running' OR (status = 'queued' AND dispatched = 1))",
+                task_types,
             ).fetchone()["total"]
             room = cap - int(inflight or 0)
             if room <= 0:
                 return 0
             rows = conn.execute(
-                "SELECT id FROM vf_tasks WHERE task_type = 'synthesize_sentence' AND status = 'queued' "
+                f"SELECT id, task_type FROM vf_tasks WHERE task_type IN ({placeholders}) AND status = 'queued' "
                 "AND IFNULL(dispatched, 0) = 0 ORDER BY created_at LIMIT ?",
-                (room,),
+                (*task_types, room),
             ).fetchall()
         started = 0
         for row in rows:
             try:
-                if dispatch_task(row["id"], "synthesis"):
+                queue = _SYNTHESIS_TASK_QUEUES.get(row["task_type"], "synthesis")
+                if dispatch_task(row["id"], queue):
                     started += 1
             except Exception:
                 continue
@@ -453,7 +465,11 @@ def synthesize_voice_emotion(voice_id: str, emotion: str, text: str, instruct: s
         with session() as conn:
             task = conn.execute("SELECT status FROM vf_tasks WHERE id = ?", (task_id,)).fetchone()
             voice = conn.execute("SELECT * FROM vf_voices WHERE id = ?", (voice_id,)).fetchone()
-        if not task or task["status"] == "cancelled" or not voice:
+        if not task or task["status"] == "cancelled":
+            return
+        if not voice:
+            # 音色已被删除：必须收敛任务状态，否则会永久占用合成并发额度（与句子合成一致）
+            update_task(task_id, "failed", 1, error_message="音色不存在，情绪合成任务已终止")
             return
         data = dict(voice)
         params = json.loads(data.get("params_json") or "{}")
