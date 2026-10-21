@@ -18,6 +18,10 @@ LCWR_DOWNLOAD_URL = "https://qinmuzhifang.feishu.cn/wiki/IkBVwfe72iEVLTkhVQ0cW0m
 DEFAULT_BASE_URL = "http://localhost:1120"
 VIDEO_EXTS = {".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", ".wmv", ".ts", ".m4v"}
 IMAGE_EXTS = {".png", ".jpg", ".jpeg", ".webp", ".bmp", ".gif"}
+# LCWR V2.0（app4）以 engine.config.InpaintMode 为真源，仅这 6 个模型合法；
+# 旧版节点用过的 bernini / online 在 app4 已不存在，需回退到有效模型，避免 400。
+VALID_MODELS = ("lama", "sttn", "propainter", "diffueraser", "effecterase", "e2fgvi")
+DEFAULT_MODEL = "sttn"
 POLL_INTERVAL = 2.0  # 秒
 POLL_TIMEOUT = int(os.getenv("LCWR_POLL_TIMEOUT", str(4 * 3600)))  # 默认最长等待 4 小时
 
@@ -116,14 +120,18 @@ class S_LcwrWatermarkRemoval(BaseStep):
         step_inputs = getattr(self, "_step_inputs", {}) or {}
 
         base_url = str(cfg.get("lcwr_base_url") or DEFAULT_BASE_URL).strip().rstrip("/") or DEFAULT_BASE_URL
-        model = cfg.get("model") or "bernini"
+        model = cfg.get("model") or DEFAULT_MODEL
         if isinstance(model, list):
-            model = model[0] if model else "bernini"
-        model = str(model).strip() or "bernini"
+            model = model[0] if model else DEFAULT_MODEL
+        model = str(model).strip().lower()
+        if model not in VALID_MODELS:  # 兼容旧流程中的 bernini / online 等已废弃取值
+            model = DEFAULT_MODEL
         regions = _normalize_regions(cfg.get("regions") or [])
         skip_head_sec = float(cfg.get("skip_head_sec") or 0)
         skip_tail_sec = float(cfg.get("skip_tail_sec") or 0)
-        skip_tail_mode = str(cfg.get("skip_tail_mode") or "from_end").strip() or "from_end"
+        # 文档：skip_tail_mode 仅 from_end / from_start，任何非 from_end 的值都按 from_start 处理
+        skip_tail_mode = str(cfg.get("skip_tail_mode") or "from_end").strip().lower()
+        skip_tail_mode = "from_end" if skip_tail_mode == "from_end" else "from_start"
 
         # --- 1. 解析输入媒体 ---
         media = _resolve_media(task_dir, step_inputs)

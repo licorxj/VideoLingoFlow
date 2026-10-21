@@ -8,13 +8,15 @@ from fastapi import APIRouter
 
 router = APIRouter(prefix="/api/lcwr", tags=["lcwr"])
 
+# 与 LCWR V2.0（app4）engine.config.InpaintMode 保持一致：共 6 个本地模型。
+# app4 已移除 bernini 与在线模型链路，此处不可再出现，否则提交会返回 400。
 STATIC_MODELS = [
     {"id": "lama", "name": "LaMa（快速）", "type": "local"},
     {"id": "sttn", "name": "STTN（时空张量）", "type": "local"},
     {"id": "propainter", "name": "ProPainter（高质量）", "type": "local"},
     {"id": "diffueraser", "name": "DiffuEraser（扩散模型）", "type": "local"},
-    {"id": "bernini", "name": "Bernini（旗舰）", "type": "local"},
-    {"id": "online", "name": "LCWR在线模型", "type": "online"},
+    {"id": "effecterase", "name": "EffectErase（效果消除，CC BY-NC 非商用）", "type": "local"},
+    {"id": "e2fgvi", "name": "E2FGVI（视频补全，CC BY-NC 非商用）", "type": "local"},
 ]
 
 

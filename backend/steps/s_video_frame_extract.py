@@ -6,6 +6,9 @@ from typing import Callable, Optional
 
 from backend.steps.base_step import BaseStep
 
+# 视为「视频文件」的扩展名（用于连线输入的严格识别）
+_VIDEO_EXTS = (".mp4", ".mov", ".mkv", ".avi", ".webm", ".flv", ".wmv", ".m4v", ".mpg", ".mpeg", ".ts")
+
 
 def _parse_srt(srt_path: str) -> list:
     """Parse SRT file into list of {start, end, text} dicts (times in seconds)."""
@@ -184,33 +187,67 @@ class S_VideoFrameExtract(BaseStep):
         if isinstance(video_source, list):
             video_source = video_source[0] if video_source else "input_node"
 
+        def _as_existing_path(raw) -> str:
+            """把 step_inputs 中的单个值解析为存在的绝对路径；无效/不存在返回空串。"""
+            if isinstance(raw, (list, tuple)):
+                for item in raw:
+                    hit = _as_existing_path(item)
+                    if hit:
+                        return hit
+                return ""
+            text = str(raw or "").strip()
+            if not text:
+                return ""
+            candidate = text if os.path.isabs(text) else os.path.join(task_dir, text)
+            return candidate if os.path.isfile(candidate) else ""
+
+        def _find_connected_video() -> str:
+            """仅在连线输入中寻找视频文件：优先 video 端口，其次扫描其它输入端口的视频值。
+
+            兼容上游输出端口名与目标端口名不一致（如上游输出 filepath）的情况。
+            """
+            direct = _as_existing_path(step_inputs.get("video"))
+            if direct:
+                return direct
+            skip_keys = {"srt", "json", "subtitle", "subtitle_path"}
+            for key, val in step_inputs.items():
+                if key in skip_keys:
+                    continue
+                hit = _as_existing_path(val)
+                if hit and hit.lower().endswith(_VIDEO_EXTS):
+                    return hit
+            return ""
+
         video_path = None
         if video_source == "connection":
-            raw = step_inputs.get("video", "")
-            if raw:
-                if os.path.isabs(raw) and os.path.isfile(raw):
-                    video_path = raw
-                elif os.path.isfile(os.path.join(task_dir, raw)):
-                    video_path = os.path.join(task_dir, raw)
-
-        if not video_path:
-            # 回退：优先检查 step_inputs 中的 video，再扫描 cache 目录
-            raw = step_inputs.get("video", "")
-            if raw:
-                p = raw if os.path.isabs(raw) else os.path.join(task_dir, raw)
-                if os.path.isfile(p):
-                    video_path = p
+            # 严格模式：来自节点连线时只使用连线传入的视频，绝不回退到输入节点的视频
+            video_path = _find_connected_video()
+            if not video_path:
+                provided = {k: v for k, v in step_inputs.items() if v not in (None, "", [], {})}
+                raise ValueError(
+                    "视频源选择「来自节点连线」，但未从连线获取到有效的视频文件。"
+                    f"当前连线输入端口：{sorted(provided.keys()) or '（无）'}。"
+                    "请确认已连接视频输出端口（如「文件加载」/「视频加载器」的 filepath，或视频处理节点的 video），"
+                    "且上游节点已成功产出视频。"
+                )
+            if callback:
+                callback(8, f"使用连线视频：{os.path.basename(video_path)}")
+        else:
+            # 来自输入节点：沿用原有回退逻辑（输入端口 video → cache 中的输入视频）
+            p = _as_existing_path(step_inputs.get("video"))
+            if p:
+                video_path = p
 
         if not video_path:
             cache_dir = os.path.join(task_dir, "cache")
             if os.path.isdir(cache_dir):
                 for f in sorted(os.listdir(cache_dir)):
-                    if f.startswith("input_video") and f.endswith(('.mp4', '.mkv', '.webm', '.avi', '.mov')):
+                    if f.startswith("input_video") and f.lower().endswith(_VIDEO_EXTS):
                         video_path = os.path.join(cache_dir, f)
                         break
                 if not video_path:
                     for f in sorted(os.listdir(cache_dir)):
-                        if f.endswith(('.mp4', '.mkv', '.webm', '.avi', '.mov')):
+                        if f.lower().endswith(_VIDEO_EXTS):
                             video_path = os.path.join(cache_dir, f)
                             break
 

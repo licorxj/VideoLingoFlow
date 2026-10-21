@@ -7,13 +7,15 @@ import { RefreshCw, ExternalLink, Trash2, Loader2, Info, Eraser, ChevronLeft, Ch
 
 const LCWR_DOWNLOAD_URL = "https://qinmuzhifang.feishu.cn/wiki/IkBVwfe72iEVLTkhVQ0cW0mvnBc";
 
+// 与 LCWR V2.0（app4）engine.config.InpaintMode 对齐：仅 6 个本地模型。
+// app4 已移除 bernini 与在线模型，服务离线时也不能回退到它们，否则提交会 400。
 const STATIC_MODELS = [
   { id: "lama", name: "LaMa（快速）", type: "local" },
   { id: "sttn", name: "STTN（时空张量）", type: "local" },
   { id: "propainter", name: "ProPainter（高质量）", type: "local" },
   { id: "diffueraser", name: "DiffuEraser（扩散模型）", type: "local" },
-  { id: "bernini", name: "Bernini（旗舰）", type: "local" },
-  { id: "online", name: "LCWR在线模型", type: "online" },
+  { id: "effecterase", name: "EffectErase（效果消除，CC BY-NC 非商用）", type: "local" },
+  { id: "e2fgvi", name: "E2FGVI（视频补全，CC BY-NC 非商用）", type: "local" },
 ];
 
 const ASPECT_PRESETS = ["16:9", "9:16", "4:3", "3:4", "1:1", "21:9"];
@@ -109,7 +111,7 @@ export function LcwrNodeControls({ config, onConfigChange }: {
       <div className="flex items-center gap-1.5">
         <label className="text-[11px] font-medium text-muted-foreground flex-shrink-0">执行模型</label>
         <select
-          value={config.model || "bernini"}
+          value={config.model || "sttn"}
           onChange={(e) => onConfigChange("model", e.target.value)}
           onPointerDown={(e) => e.stopPropagation()}
           onWheel={(e) => e.stopPropagation()}
