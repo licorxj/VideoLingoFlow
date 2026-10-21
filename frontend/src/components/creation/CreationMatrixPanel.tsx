@@ -7,7 +7,7 @@
  * 前端不维护第二套状态；点击格子后按分镜展开产物明细（复用 /api/creation/{id}/tree）。
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, ChevronRight, Grid3x3, Loader2, Play, RefreshCw, RotateCw, X } from "lucide-react";
+import { AlertTriangle, ChevronRight, Grid3x3, Loader2, Play, RefreshCw, RotateCw, Square, X } from "lucide-react";
 import client from "@/api/client";
 import { useKeepAliveActive } from "@/components/layout/keepAliveActive";
 
@@ -20,11 +20,24 @@ interface CockpitTask {
   status: string;
   node_status: string;
   error_class: string;
+  /** 节点进度 0-100（排队中为 0） */
+  progress?: number;
+  /** 等待资源时的文案（如「等待 GPU 资源」） */
+  wait_message?: string;
   created_at: string;
   updated_at: string;
 }
 
 const ACTIVE_TASK_STATUS = ["created", "queued", "running", "paused", "stopping"];
+
+/** 活跃任务状态 → 前端文案：区分排队中/进行中/已暂停/停止中，不再一律「进行中」 */
+const TASK_STATUS_LABEL: Record<string, string> = {
+  created: "排队中",
+  queued: "排队中",
+  running: "进行中",
+  paused: "已暂停",
+  stopping: "停止中",
+};
 
 /** 后端矩阵接口返回结构 */
 export interface MatrixStage {
@@ -241,10 +254,12 @@ function ShotMedia({ urls, meta, kind, onReviewed }: {
   );
 }
 
-/** 格子：状态色 + n/N + 失败角标 + 运行态 + 悬浮执行按钮 */
-function MatrixCellView({ cell, running, onRun, onClick }: {
+/** 格子：状态色 + n/N + 失败角标 + 运行态 + 悬浮执行/停止按钮 */
+function MatrixCellView({ cell, running, statusLabel, onCancel, onRun, onClick }: {
   cell: MatrixCell;
   running: boolean;
+  statusLabel?: string;
+  onCancel?: () => void;
   onRun: (force: boolean) => void;
   onClick: () => void;
 }) {
@@ -262,7 +277,7 @@ function MatrixCellView({ cell, running, onRun, onClick }: {
           ) : (
             <span className={`w-1.5 h-1.5 rounded-full ${DOT_STYLE[cell.status] || DOT_STYLE.empty}`} />
           )}
-          {running ? "进行中" : cell.status === "empty" && !hasTotal ? "未开始" : `${cell.done}${hasTotal ? `/${cell.total}` : " 镜"}`}
+          {running ? (statusLabel || "进行中") : cell.status === "empty" && !hasTotal ? "未开始" : `${cell.done}${hasTotal ? `/${cell.total}` : " 镜"}`}
         </span>
         {cell.failed > 0 && (
           <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-[14px] px-[3px] rounded-full bg-red-500 text-white text-[9px] leading-[14px] font-bold">
@@ -270,7 +285,16 @@ function MatrixCellView({ cell, running, onRun, onClick }: {
           </span>
         )}
       </button>
-      {!running && (
+      {running && onCancel ? (
+        <button
+          type="button"
+          title="停止该阶段任务"
+          onClick={(e) => { e.stopPropagation(); onCancel(); }}
+          className="absolute -top-2 -right-2 hidden group-hover/cell:flex w-5 h-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground shadow hover:opacity-90"
+        >
+          <Square className="w-2.5 h-2.5" />
+        </button>
+      ) : !running && (
         <button
           type="button"
           title="生成 / 补齐该阶段"
@@ -285,11 +309,13 @@ function MatrixCellView({ cell, running, onRun, onClick }: {
 }
 
 /** 点击格子后的分镜级产物墙 */
-function StageDrawer({ chapter, stageKey, stageLabel, running, onRun, onReviewed, onClose }: {
+function StageDrawer({ chapter, stageKey, stageLabel, running, statusLabel, onCancel, onRun, onReviewed, onClose }: {
   chapter: TreeChapter;
   stageKey: string;
   stageLabel: string;
   running: boolean;
+  statusLabel?: string;
+  onCancel?: () => void;
   onRun: (force: boolean) => void;
   onReviewed: (assetId: string, status: string, note: string, primary?: boolean) => void;
   onClose: () => void;
@@ -326,9 +352,19 @@ function StageDrawer({ chapter, stageKey, stageLabel, running, onRun, onReviewed
           共 {chapter.shots.length} 镜{missingFirst.length ? ` · 缺 ${missingFirst.length} 镜` : ""}
         </span>
         {running ? (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] bg-primary/10 text-primary">
-            <Loader2 className="w-3 h-3 animate-spin" />进行中
-          </span>
+          <>
+            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] bg-primary/10 text-primary">
+              <Loader2 className="w-3 h-3 animate-spin" />{statusLabel || "进行中"}
+            </span>
+            {onCancel && (
+              <button type="button"
+                onClick={onCancel}
+                title="停止该阶段任务"
+                className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] font-medium border border-destructive/40 bg-destructive/10 text-destructive hover:bg-destructive/20">
+                <Square className="w-3 h-3" />停止
+              </button>
+            )}
+          </>
         ) : (
           <>
             <button type="button"
@@ -452,6 +488,16 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
     [tasks]
   );
 
+  /** 工具条按状态分组计数（排队中/进行中/已暂停/停止中） */
+  const activeSummary = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const t of activeTasks) {
+      const label = TASK_STATUS_LABEL[t.status] || t.status;
+      counts.set(label, (counts.get(label) || 0) + 1);
+    }
+    return [...counts.entries()];
+  }, [activeTasks]);
+
   // 有任务在跑时轮询；全部结束后刷新矩阵与分镜明细
   const finishedRef = useRef(0);
   const keepAliveActive = useKeepAliveActive();
@@ -484,7 +530,13 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
       chapter_id: chapterId,
       force,
     })
-      .then(() => { loadTasks(); })
+      .then((res) => {
+        // 单飞保护命中（同格子已有非终态任务）：不静默新建，明确提示
+        if (res.data && res.data.created === false) {
+          setRunError("该格子已有进行中/排队中的任务（重复提交已拦截）");
+        }
+        loadTasks();
+      })
       .catch((e) => {
         setRunError(e?.response?.data?.detail || e?.message || "任务投递失败");
       })
@@ -502,6 +554,20 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
     if (pending[`${chapterId}:${stepId}`]) return true;
     return tasks.some((t) => t.chapter_id === chapterId && t.step_id === stepId
       && ACTIVE_TASK_STATUS.includes(t.status));
+  };
+
+  /** 取该格子当前活跃任务（用于停止按钮与状态文案） */
+  const activeTaskFor = (chapterId: string, stepId: string): CockpitTask | undefined =>
+    tasks.find((t) => t.chapter_id === chapterId && t.step_id === stepId
+      && ACTIVE_TASK_STATUS.includes(t.status));
+
+  /** 停止一个驾驶舱任务（后端走 request_cancel：stopping + 杀子进程树） */
+  const cancelTask = (taskId: string) => {
+    client.post(`/api/creation/tasks/${taskId}/cancel`)
+      .then(() => { loadTasks(); })
+      .catch((e) => {
+        setRunError(e?.response?.data?.detail || e?.message || "停止失败");
+      });
   };
 
   /** 审查一条资产：落库后本地同步元信息（避免整棵树重拉） */
@@ -558,6 +624,14 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
     [treeChapters, open]
   );
 
+  /** 抽屉当前格子的活跃任务（供停止按钮/状态文案） */
+  const drawerTask = useMemo(() => {
+    if (!open) return undefined;
+    const stepId = stages.find((s) => s.key === open.stageKey)?.step_id || "";
+    return tasks.find((t) => t.chapter_id === open.chapterId && t.step_id === stepId
+      && ACTIVE_TASK_STATUS.includes(t.status));
+  }, [open, stages, tasks]);
+
   if (loading && !data) {
     return (
       <div className="h-full flex items-center justify-center text-muted-foreground">
@@ -599,11 +673,11 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
             失败次数
           </span>
         </div>
-        {activeTasks.length > 0 && (
-          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] bg-primary/10 text-primary">
-            <Loader2 className="w-3 h-3 animate-spin" />进行中 {activeTasks.length}
+        {activeSummary.map(([label, count]) => (
+          <span key={label} className="inline-flex items-center gap-1 px-2 py-1 rounded-md text-[10px] bg-primary/10 text-primary">
+            <Loader2 className="w-3 h-3 animate-spin" />{label} {count}
           </span>
-        )}
+        ))}
         <button type="button"
           onClick={() => setTransposed((v) => !v)}
           className="ml-auto px-2.5 py-1 rounded-md text-[11px] font-medium border border-border/50 hover:bg-muted transition-colors">
@@ -672,12 +746,15 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
                     return <td key={col.id || col.key} className="px-2 py-2 text-center text-muted-foreground/50">—</td>;
                   }
                   const running = isRunning(chapterId, stage.step_id);
+                  const cellTask = activeTaskFor(chapterId, stage.step_id);
                   return (
                     <td key={col.id || col.key} className="px-1.5 py-1.5 align-middle">
                       <div title={`${resolved.done}/${resolved.total}${resolved.updated_at ? ` · ${formatTime(resolved.updated_at)}` : ""}`}>
                         <MatrixCellView
                           cell={resolved}
                           running={running}
+                          statusLabel={cellTask ? TASK_STATUS_LABEL[cellTask.status] : undefined}
+                          onCancel={cellTask ? () => cancelTask(cellTask.task_id) : undefined}
                           onRun={(force) => runStage(chapterId, stage.step_id, force)}
                           onClick={() => openCell(chapterId, stage.key, stage.label)}
                         />
@@ -701,6 +778,8 @@ export function CreationMatrixPanel({ creationId }: { creationId: string }) {
               stageKey={open.stageKey}
               stageLabel={open.stageLabel}
               running={isRunning(open.chapterId, stages.find((s) => s.key === open.stageKey)?.step_id || "")}
+              statusLabel={drawerTask ? TASK_STATUS_LABEL[drawerTask.status] : undefined}
+              onCancel={drawerTask ? () => cancelTask(drawerTask.task_id) : undefined}
               onRun={(force) => runStage(
                 open.chapterId,
                 stages.find((s) => s.key === open.stageKey)?.step_id || "",

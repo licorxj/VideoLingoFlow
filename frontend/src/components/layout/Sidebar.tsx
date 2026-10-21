@@ -417,6 +417,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
         </div>
       )}
       {collapsed && (
+        <>
         <button
           onClick={() => {
             if (agentState !== "booting") setPiJump(true);
@@ -444,8 +445,7 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
           )}
           {(agentState === "open" || agentState === "minimized") && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full border-2 border-background bg-[hsl(var(--success))]" />}
         </button>
-        )}
-        {/* 折叠态：本机库入口（图标按钮） */}
+        {/* 折叠态：本机库入口（图标按钮），仅在侧边栏折叠时渲染 */}
         <div className="mb-3 flex flex-col items-center gap-1">
           {LIBRARY_LINKS.map((link) => { const Icon = link.icon; return (
             <button
@@ -459,6 +459,8 @@ export default function Sidebar({ collapsed, agentState }: { collapsed: boolean;
             </button>
           ); })}
         </div>
+        </>
+      )}
       </aside>
       <SkillMcpPickerDialog
         kind={libraryKind ?? "skills"}

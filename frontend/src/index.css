@@ -651,6 +651,59 @@
   transition: none !important;
 }
 
+/* ── 选中节点的淡蓝色光晕 ────────────────────────────────────────────
+   静态柔光贴在卡片外沿，伪元素光环从卡片边缘向外扩张并淡出（选中瞬间播放一次）。
+   三类卡片（普通 / 组合 / 循环）根元素均为 rounded-2xl（16px），
+   故光环 inset -4px 配 20px 圆角，扩张时不会出现方角错位。
+   配色统一为 blue-400 #60a5fa（与画布 indigo/violet 主题相邻，不刺眼）。 */
+.wf-node-selected {
+  position: relative;
+  border-color: #60a5fa;
+  box-shadow: 0 0 16px 2px rgba(96, 165, 250, 0.32),
+              0 0 38px 10px rgba(96, 165, 250, 0.18);
+}
+
+.wf-node-selected::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 20px;
+  border: 2px solid rgba(96, 165, 250, 0.6);
+  pointer-events: none;
+  z-index: 30;
+  animation: wf-node-halo 1.9s cubic-bezier(0.22, 0.61, 0.36, 1) infinite;
+}
+
+@keyframes wf-node-halo {
+  0% {
+    transform: scale(1);
+    opacity: 0;
+    box-shadow: 0 0 8px 0 rgba(96, 165, 250, 0.55);
+  }
+  16% {
+    opacity: 0.95;
+  }
+  78% {
+    transform: scale(1.06);
+    opacity: 0;
+    box-shadow: 0 0 26px 6px rgba(96, 165, 250, 0.34),
+                0 0 60px 18px rgba(96, 165, 250, 0.18);
+  }
+  100% {
+    transform: scale(1.06);
+    opacity: 0;
+  }
+}
+
+/* 降低动效偏好：保留静态柔光，去掉扩散动画 */
+@media (prefers-reduced-motion: reduce) {
+  .wf-node-selected::after {
+    animation: none;
+    opacity: 0.6;
+    box-shadow: 0 0 18px 4px rgba(96, 165, 250, 0.32);
+  }
+}
+
 /* Markdown 渲染（云协作安装指南弹窗） */
 .markdown-body { color: hsl(var(--foreground)); line-height: 1.7; word-break: break-word; }
 .markdown-body > *:first-child { margin-top: 0; }

@@ -1175,6 +1175,24 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     setNodes((nds) => [...nds, { id: getNextId(), type: "workflow", position: { x: cx, y: cy }, data: createNodeDataFromType(nodeType) }]);
   }, [reactFlowInstance, setNodes]);
 
+  // 全局事件：从外部（如 Skill 库 / 专家库弹窗）向当前画布新建节点并写入配置
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail || {};
+      const def = getNodeTypeDef(String(detail.nodeType || ""));
+      if (!def) return;
+      const overrides = detail.config && typeof detail.config === "object" ? detail.config : null;
+      const vp = reactFlowInstance ? reactFlowInstance.getViewport() : { x: 0, y: 0, zoom: 1 };
+      const cx = (reactFlowWrapper.current?.clientWidth || 600) / 2 / (vp.zoom || 1) - (vp.x || 0);
+      const cy = (reactFlowWrapper.current?.clientHeight || 400) / 2 / (vp.zoom || 1) - (vp.y || 0);
+      const data = createNodeDataFromType(def) as Record<string, any>;
+      if (overrides) data.config = { ...(data.config || {}), ...overrides };
+      setNodes((nds) => [...nds, { id: getNextId(), type: "workflow", position: { x: cx, y: cy }, data }]);
+    };
+    window.addEventListener("vl-add-node", handler as EventListener);
+    return () => window.removeEventListener("vl-add-node", handler as EventListener);
+  }, [reactFlowInstance, setNodes]);
+
   const addNodeAtPosition = useCallback((nodeType: NodeTypeDef, screenX: number, screenY: number) => {
     if (!reactFlowInstance) return;
     // 直接传屏幕坐标（clientX/clientY），节点左上角落在鼠标点

@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
-import { Cable, Check, FolderOpen, Loader2, RefreshCw, Search, Sparkles, X } from "lucide-react";
+import { Boxes, Cable, Check, FolderOpen, Loader2, RefreshCw, Search, Sparkles, X } from "lucide-react";
 import client from "@/api/client";
 import { cn } from "@/lib/utils";
 
-export type PickerKind = "skills" | "mcps";
+export type PickerKind = "skills" | "mcps" | "packs";
 
 type ScanItem = {
   item_id: string;
@@ -31,6 +31,8 @@ export default function SkillMcpPickerDialog({
   const [keyword, setKeyword] = useState("");
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [preview, setPreview] = useState<ScanItem | null>(null);
+  const [targetAgent, setTargetAgent] = useState<string>("pi_agent");
+  const [loadNotice, setLoadNotice] = useState("");
   const keywordRef = useRef<HTMLInputElement>(null);
   // 仅在弹窗打开时捕获一次初始选中；渲染期间同步引用，避免父组件重渲染导致勾选被重置
   const initialSelectedRef = useRef<string[]>(selected);
@@ -39,6 +41,46 @@ export default function SkillMcpPickerDialog({
   // 拉取扫描结果；打开时清空关键词与预览并重置勾选，手动扫描时保留当前勾选与关键词
   const loadItems = useCallback((reset: boolean) => {
     setLoading(true);
+    // 专家团模式：读取安装记录（skills_store_lock.json），无需磁盘扫描
+    if (kind === "packs") {
+      Promise.all([client.get("/api/pi/settings/packs"), client.get("/api/pi/settings")])
+        .then(([packsRes, settingsRes]) => {
+          const authorized = new Set(
+            ((settingsRes.data?.skills || []) as { name: string; enabled: boolean }[])
+              .filter((item) => item.enabled)
+              .map((item) => item.name),
+          );
+          const packs = Array.isArray(packsRes.data) ? packsRes.data : [];
+          const list: ScanItem[] = packs.map((pack: any) => {
+            const skills: { slug: string; installed: boolean }[] = pack.skills || [];
+            const lines = skills.map((skill) => {
+              const status = !skill.installed ? "缺失" : authorized.has(skill.slug) ? "已授权" : "未授权";
+              return `· ${skill.slug}（${status}）`;
+            });
+            return {
+              item_id: pack.pack_id,
+              name: pack.display_name || pack.pack_id,
+              path: `~/.claude/skills/${pack.pack_id}`,
+              description: [
+                pack.version ? `版本：v${pack.version}` : "",
+                pack.installed_at ? `安装时间：${pack.installed_at}` : "",
+                `成员技能（${skills.length}）：`,
+                ...lines,
+              ].filter(Boolean).join("\n"),
+              enabled: skills.length > 0 && skills.every((skill) => skill.installed && authorized.has(skill.slug)),
+            };
+          });
+          setItems(list);
+          if (reset) {
+            setChecked(new Set());
+            setKeyword("");
+            setPreview(null);
+          }
+        })
+        .catch(() => setItems([]))
+        .finally(() => setLoading(false));
+      return;
+    }
     // 后端 scan 接口按单数 kind（skill / mcp）路由，弹窗内部用复数表示语义
     const apiKind = kind === "skills" ? "skill" : "mcp";
     client.post(`/api/pi/settings/scan/${apiKind}`)
@@ -80,7 +122,29 @@ export default function SkillMcpPickerDialog({
     });
   };
 
+  // 「新建智能体节点加载」：把所选 Skill/MCP 或当前预览的专家团载入当前工作流画布的新节点
+  const agentTargets = kind === "packs"
+    ? [{ id: "expert_agent", label: "召唤专家" }]
+    : [{ id: "pi_agent", label: "小派智能体" }, { id: "opencode_agent", label: "本地CLI智能体" }];
+  const canLoad = kind === "packs" ? !!preview : checked.size > 0;
+  const loadToCanvas = () => {
+    let detail: { nodeType: string; config: Record<string, unknown> } | null = null;
+    if (kind === "packs") {
+      if (!preview) return;
+      detail = { nodeType: "expert_agent", config: { pack_id: preview.item_id } };
+    } else {
+      const key = kind === "skills" ? "skills" : "mcps";
+      detail = { nodeType: targetAgent, config: { [key]: Array.from(checked) } };
+    }
+    if (!detail) return;
+    window.dispatchEvent(new CustomEvent("vl-add-node", { detail }));
+    setLoadNotice("已新建节点并载入当前画布");
+    window.setTimeout(() => setLoadNotice(""), 2600);
+  };
+
   if (!open) return null;
+
+  const isPacks = kind === "packs";
 
   return createPortal(
     <div className="fixed inset-0 z-[12000] flex items-center justify-center bg-black/40 backdrop-blur-sm" onPointerDown={onClose} onMouseDown={onClose}>
@@ -88,8 +152,9 @@ export default function SkillMcpPickerDialog({
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-black/[0.08] px-5 py-3">
           <div className="flex items-center gap-2">
-            <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary/10 text-primary">{kind === "skills" ? <Sparkles className="h-4 w-4" /> : <Cable className="h-4 w-4" />}</span>
+            <span className="grid h-7 w-7 place-items-center rounded-lg bg-primary/10 text-primary">{kind === "skills" ? <Sparkles className="h-4 w-4" /> : isPacks ? <Boxes className="h-4 w-4" /> : <Cable className="h-4 w-4" />}</span>
             <span className="text-sm font-semibold">选择{label}</span>
+            <span className="hidden truncate text-[11px] text-muted-foreground/80 md:inline">安装智能体或者专家团，请打开小π智能助手安装</span>
           </div>
           <button type="button" onClick={onClose} className="rounded-md p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive" title="关闭"><X className="h-4 w-4" /></button>
         </div>
@@ -112,17 +177,17 @@ export default function SkillMcpPickerDialog({
                 type="button"
                 onClick={() => loadItems(false)}
                 disabled={loading}
-                title="重新扫描常见 Skill / MCP 存放目录（项目、~/.trae、~/.agents、~/.agent、~/.claude 等）"
+                title={isPacks ? "重新读取已安装的专家团列表（~/.claude/skills/.skills_store_lock.json）" : "重新扫描常见 Skill / MCP 存放目录（项目、~/.trae、~/.agents、~/.agent、~/.claude 等）"}
                 className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary disabled:opacity-60"
               >
                 <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-                扫描
+                {isPacks ? "刷新" : "扫描"}
               </button>
             </div>
             <div className="min-h-0 flex-1 space-y-0.5 overflow-y-auto px-2 pb-2">
               {loading && (
                 <div className="flex items-center justify-center gap-2 py-8 text-xs text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />正在扫描{label}…
+                  <Loader2 className="h-4 w-4 animate-spin" />正在{isPacks ? "读取" : "扫描"}{label}…
                 </div>
               )}
               {!loading && filtered.length === 0 && (
@@ -138,16 +203,18 @@ export default function SkillMcpPickerDialog({
                     onClick={() => setPreview(item)}
                     className={cn("flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors", isPreview ? "bg-primary/10 ring-1 ring-primary/20" : "hover:bg-muted")}
                   >
-                    <span
-                      role="checkbox"
-                      aria-checked={isChecked}
-                      onClick={(e) => { e.stopPropagation(); toggle(item.name); }}
-                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggle(item.name); } }}
-                      tabIndex={0}
-                      className={cn("grid h-4 w-4 shrink-0 place-items-center rounded border transition-colors", isChecked ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background")}
-                    >
-                      {isChecked && <Check className="h-3 w-3" />}
-                    </span>
+                    {!isPacks && (
+                      <span
+                        role="checkbox"
+                        aria-checked={isChecked}
+                        onClick={(e) => { e.stopPropagation(); toggle(item.name); }}
+                        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); toggle(item.name); } }}
+                        tabIndex={0}
+                        className={cn("grid h-4 w-4 shrink-0 place-items-center rounded border transition-colors", isChecked ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background")}
+                      >
+                        {isChecked && <Check className="h-3 w-3" />}
+                      </span>
+                    )}
                     <span className="min-w-0 flex-1">
                       <span className="flex items-center gap-1.5">
                         <span className="truncate text-xs font-medium">{item.name}</span>
@@ -187,10 +254,28 @@ export default function SkillMcpPickerDialog({
 
         {/* 底部操作 */}
         <div className="flex items-center justify-between border-t border-black/[0.08] px-5 py-3">
-          <span className="text-[11px] text-muted-foreground">已选择 {checked.size} 项</span>
+          <span className="text-[11px] text-muted-foreground">{loadNotice || (isPacks ? `共 ${items.length} 个专家团` : `已选择 ${checked.size} 项`)}</span>
           <div className="flex items-center gap-2">
-            <button type="button" onClick={onClose} className="rounded-lg border border-border/60 px-4 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted">取消</button>
-            <button type="button" onClick={() => onConfirm(Array.from(checked))} className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">确认</button>
+            {/* 智能体选择 + 新建智能体节点加载 */}
+            <select
+              value={agentTargets.some((t) => t.id === targetAgent) ? targetAgent : agentTargets[0].id}
+              onChange={(e) => setTargetAgent(e.target.value)}
+              title="选择要新建的智能体节点类型"
+              className="rounded-lg border border-border/60 bg-background px-2 py-1.5 text-[11px] font-medium text-foreground outline-none transition-colors hover:border-primary/40 focus:border-primary/50"
+            >
+              {agentTargets.map((t) => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+            <button
+              type="button"
+              onClick={loadToCanvas}
+              disabled={!canLoad}
+              title={isPacks ? "在当前工作流画布新建「召唤专家」节点并载入该专家团（先点击左侧专家团查看介绍）" : "在当前工作流画布新建所选智能体节点，并勾选项写入其可调用列表"}
+              className="rounded-lg border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              新建智能体节点加载
+            </button>
+            <button type="button" onClick={onClose} className="rounded-lg border border-border/60 px-4 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted">{isPacks ? "关闭" : "取消"}</button>
+            {!isPacks && <button type="button" onClick={() => onConfirm(Array.from(checked))} className="rounded-lg bg-primary px-4 py-1.5 text-xs font-semibold text-primary-foreground shadow-sm transition-colors hover:bg-primary/90">确认</button>}
           </div>
         </div>
       </div>

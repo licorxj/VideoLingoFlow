@@ -28,17 +28,20 @@ import {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages,
   Video, UserRound, AudioLines, UserRoundPlus,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
-  Upload, Wrench, CheckCircle2, Loader2, XCircle, Clock, AlertTriangle, Play,
+  Upload, Wrench, CheckCircle2, Loader2, XCircle, Clock, AlertTriangle, Play, Pause,
   ChevronDown, ChevronRight, Eye, ArrowRight, Sparkles, Maximize2, HelpCircle,
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
   Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
   Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes, Terminal,
+  Dices,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
 import SubtitleEditorDialog from "./SubtitleEditorDialog";
 import DubCheckDialog from "./DubCheckDialog";
 import { LcwrNodeControls, LcwrRegionSummary, LcwrWatermarkEditor } from "./LcwrWatermarkEditor";
+import { SpecifiedNodePackageEditor } from "./SpecifiedNodePackageEditor";
+import { SpecifiedWorkflowEditor } from "./SpecifiedWorkflowEditor";
 import { SubtitleFindEditor } from "./SubtitleFindEditor";
 import { ImageMaskEditor } from "./ImageMaskEditor";
 import { VideoGenNode } from "./VideoGenNode";
@@ -552,6 +555,90 @@ function ListImageItem({ path, config, refreshKey, taskId }: { path: string; con
   );
 }
 
+/** 音乐节点单条音频：懒加载——首次点击播放按钮才请求文件流并挂载 <audio>，
+ *  之后按钮切换播放/暂停（已加载的音频不再重复请求）。 */
+function MusicLazyAudioRow({ label, path, taskId }: { label: string; path: string; taskId?: string }) {
+  const [activated, setActivated] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const src = useStableFileUrl(activated ? path : "", taskId);
+  const fileName = path.replace(/\\/g, "/").split("/").pop() || path;
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const el = audioRef.current;
+    if (!activated) {
+      // 首次点击：挂载音频元素（autoPlay 自动开始播放），即“点击播放按钮之后再加载”
+      setActivated(true);
+      return;
+    }
+    if (!el) return;
+    if (el.paused) el.play().catch(() => setPlaying(false));
+    else el.pause();
+  };
+
+  return (
+    <div className="rounded-md border border-violet-500/20 bg-violet-500/5 px-2 py-1">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={handleToggle}
+          title={activated && playing ? "暂停" : "播放"}
+          className="nodrag flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-violet-500/15 text-violet-600 transition-colors hover:bg-violet-500/25 dark:text-violet-300"
+        >
+          {activated && playing ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
+        </button>
+        <span className="flex-shrink-0 text-[10px] font-medium text-violet-600 dark:text-violet-300">{label}</span>
+        <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground" title={path}>{fileName}</span>
+      </div>
+      {activated && (
+        <audio
+          ref={audioRef}
+          src={src}
+          controls
+          autoPlay
+          preload="metadata"
+          className="mt-1 w-full"
+          onPlay={() => setPlaying(true)}
+          onPause={() => setPlaying(false)}
+          onEnded={() => setPlaying(false)}
+          onPointerDown={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 音乐节点卡片底部的音频预览区：按实际返回的音频数量渲染播放控件
+ *  （官方生成类接口每次返回 2 个变体 → audio_1 / audio_2，旧任务兼容 audio / audios）。 */
+function MusicAudioOutputs({ outputs, taskId }: { outputs: Record<string, any>; taskId?: string }) {
+  const items: { label: string; path: string }[] = [];
+  const push = (label: string, raw: any) => {
+    const p = resolveAudioTrack(raw);
+    if (p && !items.some((it) => it.path === p)) items.push({ label, path: p });
+  };
+  push("音频1", outputs.audio_1);
+  push("音频2", outputs.audio_2);
+  push("音频", outputs.audio);
+  for (const p of normalizeListPaths(outputs.audios)) push(`音频${items.length + 1}`, p);
+  if (items.length === 0) return null;
+  return (
+    <div className="px-3 pb-3 border-t border-border/50 pt-2">
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <Music className="w-3 h-3 text-violet-500" />
+        <span className="text-[11px] font-semibold text-violet-600 dark:text-violet-400">音频预览</span>
+        <span className="text-[10px] text-muted-foreground">{items.length} 个</span>
+      </div>
+      <div className="space-y-1">
+        {items.map((it) => (
+          <MusicLazyAudioRow key={it.path} label={it.label} path={it.path} taskId={taskId} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function VideoPreview({ config, videoPath, subtitlePath, listPaths, taskId, onConfigChange, refreshKey }: { config: Record<string, any>; videoPath?: string; subtitlePath?: string; listPaths?: string[]; taskId?: string; onConfigChange?: (key: string, value: any) => void; refreshKey?: string }) {
   const [fontSize, setFontSize] = useState(config.fontSize || 12);
   const [subtitles, setSubtitles] = useState<{ start: number; end: number; text: string }[]>([]);
@@ -1018,10 +1105,13 @@ function MediaLoaderPreview({ kind, filePath }: { kind: "video" | "image" | "aud
     );
   }
 
-  // 音频：直接用浏览器原生音频播放器（含播放/进度/音量），不做视频化包装，也不需要全屏
+  // 音频：浏览器原生播放器（含播放/暂停/进度/音量）+ 右上角全屏预览按钮
   if (kind === "audio") {
     return (
-      <div className="space-y-1 rounded-md border border-border/60 bg-muted/30 p-2">
+      <div
+        ref={containerRef}
+        className="group relative space-y-1 rounded-md border border-border/60 bg-muted/30 p-2"
+      >
         <audio
           controls
           src={src}
@@ -1033,6 +1123,22 @@ function MediaLoaderPreview({ kind, filePath }: { kind: "video" | "image" | "aud
         <div className="truncate text-[10px] text-muted-foreground/70" title={filePath}>
           {String(filePath).split(/[\\/]/).pop()}
         </div>
+        {/* 右上角：全屏预览按钮 —— 与图片一致，常显 */}
+        <button
+          type="button"
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => {
+            e.stopPropagation();
+            toggleFullscreen();
+          }}
+          className="absolute top-2 right-2 z-10 w-7 h-7 rounded-md flex items-center justify-center bg-black/55 text-white/85 hover:bg-black/80 hover:text-white transition-colors"
+          title={isFullscreen ? "退出全屏" : "全屏预览"}
+          aria-label={isFullscreen ? "退出全屏" : "全屏预览"}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
+          </svg>
+        </button>
       </div>
     );
   }
@@ -1945,6 +2051,10 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   })();
   // LCWR 去水印节点使用自定义编辑器（LcwrWatermarkEditor），跳过通用表单渲染
   if (nodeType.id === "lcwr_watermark_removal") return null;
+  // 指定调用节点包使用专用编辑器（SpecifiedNodePackageEditor），跳过通用表单渲染
+  if (nodeType.id === "specified_node_package") return null;
+  // 指定调用工作流使用专用编辑器（SpecifiedWorkflowEditor），跳过通用表单渲染
+  if (nodeType.id === "specified_workflow") return null;
   // 即梦(Seedance) / AI生视频 节点由自定义组件渲染，不再走通用 configFields 表单
   if ((nodeType.id || "").startsWith("seedance_") || nodeType.id === "ai_video_gen") return null;
   if (configFields.length === 0 && !dynamicLoading) return null;
@@ -2369,6 +2479,34 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
             );
           }
 
+          if (field.type === "combobox") {
+            // 可下拉可自由输入：原生 input + datalist（常用值下拉，手动输入同样生效）
+            const listId = `cb-${nodeType.id}-${field.key}`;
+            return (
+              <div key={field.key} className={fieldSpanClass(field)}>
+                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <input
+                  type="text"
+                  list={listId}
+                  value={value}
+                  onChange={(e) => onConfigChange(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onWheel={(e) => e.stopPropagation()}
+                  className="w-full text-xs px-2.5 py-1.5 rounded-md border border-border/50 bg-background focus:border-primary/50 focus:ring-1 focus:ring-primary/20 outline-none transition-all"
+                />
+                <datalist id={listId}>
+                  {(field.options || []).map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </datalist>
+                {field.description && (
+                  <p className="text-[10px] text-muted-foreground/70 mt-1">{field.description}</p>
+                )}
+              </div>
+            );
+          }
+
           if (field.type === "datetime-local") {
             return (
               <div key={field.key} className={fieldSpanClass(field)}>
@@ -2418,9 +2556,46 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           }
 
           if (field.type === "textarea") {
+            const fieldKeys = new Set(nodeType.configFields?.map((f: ConfigField) => f.key) || []);
+            // 骰子按钮：抽取一条示例 JSON，按示例键 → 节点字段映射渲染；不匹配的键静默忽略
+            const rollExample = async () => {
+              if (!field.diceEndpoint) return;
+              try {
+                const res = await client.get(field.diceEndpoint);
+                const example = (res.data || {}).example;
+                if (!example || typeof example !== "object") return;
+                const KEY_MAP: Record<string, string> = {
+                  caption: "custom_prompt", description: "custom_prompt",
+                  lyrics: "custom_lyrics", bpm: "bpm", duration: "duration",
+                  keyscale: "key_scale", language: "vocal_language",
+                  vocal_language: "vocal_language", timesignature: "time_signature",
+                  think: "thinking",
+                };
+                for (const [srcKey, srcVal] of Object.entries(example)) {
+                  const target = KEY_MAP[srcKey];
+                  if (!target || !fieldKeys.has(target)) continue; // 不匹配 → 静默忽略
+                  if (srcVal === null || srcVal === undefined) continue;
+                  const val = typeof srcVal === "boolean" ? srcVal : String(srcVal);
+                  onConfigChange(target, val);
+                }
+              } catch { /* 示例抽取失败静默处理 */ }
+            };
             return (
               <div key={field.key} className={fieldSpanClass(field)}>
-                <label className="text-[11px] font-medium text-muted-foreground block mb-1">{field.label}</label>
+                <div className="flex items-center gap-1 mb-1">
+                  <label className="text-[11px] font-medium text-muted-foreground">{field.label}</label>
+                  {field.dice && (
+                    <button
+                      type="button"
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onClick={rollExample}
+                      className="p-0.5 rounded text-muted-foreground/70 hover:text-primary hover:bg-primary/10 transition-colors"
+                      title={field.diceTitle || "随机示例"}
+                    >
+                      <Dices className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
                 {field.chips && field.chips.length > 0 && (
                   <div className="flex flex-wrap gap-1 mb-1.5">
                     {field.chips.map((chip) => (
@@ -2511,7 +2686,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
             const showBrowse = !!onBrowseProject
               && nodeType.id?.startsWith("agi_")
               && field.apiEndpoint === "/api/creation/list";
-            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={config} onConfigChange={onConfigChange} followValue={field.followPort ? String((upstreamOutputs as any)?.[field.followPort] ?? "") : ""} onBrowseProject={showBrowse ? onBrowseProject : undefined} /></div>;
+            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={{ ...(nodeType.defaultConfig || {}), ...config }} onConfigChange={onConfigChange} followValue={field.followPort ? String((upstreamOutputs as any)?.[field.followPort] ?? "") : ""} onBrowseProject={showBrowse ? onBrowseProject : undefined} /></div>;
           }
 
           if (field.type === "desk-ops") {
@@ -3028,6 +3203,8 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
   const isExpertAgent = nodeType.id === "expert_agent";
   const isOpenCodeAgent = nodeType.id === "opencode_agent";
   const isSeedance = (nodeType.id || "").startsWith("seedance_");
+  // AI音乐节点（KieAI/Suno + 免费 step music）：task_id 端口只用于连线串联，不进「输出产物」列表
+  const isMusicGen = nodeType.category === "music_gen" || nodeType.category === "music_step";
   const SEEDANCE_MODE_MAP: Record<string, string> = {
     seedance_txt2video: "txt2video",
     seedance_img2video: "img2video",
@@ -3043,6 +3220,8 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
     if (!rawOutputs || typeof rawOutputs !== "object" || Array.isArray(rawOutputs)) return [];
     return Object.entries(rawOutputs).filter(([key, filePath]) => {
       if (typeof key !== "string") return false;
+      // 音乐节点的链式元数据端口（Task ID / Persona / Voice）仅用于连线，不当作产物展示
+      if (isMusicGen && ["task_id", "persona_id", "voice_id", "is_available"].includes(key)) return false;
       // Only include string or number values, skip objects/functions
       if (filePath !== null && filePath !== undefined && typeof filePath !== "string" && typeof filePath !== "number") return false;
       const dedupeKey = String(filePath);
@@ -3729,6 +3908,12 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
       )}
       {nodeType.id === "lcwr_watermark_removal" && (
         <LcwrRegionSummary config={config} />
+      )}
+      {nodeType.id === "specified_node_package" && (
+        <SpecifiedNodePackageEditor config={config} onConfigChange={handleConfigChange} />
+      )}
+      {nodeType.id === "specified_workflow" && (
+        <SpecifiedWorkflowEditor config={config} onConfigChange={handleConfigChange} />
       )}
       {nodeType.id === "lcwr_watermark_removal" && (
         <div className="px-3 pb-3 pt-1">
@@ -4561,6 +4746,14 @@ function WorkflowNodeComponent({ data, id, selected }: NodeProps) {
           </div>
         );
       })()}
+
+      {/* AI音乐：卡片底部音频预览（懒加载，按实际返回数量渲染播放控件） */}
+      {isMusicGen && status === "completed" && (
+        <MusicAudioOutputs
+          outputs={(nd.outputs || {}) as Record<string, any>}
+          taskId={previewTaskId}
+        />
+      )}
 
       {/* Error Display Panel - shows errors after failure */}
       {status === "failed" && nd.error && (

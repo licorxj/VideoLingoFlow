@@ -369,6 +369,9 @@ export default function CreationCanvas() {
   const [draft, setDraft] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const pollRef = useRef<number | null>(null);
+  /** 当前 snap 对应的项目 id 与内容签名：轮询数据没变时跳过 state 更新，避免无谓重渲染 */
+  const snapIdRef = useRef<number | null>(null);
+  const lastSigRef = useRef<string>("");
 
   const loadProjects = useCallback(() => {
     toonflowApi.listProjects().then(({ data }) => {
@@ -394,18 +397,27 @@ export default function CreationCanvas() {
   }, [projects, activeId]);
 
   const loadSnapshot = useCallback((id: number) => {
-    // 先用缓存快照瞬时恢复画面，再向服务端刷新
+    // 先用缓存快照瞬时恢复画面（仅切换项目时触发，避免每轮轮询都用旧缓存闪一下），再向服务端刷新
     const cached = readJSON<Snapshot>(LS_SNAP(id));
-    if (cached) {
+    if (cached && snapIdRef.current !== id) {
+      snapIdRef.current = id;
+      lastSigRef.current = JSON.stringify(cached);
       setSnap(cached);
       setNodes(snapshotToNodes(cached, id));
     }
     setLoading(true);
     toonflowApi.getCanvas(id)
       .then(({ data }) => {
-        setSnap(data);
-        setNodes(snapshotToNodes(data as Snapshot, id));
-        writeJSON(LS_SNAP(id), data);
+        const next = data as Snapshot;
+        writeJSON(LS_SNAP(id), next);
+        // 数据无变化时跳过 state 更新：5s 轮询不应反复引发全页重渲染
+        // （重渲染会打断输入焦点、关闭下拉弹出态，观感就是「页面每隔 5 秒刷新一次」）
+        const sig = JSON.stringify(next);
+        if (snapIdRef.current === id && sig === lastSigRef.current) return;
+        snapIdRef.current = id;
+        lastSigRef.current = sig;
+        setSnap(next);
+        setNodes(snapshotToNodes(next, id));
       })
       .catch(() => undefined)
       .finally(() => setLoading(false));
@@ -423,7 +435,7 @@ export default function CreationCanvas() {
 
   useEffect(() => {
     if (activeId) loadSnapshot(activeId);
-    else { setSnap(null); setNodes([]); }
+    else { setSnap(null); setNodes([]); snapIdRef.current = null; lastSigRef.current = ""; }
   }, [activeId, loadSnapshot, setNodes]);
 
   // 有进行中状态时轮询
@@ -1114,6 +1126,84 @@ function splitChapters(text: string): { reel: string; chapter: string; chapterDa
 /** 画布能力设置弹窗：读写 config.yaml（经 /api/settings），覆盖 LLM 地址与生图/视频/TTS 能力默认接口模型。 */
 interface IfaceItem { id: string; name: string }
 
+/**
+ * 表单原子组件（必须保持在模块作用域，切勿移回各弹窗体内）：
+ * 渲染期内定义的组件每次重渲染都是全新的函数身份，React 会整棵卸载重建子树，
+ * 输入框随之失焦、原生下拉弹出态被清掉。画布每 5s 轮询快照会反复触发父组件
+ * 重渲染，这正是「输入状态每隔 5 秒被刷掉」的根因。
+ */
+
+/** 字段外壳：标签在上、控件在下；hint 为可选补充说明 */
+function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1 min-w-0">
+      <span className="text-xs text-muted-foreground">{label}</span>
+      {children}
+      {hint && <span className="text-[11px] text-muted-foreground/70">{hint}</span>}
+    </div>
+  );
+}
+
+/** 轻量下拉：与 Field 搭配；placeholder 渲染为空值选项 */
+function Sel({ value, onChange, options, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  options: { value: string; label: string }[];
+  placeholder?: string;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-full text-sm px-2 py-1.5 rounded-md border border-border/50 bg-background outline-none truncate"
+    >
+      {placeholder && <option value="">{placeholder}</option>}
+      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+    </select>
+  );
+}
+
+/** 设置弹窗内的分组 */
+function SettingsSection({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-4">
+      <div className="text-xs font-semibold text-muted-foreground mb-1.5">{title}</div>
+      <div className="space-y-2">{children}</div>
+    </div>
+  );
+}
+
+/** 当前值不在候选列表时补到首位，避免下拉显示空值 */
+function withCurrent(list: string[], cur: string) {
+  return cur && !list.includes(cur) ? [cur, ...list] : list;
+}
+
+/** 设置弹窗的一行「接口 | 模型」：模型候选随本行接口联动（全部经 props 传入，无闭包依赖） */
+function ModeRow({ label, ifaceValue, modelValue, ifaces, modelOptions, onIfaceChange, onModelChange }: {
+  label: string;
+  ifaceValue: string;
+  modelValue: string;
+  ifaces: IfaceItem[];
+  modelOptions: string[];
+  onIfaceChange: (v: string) => void;
+  onModelChange: (v: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      <Field label={`${label} · 接口`}>
+        <Sel value={ifaceValue} placeholder="留空用首个已启用接口"
+          options={ifaces.map((i) => ({ value: i.id, label: i.name }))}
+          onChange={onIfaceChange} />
+      </Field>
+      <Field label={`${label} · 模型`}>
+        <Sel value={modelValue} placeholder="跟随接口默认"
+          options={withCurrent(modelOptions, modelValue).map((m) => ({ value: m, label: m }))}
+          onChange={onModelChange} />
+      </Field>
+    </div>
+  );
+}
+
 function CanvasSettingsDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const empty = {
     llmUrl: "", llmKey: "", llmKeySet: false, llmModel: "",
@@ -1234,58 +1324,31 @@ function CanvasSettingsDialog({ open, onClose }: { open: boolean; onClose: () =>
 
   if (!open) return null;
 
-  const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
-    <div className="mb-4">
-      <div className="text-xs font-semibold text-muted-foreground mb-1.5">{title}</div>
-      <div className="space-y-2">{children}</div>
-    </div>
-  );
-  /** 并排字段：标签在上，控件在下；配合 grid 实现「接口 | 模型」两列布局 */
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div className="flex flex-col gap-1 min-w-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      {children}
-    </div>
-  );
-  const Sel = ({ value, onChange, options, placeholder }: {
-    value: string; onChange: (v: string) => void; options: { value: string; label: string }[]; placeholder: string;
-  }) => (
-    <select
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      className="w-full text-sm px-2 py-1.5 rounded-md border border-border/50 bg-background outline-none truncate"
-    >
-      <option value="">{placeholder}</option>
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  );
-  const withCurrent = (list: string[], cur: string) =>
-    cur && !list.includes(cur) ? [cur, ...list] : list;
-  /** 一行 = 一个模式的两列设置：[接口 | 模型]，模型候选随本行接口联动 */
   type TextFieldKey = { [K in keyof typeof empty]: (typeof empty)[K] extends string ? K : never }[keyof typeof empty];
-  const ModeRow = ({ label, kind, mode, ifaceKey, modelKey, ifaces }: {
-    label: string; kind: "imagegen" | "videogen" | "tts"; mode: string;
-    ifaceKey: TextFieldKey; modelKey: TextFieldKey; ifaces: IfaceItem[];
-  }) => {
+  /**
+   * 生成一行「接口 | 模型」设置。
+   * 必须是「工厂函数返回 <ModeRow/> 元素」而不能在渲染期定义组件——内联组件每次
+   * 重渲染都是新身份，React 会整棵卸载重建子树，画布 5s 轮询触发父组件重渲染时
+   * 输入框会失焦、下拉弹出态会被清掉（ModeRow 已提升到模块作用域，身份稳定）。
+   */
+  const row = (label: string, kind: "imagegen" | "videogen" | "tts", mode: string,
+               ifaceKey: TextFieldKey, modelKey: TextFieldKey, ifaces: IfaceItem[]) => {
     const ifaceVal = form[ifaceKey];
     const opts = modelOpts[optKey(kind, mode, ifaceVal)] || [];
     return (
-      <div className="grid grid-cols-2 gap-3">
-        <Field label={`${label} · 接口`}>
-          <Sel value={ifaceVal} placeholder="留空用首个已启用接口"
-            options={ifaces.map((i) => ({ value: i.id, label: i.name }))}
-            onChange={async (v) => {
-              patch({ [ifaceKey]: v } as Partial<typeof empty>);
-              const models = await fetchModels(kind, v, mode);
-              setModelOpts((m) => ({ ...m, [optKey(kind, mode, v)]: models }));
-            }} />
-        </Field>
-        <Field label={`${label} · 模型`}>
-          <Sel value={form[modelKey]} placeholder="跟随接口默认"
-            options={withCurrent(opts, form[modelKey]).map((m) => ({ value: m, label: m }))}
-            onChange={(v) => patch({ [modelKey]: v } as Partial<typeof empty>)} />
-        </Field>
-      </div>
+      <ModeRow
+        label={label}
+        ifaceValue={ifaceVal}
+        modelValue={form[modelKey]}
+        ifaces={ifaces}
+        modelOptions={opts}
+        onIfaceChange={async (v) => {
+          patch({ [ifaceKey]: v } as Partial<typeof empty>);
+          const models = await fetchModels(kind, v, mode);
+          setModelOpts((m) => ({ ...m, [optKey(kind, mode, v)]: models }));
+        }}
+        onModelChange={(v) => patch({ [modelKey]: v } as Partial<typeof empty>)}
+      />
     );
   };
 
@@ -1305,7 +1368,7 @@ function CanvasSettingsDialog({ open, onClose }: { open: boolean; onClose: () =>
             </div>
           ) : (
             <>
-              <Section title="LLM">
+              <SettingsSection title="LLM">
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="接口地址">
                     <Input value={form.llmUrl} onChange={(e) => patch({ llmUrl: e.target.value })}
@@ -1320,25 +1383,19 @@ function CanvasSettingsDialog({ open, onClose }: { open: boolean; onClose: () =>
                   <Input type="password" value={form.llmKey} onChange={(e) => patch({ llmKey: e.target.value })}
                     placeholder={form.llmKeySet ? "已配置（留空保持不变）" : "未配置"} className="h-9 w-full text-sm" />
                 </Field>
-              </Section>
-              <Section title="生图（资产图 / 分镜图）">
-                <ModeRow label="文生图" kind="imagegen" mode="txt2img"
-                  ifaceKey="imgT2IIface" modelKey="imgT2IModel" ifaces={imageIfaces} />
-                <ModeRow label="图生图" kind="imagegen" mode="img2img"
-                  ifaceKey="imgI2IIface" modelKey="imgI2IModel" ifaces={imageIfaces} />
-              </Section>
-              <Section title="视频（分镜视频）">
-                <ModeRow label="文生视频" kind="videogen" mode="t2v"
-                  ifaceKey="vidT2VIface" modelKey="vidT2VModel" ifaces={videoIfaces} />
-                <ModeRow label="图生视频" kind="videogen" mode="i2v"
-                  ifaceKey="vidI2VIface" modelKey="vidI2VModel" ifaces={videoIfaces} />
-                <ModeRow label="视频续写" kind="videogen" mode="v2v"
-                  ifaceKey="vidV2VIface" modelKey="vidV2VModel" ifaces={videoIfaces} />
-              </Section>
-              <Section title="TTS（配音候选音色来自配音谷音色库）">
-                <ModeRow label="TTS" kind="tts" mode=""
-                  ifaceKey="ttsIface" modelKey="ttsModel" ifaces={ttsIfaces} />
-              </Section>
+              </SettingsSection>
+              <SettingsSection title="生图（资产图 / 分镜图）">
+                {row("文生图", "imagegen", "txt2img", "imgT2IIface", "imgT2IModel", imageIfaces)}
+                {row("图生图", "imagegen", "img2img", "imgI2IIface", "imgI2IModel", imageIfaces)}
+              </SettingsSection>
+              <SettingsSection title="视频（分镜视频）">
+                {row("文生视频", "videogen", "t2v", "vidT2VIface", "vidT2VModel", videoIfaces)}
+                {row("图生视频", "videogen", "i2v", "vidI2VIface", "vidI2VModel", videoIfaces)}
+                {row("视频续写", "videogen", "v2v", "vidV2VIface", "vidV2VModel", videoIfaces)}
+              </SettingsSection>
+              <SettingsSection title="TTS（配音候选音色来自配音谷音色库）">
+                {row("TTS", "tts", "", "ttsIface", "ttsModel", ttsIfaces)}
+              </SettingsSection>
               {err && <div className="text-xs text-destructive">{err}</div>}
             </>
           )}
@@ -1583,12 +1640,7 @@ function CardEditDialog({ data, snap, onClose, onSaved }: {
   };
 
   const isLongText = data.kind === "chapter" || data.kind === "script";
-  const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-    <div className="flex flex-col gap-1 min-w-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      {children}
-    </div>
-  );
+  // Field 用模块级组件：内联定义会在每次重渲染时重建子树，导致输入框失焦
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>
@@ -1679,24 +1731,7 @@ function ProjectDialog({ open, initial, onClose, onSave }: {
   if (!open) return null;
 
   const patch = (p: Partial<ProjectPayload>) => setForm((f) => ({ ...f, ...p }));
-
-  const Sel = ({ value, onChange, options, placeholder }: {
-    value: string; onChange: (v: string) => void; options: { value: string; label: string }[];
-    placeholder?: string;
-  }) => (
-    <select value={value} onChange={(e) => onChange(e.target.value)}
-      className="w-full text-sm px-2 py-1.5 rounded-md border border-border/50 bg-background outline-none">
-      {placeholder && <option value="">{placeholder}</option>}
-      {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-    </select>
-  );
-  const Field = ({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) => (
-    <div className="flex flex-col gap-1 min-w-0">
-      <span className="text-xs text-muted-foreground">{label}</span>
-      {children}
-      {hint && <span className="text-[11px] text-muted-foreground/70">{hint}</span>}
-    </div>
-  );
+  // Sel / Field 用模块级组件：内联定义会在每次重渲染时重建子树，导致输入框失焦、下拉弹出态被清掉
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onClose}>

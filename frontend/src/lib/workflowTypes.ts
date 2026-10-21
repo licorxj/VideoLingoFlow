@@ -107,10 +107,13 @@ export interface LoopWorkflowDefinition extends GroupWorkflowDefinition {
 export interface ConfigField {
   key: string;
   label: string;
-  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "reorder-list" | "date" | "time" | "button" | "wf-io-mapping" | "opencode-models" | "desk-ops";
+  type: "text" | "textarea" | "select" | "multiselect" | "checkbox" | "toggle" | "chips" | "file" | "hotwords" | "language-select" | "api-select" | "voice-select" | "slider" | "number" | "datetime-local" | "account-select" | "audio-selector" | "voice-target-list" | "reorder-list" | "date" | "time" | "button" | "wf-io-mapping" | "opencode-models" | "desk-ops" | "combobox";
   placeholder?: string;
   options?: { value: string; label: string }[];
   dependsOn?: string;
+  dice?: boolean;
+  diceEndpoint?: string;
+  diceTitle?: string;
   dependsValue?: any;
   dependsOnAny?: string[];
   dependsAnyValues?: any[];
@@ -151,7 +154,7 @@ export interface ConfigField {
 export interface NodeTypeDef {
   id: string;
   name: string;
-  category: "io" | "preview" | "audio" | "asset" | "video" | "ai_gen" | "music_gen" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "ai_desk" | "agent" | "utility" | "file" | "group_node" | "hyperframes" | "input" | "ai" | "output" | "publish";
+  category: "io" | "preview" | "audio" | "asset" | "video" | "ai_gen" | "music_gen" | "music_step" | "translation" | "flow_control" | "network_request" | "aigc" | "agi_story" | "agi_asset" | "agi_shot" | "agi_render" | "agi_data" | "ai_desk" | "agent" | "utility" | "file" | "group_node" | "hyperframes" | "input" | "ai" | "output" | "publish";
   description: string;
   icon: string;
   color: string;
@@ -217,17 +220,19 @@ let runtimeNodeTypes: NodeTypeDef[] = [];
 
 // ==================== Category Config ====================
 // 注意：对象的键顺序即节点面板的分组展示顺序（NodePalette 用 Object.entries 遍历）
-// 约定顺序：输入输出 → 预览 → 流程控制 → 智能体 → 素材库 → 其余 → 漫剧链（置底）
+// 约定顺序：输入输出 → 预览 → 流程控制 → 智能体 → AI剪辑链 → 素材库 → 其余 → 漫剧链（置底）
 export const CATEGORIES = {
   io: { label: "输入输出节点", color: "#3b82f6", icon: "Upload" },
   preview: { label: "预览节点", color: "#14b8a6", icon: "Eye" },
   flow_control: { label: "流程控制节点", color: "#6366f1", icon: "GitBranch" },
   agent: { label: "智能体", color: "#a855f7", icon: "Bot" },
+  ai_desk: { label: "AI剪辑链", color: "#0ea5e9", icon: "Scissors" },
   asset: { label: "素材库", color: "#84cc16", icon: "Library" },
   audio: { label: "音频处理节点", color: "#0ea5e9", icon: "Volume2" },
   video: { label: "视频处理节点", color: "#ef4444", icon: "Film" },
   ai_gen: { label: "AI生成类节点", color: "#10b981", icon: "Sparkles" },
   music_gen: { label: "AI音乐", color: "#a78bfa", icon: "Music" },
+  music_step: { label: "免费AI音乐step music", color: "#22c55e", icon: "Music" },
   translation: { label: "翻译相关节点", color: "#8b5cf6", icon: "Languages" },
   network_request: { label: "网络请求类节点", color: "#0f766e", icon: "Globe" },
   aigc: { label: "AIGC流程链", color: "#22c55e", icon: "Boxes" },
@@ -244,7 +249,6 @@ export const CATEGORIES = {
   agi_shot: { label: "漫剧·分镜链", color: "#9333ea", icon: "Clapperboard" },
   agi_render: { label: "漫剧·成片链", color: "#7c3aed", icon: "FileVideo" },
   agi_data: { label: "漫剧·数据链", color: "#0891b2", icon: "Database" },
-  ai_desk: { label: "AI剪辑链", color: "#0ea5e9", icon: "Scissors" },
 } as const;
 
 // ==================== 漫剧链路顺序 ====================
@@ -482,6 +486,13 @@ export function getVisibleOutputs(nodeType: NodeTypeDef, config: Record<string, 
     // 合并节点仅有一个静态 json 输出，不随端口数变化
     return nodeType.outputs;
   }
+  if (nodeType.id === "music_prompt_optimizer") {
+    // 音乐提示词优化：勾选「是否纯音乐」后无歌词，隐藏歌词输出端口
+    if (config.instrumental) {
+      return nodeType.outputs.filter((p) => p.id !== "lyrics");
+    }
+    return nodeType.outputs;
+  }
   return nodeType.outputs;
 }
 
@@ -524,6 +535,9 @@ export const PI_AGENT_OUTPUT_TYPES = [
 /** Check if a config field should be visible based on dependsOn */
 export function isConfigFieldVisible(field: ConfigField, config: Record<string, any>): boolean {
   if (!field.dependsOn) return true;
+  // 端点内含 {依赖键} 占位符的联动下拉（如模型随接口类型刷新重取列表）：
+  // dependsOn 仅用于触发重新拉取，不控制可见性——否则旧节点 config 缺少该键时字段会被整体隐藏
+  if (field.apiEndpoint?.includes(`{${field.dependsOn}}`)) return true;
   const depValue = config[field.dependsOn];
 
   // supports chip-style array values ?check if array contains any of the dependsAnyValues

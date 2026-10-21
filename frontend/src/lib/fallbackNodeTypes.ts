@@ -294,6 +294,93 @@ export const FALLBACK_NODE_TYPES = [
     "isBuiltIn": true
   },
   {
+    "id": "video_loader",
+    "name": "视频加载器",
+    "category": "io",
+    "description": "在卡片上选择或输入视频文件路径，卡片内直接预览（带播放/暂停控制），输出视频绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。",
+    "icon": "Film",
+    "color": "#3b82f6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "any",
+        "label": "输入",
+        "type": "any",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "id": "filepath",
+        "label": "文件路径",
+        "type": "any"
+      }
+    ],
+    "defaultConfig": {
+      "filePath": ""
+    },
+    "configFields": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "image_loader",
+    "name": "图片加载器",
+    "category": "io",
+    "description": "在卡片上选择或输入图片文件路径，卡片内直接预览（右上角全屏按钮），输出图片绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。",
+    "icon": "Image",
+    "color": "#3b82f6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "any",
+        "label": "输入",
+        "type": "any",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "id": "filepath",
+        "label": "文件路径",
+        "type": "any"
+      }
+    ],
+    "defaultConfig": {
+      "filePath": ""
+    },
+    "configFields": [],
+    "isBuiltIn": true
+  },
+  {
+    "id": "audio_loader",
+    "name": "音频加载器",
+    "category": "io",
+    "description": "在卡片上选择或输入音频文件路径，卡片内直接预览（带播放/暂停控制，右上角全屏按钮），输出音频绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。",
+    "icon": "Volume2",
+    "color": "#3b82f6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "any",
+        "label": "输入",
+        "type": "any",
+        "required": false
+      }
+    ],
+    "outputs": [
+      {
+        "id": "filepath",
+        "label": "文件路径",
+        "type": "any"
+      }
+    ],
+    "defaultConfig": {
+      "filePath": ""
+    },
+    "configFields": [],
+    "isBuiltIn": true
+  },
+  {
     "id": "specified_node_package",
     "name": "指定调用节点包",
     "category": "io",
@@ -13531,7 +13618,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "online_watermark_removal",
     "name": "在线去水印去字幕",
     "category": "video",
-    "description": "晴沐智坊提供的在线高质量去除视频中的水印服务，使用前确保注册登录晴沐智坊账号，使用将消耗软件的通用积分，确保积分足够视频消耗，1.3分钱每秒。详情访问晴沐hub：https://www.licorxj.online/capability-hub",
+    "description": "VLF官方节点，登录即可使用，消耗积分1.3积分每秒。请使用【媒体转链接节点】前置获取上传云端信息",
     "icon": "Eraser",
     "color": "#8b5cf6",
     "execution_domain": "thread",
@@ -18850,143 +18937,87 @@ export const FALLBACK_NODE_TYPES = [
     "isBuiltIn": true
   },
   {
-    "id": "step_music_txt2music",
-    "name": "免费AI音乐-文生音乐",
+    "id": "music_prompt_optimizer",
+    "name": "音乐提示词优化",
     "category": "music_step",
-    "description": "ACE-Step 1.5 标签模式：按提示词描述生成完整歌曲（可选提供歌词，未提供时由 LM 创作）。官方标价 $0 免费；提示词与歌词分开接入，节点自定义输入优先于连线输入。",
-    "icon": "Music",
+    "description": "把对音乐的简单描述按目标平台（ACE-Step / Suno）提示词规范，用 LLM 扩写成中文提示词、英文提示词、歌词与全信息 JSON；纯音乐模式下不生成歌词。结果可直接接入「免费AI音乐step music」或「AI音乐」节点使用。",
+    "icon": "Brain",
     "color": "#22c55e",
     "execution_domain": "process",
     "inputs": [
       {
         "id": "text",
-        "label": "提示词",
+        "label": "音乐简单描述",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "prompt_zh",
+        "label": "中文提示词",
+        "type": "text"
+      },
+      {
+        "id": "prompt_en",
+        "label": "英文提示词",
         "type": "text"
       },
       {
         "id": "lyrics",
         "label": "歌词",
         "type": "text"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "audio_1",
-        "label": "音频1",
-        "type": "audio"
-      },
-      {
-        "id": "audio_2",
-        "label": "音频2",
-        "type": "audio"
       },
       {
         "id": "params",
-        "label": "生成参数JSON",
+        "label": "全信息Json",
         "type": "json"
       }
     ],
     "defaultConfig": {
-      "model": "cloud",
-      "custom_prompt": "",
-      "custom_lyrics": "",
-      "lm_optimize": true,
-      "thinking": false,
-      "duration": "30",
-      "audio_format": "mp3",
-      "poll_timeout": 900
+      "custom_description": "",
+      "platform": "ace",
+      "instrumental": false,
+      "vocal_language": "zh",
+      "singer_gender": "female",
+      "llm_model": "",
+      "temperature": "0.7"
     },
     "configFields": [
       {
-        "key": "btn_get_key",
-        "label": "获取API key",
-        "type": "button",
-        "colSpan": "half",
-        "url": "https://acemusic.ai/api-key"
+        "key": "custom_description",
+        "label": "自定义音乐描述",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的描述；留空则使用连线接入值（如：一首关于夏天旅行的欢快流行歌）",
+        "description": "节点自定义输入优先于接入输入"
       },
       {
-        "key": "btn_download_pack",
-        "label": "下载整合包",
-        "type": "button",
-        "colSpan": "half",
-        "url": "https://pan.quark.cn/s/f4b561117d63"
-      },
-      {
-        "key": "model",
-        "label": "模型",
+        "key": "platform",
+        "label": "优化平台",
         "type": "select",
         "colSpan": "half",
         "options": [
           {
-            "value": "local",
-            "label": "step-music（本地整合包）"
+            "value": "ace",
+            "label": "ACE"
           },
           {
-            "value": "cloud",
-            "label": "免费在线模型（获取key）"
+            "value": "suno",
+            "label": "Suno"
           }
         ],
-        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+        "description": "按所选平台的提示词规范扩写（读取对应平台指导文档）"
       },
       {
-        "key": "custom_prompt",
-        "label": "自定义提示词",
-        "type": "textarea",
-        "colSpan": "full",
-        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
-        "description": "节点自定义输入优先于接入输入"
-      },
-      {
-        "key": "custom_lyrics",
-        "label": "自定义歌词",
-        "type": "textarea",
-        "colSpan": "full",
-        "placeholder": "支持 [Verse] / [Chorus] 等结构标记；填写后优先于连线输入的歌词",
-        "description": "节点自定义输入优先于接入输入"
-      },
-      {
-        "key": "lm_optimize",
-        "label": "LM优化提示词",
-        "type": "toggle",
+        "key": "instrumental",
+        "label": "是否纯音乐",
+        "type": "checkbox",
         "colSpan": "half",
-        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
-      },
-      {
-        "key": "thinking",
-        "label": "LM深度思考",
-        "type": "toggle",
-        "colSpan": "half",
-        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
-      },
-      {
-        "key": "duration",
-        "label": "时长(秒)",
-        "type": "number",
-        "min": 10,
-        "max": 600,
-        "colSpan": "half",
-        "description": "10~600 秒，留空由 LM 自动决定"
-      },
-      {
-        "key": "bpm",
-        "label": "曲速 BPM",
-        "type": "number",
-        "min": 30,
-        "max": 300,
-        "colSpan": "half",
-        "description": "30~300，留空自动决定"
-      },
-      {
-        "key": "key_scale",
-        "label": "调性",
-        "type": "text",
-        "colSpan": "half",
-        "placeholder": "如：C Major / A Minor",
-        "description": "留空自动决定"
+        "description": "勾选后生成纯音乐提示词：不输出歌词端口，描述强调器乐/配乐"
       },
       {
         "key": "vocal_language",
-        "label": "演唱语言",
+        "label": "歌词语言",
         "type": "select",
         "colSpan": "half",
         "options": [
@@ -19023,658 +19054,49 @@ export const FALLBACK_NODE_TYPES = [
             "label": "葡萄牙语"
           }
         ],
-        "description": "歌词演唱语言；纯音乐节点忽略"
+        "dependsOn": "instrumental",
+        "dependsValue": false,
+        "description": "生成歌词的演唱语言（纯音乐模式忽略）"
       },
       {
-        "key": "audio_format",
-        "label": "音频格式",
+        "key": "singer_gender",
+        "label": "歌者性别",
         "type": "select",
         "colSpan": "half",
         "options": [
           {
-            "value": "mp3",
-            "label": "MP3"
+            "value": "male",
+            "label": "男声"
           },
           {
-            "value": "wav",
-            "label": "WAV（无损）"
+            "value": "female",
+            "label": "女声"
           },
           {
-            "value": "flac",
-            "label": "FLAC（无损）"
-          },
-          {
-            "value": "opus",
-            "label": "Opus"
-          },
-          {
-            "value": "aac",
-            "label": "AAC"
-          }
-        ]
-      },
-      {
-        "key": "seed",
-        "label": "随机种子",
-        "type": "number",
-        "colSpan": "half",
-        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
-    "id": "step_music_natural",
-    "name": "免费AI音乐-自然语言创作",
-    "category": "music_step",
-    "description": "ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。",
-    "icon": "Sparkles",
-    "color": "#22c55e",
-    "execution_domain": "process",
-    "inputs": [
-      {
-        "id": "text",
-        "label": "提示词",
-        "type": "text"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "audio_1",
-        "label": "音频1",
-        "type": "audio"
-      },
-      {
-        "id": "audio_2",
-        "label": "音频2",
-        "type": "audio"
-      },
-      {
-        "id": "params",
-        "label": "生成参数JSON",
-        "type": "json"
-      }
-    ],
-    "defaultConfig": {
-      "model": "cloud",
-      "custom_prompt": "",
-      "custom_lyrics": "",
-      "lm_optimize": true,
-      "thinking": false,
-      "duration": "30",
-      "audio_format": "mp3",
-      "poll_timeout": 900
-    },
-    "configFields": [
-      {
-        "key": "btn_get_key",
-        "label": "获取API key",
-        "type": "button",
-        "colSpan": "half",
-        "url": "https://acemusic.ai/api-key"
-      },
-      {
-        "key": "btn_download_pack",
-        "label": "下载整合包",
-        "type": "button",
-        "colSpan": "half",
-        "url": "https://pan.quark.cn/s/f4b561117d63"
-      },
-      {
-        "key": "model",
-        "label": "模型",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "local",
-            "label": "step-music（本地整合包）"
-          },
-          {
-            "value": "cloud",
-            "label": "免费在线模型（获取key）"
+            "value": "duet",
+            "label": "对唱"
           }
         ],
-        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+        "dependsOn": "instrumental",
+        "dependsValue": false,
+        "description": "人声声部（纯音乐模式忽略）"
       },
       {
-        "key": "custom_prompt",
-        "label": "自定义提示词",
-        "type": "textarea",
-        "colSpan": "full",
-        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
-        "description": "节点自定义输入优先于接入输入"
-      },
-      {
-        "key": "lm_optimize",
-        "label": "LM优化提示词",
-        "type": "toggle",
-        "colSpan": "half",
-        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
-      },
-      {
-        "key": "thinking",
-        "label": "LM深度思考",
-        "type": "toggle",
-        "colSpan": "half",
-        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
-      },
-      {
-        "key": "duration",
-        "label": "时长(秒)",
-        "type": "number",
-        "min": 10,
-        "max": 600,
-        "colSpan": "half",
-        "description": "10~600 秒，留空由 LM 自动决定"
-      },
-      {
-        "key": "bpm",
-        "label": "曲速 BPM",
-        "type": "number",
-        "min": 30,
-        "max": 300,
-        "colSpan": "half",
-        "description": "30~300，留空自动决定"
-      },
-      {
-        "key": "key_scale",
-        "label": "调性",
+        "key": "llm_model",
+        "label": "LLM模型",
         "type": "text",
         "colSpan": "half",
-        "placeholder": "如：C Major / A Minor",
-        "description": "留空自动决定"
+        "placeholder": "留空跟随全局 LLM 配置",
+        "description": "执行优化的 LLM 模型名（覆盖全局步骤模型路由）"
       },
       {
-        "key": "vocal_language",
-        "label": "演唱语言",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "en",
-            "label": "英语"
-          },
-          {
-            "value": "zh",
-            "label": "中文"
-          },
-          {
-            "value": "ja",
-            "label": "日语"
-          },
-          {
-            "value": "ko",
-            "label": "韩语"
-          },
-          {
-            "value": "es",
-            "label": "西班牙语"
-          },
-          {
-            "value": "fr",
-            "label": "法语"
-          },
-          {
-            "value": "de",
-            "label": "德语"
-          },
-          {
-            "value": "pt",
-            "label": "葡萄牙语"
-          }
-        ],
-        "description": "歌词演唱语言；纯音乐节点忽略"
-      },
-      {
-        "key": "audio_format",
-        "label": "音频格式",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "mp3",
-            "label": "MP3"
-          },
-          {
-            "value": "wav",
-            "label": "WAV（无损）"
-          },
-          {
-            "value": "flac",
-            "label": "FLAC（无损）"
-          },
-          {
-            "value": "opus",
-            "label": "Opus"
-          },
-          {
-            "value": "aac",
-            "label": "AAC"
-          }
-        ]
-      },
-      {
-        "key": "seed",
-        "label": "随机种子",
+        "key": "temperature",
+        "label": "温度",
         "type": "number",
+        "min": 0,
+        "max": 2,
         "colSpan": "half",
-        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
-    "id": "step_music_lyrics2music",
-    "name": "免费AI音乐-歌词生音乐",
-    "category": "music_step",
-    "description": "ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。",
-    "icon": "FileText",
-    "color": "#22c55e",
-    "execution_domain": "process",
-    "inputs": [
-      {
-        "id": "text",
-        "label": "提示词",
-        "type": "text"
-      },
-      {
-        "id": "lyrics",
-        "label": "歌词",
-        "type": "text"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "audio_1",
-        "label": "音频1",
-        "type": "audio"
-      },
-      {
-        "id": "audio_2",
-        "label": "音频2",
-        "type": "audio"
-      },
-      {
-        "id": "params",
-        "label": "生成参数JSON",
-        "type": "json"
-      }
-    ],
-    "defaultConfig": {
-      "model": "cloud",
-      "custom_prompt": "",
-      "custom_lyrics": "",
-      "lm_optimize": true,
-      "thinking": false,
-      "duration": "30",
-      "audio_format": "mp3",
-      "poll_timeout": 900
-    },
-    "configFields": [
-      {
-        "key": "btn_get_key",
-        "label": "获取API key",
-        "type": "button",
-        "colSpan": "half",
-        "url": "https://acemusic.ai/api-key"
-      },
-      {
-        "key": "btn_download_pack",
-        "label": "下载整合包",
-        "type": "button",
-        "colSpan": "half",
-        "url": "https://pan.quark.cn/s/f4b561117d63"
-      },
-      {
-        "key": "model",
-        "label": "模型",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "local",
-            "label": "step-music（本地整合包）"
-          },
-          {
-            "value": "cloud",
-            "label": "免费在线模型（获取key）"
-          }
-        ],
-        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
-      },
-      {
-        "key": "custom_prompt",
-        "label": "自定义提示词",
-        "type": "textarea",
-        "colSpan": "full",
-        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
-        "description": "节点自定义输入优先于接入输入"
-      },
-      {
-        "key": "custom_lyrics",
-        "label": "自定义歌词",
-        "type": "textarea",
-        "colSpan": "full",
-        "placeholder": "支持 [Verse] / [Chorus] 等结构标记；填写后优先于连线输入的歌词",
-        "description": "节点自定义输入优先于接入输入（本节点歌词必填）"
-      },
-      {
-        "key": "lm_optimize",
-        "label": "LM优化提示词",
-        "type": "toggle",
-        "colSpan": "half",
-        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
-      },
-      {
-        "key": "thinking",
-        "label": "LM深度思考",
-        "type": "toggle",
-        "colSpan": "half",
-        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
-      },
-      {
-        "key": "duration",
-        "label": "时长(秒)",
-        "type": "number",
-        "min": 10,
-        "max": 600,
-        "colSpan": "half",
-        "description": "10~600 秒，留空由 LM 自动决定"
-      },
-      {
-        "key": "bpm",
-        "label": "曲速 BPM",
-        "type": "number",
-        "min": 30,
-        "max": 300,
-        "colSpan": "half",
-        "description": "30~300，留空自动决定"
-      },
-      {
-        "key": "key_scale",
-        "label": "调性",
-        "type": "text",
-        "colSpan": "half",
-        "placeholder": "如：C Major / A Minor",
-        "description": "留空自动决定"
-      },
-      {
-        "key": "vocal_language",
-        "label": "演唱语言",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "en",
-            "label": "英语"
-          },
-          {
-            "value": "zh",
-            "label": "中文"
-          },
-          {
-            "value": "ja",
-            "label": "日语"
-          },
-          {
-            "value": "ko",
-            "label": "韩语"
-          },
-          {
-            "value": "es",
-            "label": "西班牙语"
-          },
-          {
-            "value": "fr",
-            "label": "法语"
-          },
-          {
-            "value": "de",
-            "label": "德语"
-          },
-          {
-            "value": "pt",
-            "label": "葡萄牙语"
-          }
-        ],
-        "description": "歌词演唱语言；纯音乐节点忽略"
-      },
-      {
-        "key": "audio_format",
-        "label": "音频格式",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "mp3",
-            "label": "MP3"
-          },
-          {
-            "value": "wav",
-            "label": "WAV（无损）"
-          },
-          {
-            "value": "flac",
-            "label": "FLAC（无损）"
-          },
-          {
-            "value": "opus",
-            "label": "Opus"
-          },
-          {
-            "value": "aac",
-            "label": "AAC"
-          }
-        ]
-      },
-      {
-        "key": "seed",
-        "label": "随机种子",
-        "type": "number",
-        "colSpan": "half",
-        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
-      }
-    ],
-    "isBuiltIn": true
-  },
-  {
-    "id": "step_music_instrumental",
-    "name": "免费AI音乐-纯音乐",
-    "category": "music_step",
-    "description": "ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。官方标价 $0 免费；适合视频配乐。",
-    "icon": "Music",
-    "color": "#22c55e",
-    "execution_domain": "process",
-    "inputs": [
-      {
-        "id": "text",
-        "label": "提示词",
-        "type": "text"
-      }
-    ],
-    "outputs": [
-      {
-        "id": "audio_1",
-        "label": "音频1",
-        "type": "audio"
-      },
-      {
-        "id": "audio_2",
-        "label": "音频2",
-        "type": "audio"
-      },
-      {
-        "id": "params",
-        "label": "生成参数JSON",
-        "type": "json"
-      }
-    ],
-    "defaultConfig": {
-      "model": "cloud",
-      "custom_prompt": "",
-      "custom_lyrics": "",
-      "lm_optimize": true,
-      "thinking": false,
-      "duration": "30",
-      "audio_format": "mp3",
-      "poll_timeout": 900
-    },
-    "configFields": [
-      {
-        "key": "btn_get_key",
-        "label": "获取API key",
-        "type": "button",
-        "colSpan": "half",
-        "url": "https://acemusic.ai/api-key"
-      },
-      {
-        "key": "btn_download_pack",
-        "label": "下载整合包",
-        "type": "button",
-        "colSpan": "half",
-        "url": "https://pan.quark.cn/s/f4b561117d63"
-      },
-      {
-        "key": "model",
-        "label": "模型",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "local",
-            "label": "step-music（本地整合包）"
-          },
-          {
-            "value": "cloud",
-            "label": "免费在线模型（获取key）"
-          }
-        ],
-        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
-      },
-      {
-        "key": "custom_prompt",
-        "label": "自定义提示词",
-        "type": "textarea",
-        "colSpan": "full",
-        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
-        "description": "节点自定义输入优先于接入输入"
-      },
-      {
-        "key": "lm_optimize",
-        "label": "LM优化提示词",
-        "type": "toggle",
-        "colSpan": "half",
-        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
-      },
-      {
-        "key": "thinking",
-        "label": "LM深度思考",
-        "type": "toggle",
-        "colSpan": "half",
-        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
-      },
-      {
-        "key": "duration",
-        "label": "时长(秒)",
-        "type": "number",
-        "min": 10,
-        "max": 600,
-        "colSpan": "half",
-        "description": "10~600 秒，留空由 LM 自动决定"
-      },
-      {
-        "key": "bpm",
-        "label": "曲速 BPM",
-        "type": "number",
-        "min": 30,
-        "max": 300,
-        "colSpan": "half",
-        "description": "30~300，留空自动决定"
-      },
-      {
-        "key": "key_scale",
-        "label": "调性",
-        "type": "text",
-        "colSpan": "half",
-        "placeholder": "如：C Major / A Minor",
-        "description": "留空自动决定"
-      },
-      {
-        "key": "vocal_language",
-        "label": "演唱语言",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "en",
-            "label": "英语"
-          },
-          {
-            "value": "zh",
-            "label": "中文"
-          },
-          {
-            "value": "ja",
-            "label": "日语"
-          },
-          {
-            "value": "ko",
-            "label": "韩语"
-          },
-          {
-            "value": "es",
-            "label": "西班牙语"
-          },
-          {
-            "value": "fr",
-            "label": "法语"
-          },
-          {
-            "value": "de",
-            "label": "德语"
-          },
-          {
-            "value": "pt",
-            "label": "葡萄牙语"
-          }
-        ],
-        "description": "歌词演唱语言；纯音乐节点忽略"
-      },
-      {
-        "key": "audio_format",
-        "label": "音频格式",
-        "type": "select",
-        "colSpan": "half",
-        "options": [
-          {
-            "value": "mp3",
-            "label": "MP3"
-          },
-          {
-            "value": "wav",
-            "label": "WAV（无损）"
-          },
-          {
-            "value": "flac",
-            "label": "FLAC（无损）"
-          },
-          {
-            "value": "opus",
-            "label": "Opus"
-          },
-          {
-            "value": "aac",
-            "label": "AAC"
-          }
-        ]
-      },
-      {
-        "key": "seed",
-        "label": "随机种子",
-        "type": "number",
-        "colSpan": "half",
-        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
+        "description": "LLM 采样温度，留空用全局默认"
       }
     ],
     "isBuiltIn": true

@@ -12,6 +12,7 @@ import MusicGenSettings from "@/components/settings/MusicGenSettings";
 import SubtitleStyle from "@/components/settings/SubtitleStyle";
 import VideoProcess from "@/components/settings/VideoProcess";
 import GeneralSettings from "@/components/settings/GeneralSettings";
+import ThreadSettings from "@/components/settings/ThreadSettings";
 import UISettings from "@/components/settings/UISettings";
 import AudioProcessingSettings from "@/components/settings/AudioProcessing";
 import AigcCapabilitiesSettings from "@/components/settings/AigcCapabilitiesSettings";
@@ -35,6 +36,7 @@ import {
   Layers,
   Database,
   KeyRound,
+  Cpu,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
@@ -51,7 +53,8 @@ interface TabDef {
 
 const TABS: TabDef[] = [
   { id: "ui", label: "UI 设置", icon: Palette, group: "界面", tone: "primary", component: UISettings },
-  { id: "general", label: "通用设置", icon: Settings2, group: "通用", tone: "default", component: GeneralSettings },
+  { id: "general", label: "翻译相关设置", icon: Settings2, group: "通用", tone: "default", component: GeneralSettings },
+  { id: "threads", label: "线程设置", icon: Cpu, group: "通用", tone: "info", component: ThreadSettings },
   { id: "audio", label: "音频处理", icon: SlidersVertical, group: "媒体", tone: "info", component: AudioProcessingSettings },
   { id: "secrets", label: "密钥管理", icon: KeyRound, group: "模型", tone: "warning", component: SecretManagerSettings },
   { id: "llm", label: "AI 模型配置", icon: Brain, group: "模型", tone: "ai", component: LLMSettings },
@@ -69,7 +72,7 @@ const TABS: TabDef[] = [
 
 const GROUPS = [
   { id: "界面", icon: Palette, desc: "主题、布局与显示" },
-  { id: "通用", icon: Settings2, desc: "项目级通用配置" },
+  { id: "通用", icon: Settings2, desc: "翻译与线程配置" },
   { id: "模型", icon: Brain, desc: "AI 模型与第三方接口" },
   { id: "媒体", icon: Layers, desc: "音频、字幕与视频处理" },
   { id: "高级", icon: Sparkles, desc: "实验性能力与扩展接口" },

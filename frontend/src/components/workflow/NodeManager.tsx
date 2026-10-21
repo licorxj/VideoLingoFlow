@@ -80,6 +80,7 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
       { value: "number", label: "数字", supportedProperties: ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
       { value: "voice-target-list", label: "音色目标列表", supportedProperties: ["apiEndpoint", "optionLabel", "optionValue", "placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
       { value: "reorder-list", label: "排序列表", supportedProperties: ["options", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"], requiresOptions: true },
+      { value: "desk-ops", label: "AI剪辑·工具调用", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
     ],
     execTypes: [
       { value: "", label: "无 (仅 UI)" },
