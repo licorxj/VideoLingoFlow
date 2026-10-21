@@ -378,48 +378,6 @@
         "type": "chat"
       },
       {
-        "id": "moonshotai/kimi-k3",
-        "name": "Kimi K3",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text",
-          "image"
-        ],
-        "cost": {
-          "input": 0,
-          "output": 0,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsLongCacheRetention": false,
-          "supportsStrictMode": false
-        },
-        "contextWindow": 1048576,
-        "maxTokens": 131072,
-        "inputLimits": {
-          "images": {
-            "resize": {
-              "maxWidth": 2000,
-              "maxHeight": 2000,
-              "maxBytes": 4718592,
-              "jpegQuality": 80
-            }
-          }
-        },
-        "type": "chat"
-      },
-      {
         "id": "nvidia/cosmos-reason2-8b",
         "name": "Cosmos Reason2 8B",
         "api": "openai-completions",
@@ -563,37 +521,6 @@
             }
           }
         },
-        "type": "chat"
-      },
-      {
-        "id": "nvidia/nemotron-3-super-120b-a12b",
-        "name": "Nemotron 3 Super",
-        "api": "openai-completions",
-        "provider": "nvidia",
-        "baseUrl": "https://integrate.api.nvidia.com/v1",
-        "headers": {
-          "NVCF-POLL-SECONDS": "3600"
-        },
-        "reasoning": true,
-        "input": [
-          "text"
-        ],
-        "cost": {
-          "input": 0.2,
-          "output": 0.8,
-          "cacheRead": 0,
-          "cacheWrite": 0
-        },
-        "compat": {
-          "supportsStore": false,
-          "supportsDeveloperRole": false,
-          "supportsReasoningEffort": false,
-          "maxTokensField": "max_tokens",
-          "supportsLongCacheRetention": false,
-          "supportsStrictMode": false
-        },
-        "contextWindow": 262144,
-        "maxTokens": 262144,
         "type": "chat"
       },
       {
@@ -794,9 +721,9 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1791437232704,
-    "lastModified": 1791313527000,
-    "etag": "W/\"ea873eafd4b0253d71632fad1ac725b4\""
+    "checkedAt": 1792411331957,
+    "lastModified": 1792068056000,
+    "etag": "W/\"4330e74f82097d344ba49222c13b1b6e\""
   },
   "xiaomi": {
     "models": [
@@ -808,10 +735,20 @@
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
           "supportsStrictMode": true,
+          "supportsReasoningEffort": false,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": "off",
+          "minimal": null,
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -844,10 +781,20 @@
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
           "supportsStrictMode": true,
+          "supportsReasoningEffort": false,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": "off",
+          "minimal": null,
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text"
         ],
@@ -869,10 +816,20 @@
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
           "supportsStrictMode": true,
+          "supportsReasoningEffort": false,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": "off",
+          "minimal": null,
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text"
         ],
@@ -894,10 +851,20 @@
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
           "supportsStrictMode": true,
+          "supportsReasoningEffort": false,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": "off",
+          "minimal": null,
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -930,10 +897,20 @@
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
           "supportsStrictMode": true,
+          "supportsReasoningEffort": false,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": "off",
+          "minimal": null,
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -966,10 +943,20 @@
         "baseUrl": "https://api.xiaomimimo.com/v1",
         "compat": {
           "supportsStrictMode": true,
+          "supportsReasoningEffort": false,
           "requiresReasoningContentOnAssistantMessages": true,
           "thinkingFormat": "deepseek"
         },
         "reasoning": true,
+        "thinkingLevelMap": {
+          "off": "off",
+          "minimal": null,
+          "low": null,
+          "medium": null,
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
         "input": [
           "text",
           "image"
@@ -995,9 +982,9 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1791437232303,
-    "lastModified": 1790340067000,
-    "etag": "W/\"c6e5204bdd5c6de144b577d8f9233a6c\""
+    "checkedAt": 1792411331613,
+    "lastModified": 1791981660000,
+    "etag": "W/\"1d17fcf2ff85a04855c03a9319b6e343\""
   },
   "google": {
     "models": [
@@ -1016,7 +1003,16 @@
           "input": 2,
           "output": 12,
           "cacheRead": 0.2,
-          "cacheWrite": 0
+          "cacheWrite": 0,
+          "tiers": [
+            {
+              "inputTokensAbove": 200000,
+              "input": 4,
+              "output": 18,
+              "cacheRead": 0.4,
+              "cacheWrite": 0
+            }
+          ]
         },
         "contextWindow": 131072,
         "maxTokens": 65536,
@@ -1049,7 +1045,16 @@
           "input": 2,
           "output": 12,
           "cacheRead": 0.2,
-          "cacheWrite": 0
+          "cacheWrite": 0,
+          "tiers": [
+            {
+              "inputTokensAbove": 200000,
+              "input": 4,
+              "output": 18,
+              "cacheRead": 0.4,
+              "cacheWrite": 0
+            }
+          ]
         },
         "contextWindow": 131072,
         "maxTokens": 65536,
@@ -1082,7 +1087,16 @@
           "input": 1.25,
           "output": 10,
           "cacheRead": 0,
-          "cacheWrite": 0
+          "cacheWrite": 0,
+          "tiers": [
+            {
+              "inputTokensAbove": 200000,
+              "input": 2.5,
+              "output": 15,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            }
+          ]
         },
         "contextWindow": 128000,
         "maxTokens": 64000,
@@ -1181,7 +1195,16 @@
           "input": 1.25,
           "output": 10,
           "cacheRead": 0.125,
-          "cacheWrite": 0
+          "cacheWrite": 0,
+          "tiers": [
+            {
+              "inputTokensAbove": 200000,
+              "input": 2.5,
+              "output": 15,
+              "cacheRead": 0.25,
+              "cacheWrite": 0
+            }
+          ]
         },
         "contextWindow": 1048576,
         "maxTokens": 65536,
@@ -1433,7 +1456,16 @@
           "input": 2,
           "output": 12,
           "cacheRead": 0.2,
-          "cacheWrite": 0
+          "cacheWrite": 0,
+          "tiers": [
+            {
+              "inputTokensAbove": 200000,
+              "input": 4,
+              "output": 18,
+              "cacheRead": 0.4,
+              "cacheWrite": 0
+            }
+          ]
         },
         "contextWindow": 1048576,
         "maxTokens": 65536,
@@ -1475,7 +1507,16 @@
           "input": 2,
           "output": 12,
           "cacheRead": 0.2,
-          "cacheWrite": 0
+          "cacheWrite": 0,
+          "tiers": [
+            {
+              "inputTokensAbove": 200000,
+              "input": 4,
+              "output": 18,
+              "cacheRead": 0.4,
+              "cacheWrite": 0
+            }
+          ]
         },
         "contextWindow": 1048576,
         "maxTokens": 65536,
@@ -1704,6 +1745,48 @@
         "type": "chat"
       },
       {
+        "id": "gemini-4-argon",
+        "name": "Gemini 4 Argon",
+        "api": "google-generative-ai",
+        "provider": "google",
+        "baseUrl": "https://generativelanguage.googleapis.com/v1beta",
+        "reasoning": true,
+        "thinkingLevelMap": {
+          "off": null,
+          "minimal": null,
+          "low": "low",
+          "medium": "medium",
+          "high": "high",
+          "xhigh": null,
+          "max": null
+        },
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 2,
+          "output": 10,
+          "cacheRead": 0.1,
+          "cacheWrite": 0
+        },
+        "contextWindow": 1048576,
+        "maxTokens": 32768,
+        "inputLimits": {
+          "maxRequestBytes": 20971520,
+          "images": {
+            "maxPerRequest": 3600,
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
         "id": "gemini-flash-latest",
         "name": "Gemini Flash Latest",
         "api": "google-generative-ai",
@@ -1868,9 +1951,9 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1791437232675,
-    "lastModified": 1790340008000,
-    "etag": "W/\"7479536815e7f52fb17815e7f6031a76\""
+    "checkedAt": 1792411331571,
+    "lastModified": 1791981591000,
+    "etag": "W/\"1d421d9186c86f219a340db95c0eb156\""
   },
   "openai": {
     "models": [
@@ -3306,7 +3389,8 @@
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true,
-          "supportsExplicitPromptCacheMode": true
+          "supportsExplicitPromptCacheMode": true,
+          "supportsMidConvoEffort": true
         },
         "inputLimits": {
           "maxRequestBytes": 536870912,
@@ -3365,7 +3449,8 @@
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true,
-          "supportsExplicitPromptCacheMode": true
+          "supportsExplicitPromptCacheMode": true,
+          "supportsMidConvoEffort": true
         },
         "inputLimits": {
           "maxRequestBytes": 536870912,
@@ -3424,7 +3509,8 @@
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true,
-          "supportsExplicitPromptCacheMode": true
+          "supportsExplicitPromptCacheMode": true,
+          "supportsMidConvoEffort": true
         },
         "inputLimits": {
           "maxRequestBytes": 536870912,
@@ -3483,7 +3569,8 @@
           "supportsAdditionalTools": true,
           "supportsToolSearch": true,
           "supportsMidConvoSystemMessages": true,
-          "supportsExplicitPromptCacheMode": true
+          "supportsExplicitPromptCacheMode": true,
+          "supportsMidConvoEffort": true
         },
         "inputLimits": {
           "maxRequestBytes": 536870912,
@@ -3514,7 +3601,16 @@
           "input": 4,
           "output": 20,
           "cacheRead": 0.4,
-          "cacheWrite": 5
+          "cacheWrite": 5,
+          "tiers": [
+            {
+              "inputTokensAbove": 272000,
+              "input": 8,
+              "output": 30,
+              "cacheRead": 0.8,
+              "cacheWrite": 10
+            }
+          ]
         },
         "contextWindow": 1050000,
         "maxTokens": 128000,
@@ -3894,9 +3990,9 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1791437232305,
-    "lastModified": 1790859104000,
-    "etag": "W/\"088045d5b9f69b280395672dcd5ada79\""
+    "checkedAt": 1792411331602,
+    "lastModified": 1791981624000,
+    "etag": "W/\"b0dc71970824c1732139c09709a6ffc4\""
   },
   "huggingface": {
     "models": [
@@ -4476,6 +4572,30 @@
         },
         "contextWindow": 131072,
         "maxTokens": 4096,
+        "type": "chat"
+      },
+      {
+        "id": "MiniMaxAI/MiniMax-M1-80k",
+        "name": "MiniMax M1 80K",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": true,
+        "input": [
+          "text"
+        ],
+        "cost": {
+          "input": 0.55,
+          "output": 2.2,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 1000000,
+        "maxTokens": 80000,
         "type": "chat"
       },
       {
@@ -5227,6 +5347,41 @@
           "xhigh": null,
           "max": null
         },
+        "inputLimits": {
+          "images": {
+            "resize": {
+              "maxWidth": 2000,
+              "maxHeight": 2000,
+              "maxBytes": 4718592,
+              "jpegQuality": 80
+            }
+          }
+        },
+        "type": "chat"
+      },
+      {
+        "id": "Qwen/Qwen3-VL-30B-A3B-Instruct",
+        "name": "Qwen3 VL 30B A3B Instruct",
+        "api": "openai-completions",
+        "provider": "huggingface",
+        "baseUrl": "https://router.huggingface.co/v1",
+        "reasoning": false,
+        "input": [
+          "text",
+          "image"
+        ],
+        "cost": {
+          "input": 0.2,
+          "output": 0.7,
+          "cacheRead": 0,
+          "cacheWrite": 0
+        },
+        "compat": {
+          "supportsStrictMode": true,
+          "supportsDeveloperRole": false
+        },
+        "contextWindow": 131072,
+        "maxTokens": 32768,
         "inputLimits": {
           "images": {
             "resize": {
@@ -6213,9 +6368,9 @@
         "type": "chat"
       }
     ],
-    "checkedAt": 1791437232713,
-    "lastModified": 1790340016000,
-    "etag": "W/\"16fd3507eb5807845f3f87d72e24c778\""
+    "checkedAt": 1792411331620,
+    "lastModified": 1791981599000,
+    "etag": "W/\"bad3f197735973f3d506a1e901d8ac2e\""
   },
   "anthropic": {
     "models": [

@@ -1213,6 +1213,27 @@ class AlipayPlatform(BasePlatform):
     # ------------------------------------------------------------------
 
     @staticmethod
+    async def _dismiss_ai_guide_overlay(page):
+        """支付宝发布页偶发浮出「AI 优化引导」蒙层(ai-optimization-guide-overlay
+        / ai-optimization-guide-block),会盖住描述输入框拦截指针事件,导致
+        ``textarea.click()`` 因 "subtree intercepts pointer events" 超时。
+
+        在点击描述框等交互前调用,直接把该蒙层隐藏掉,避免拦截。
+        """
+        try:
+            await page.evaluate("""() => {
+                document.querySelectorAll(
+                    '.ai-optimization-guide-overlay, .ai-optimization-guide-block'
+                ).forEach(el => {
+                    el.style.display = 'none';
+                    el.style.pointerEvents = 'none';
+                    el.setAttribute('aria-hidden', 'true');
+                });
+            }""")
+        except Exception:
+            pass
+
+    @staticmethod
     async def _set_description_and_tags(
         page, desc: str, title: str, tags: list
     ):
@@ -1229,11 +1250,14 @@ class AlipayPlatform(BasePlatform):
             "textarea.mentions-textarea__input"
         ).first
         await textarea.wait_for(state="visible", timeout=10000)
+        # 先清掉可能盖住输入框的「AI 优化引导」蒙层
+        await self._dismiss_ai_guide_overlay(page)
 
         # 先填描述正文(不含 #话题,话题单独走联想)
         # 描述为空时不再回落标题，保持为空
         text = (desc or "").strip()
         if text:
+            await self._dismiss_ai_guide_overlay(page)
             await textarea.click()
             await asyncio.sleep(0.2)
             # 清空后输入(跨平台:Mac 用 Cmd+A,其他用 Ctrl+A)
@@ -1254,6 +1278,7 @@ class AlipayPlatform(BasePlatform):
                 continue
             try:
                 logger.info("[上传视频] 开始添加话题 #%s", tag)
+                await self._dismiss_ai_guide_overlay(page)
                 await textarea.click()
                 await asyncio.sleep(0.2)
                 # 先键盘输入 # 触发 mention 插件的联想下拉
@@ -1862,6 +1887,7 @@ class AlipayPlatform(BasePlatform):
                 "(检查作者声明等必填项)"
             )
 
+        await self._dismiss_ai_guide_overlay(page)
         await publish_btn.click()
         logger.info("[上传视频] 已点击「确认发布」按钮")
 

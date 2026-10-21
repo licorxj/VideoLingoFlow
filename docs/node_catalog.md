@@ -1,13 +1,13 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-20 17:21:21  
-> 节点总数：180　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-20 23:04:19  
+> 节点总数：183　（带 `*` 的接口为必填项）
 
 ## 总览
 
 | 分组 | 节点数 |
 |------|-------|
-| 输入输出节点（`io`） | 7 |
+| 输入输出节点（`io`） | 10 |
 | 预览节点（`preview`） | 4 |
 | 音频处理节点（`audio`） | 11 |
 | 视频处理节点（`video`） | 19 |
@@ -38,12 +38,15 @@
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
 | 产物文件归档 | `archive_artifacts` | 将上游多个产物文件归档到指定目录，支持复制/剪切、新建子文件夹、重命名与自动序号 | thread | 产物输入(`any`:any) | 归档路径(`output`:any) |
+| 图片加载器 | `image_loader` | 在卡片上选择或输入图片文件路径，卡片内直接预览（右上角全屏按钮），输出图片绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。 | thread | 输入(`any`:any) | 文件路径(`filepath`:any) |
 | 指定调用工作流 | `specified_workflow` | 在卡片上指定要调用的工作流（分组 + 工作流，可加减任意数量），后端按选择顺序把它们组装成一份「工作流调用参考提示词」，从「提示词」端口输出给下游智能体使用（不落盘）。 | thread | 输入(`any`:any) | 提示词(`prompt`:text) |
 | 指定调用节点包 | `specified_node_package` | 在卡片上指定要调用的节点（分组 + 节点，可加减任意数量），后端按选择顺序把它们组装成一份「节点调用参考提示词」，从「提示词」端口输出给下游智能体使用（不落盘）。 | thread | 输入(`any`:any) | 提示词(`prompt`:text) |
 | 文件加载 | `file_load` | 在卡片上选择或输入文件路径，输出该文件的绝对路径（不落盘） | thread | 输入(`any`:any) | 文件路径(`filepath`:any) |
 | 文本输入框 | `text_input` | 提供一个大文本输入框，将其内容作为文本输出给下游（不落盘） | thread | 输入(`any`:any) | 文本(`text`:text) |
+| 视频加载器 | `video_loader` | 在卡片上选择或输入视频文件路径，卡片内直接预览（带播放/暂停控制），输出视频绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。 | thread | 输入(`any`:any) | 文件路径(`filepath`:any) |
 | 输入 | `input` | 导入文件或URL | thread | — | 视频(`video`:video); 音频(`audio`:audio); 字幕(`subtitle`:subtitle); URL(`url`:url); 文件路径(`filepath`:any); 文本(`text`:text); 不需要输入(`no_input`:any) |
 | 输出 | `output` | 导出文件 | thread | 输入(`any`:any) | — |
+| 音频加载器 | `audio_loader` | 在卡片上选择或输入音频文件路径，卡片内直接预览（带播放/暂停控制，右上角全屏按钮），输出音频绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。 | thread | 输入(`any`:any) | 文件路径(`filepath`:any) |
 
 ### 预览节点（`preview`）
 
@@ -78,7 +81,7 @@
 | OCR字幕查找 | `subtitle_position_search` | 定位视频字幕区域：支持 OCR 自动查找（输出标注帧与相对坐标 JSON），也可手动框选字幕位置并设置片头片尾跳过时间 | thread | 视频(`video`:video) | 标注帧(`image`:image); 字幕坐标JSON(`json`:json) |
 | OCR字幕识别 | `subtitle_recognition` | 按字幕区域坐标用 OCR 识别字幕内容与时间轴，输出 ASR 格式结果 JSON | thread | 视频(`video`*:video); 字幕区域坐标(`json`:json) | 识别结果JSON(ASR)(`subtitle`:json) |
 | 切割片头片尾 | `video_clip_intro_outro` | 从主视频中裁剪片头与片尾，输出裁剪后的主视频、片头片段、片尾片段（ffmpeg 流拷贝，不重新编码） | thread | 主视频(`video`*:video) | 裁剪后主视频(`video`:video); 片头片段(`intro`:video); 片尾片段(`outro`:video) |
-| 在线去水印去字幕 | `online_watermark_removal` | 晴沐智坊提供的在线高质量去除视频中的水印服务，使用前确保注册登录晴沐智坊账号，使用将消耗软件的通用积分，确保积分足够视频消耗，1.3分钱每秒。详情访问晴沐hub：https://www.licorxj.online/capability-hub | thread | 媒体详情JSON(`url_json`:json) | 去水印视频(`video`:video); 任务记录(`json`:json) |
+| 在线去水印去字幕 | `online_watermark_removal` | VLF官方节点，登录即可使用，消耗积分1.3积分每秒。请使用【媒体转链接节点】前置获取上传云端信息 | thread | 媒体详情JSON(`url_json`:json) | 去水印视频(`video`:video); 任务记录(`json`:json) |
 | 字幕烧录 | `merge_sub_video` | 将字幕烧录到视频 | thread | 视频(`video`*:video); 字幕(`subtitle`*:subtitle); 背景音乐(`audio`:audio); 配音音频(`dub`:audio) | 字幕视频(`video`:video) |
 | 按字幕切割视频 | `video_cut_by_subtitle` | 按 srt 字幕或句子 json 的时间轴切割视频，输出片段清单 json 与各视频片段 | thread | 视频(`video`*:video); SRT字幕(`srt`:subtitle); 句子JSON(`json`:json) | 切割信息(`json`:json); 视频片段清单(`video_segments`:json) |
 | 水印添加 | `watermark` | 为视频添加水印 | thread | 视频(`video`*:video); 水印图片(`image`:image) | 最终视频(`video`:video) |
@@ -323,7 +326,7 @@
 
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
-| 免费AI音乐-文生音乐 | `step_music_txt2music` | ACE-Step 1.5 标签模式：按提示词描述生成完整歌曲（可选提供歌词，未提供时由 LM 创作）。官方标价 $0 免费；提示词与歌词分开接入，节点自定义输入优先于连线输入。 | process | 提示词(`text`:text); 歌词(`lyrics`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
-| 免费AI音乐-歌词生音乐 | `step_music_lyrics2music` | ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。 | process | 提示词(`text`:text); 歌词(`lyrics`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
-| 免费AI音乐-纯音乐 | `step_music_instrumental` | ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。官方标价 $0 免费；适合视频配乐。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
-| 免费AI音乐-自然语言创作 | `step_music_natural` | ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 生成参数JSON(`params`:json) |
+| 免费AI音乐-文生音乐 | `step_music_txt2music` | ACE-Step 1.5 标签模式：按提示词描述生成完整歌曲（可选提供歌词，未提供时由 LM 创作）。官方标价 $0 免费；提示词与歌词分开接入，节点自定义输入优先于连线输入。 | process | 提示词(`text`:text); 歌词(`lyrics`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
+| 免费AI音乐-歌词生音乐 | `step_music_lyrics2music` | ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。 | process | 提示词(`text`:text); 歌词(`lyrics`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
+| 免费AI音乐-纯音乐 | `step_music_instrumental` | ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。官方标价 $0 免费；适合视频配乐。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
+| 免费AI音乐-自然语言创作 | `step_music_natural` | ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |

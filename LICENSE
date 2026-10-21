@@ -36,7 +36,7 @@ VideoLingoFlow —— 开源许可声明（非商业用途）
 ----------------------------------------------------------------------
 
   1. 本声明仅约束「VideoLingoFlow 自有代码与文档」。仓库中 `thirdparty/` 下的
-     第三方组件（如 social-auto-upload-web-ui、QM-LocalRouter、Cutia、Pi 等）
+     第三方组件（如 social-auto-upload-web-ui、QM-LocalRouter、OpenChatCut、Pi 等）
      以及 `cloudflare/` 下的组件，仍分别遵循其各自目录内声明的许可（如 MIT 等），
      与本声明互不冲突；使用这些组件时请同时遵守其原有许可。
 
