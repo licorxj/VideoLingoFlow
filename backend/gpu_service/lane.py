@@ -100,6 +100,22 @@ def _process_job(rc, lane_id: str, job: dict) -> None:
     hb_thread = threading.Thread(target=_heartbeat_loop, daemon=True)
     hb_thread.start()
     start = time.time()
+    # 执行看门狗：超过 job_timeout（GPU_SERVICE_JOB_TIMEOUT，默认 3600s）强制结束。
+    # Python 杀不了线程，CUDA 挂起（驱动卡死/内核死锁）时唯一能释放显存的办法是
+    # 整进程退出：先回报超时结果让等待方立即拿到错误（不再干等到客户端超时），
+    # 再 os._exit；manager 的 _reap 会把候补任务搬回共享队列并补失败结果。
+    job_timeout = config.job_timeout()
+    stop_watchdog = threading.Event()
+
+    def _watchdog_loop():
+        while not stop_watchdog.wait(2.0):
+            if time.time() - start > job_timeout:
+                jobs.push_result(rc, job_id, {}, error=f"GpuJobTimeout: lane 执行超过 {job_timeout}s，已强制结束")
+                print(f"[GPU-lane {lane_id}] job {job_id[:8]} 超过 {job_timeout}s，强制结束 lane 释放显存", flush=True)
+                os._exit(3)
+
+    watchdog = threading.Thread(target=_watchdog_loop, daemon=True)
+    watchdog.start()
     try:
         kind = job.get("kind")
         if kind == "asr":
@@ -116,6 +132,7 @@ def _process_job(rc, lane_id: str, job: dict) -> None:
         print(f"[GPU-lane {lane_id}] job {job_id[:8]} FAILED: {exc}", flush=True)
     finally:
         stop_hb.set()
+        stop_watchdog.set()
         jobs.heartbeat(rc, lane_id, {"status": "idle", "pid": os.getpid()})
 
 

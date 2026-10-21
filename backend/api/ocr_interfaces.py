@@ -62,7 +62,8 @@ async def list_interfaces():
 @router.get("/enabled")
 async def list_enabled():
     mgr = get_ocr_interface_manager()
-    return {"interfaces": mgr.get_enabled()}
+    # get_enabled() 已解析 secret:// 为明文密钥，下发前必须脱敏（与 GET / 、GET /{id} 一致）
+    return {"interfaces": mask_deep(mgr.get_enabled())}
 
 
 @router.get("/check-deps")

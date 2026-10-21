@@ -54,6 +54,11 @@ class CacheClearRequest(BaseModel):
     category: str = Field(default="all", pattern=r"^(sessions|models|staging|all)$")
 
 
+class PackAuthorizeRequest(BaseModel):
+    pack_id: str | None = Field(default=None, max_length=200)
+    slugs: list[str] | None = Field(default=None, max_length=200)
+
+
 def _error(exc: Exception) -> HTTPException:
     message = str(exc)
     status = 503 if "runtime" in message.lower() or "process" in message.lower() else 400
@@ -118,6 +123,19 @@ async def agent_install_staging() -> list[dict[str, str]]:
 @router.get("/settings/models")
 async def agent_model_catalog() -> list[dict[str, Any]]:
     return get_pi_manager().models()
+
+
+@router.get("/settings/packs")
+async def agent_expert_packs() -> list[dict[str, Any]]:
+    return get_pi_manager().packs()
+
+
+@router.post("/settings/packs/authorize")
+async def authorize_expert_pack(request: PackAuthorizeRequest) -> dict[str, Any]:
+    try:
+        return get_pi_manager().authorize_pack(request.pack_id, request.slugs)
+    except Exception as exc:
+        raise _error(exc) from exc
 
 
 @router.get("/settings/docs")

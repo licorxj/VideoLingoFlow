@@ -82,7 +82,9 @@ async def list_interfaces():
 @router.get("/enabled")
 async def list_enabled():
     mgr = get_imagegen_interface_manager()
-    return mgr.get_enabled()
+    # get_enabled() 返回 resolve_deep 后的配置（secret:// 已解析为明文密钥），
+    # 必须脱敏后再下发，与 GET / 、GET /{iface_id} 的处理保持一致
+    return mask_deep(mgr.get_enabled())
 
 
 @router.get("/{iface_id}")

@@ -90,7 +90,7 @@ export default function LoopContainerCard({
     <div
       className={cn(
         "rounded-2xl border-[3px] bg-card text-card-foreground w-[440px] max-w-[440px] transition-all duration-300",
-        selected ? "border-primary shadow-primary/20 shadow-lg scale-[1.02]" : "border-indigo-400/60 shadow-md"
+        selected ? "wf-node-selected scale-[1.02]" : "border-indigo-400/60 shadow-md"
       )}
     >
       {visibleInputs.map((port, i) => (

@@ -54,6 +54,19 @@ export interface PiIntegration {
   path: string;
   enabled: boolean;
 }
+export interface PiExpertPackSkill {
+  slug: string;
+  installed: boolean;
+  installed_at: string;
+}
+export interface PiExpertPack {
+  pack_id: string;
+  display_name: string;
+  version: string;
+  installed_at: string;
+  source: string;
+  skills: PiExpertPackSkill[];
+}
 export interface PiAgentSettings {
   model_mode: "router" | "custom";
   custom_base_url: string;
@@ -141,6 +154,12 @@ export const piRpcApi = {
     }),
   staging: () =>
     client.get<{ name: string; path: string }[]>("/api/pi/settings/staging"),
+  packs: () => client.get<PiExpertPack[]>("/api/pi/settings/packs"),
+  authorizePack: (packId: string) =>
+    client.post<{ pack_id: string; authorized: string[]; missing: string[] }>(
+      "/api/pi/settings/packs/authorize",
+      { pack_id: packId },
+    ),
   clearCache: (category: "sessions" | "models" | "staging" | "all") =>
     client.post<{ sessions: number; models: number; staging: number }>(
       "/api/pi/cache/clear",

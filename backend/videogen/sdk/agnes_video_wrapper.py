@@ -17,7 +17,8 @@
 
 密钥取值优先级（从高到低）：
 
-  1. 接口配置显式填写的 ``sdk_api_key``（工厂注入，可填 ``secret://AGNES_API_KEY`` 引用）；
+  1. 接口配置显式填写的 ``sdk_api_key``（工厂注入的明文；若误传 ``secret://AGNES_API_KEY``
+     未解析引用，本模块会代为解析并告警，不会把引用字符串发给服务端）；
   2. 系统环境变量 ``AGNES_API_KEY``（兼容 ``AGNES_API_TOKEN`` / ``APIHUB_AGNES_API_KEY``）；
   3. 项目密钥管理器（control-plane ``cp_credentials``）中的 ``AGNES_API_KEY``。
 
@@ -131,11 +132,31 @@ def _site_base(api_base: str) -> str:
 def _get_api_key(api_key: str = "") -> str:
     """API Key 取值优先级：显式参数 > 系统环境变量 > 项目密钥管理器。
 
-    显式参数来自接口配置的 ``sdk_api_key``（工厂注入，可能是 ``secret://AGNES_API_KEY``
-    已解析的明文）；环境变量优先于密钥管理器，便于部署机直接注入而不落库。
+    显式参数来自接口配置的 ``sdk_api_key``（工厂注入，应为已解析的明文）；
+    若调用方误传入 ``secret://NAME`` 未解析引用，这里代为解析并告警——
+    否则引用字符串会被当成密钥发给服务端，稳定复现 401 Invalid token
+    （2026-10-19：videogen 工厂漏解析所致）。
+    环境变量优先于密钥管理器，便于部署机直接注入而不落库。
     """
     if api_key and str(api_key).strip():
-        return str(api_key).strip()
+        text = str(api_key).strip()
+        if text.startswith("secret://"):
+            logger.warning(
+                "Agnes: api_key 传入的是未解析的密钥引用 %s，将代为解析"
+                "（工厂侧应解析为明文后注入）", text,
+            )
+            try:
+                from backend.config.credential_store import resolve as _resolve_ref
+
+                resolved = str(_resolve_ref(text) or "").strip()
+            except Exception as e:  # noqa: BLE001
+                logger.warning("Agnes: 解析密钥引用 %s 失败: %s", text, e)
+                resolved = ""
+            if resolved:
+                return resolved
+            # 解析结果为空（密钥不存在）：继续走环境变量与密钥管理器兜底
+        else:
+            return text
 
     for name in API_KEY_ENV_ALIASES:
         value = (os.environ.get(name, "") or "").strip()
@@ -340,27 +361,46 @@ def _report(on_progress, progress, status: str) -> None:
         logger.debug("Agnes: on_progress 回调异常: %s", e)
 
 
-def _post_json_with_backoff(url: str, headers: dict, payload: dict, timeout: float,
-                           retries: int = 3) -> "object":
-    """创建任务；对 ``429``（账号速率/额度限制）与 ``503``（服务繁忙）分别退避重试。
+# 创建任务的重试预算：按错误类型分别计数（与 _poll_task 的 poll_429/poll_503 同思路）。
+# 曾用共享 attempt 预算，导致 503 的短退避耗尽次数后，429 的长退避没机会执行
+# （2026-10-19 复现：503×2 耗尽 3 次 attempt，第 3 次 429 只等了 9s 就失败，
+# 而实测免费通道限流是分钟级波动窗口）。
+_RETRY_429_TIMES = 2                   # 429（免费账号速率/额度限制）额外重试次数
+_RETRY_503_TIMES = 2                   # 503（队列满/服务繁忙）额外重试次数
+_MAX_CREATE_ATTEMPTS = 8               # 兜底总上限（正常最多 1+2+2=5 次请求）
 
-    * 503：短退避 3s → 6s（服务端瞬时过载，很快恢复）
-    * 429：长退避 15s → 45s（免费账号存在速率限制，需等配额窗口刷新）
+
+def _post_json_with_backoff(url: str, headers: dict, payload: dict, timeout: float) -> "object":
+    """创建任务；429（账号速率/额度限制）与 503（服务繁忙）分别退避重试。
+
+    * 503：短退避 3s → 6s（服务端瞬时过载，较快恢复）
+    * 429：长退避 15s → 30s（免费账号限流，需等配额窗口刷新）
+
+    两类错误各自独立计数，互不抢占重试预算：混合出现时（如 503→503→429）
+    每类都能退避到自家上限，不会因短退避耗光次数而错过限流恢复窗口。
     """
+    retry_429 = retry_503 = 0
     last_resp = None
-    for attempt in range(max(1, retries)):
+    for _ in range(_MAX_CREATE_ATTEMPTS):
         resp = request_with_retry("POST", url, headers=headers, json=payload, timeout=timeout)
-        if resp.status_code == 503:
-            reason, wait = "服务繁忙", min(RETRY_BACKOFF_CAP, 3.0 * (2 ** attempt))
-        elif resp.status_code == 429:
-            reason, wait = "触发速率/额度限制", min(RETRY_BACKOFF_CAP * 6, 15.0 * (3 ** attempt))
+        if resp.status_code == 429:
+            if retry_429 >= _RETRY_429_TIMES:
+                return resp
+            wait = min(RETRY_BACKOFF_CAP * 4, 15.0 * (2 ** retry_429))
+            retry_429 += 1
+            reason = "触发速率/额度限制"
+        elif resp.status_code == 503:
+            if retry_503 >= _RETRY_503_TIMES:
+                return resp
+            wait = min(RETRY_BACKOFF_CAP, 3.0 * (2 ** retry_503))
+            retry_503 += 1
+            reason = "服务繁忙"
         else:
             return resp
         last_resp = resp
-        if attempt < retries - 1:
-            logger.warning("Agnes: 创建任务%s(HTTP %s)，%.0fs 后重试(%d/%d)",
-                           reason, resp.status_code, wait, attempt + 1, retries)
-            time.sleep(wait)
+        logger.warning("Agnes: 创建任务%s(HTTP %s)，%.0fs 后重试",
+                       reason, resp.status_code, wait)
+        time.sleep(wait)
     return last_resp
 
 
@@ -375,6 +415,11 @@ def _create_task(url: str, headers: dict, payload: dict, timeout: float) -> str:
                     "建议降低接口并发、稍后重试，或升级 Token Plan）")
         elif resp.status_code == 503:
             hint = "（服务端繁忙，可稍后重试）"
+        elif resp.status_code == 401:
+            hint = (f"（服务端未识别该密钥。常见原因：① 刚在「密钥管理」保存/更换过 "
+                    f"{API_KEY_ENV} 后立刻运行——常驻进程（celery worker）内的短期密钥缓存 "
+                    f"可能仍在用旧密钥，稍等几秒待缓存过期后重跑即可；"
+                    f"② 密钥已被服务端吊销或过期——请在「密钥管理」重新填入有效密钥）")
         elif resp.status_code in (400, 422) and re.search(r"url|image|media|file", detail, re.I):
             # 本地素材走 base64 内联时最可能踩的坑：服务端只认真公网 URL
             hint = ("（若错误与素材 URL/图片有关，说明服务端未接受 base64 内联："

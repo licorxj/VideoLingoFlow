@@ -25,16 +25,24 @@ def _now() -> float:
 
 
 def service_alive(client: redis.Redis | None = None) -> bool:
-    """服务是否可用：Redis 可 ping 且 manager 心跳键新鲜。"""
+    """服务是否可用：Redis 可 ping 且（manager 心跳新鲜 或 任一 lane 心跳新鲜）。
+
+    manager 状态键过期（重启/卡顿）但仍有 lane 在正常跑时，服务对提交/等待侧
+    依然可用；此时若仅凭状态键判死，上层会误回退到无管控的进程内 CUDA 执行。
+    """
     try:
         rc = client or get_redis()
         if not rc.ping():
             return False
+        ttl = config.heartbeat_ttl()
         raw = rc.get(config.status_key())
-        if not raw:
-            return False
-        info = json.loads(raw)
-        return (_now() - float(info.get("ts", 0))) <= config.heartbeat_ttl() * 2
+        if raw:
+            info = json.loads(raw)
+            if (_now() - float(info.get("ts", 0))) <= ttl * 2:
+                return True
+        # manager 状态键不新鲜：退而检查 lane 心跳（busy 心跳 10s 一轮，idle 由 lane 自维护）
+        hbs = read_heartbeats(rc)
+        return any((_now() - float(h.get("ts", 0))) <= ttl for h in hbs.values())
     except Exception:
         return False
 
@@ -204,6 +212,41 @@ def clear_lane(lane_id: str) -> None:
         rc = get_redis()
         rc.delete(config.lane_queue_key(lane_id))
         rc.hdel("videolingo:gpu:heartbeat", lane_id)
+    except Exception:
+        pass
+
+
+def requeue_lane_jobs(client: redis.Redis, lane_id: str) -> int:
+    """lane 退出时把其专属队列里的候补任务按原顺序搬回共享队列。
+
+    队列语义：push_lane_job 用 LPUSH（左端最新），lane 侧 BRPOP 取右端（最旧）。
+    因此 lrange 顺序为 [最新...最旧]；按该顺序 RPUSH 回共享队列后，最旧任务
+    位于共享队列右端，仍会被优先消费，顺序不丢、不饿死。
+    返回搬迁任务数；任何异常都静默返回 0（由 manager 日志层面感知）。
+    """
+    try:
+        pending = client.lrange(config.lane_queue_key(lane_id), 0, -1)
+        if not pending:
+            return 0
+        pipe = client.pipeline()
+        pipe.delete(config.lane_queue_key(lane_id))
+        pipe.rpush(config.job_queue_key(), *pending)
+        pipe.execute()
+        return len(pending)
+    except Exception:
+        return 0
+
+
+def fail_orphan_job(client: redis.Redis, job_id: str, error: str) -> None:
+    """lane 崩溃时给其「在途未产出」的任务补一个失败结果。
+
+    没有这个补偿，等待方（wait_result 的 BRPOP）只能空等到超时（默认 3600s，
+    本机环境变量可配到 7200s）才报错，表现为「任务卡住不动」。
+    正常完成的任务会先 push_result（位于结果列表更「旧」的尾端），
+    等待方先消费到真实结果，这里的补偿结果不会造成重复执行。
+    """
+    try:
+        push_result(client, job_id, {}, error=error)
     except Exception:
         pass
 

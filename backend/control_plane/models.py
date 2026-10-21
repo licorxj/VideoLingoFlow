@@ -17,7 +17,9 @@ class TimestampedVersioned:
     id: Mapped[str] = mapped_column(String(32), primary_key=True, default=_uuid)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), onupdate=func.now())
+    # default=func.now() 为 Python 侧默认：历史迁移建的表 updated_at 列无 DEFAULT
+    # （迁移漂移），仅靠 server_default 会插入 NULL，导致按 updated_at 排序/判新失效。
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, server_default=func.now(), default=func.now(), onupdate=func.now())
 
 
 class SoftDeleteMixin:

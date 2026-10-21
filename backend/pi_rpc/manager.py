@@ -267,7 +267,7 @@ class PiSessionManager:
             return ""
 
     def update_assistant(self, assistant_id: str, values: dict[str, Any]) -> dict[str, Any]:
-        if assistant_id not in {"general", "node", "workflow", "execution", "files", "publish", "installer"}:
+        if assistant_id not in {"general", "node", "workflow", "execution", "files", "publish", "installer", "team"}:
             raise PiRpcError("Unknown assistant")
         root = self._root().resolve()
         result = {
@@ -281,13 +281,11 @@ class PiSessionManager:
         self._store.set_assistant(assistant_id, result)
         return result
 
-    def scan(self, kind: str) -> list[dict[str, Any]]:
+    def _integration_candidates(self, kind: str) -> list[Path]:
+        """Skill / MCP 的扫描目录（项目内置优先，其后为用户级共享目录）。"""
         root = self._root()
-        if kind == "docs":
-            directory = root / "backend" / "config" / "agent" / "docs"
-            return [{"name": path.name, "path": str(path)} for path in sorted(directory.glob("*.md"))] if directory.is_dir() else []
         if kind in ("skill", "skills"):
-            candidates = [
+            return [
                 root / "backend" / "config" / "agent" / "skills",
                 Path.home() / ".claude" / "skills",
                 Path.home() / ".codex" / "skills",
@@ -295,16 +293,22 @@ class PiSessionManager:
                 Path.home() / ".agents" / "skills",
                 Path.home() / ".agent" / "skills",
             ]
-        elif kind in ("mcp", "mcps"):
-            candidates = [
+        if kind in ("mcp", "mcps"):
+            return [
                 root / "backend" / "config" / "agent" / "mcp",
                 Path.home() / ".claude" / "mcps",
                 Path.home() / ".trae" / "mcps",
                 Path.home() / ".agents" / "mcps",
                 Path.home() / ".agent" / "mcps",
             ]
-        else:
-            raise PiRpcError("Unknown integration type")
+        raise PiRpcError("Unknown integration type")
+
+    def scan(self, kind: str) -> list[dict[str, Any]]:
+        root = self._root()
+        if kind == "docs":
+            directory = root / "backend" / "config" / "agent" / "docs"
+            return [{"name": path.name, "path": str(path)} for path in sorted(directory.glob("*.md"))] if directory.is_dir() else []
+        candidates = self._integration_candidates(kind)
         items: list[dict[str, Any]] = []
         seen: set[str] = set()
         for directory in candidates:
@@ -495,6 +499,93 @@ class PiSessionManager:
         if not directory.is_dir():
             return []
         return [{"name": path.name, "path": str(path)} for path in sorted(directory.iterdir()) if path.is_dir()]
+
+    def packs(self) -> list[dict[str, Any]]:
+        """列出已安装的 SkillHUB 专家团（packs）。
+
+        数据源：``~/.claude/skills/.skills_store_lock.json`` 的 ``packs`` 字段，
+        由 SkillHUB 官方安装 prompt（skillhub-pack-install.md）写入。
+        同时按 ``skillSlugs`` 反查 skills 记录与磁盘目录，标记成员技能是否落盘。
+        """
+        lock_file = Path.home() / ".claude" / "skills" / ".skills_store_lock.json"
+        if not lock_file.is_file():
+            return []
+        try:
+            payload = json.loads(lock_file.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            return []
+        if not isinstance(payload, dict):
+            return []
+        raw_packs = payload.get("packs")
+        if not isinstance(raw_packs, dict):
+            return []
+        raw_skills = payload.get("skills") if isinstance(payload.get("skills"), dict) else {}
+        skills_dir = lock_file.parent
+        items: list[dict[str, Any]] = []
+        for pack_id, raw in raw_packs.items():
+            info = raw if isinstance(raw, dict) else {}
+            slugs = info.get("skillSlugs") if isinstance(info.get("skillSlugs"), list) else []
+            members: list[dict[str, Any]] = []
+            for slug in slugs:
+                if not isinstance(slug, str) or not slug:
+                    continue
+                record = raw_skills.get(slug) if isinstance(raw_skills, dict) else None
+                members.append({
+                    "slug": slug,
+                    "installed": (skills_dir / slug).is_dir() or (skills_dir / f"{slug}.md").is_file(),
+                    "installed_at": str(record.get("installedAt", "")) if isinstance(record, dict) else "",
+                })
+            items.append({
+                "pack_id": str(pack_id),
+                "display_name": str(info.get("displayName") or pack_id),
+                "version": str(info.get("version") or ""),
+                "installed_at": str(info.get("installedAt") or ""),
+                "source": str(lock_file),
+                "skills": members,
+            })
+        items.sort(key=lambda item: (item["installed_at"], item["pack_id"]), reverse=True)
+        return items
+
+    def authorize_pack(self, pack_id: str | None = None, slugs: list[str] | None = None) -> dict[str, Any]:
+        """一键授权专家团（pack）的全部成员 Skill。
+
+        - ``pack_id`` 为空时对当前所有已安装专家团生效；给出时只处理该专家团。
+        - ``slugs`` 显式给出（``pack_id`` 为空）时只授权这些技能名。
+        等价于在「Skill」标签页逐个打开开关，用于安装专家团后一步到位。
+        """
+        wanted: list[str] = []
+        if slugs:
+            wanted.extend(str(slug).strip() for slug in slugs if str(slug).strip())
+        else:
+            matched = False
+            for pack in self.packs():
+                if pack_id and pack["pack_id"] != pack_id:
+                    continue
+                matched = True
+                wanted.extend(str(skill["slug"]) for skill in pack["skills"])
+            if pack_id and not matched:
+                raise PiRpcError(f"Expert pack not found: {pack_id}")
+        unique: list[str] = []
+        seen: set[str] = set()
+        for slug in wanted:
+            if slug not in seen:
+                seen.add(slug)
+                unique.append(slug)
+        if not unique:
+            raise PiRpcError("No skill to authorize")
+        # 先扫描，确保每个 Skill 都有稳定的 item_id 记录，再逐个置为已授权。
+        items = self.scan("skill")
+        by_name = {item["name"]: item for item in items}
+        authorized: list[str] = []
+        missing: list[str] = []
+        for slug in unique:
+            item = by_name.get(slug)
+            if not item:
+                missing.append(slug)
+                continue
+            self._store.set_integration("skill", str(item["item_id"]), True)
+            authorized.append(slug)
+        return {"pack_id": pack_id or "", "authorized": authorized, "missing": missing}
 
     def models(self) -> list[dict[str, Any]]:
         """Aggregate the model catalog shipped with Pi (providers/data/*.json).

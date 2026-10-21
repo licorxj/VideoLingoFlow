@@ -72,7 +72,8 @@ async def list_enabled(scope: str = None):
     interfaces = mgr.get_enabled()
     if scope:
         interfaces = [i for i in interfaces if _interface_has_category(i, scope)]
-    return {"interfaces": interfaces}
+    # get_enabled() 已解析 secret:// 为明文密钥，下发前必须脱敏（与 GET / 、GET /{id} 一致）
+    return {"interfaces": mask_deep(interfaces)}
 
 
 @router.get("/models")

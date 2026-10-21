@@ -78,7 +78,10 @@ def configure_database(url: str | None = None) -> None:
             Path(sqlite_url.database).expanduser().parent.mkdir(parents=True, exist_ok=True)
         engine_options = {"connect_args": {"timeout": 5}, "pool_pre_ping": True}
         if sqlite_url.database != ":memory:":
-            engine_options.update(pool_size=5, max_overflow=0)
+            # 高频短会话场景（进度事件/日志/取消轮询逐条开会话）下，5 连接会瞬间打满，
+            # 报 QueuePool limit reached 导致进度丢失、状态写不进。WAL 模式下多连接
+            # 读互不阻塞，写由 busy_timeout 串行，故放大到 20+10。
+            engine_options.update(pool_size=20, max_overflow=10)
         _engine = create_engine(target_url, **engine_options)
         event.listen(_engine, "connect", _configure_sqlite_connection)
     else:

@@ -271,15 +271,16 @@ export default function SettingsPage() {
               <p className="text-xs text-muted-foreground mt-0.5">{t("settings.responseFormatDesc")}</p>
             </div>
             <div className="flex gap-2">
-              {["openai", "claude", "gemini"].map((p) => (
+              {["openai", "responses", "claude", "gemini"].map((p) => (
                 <Button key={p} variant={appSettings.output_protocol === p ? "default" : "outline"} size="sm" className={appSettings.output_protocol === p ? "bg-info hover:bg-info/90" : ""} onClick={() => { setAppSettings({ ...appSettings, output_protocol: p }); }}>
-                  {p === "openai" ? "OpenAI" : p === "claude" ? "Claude" : "Gemini"}
+                  {p === "openai" ? "OpenAI" : p === "responses" ? "Responses" : p === "claude" ? "Claude" : "Gemini"}
                 </Button>
               ))}
             </div>
           </div>
           <p className="text-xs text-muted-foreground mt-3">
             {appSettings.output_protocol === "openai" && t("settings.openaiFormatDesc")}
+            {appSettings.output_protocol === "responses" && t("settings.responsesFormatDesc")}
             {appSettings.output_protocol === "claude" && t("settings.claudeFormatDesc")}
             {appSettings.output_protocol === "gemini" && t("settings.geminiFormatDesc")}
           </p>

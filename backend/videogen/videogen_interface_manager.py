@@ -188,7 +188,11 @@ class VideoGenInterfaceManager:
 
         返回字典包含：module / function / extra_args（路由信息）+ 视频生成调用参数。
         """
-        iface = self.interfaces.get(iface_id, {})
+        # 必须走 self.get()（resolve_deep 解析 secret:// 密钥引用）：若用原始
+        # self.interfaces 配置，sdk_api_key 会以 "secret://NAME" 字面量传给
+        # wrapper，请求头变成 Bearer secret://... 被服务端判 401 Invalid token
+        # （2026-10-19 复现；其余管理器 imagegen/tts/asr 均用 self.get()）。
+        iface = self.get(iface_id) or {}
         config = iface.get("config", {})
         extra = dict(config.get("sdk_extra_args", {}) or {})
         extra["api_key"] = api_key or config.get("api_key", "") or config.get("sdk_api_key", "")

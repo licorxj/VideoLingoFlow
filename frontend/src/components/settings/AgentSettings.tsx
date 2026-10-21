@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bot,
+  Boxes,
   Brain,
   Download,
   ExternalLink,
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import {
   piRpcApi,
   type PiAgentSettings,
+  type PiExpertPack,
   type PiIntegration,
 } from "@/api/piRpc";
 import { normalizeApiError } from "@/api/client";
@@ -30,6 +32,7 @@ const assistants = [
   ["files", "文件整理助手"],
   ["publish", "作品发布助手"],
   ["installer", "技能安装助手"],
+  ["team", "组建专家团"],
 ] as const;
 
 const emptySettings: PiAgentSettings = {
@@ -56,16 +59,23 @@ const toolOptions: { id: string; label: string; desc: string; danger?: boolean }
   { id: "bash", label: "Shell 命令", desc: "允许执行 shell 命令，高权限，谨慎开启", danger: true },
 ];
 
-type SettingsTab = "general" | "model" | "permission" | "skill" | "mcp" | "assistant";
+type SettingsTab = "general" | "model" | "permission" | "packs" | "skill" | "mcp" | "assistant";
 
 const settingTabs: { id: SettingsTab; label: string; icon: typeof Brain }[] = [
   { id: "general", label: "通用", icon: Bot },
   { id: "model", label: "模型", icon: Brain },
   { id: "permission", label: "通用权限", icon: ShieldCheck },
+  { id: "packs", label: "专家团", icon: Boxes },
   { id: "skill", label: "Skill", icon: Sparkles },
   { id: "mcp", label: "MCP", icon: PlugZap },
   { id: "assistant", label: "助手", icon: ShieldCheck },
 ];
+
+const formatInstalledAt = (value: string) => {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+};
 
 export default function AgentSettings() {
   const navigate = useNavigate();
@@ -77,6 +87,13 @@ export default function AgentSettings() {
   const [activeTab, setActiveTab] = useState<SettingsTab>("model");
   const [staging, setStaging] = useState<{ name: string; path: string }[]>([]);
   const [stagingLoading, setStagingLoading] = useState(false);
+  const [packs, setPacks] = useState<PiExpertPack[]>([]);
+  const [packsLoading, setPacksLoading] = useState(false);
+  const [authorizing, setAuthorizing] = useState<string | null>(null);
+  const [packsNotice, setPacksNotice] = useState<{
+    kind: "ok" | "warn" | "error";
+    text: string;
+  } | null>(null);
   const [installLevel, setInstallLevel] = useState<"project" | "system">("project");
   const [installing, setInstalling] = useState<string | null>(null);
   const [installNotice, setInstallNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -115,8 +132,42 @@ export default function AgentSettings() {
       setStagingLoading(false);
     }
   };
+  const loadPacks = async () => {
+    setPacksLoading(true);
+    try {
+      const { data } = await piRpcApi.packs();
+      setPacks(data);
+      setPacksNotice(null);
+    } catch (error) {
+      setPacksNotice({ kind: "error", text: normalizeApiError(error).message });
+    } finally {
+      setPacksLoading(false);
+    }
+  };
+  const authorizePack = async (packId: string) => {
+    setAuthorizing(packId);
+    setPacksNotice(null);
+    try {
+      const { data } = await piRpcApi.authorizePack(packId);
+      await loadPacks();
+      const { data: latest } = await piRpcApi.getSettings();
+      setSettings({ ...emptySettings, ...latest });
+      const missing = data.missing || [];
+      setPacksNotice({
+        kind: missing.length ? "warn" : "ok",
+        text: missing.length
+          ? `已授权 ${data.authorized.length} 个技能；${missing.length} 个技能未在 Skill 列表中找到（可能未落盘）：${missing.join("、")}`
+          : `技能树已一键授权 ${data.authorized.length} 个技能，新会话创建时生效。`,
+      });
+    } catch (error) {
+      setPacksNotice({ kind: "error", text: normalizeApiError(error).message });
+    } finally {
+      setAuthorizing(null);
+    }
+  };
   useEffect(() => {
     if (activeTab === "skill" || activeTab === "mcp") loadStaging();
+    if (activeTab === "packs") loadPacks();
   }, [activeTab]);
 
   const handleClearCache = async (category: "sessions" | "models" | "staging" | "all") => {
@@ -647,6 +698,98 @@ export default function AgentSettings() {
             </label>
           </div>
         </div>
+        </div>
+      )}
+      {activeTab === "packs" && (
+        <div className="rounded-xl border border-border/55 bg-card/75 p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="flex items-center gap-2 text-sm font-semibold">
+                <Boxes className="h-4 w-4 text-primary" />
+                专家团
+              </h3>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                读取 <code className="rounded bg-muted/60 px-1 py-0.5 text-[11px]">~/.claude/skills/.skills_store_lock.json</code> 的
+                packs 字段：展示通过「组建专家团」助手按 SkillHUB 安装 prompt 装好的专家团及成员技能。成员技能需在
+                Skill 标签页开启授权后才会下发给 Agent。
+              </p>
+            </div>
+            <Button size="sm" variant="outline" onClick={loadPacks} disabled={packsLoading}>
+              {packsLoading ? (
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <FolderSearch className="mr-1.5 h-3.5 w-3.5" />
+              )}
+              刷新
+            </Button>
+          </div>
+          <div className="mt-4 space-y-3">
+            {packs.length ? (
+              packs.map((pack) => (
+                <div
+                  key={pack.pack_id}
+                  className="rounded-lg border border-border/50 bg-background/50 p-4"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="grid h-7 w-7 place-items-center rounded-md bg-primary/10 text-primary">
+                      <Boxes className="h-3.5 w-3.5" />
+                    </span>
+                    <span className="text-sm font-semibold">{pack.display_name}</span>
+                    <span className="rounded bg-muted/70 px-1.5 py-0.5 text-[10px] text-muted-foreground">{pack.pack_id}</span>
+                    {pack.version && <span className="text-[10px] text-muted-foreground">v{pack.version}</span>}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => authorizePack(pack.pack_id)}
+                      disabled={authorizing !== null}
+                      className="h-7"
+                    >
+                      {authorizing === pack.pack_id ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : (
+                        <ShieldCheck className="mr-1 h-3 w-3" />
+                      )}
+                      技能树一键授权
+                    </Button>
+                    <span className="ml-auto text-[10px] text-muted-foreground">{formatInstalledAt(pack.installed_at)}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {pack.skills.length ? (
+                      pack.skills.map((skill) => {
+                        const record = settings.skills.find((item) => item.name === skill.slug);
+                        return (
+                          <span
+                            key={skill.slug}
+                            title={record ? `路径：${record.path}` : skill.installed ? "已落盘，但尚未扫描为可授权 Skill" : "磁盘上未找到该技能目录"}
+                            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 text-[11px] ${skill.installed ? "border-border/55 bg-background/70 text-foreground" : "border-destructive/30 bg-destructive/5 text-destructive"}`}
+                          >
+                            <span className={`h-1.5 w-1.5 rounded-full ${skill.installed ? "bg-emerald-500" : "bg-destructive"}`} />
+                            {skill.slug}
+                            <span className="text-[10px] text-muted-foreground">
+                              {record ? (record.enabled ? "已授权" : "未授权") : skill.installed ? "未扫描" : "缺失"}
+                            </span>
+                          </span>
+                        );
+                      })
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">该专家团未记录成员技能</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-border/60 px-3 py-6 text-center text-xs leading-5 text-muted-foreground">
+                尚未检测到已安装的专家团。
+                <br />
+                可在小π Agent 中选择「组建专家团」助手，按引导打开专家库挑选，把安装 prompt 粘贴给它即可完成安装。
+              </div>
+            )}
+            {packsNotice && (
+              <div className={`rounded-md px-2.5 py-2 text-[11px] leading-4 ${packsNotice.kind === "ok" ? "bg-primary/10 text-primary" : packsNotice.kind === "warn" ? "bg-warning/10 text-warning" : "bg-destructive/10 text-destructive"}`}>
+                {packsNotice.text}
+              </div>
+            )}
+          </div>
         </div>
       )}
       {activeTab === "skill" && integrations("skill", "Skill 授权", Sparkles)}

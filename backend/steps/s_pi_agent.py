@@ -75,6 +75,11 @@ class S_PiAgent(BaseStep):
         if not persona:
             raise ValueError("小pi通用智能体需要人设设定")
 
+        # 调用模型：留空时由 Pi 侧回退到全局配置（llm.step_models.agent_model，默认 vlf-agent）
+        model = str(config.get("model", "") or "").strip()
+        if model and (len(model) > 200 or any(char in model for char in "\r\n")):
+            raise ValueError("调用模型名称不合法（过长或含换行符）")
+
         task_dir_path = Path(task_dir).resolve()
         task_dir_path.mkdir(parents=True, exist_ok=True)
         cache_dir = task_dir_path / "cache"
@@ -112,15 +117,16 @@ class S_PiAgent(BaseStep):
             try:
                 if cancel_callback and cancel_callback():
                     raise RuntimeError("任务已取消")
-                progress(5, "正在启动小 Pi 智能体会话")
+                progress(5, f"正在启动小 Pi 智能体会话（模型: {model or '全局默认'}）")
                 client = await manager.workflow_session(
                     system_prompt=system_prompt,
                     cwd=str(task_dir_path),
                     tools=None,  # 使用全局 allow_tools
+                    model=model or None,
                 )
                 if cancel_callback and cancel_callback():
                     raise RuntimeError("任务已取消")
-                progress(10, "小 Pi 智能体会话已就绪")
+                progress(10, f"小 Pi 智能体会话已就绪（模型: {model or '全局默认'}）")
 
                 final_text: list[str] = []
                 last_msg: dict[str, Any] = {}

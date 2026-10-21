@@ -27,6 +27,7 @@ class GpuServiceManager:
         self._rc = jobs.get_redis()
         self._lanes: dict[str, dict] = {}  # lane_id -> {"proc": Popen, "spawned_at": float}
         self._vram = {"available": False, "free_gb": 0.0, "total_gb": 0.0, "used_gb": 0.0, "name": ""}
+        self._vram_at = 0.0  # 上次显存采样的 wall clock（起 lane 前补采判断陈旧用）
         self._stop = threading.Event()
         self._serial = config.serial_mode()
         self._max_lanes = config.max_lanes()
@@ -48,7 +49,19 @@ class GpuServiceManager:
     def _vram_loop(self) -> None:
         while not self._stop.is_set():
             self._vram = gpu_info()
+            self._vram_at = time.time()
             self._stop.wait(3.0)
+
+    def _fresh_vram(self) -> dict:
+        """起 lane 前的显存采样：_vram_loop 每 3s 更新，超过 1s 立即补采。
+
+        一批排队任务会在同一主循环轮次里连续起 lane，若都读 3s 前的同一份采样，
+        可能连续起到 max_lanes 个 lane，之后各自加载大模型 → OOM。
+        """
+        if time.time() - self._vram_at > 1.0:
+            self._vram = gpu_info()
+            self._vram_at = time.time()
+        return self._vram
 
     # ── lane 管理 ─────────────────────────────────────────────────
     def _live_lanes(self) -> list[tuple[str, dict]]:
@@ -58,14 +71,29 @@ class GpuServiceManager:
         dead = [lid for lid, lane in self._lanes.items() if lane["proc"].poll() is not None]
         for lid in dead:
             print(f"[GPU-manager] lane {lid} exited", flush=True)
+            # lane 退出前先把其候补队列搬回共享队列（按原顺序），避免任务被静默丢弃；
+            # 再给「在途未产出」的任务补失败结果，避免等待方空转到超时。
+            # 注意顺序：心跳须在 clear_lane 之前读取（clear_lane 会删心跳）。
+            try:
+                hb = jobs.read_heartbeats(self._rc).get(lid) or {}
+            except Exception:
+                hb = {}
+            moved = jobs.requeue_lane_jobs(self._rc, lid)
+            if moved:
+                print(f"[GPU-manager] requeued {moved} job(s) from dead lane {lid}", flush=True)
+            orphan_job = hb.get("job_id") if hb.get("status") == "busy" else None
+            if orphan_job:
+                jobs.fail_orphan_job(self._rc, orphan_job, "GpuLaneLost: lane 进程退出，任务未完成")
+                print(f"[GPU-manager] failed orphan job {str(orphan_job)[:8]} of dead lane {lid}", flush=True)
             self._lanes.pop(lid, None)
             jobs.clear_lane(lid)
 
     def _spawn_lane(self) -> str | None:
         if len(self._live_lanes()) >= self._max_lanes:
             return None
-        if self._vram.get("available") and self._vram.get("free_gb", 0.0) < self._headroom:
-            print(f"[GPU-manager] VRAM {self._vram.get('free_gb')}GB < headroom {self._headroom}GB, keep queued", flush=True)
+        vram = self._fresh_vram()
+        if vram.get("available") and vram.get("free_gb", 0.0) < self._headroom:
+            print(f"[GPU-manager] VRAM {vram.get('free_gb')}GB < headroom {self._headroom}GB, keep queued", flush=True)
             return None
         lane_id = f"lane-{uuid.uuid4().hex[:8]}"
         cmd = [sys.executable, "-m", "backend.gpu_service.lane", "--lane-id", lane_id]
@@ -175,8 +203,10 @@ class GpuServiceManager:
         if lane_id is None:
             lane_id = self._spawn_lane()
         if lane_id is None:
-            # 无空闲 lane 且无法新开（满员/显存不足）→ 任务留在队列等待
-            self._rc.lpush(config.job_queue_key(), json.dumps(job, ensure_ascii=False))
+            # 无空闲 lane 且无法新开（满员/显存不足）→ 任务留在队列等待。
+            # 必须 rpush（入尾部）：manager 消费用 BRPOP 从右端取最旧，lpush 会把
+            # 派不出的任务压到队头（最新），持续提交下它永远排在新任务之后被饿死。
+            self._rc.rpush(config.job_queue_key(), json.dumps(job, ensure_ascii=False))
             return
         jobs.push_lane_job(self._rc, lane_id, job)
 
@@ -218,6 +248,15 @@ class GpuServiceManager:
         print(f"[GPU-manager] started pid={os.getpid()} max_lanes={self._max_lanes} "
               f"serial={self._serial} idle_timeout={self._idle_timeout}s "
               f"pressure_idle={self._pressure_idle_timeout}s headroom={self._headroom}GB", flush=True)
+        # 多卡识别：lane 引擎默认 cuda:0，当前调度不利用多卡（余量判断以 device 0 为准），
+        # 多卡环境下明确告警，避免「有 3 张卡却只用到 1 张」的困惑。
+        try:
+            _vram = gpu_info()
+            if _vram.get("gpu_count", 1) > 1:
+                print(f"[GPU-manager] 检测到 {_vram['gpu_count']} 块 GPU；lane 引擎默认使用 device 0，"
+                      f"多卡并行需为各 lane 设置 CUDA_VISIBLE_DEVICES（当前未启用）", flush=True)
+        except Exception:
+            pass
         threading.Thread(target=self._vram_loop, daemon=True).start()
         try:
             self._rc.delete(config.shutdown_key())  # 清掉历史停机标记

@@ -1,5 +1,5 @@
 import { FormEvent, KeyboardEvent, PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eraser, FileArchive, FolderTree, Grip, History, Loader2, LogOut, Maximize2, MessageSquarePlus, Minimize2, Minus, Paperclip, Send, Settings2, Sparkles, Square, Trash2, Waypoints, Workflow, X } from "lucide-react";
+import { Bot, Boxes, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, Eraser, ExternalLink, FileArchive, FolderTree, Grip, History, Loader2, LogOut, Maximize2, MessageSquarePlus, Minimize2, Minus, Paperclip, Send, Settings2, ShoppingBag, Sparkles, Square, Trash2, Users, Waypoints, Workflow, X } from "lucide-react";
 import { marked } from "marked";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 marked.setOptions({ gfm: true, breaks: true });
 const renderMarkdown = (text: string) => marked.parse(text, { async: false }) as string;
 
-type AssistantKind = "general" | "node" | "workflow" | "execution" | "files" | "publish" | "installer";
+type AssistantKind = "general" | "node" | "workflow" | "execution" | "files" | "publish" | "installer" | "team";
 type ChatMessage = { role: "user" | "assistant"; text: string; thinking?: string };
 type WindowPosition = { left: number; top: number };
 type WindowSize = { width: number; height: number };
@@ -25,6 +25,13 @@ const ASSISTANTS: { id: AssistantKind; label: string; description: string; icon:
   { id: "files", label: "文件整理助手", description: "梳理素材和产物", icon: FolderTree, prompt: "你是 VideoLingo 文件整理助手。帮助用户规划素材、字幕、音频和导出文件的目录与命名。", suggestions: ["帮我规划素材目录结构", "导出文件如何命名"] },
   { id: "publish", label: "作品发布助手", description: "准备多平台发布", icon: FileArchive, prompt: "你是 VideoLingo 作品发布助手。帮助用户准备标题、简介、封面和多平台发布检查项。", suggestions: ["生成多平台发布检查清单", "帮我写一个视频标题"] },
   { id: "installer", label: "技能安装助手", description: "安装 Skill / MCP", icon: Sparkles, prompt: "你是 VideoLingo 技能安装助手。帮助用户从暂存目录安装 Skill 或 MCP，并在安装前询问是项目专用还是系统级别。", suggestions: ["如何安装一个新 Skill", "MCP 与 Skill 有什么区别"] },
+  { id: "team", label: "组建专家团", description: "下载并安装专家团", icon: Users, prompt: "你是 VideoLingo 组建专家团助手，专门帮助用户从 SkillHUB 下载并安装专家团。专家团市场地址：https://skillhub.cn/skillspackage 。行为规范一（打招呼）：每次新建对话时，必须先用下面这段完整话术打招呼，不要自行改写或删减——「你好我是专家团安装助手，请点击左下角的专家库，然后复制安装prompt告诉我，我帮你安装，安装完成之后你就可以在agent对话的时候召唤专家团，或者在智能体节点选择专家团来执行你工作流中的一环！」。行为规范二（安装）：收到用户复制回来的安装 prompt 后，你按照其中的指引为用户完成安装；官方示例安装 prompt：「请根据 https://skillhub.cn/install/skillhub-pack-install.md，安装 media-script-breakdown。」。行为规范三（安装后必须一键授权，不得省略）：安装完成后立刻为该专家团一键授权全部子 Skill，不要让用户逐个手动开启——优先用 bash 调用本机后端接口，先 GET http://127.0.0.1:11001/api/pi/settings/packs 查出该专家团的 pack_id，再 POST http://127.0.0.1:11001/api/pi/settings/packs/authorize，body 为 {\"pack_id\": \"<专家团 pack_id>\"}；接口不可用时，改为明确引导用户打开「Agent 设置 → 专家团」点击「技能树一键授权」按钮。最后必须核对结果：确认该专家团下所有成员技能均显示「已授权」，若有遗漏要说明原因并给出补救步骤。", suggestions: ["我想从 SkillHUB 安装一个专家团", "安装 prompt 是什么格式？", "帮我安装专家团"] },
+];
+
+// 左侧面板常驻的 SkillHUB 入口，点击直接在浏览器打开对应页面
+const MARKET_LINKS = [
+  { label: "技能市场", url: "https://skillhub.cn/skills?category=design-media&sortBy=score", icon: ShoppingBag },
+  { label: "专家库", url: "https://skillhub.cn/skillspackage", icon: Boxes },
 ];
 
 function TypingDots() {
@@ -519,7 +526,10 @@ export default function PiAssistantWindow({ visible = true, onClose, onMinimize,
       <aside className={cn("relative flex shrink-0 flex-col border-r border-black/[0.06] bg-white/45 transition-all dark:bg-card/35", collapsed ? "w-12" : "w-[176px]")}>
         <div className="flex h-10 items-center justify-end px-2"><Button variant="ghost" size="icon" title={collapsed ? "展开助手列表" : "折叠助手列表"} onClick={() => setCollapsed((value) => !value)}>{collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}</Button></div>
         <div className="space-y-1 px-2">{ASSISTANTS.map((item) => { const Icon = item.icon; const selected = item.id === assistant; return <button key={item.id} onClick={() => chooseAssistant(item.id)} disabled={busy} title={collapsed ? item.label : undefined} className={cn("flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-all disabled:opacity-50", selected ? "bg-primary/10 text-primary ring-1 ring-primary/20" : "text-muted-foreground hover:bg-white/75 hover:text-foreground dark:hover:bg-secondary", collapsed && "justify-center px-0")}><span className={cn("grid h-6 w-6 shrink-0 place-items-center rounded-md transition-colors", selected ? "bg-primary text-primary-foreground" : "bg-muted/70")}><Icon className="h-3.5 w-3.5" /></span>{!collapsed && <span className="min-w-0"><span className="block text-xs font-semibold">{item.label}</span><span className="block truncate text-[10px] text-muted-foreground">{item.description}</span></span>}</button>; })}</div>
-        <div className="mt-auto border-t border-black/[0.06] p-2"><Button type="button" variant="ghost" size={collapsed ? "icon" : "sm"} onClick={() => setSettingsOpen((value) => !value)} title={settingsOpen ? "返回对话" : "Agent 设置"} className={cn("w-full text-muted-foreground", collapsed && "mx-auto")}><Settings2 className={cn("h-3.5 w-3.5", !collapsed && "mr-1.5")} />{!collapsed && (settingsOpen ? "返回对话" : "设置")}</Button></div>
+        <div className="mt-auto space-y-1 border-t border-black/[0.06] p-2">
+          {MARKET_LINKS.map((link) => { const Icon = link.icon; return <button key={link.url} type="button" onClick={() => window.open(link.url, "_blank", "noopener,noreferrer")} title={collapsed ? `${link.label}（浏览器打开）` : undefined} className={cn("flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-muted-foreground transition-all hover:bg-white/75 hover:text-primary dark:hover:bg-secondary", collapsed && "justify-center px-0")}><span className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-muted/70"><Icon className="h-3.5 w-3.5" /></span>{!collapsed && <><span className="min-w-0 flex-1 text-xs font-semibold">{link.label}</span><ExternalLink className="h-3 w-3 shrink-0 text-muted-foreground/70" /></>}</button>; })}
+          <Button type="button" variant="ghost" size={collapsed ? "icon" : "sm"} onClick={() => setSettingsOpen((value) => !value)} title={settingsOpen ? "返回对话" : "Agent 设置"} className={cn("w-full text-muted-foreground", collapsed && "mx-auto")}><Settings2 className={cn("h-3.5 w-3.5", !collapsed && "mr-1.5")} />{!collapsed && (settingsOpen ? "返回对话" : "设置")}</Button>
+        </div>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">
         {settingsOpen ? <div className="min-h-0 flex-1 overflow-y-auto p-5"><AgentSettings /></div> : <>

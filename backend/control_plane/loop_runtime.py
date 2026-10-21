@@ -36,13 +36,14 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import ExitStack
 from pathlib import Path
 
 from sqlalchemy import select
 
 from backend.control_plane.database import session_scope
 from backend.control_plane.models import Task, TaskNode
-from backend.control_plane.runtime import TaskCancelledError
+from backend.control_plane.runtime import THREAD_BUDGET, TaskCancelledError
 from backend.control_plane.workflow_runtime import (
     _build_layers,
     _cancel_requested,
@@ -505,18 +506,19 @@ def _run_iteration(
             if len(layer) == 1:
                 run_one(layer[0])
             else:
-                # 迭代内层内沿用主流程的无界池（层内节点少，且令牌持有者必定在跑，无死锁）
-                with ThreadPoolExecutor(max_workers=len(layer)) as pool:
-                    futures = {pool.submit(run_one, node_id): node_id for node_id in layer}
-                    first_exc = None
-                    for future in as_completed(futures):
-                        try:
-                            future.result()
-                        except Exception:  # noqa: BLE001 - 保留首个异常，整层结束后统一抛出
-                            if first_exc is None:
-                                first_exc = future.exception()
-                    if first_exc is not None:
-                        raise first_exc
+                # 迭代内层池同样纳入全局线程预算（原为无界池，嵌套并发下拖垮 worker）
+                with THREAD_BUDGET.hold(len(layer)) as inner_workers:
+                    with ThreadPoolExecutor(max_workers=inner_workers) as pool:
+                        futures = {pool.submit(run_one, node_id): node_id for node_id in layer}
+                        first_exc = None
+                        for future in as_completed(futures):
+                            try:
+                                future.result()
+                            except Exception:  # noqa: BLE001 - 保留首个异常，整层结束后统一抛出
+                                if first_exc is None:
+                                    first_exc = future.exception()
+                        if first_exc is not None:
+                            raise first_exc
             for node_id in layer:
                 outputs_by_node[node_id] = _node_outputs(task_id, node_id)
 
@@ -712,7 +714,11 @@ def run_loop_node(task_id: str, loop_node_id: str, workspace: Path, node_payload
     abort = threading.Event()
     done = len(skipped)
     if todo:
-        with ThreadPoolExecutor(max_workers=concurrency) as pool:
+        # 迭代池纳入全局线程预算：iterationConcurrency 配到 4/5 时，
+        # 「层内池 × 迭代池 × 迭代内层池」会把 worker 线程全占成等待者。
+        with ExitStack() as stack:
+            iter_workers = stack.enter_context(THREAD_BUDGET.hold(concurrency))
+            pool = stack.enter_context(ThreadPoolExecutor(max_workers=iter_workers))
             futures = {
                 pool.submit(
                     _run_iteration,

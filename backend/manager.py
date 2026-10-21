@@ -1442,20 +1442,34 @@ def start_voiceforge_worker():
         return
     python_exe, env = prepared
     project_root = _project_root()
-    try:
-        if _worker_available(
-            python_exe,
-            env,
-            project_root,
-            {"voiceforge_synthesis", "voiceforge_voice", "voiceforge_export"},
-            "backend.voiceforge.tasks.celery_app",
-        ):
+    concurrency = _voiceforge_worker_concurrency(env)
+    if _worker_available(
+        python_exe,
+        env,
+        project_root,
+        VOICEFORGE_WORKER_QUEUES,
+        "backend.voiceforge.tasks.celery_app",
+    ):
+        # 残留 worker 的 --concurrency 是启动时冻结的旧值，不会随设置变更
+        # （历史上硬编码 5，与 voiceforge.synthesis.concurrency 脱节）；也可能残留
+        # 多个 worker 使实际总并发翻倍。只要并发度与配置不一致或 worker 数量超过
+        # 1 个，就软停全部并拉起单个新 worker，确保投递层与执行层口径一致。
+        existing = _existing_voiceforge_concurrency()
+        if existing and (any(v != concurrency for v in existing) or len(existing) > 1):
+            print(
+                f"[Manager] Existing VoiceForge worker(s) concurrency={existing} "
+                f"!= expected [{concurrency}], recycling worker(s) to apply config"
+            )
+            if not _recycle_voiceforge_workers(python_exe, env, project_root):
+                print("[Manager] VoiceForge worker 回收超时，仍按新并发拉起（旧 worker 可能仍在运行）")
+        else:
             print("[Manager] VoiceForge worker queues already have a consumer, skipping start")
             return
-        cmd = [
-            python_exe, "-m", "celery", "-A", "backend.voiceforge.tasks.celery_app.celery_app",
-            "worker", "--loglevel=INFO", "--hostname=voiceforge@%h", "--pool=threads", "--concurrency=5", "--queues=voiceforge_synthesis,voiceforge_voice,voiceforge_export",
-        ]
+    cmd = [
+        python_exe, "-m", "celery", "-A", "backend.voiceforge.tasks.celery_app.celery_app",
+        "worker", "--loglevel=INFO", "--hostname=voiceforge@%h", "--pool=threads", f"--concurrency={concurrency}", "--queues=voiceforge_synthesis,voiceforge_voice,voiceforge_export",
+    ]
+    try:
         proc = subprocess.Popen(cmd, cwd=project_root, env=env, creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0))
         _assign_to_job(proc)
         with _lock:
@@ -1467,14 +1481,17 @@ def start_voiceforge_worker():
         print(f"[Manager] Failed to start VoiceForge worker: {exc}")
 
 
-def _celery_warm_shutdown(timeout: int = 30) -> bool:
-    """通过 Celery control 协议请求 control-plane worker 暖停机（完成在途任务后退出）。
+def _celery_warm_shutdown(timeout: int = 30, hostname_prefix: str = "control-plane@") -> bool:
+    """通过 Celery control 协议请求 worker 暖停机（完成在途任务后退出）。
 
     必须定向广播（destination）：control-plane 与 voiceforge worker 共用同一 broker，
     无差别的 `celery control shutdown` 会把 voiceforge worker 也一并杀掉（表现为
     一键重启后 voiceforge 掉线、被看门狗重新拉起）。
     另外 shutdown 是"收到即退"，worker 不会回复，因此不走会等回复的 CLI（其必然
     报 "No nodes replied within time constraint"），直接用 broadcast API 下发。
+
+    hostname_prefix 限定目标 worker 节点名前缀（control-plane@ / voiceforge@），
+    对跨会话残留进程同样有效（按节点名寻址，不依赖 manager 持有的进程句柄）。
 
     返回 True 表示指令已成功下发；失败（broker 不可达、无存活节点等）返回 False。
     """
@@ -1484,7 +1501,7 @@ def _celery_warm_shutdown(timeout: int = 30) -> bool:
         warm_shutdown_code = (
             "from backend.control_plane.celery_runtime import celery_app as app\n"
             "ping = app.control.inspect(timeout=10).ping() or {}\n"
-            "targets = [n for n in ping if str(n).startswith('control-plane@')]\n"
+            f"targets = [n for n in ping if str(n).startswith({hostname_prefix!r})]\n"
             "print('warm-shutdown targets:', targets)\n"
             "if not targets:\n"
             "    raise SystemExit(2)\n"
@@ -1526,6 +1543,87 @@ def _wait_for_exit(proc, timeout: float) -> bool:
             return True
         time.sleep(1)
     return proc.poll() is not None
+
+
+VOICEFORGE_WORKER_QUEUES = {"voiceforge_synthesis", "voiceforge_voice", "voiceforge_export"}
+# VoiceForge worker 软停机等待在途任务完成的超时（秒，可调）
+VOICEFORGE_SOFT_SHUTDOWN_TIMEOUT = int(os.environ.get("VOICEFORGE_SOFT_SHUTDOWN_TIMEOUT", "300"))
+
+
+def _voiceforge_worker_concurrency(env: dict[str, str]) -> int:
+    """从配置读取 VoiceForge worker 并发数（voiceforge.synthesis.concurrency）。
+
+    与任务泵 pump_pending_tasks / 本地线程池共用同一配置与钳制范围，保证
+    投递层与执行层口径一致；读取失败时回退到环境变量或默认 3。
+    """
+    try:
+        from backend.voiceforge.task_defaults import synthesis_concurrency
+
+        return synthesis_concurrency()
+    except Exception as exc:
+        # 不再静默吞异常：读取失败时打印原因，避免冷启动 worker 并发悄悄回退默认值
+        print(f"[Manager] Failed to read voiceforge.synthesis.concurrency: {exc!r}, falling back")
+    try:
+        return max(1, int(env.get("VOICEFORGE_CONCURRENCY", "3")))
+    except (ValueError, TypeError):
+        return 3
+
+
+def _existing_voiceforge_concurrency() -> list[int]:
+    """查询当前在跑的 VoiceForge worker 实际并发度（--concurrency）；查询失败返回空列表。
+
+    用于冷启动时核对"残留 worker"的并发是否与 voiceforge.synthesis.concurrency 一致：
+    worker 的并发是启动时冻结的旧值，残留进程不会感知配置变更，需回收重启才能生效。
+    """
+    try:
+        from backend.voiceforge.tasks.celery_app import celery_app
+
+        if celery_app is None:
+            return []
+        # 注意：voiceforge 与 control-plane worker 复用同一 Celery app 与 broker，
+        # inspect().stats() 会一并返回，必须先按 active_queues 过滤出消费
+        # 配音谷队列的 worker，再取其并发度。
+        target = VOICEFORGE_WORKER_QUEUES
+        inspect = celery_app.control.inspect(timeout=3)
+        stats = inspect.stats() or {}
+        active_queues = inspect.active_queues() or {}
+        consumers = {
+            name
+            for name, worker_queues in active_queues.items()
+            if {item.get("name") for item in worker_queues} >= target
+        }
+        values: list[int] = []
+        for name in consumers:
+            info = stats.get(name)
+            pool = info.get("pool") if isinstance(info, dict) else None
+            mc = pool.get("max-concurrency") if isinstance(pool, dict) else None
+            if mc is None:
+                continue
+            try:
+                values.append(int(mc))
+            except (ValueError, TypeError):
+                continue
+        return values
+    except Exception:
+        return []
+
+
+def _recycle_voiceforge_workers(python_exe: str, env: dict[str, str], project_root: str, timeout: float = 120) -> bool:
+    """软停机全部消费配音谷队列的 worker（含跨会话残留进程），等待其退出。
+
+    返回 True 表示已无残留消费者，调用方可安全拉起新 worker；False 表示超时
+    仍有 worker 在运行（调用方需决定是否强行拉起）。
+    """
+    # 自己拉起的 worker：软停机（等待在途 TTS 任务完成）
+    stop_voiceforge_worker(soft=True)
+    # 跨会话残留进程：按节点名广播暖停机（尽力而为，失败也不影响下面的轮询判定）
+    _celery_warm_shutdown(hostname_prefix="voiceforge@")
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        if not _worker_available(python_exe, env, project_root, VOICEFORGE_WORKER_QUEUES, "backend.voiceforge.tasks.celery_app"):
+            return True
+        time.sleep(2)
+    return False
 
 
 def _existing_control_plane_concurrency() -> list[int]:
@@ -1715,22 +1813,33 @@ def restart_gpu_service():
 
 
 @_serialized
-def stop_voiceforge_worker():
+def stop_voiceforge_worker(soft: bool = False):
     global _voiceforge_worker_process, _voiceforge_worker_start_time
     _desired["voiceforge_worker"] = False
     with _lock:
         proc = _voiceforge_worker_process
         _voiceforge_worker_process = None
         _voiceforge_worker_start_time = 0
-    if proc is not None:
-        _kill_existing_process(proc)
-        print("[Manager] VoiceForge worker stopped")
+    if proc is None or proc.poll() is not None:
+        return
+    if soft:
+        print("[Manager] 软停机 VoiceForge worker（等待在途任务完成）...")
+        # 优先用 Celery control 协议请求暖停机；失败再回退为 OS 信号
+        if not _celery_warm_shutdown(hostname_prefix="voiceforge@"):
+            _soft_signal_shutdown(proc)
+        if _wait_for_exit(proc, timeout=VOICEFORGE_SOFT_SHUTDOWN_TIMEOUT):
+            print("[Manager] VoiceForge worker 已软停机")
+            return
+        print("[Manager] 软停机超时，回退为强杀")
+    _kill_existing_process(proc)
+    print("[Manager] VoiceForge worker stopped")
 
 
 @_serialized
-def restart_voiceforge_worker():
-    stop_voiceforge_worker()
-    time.sleep(1)
+def restart_voiceforge_worker(soft: bool = True):
+    # 软停机：先让在途 TTS 任务完成再退出，避免强杀中断合成
+    stop_voiceforge_worker(soft=soft)
+    # stop 已阻塞至进程退出（或已强杀），无需额外 sleep，直接拉起新 worker
     start_voiceforge_worker()
 
 

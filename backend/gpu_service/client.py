@@ -25,7 +25,10 @@ def service_available() -> bool:
     return jobs.service_alive()
 
 
-def _submit_and_wait(kind: str, engine: str, params: dict, callback, timeout: float) -> dict:
+def _submit_and_wait(kind: str, engine: str, params: dict, callback, timeout: float | None) -> dict:
+    # 等待超时默认与 lane 看门狗阈值（config.job_timeout）对齐：客户端先超时退出，
+    # lane 侧看门狗兜底强杀，两侧不会一个干等一个长跑。
+    effective_timeout = timeout if timeout is not None else config.job_timeout()
     if not jobs.service_alive():
         raise GpuServiceUnavailableError("GPU 服务未启动或不可用")
     job_id = jobs.submit_job(kind, engine, params)
@@ -33,7 +36,7 @@ def _submit_and_wait(kind: str, engine: str, params: dict, callback, timeout: fl
     if callback is not None:
         callback(0, "GPU 服务排队中")
     try:
-        return jobs.wait_result(job_id, rc, timeout=max(timeout, 30.0), callback=callback)
+        return jobs.wait_result(job_id, rc, timeout=max(effective_timeout, 30.0), callback=callback)
     except TimeoutError:
         raise TaskTimeoutError(f"GPU 任务超时: {job_id}")
     except BaseException:
@@ -44,7 +47,7 @@ def _submit_and_wait(kind: str, engine: str, params: dict, callback, timeout: fl
 
 def run_asr(engine_name: str, input_path: str, output_path: str, *,
             model: str | None = None, language: str | None = None,
-            engine_params: dict | None = None, callback=None, timeout: float = 3600) -> dict:
+            engine_params: dict | None = None, callback=None, timeout: float | None = None) -> dict:
     """经 GPU 服务执行 ASR，返回引擎 transcribe 结果 dict。"""
     return _submit_and_wait("asr", engine_name, {
         "input_path": input_path,
@@ -56,7 +59,7 @@ def run_asr(engine_name: str, input_path: str, output_path: str, *,
 
 
 def run_separation(iface_id: str, input_path: str, output_dir: str, *,
-                   model: str = "", format: str = "", callback=None, timeout: float = 3600) -> dict:
+                   model: str = "", format: str = "", callback=None, timeout: float | None = None) -> dict:
     """经 GPU 服务执行人声分离，返回 {vocals, background} 路径 dict。"""
     return _submit_and_wait("separation", iface_id, {
         "input_path": input_path,
