@@ -14,13 +14,85 @@ from app.models.model import Model
 from app.models.api_key import ApiKey
 from app.services.balancer import Balancer, _rule_token_tracker
 from app.services.forwarder import Forwarder
-from app.utils.protocol_adapter import (claude_response_to_openai, gemini_response_to_openai, openai_to_claude_response, openai_to_gemini_response, convert_openai_stream_to_claude_chunks, convert_openai_stream_to_gemini_chunks)
+from app.utils.protocol_adapter import (claude_response_to_openai, gemini_response_to_openai, openai_to_claude_response, openai_to_gemini_response, convert_openai_stream_to_claude_chunks, convert_openai_stream_to_gemini_chunks, responses_request_to_chat, chat_completion_to_response, ResponsesStreamWriter, claude_request_to_chat, gemini_request_to_chat)
 from app.routers.settings import get_output_protocol
 from app.services.access_auth import verify_client_auth, verify_alias_client_key
 import httpx
 
 router = APIRouter(tags=["proxy"], dependencies=[Depends(verify_client_auth)])
 alias_router = APIRouter(tags=["proxy-alias"])
+
+
+def _instructions_of(chat_body: dict) -> str | None:
+    """Recover the Responses `instructions` field from the converted chat body.
+
+    `responses_request_to_chat` folds instructions into a leading system
+    message; reading it back here avoids smuggling extra keys into the
+    upstream request payload.
+    """
+    for msg in chat_body.get("messages", []):
+        if msg.get("role") != "system":
+            continue
+        content = msg.get("content")
+        if isinstance(content, str):
+            return content or None
+        if isinstance(content, list):
+            text = "\n".join(
+                b.get("text", "") for b in content
+                if isinstance(b, dict) and b.get("type") == "text"
+            )
+            return text or None
+    return None
+
+
+def _passthrough_usage(client_format: str, data: dict) -> tuple[int, int, int]:
+    """Extract (prompt, completion, total) tokens from a native client-format body."""
+    if client_format == "claude":
+        usage = data.get("usage") or {}
+        prompt = usage.get("input_tokens", 0) or 0
+        completion = usage.get("output_tokens", 0) or 0
+        return prompt, completion, prompt + completion
+    if client_format == "gemini":
+        meta = data.get("usageMetadata") or {}
+        prompt = meta.get("promptTokenCount", 0) or 0
+        completion = meta.get("candidatesTokenCount", 0) or 0
+        return prompt, completion, meta.get("totalTokenCount", 0) or (prompt + completion)
+    usage = data.get("usage") or {}
+    prompt = usage.get("prompt_tokens", 0) or 0
+    completion = usage.get("completion_tokens", 0) or 0
+    return prompt, completion, usage.get("total_tokens", 0) or (prompt + completion)
+
+
+def _passthrough_stream_usage(client_format: str, chunk_text: str) -> tuple[int, int]:
+    """Best-effort token extraction from a raw upstream SSE frame / JSON line."""
+    for line in chunk_text.split("\n"):
+        line = line.strip()
+        if not line:
+            continue
+        payload = line[6:] if line.startswith("data: ") else line
+        try:
+            obj = json.loads(payload)
+        except Exception:
+            continue
+        if isinstance(obj, dict) and obj.get("type") == "message_delta":
+            usage = obj.get("usage") or {}
+            return (usage.get("input_tokens", 0) or 0), (usage.get("output_tokens", 0) or 0)
+        if isinstance(obj, dict) and obj.get("type") == "message_start":
+            usage = (obj.get("message") or {}).get("usage") or {}
+            if usage:
+                return (usage.get("input_tokens", 0) or 0), 0
+        if isinstance(obj, dict) and obj.get("usageMetadata"):
+            meta = obj["usageMetadata"]
+            return (meta.get("promptTokenCount", 0) or 0), (meta.get("candidatesTokenCount", 0) or 0)
+    return 0, 0
+
+
+def _passthrough_error_event(message: str) -> str:
+    """Emit an upstream error in the client's native wire format."""
+    return "event: error\ndata: " + json.dumps({
+        "type": "error",
+        "error": {"type": "api_error", "message": message},
+    }, ensure_ascii=False) + "\n\n"
 
 
 async def _resolve(strategy_name: str, db: AsyncSession):
@@ -40,7 +112,7 @@ async def _resolve(strategy_name: str, db: AsyncSession):
 MAX_KEY_ATTEMPTS = 3
 
 
-async def _try_forward(strategy, db, request_body, is_stream):
+async def _try_forward(strategy, db, request_body, is_stream, out_format="openai"):
     """Try to forward request using balancer with retry logic.
 
     两级故障转移：
@@ -53,7 +125,6 @@ async def _try_forward(strategy, db, request_body, is_stream):
     from app.utils.key_health import (
         classify_exception, classify_status_code, mark_failure, mark_success,
     )
-
     balancer = Balancer(db)
     forwarder = Forwarder(db)
     last_error = None
@@ -117,8 +188,8 @@ async def _try_forward(strategy, db, request_body, is_stream):
                 # 成功即复位（连同 last_used_at 一起在 handler 内commit）
                 mark_success(api_key)
                 if is_stream:
-                    return await _handle_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
-                return await _handle_non_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db)
+                    return await _handle_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db, out_format)
+                return await _handle_non_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db, out_format)
             except httpx.HTTPStatusError as e:
                 status = getattr(getattr(e, "response", None), "status_code", None)
                 kind = classify_status_code(status)
@@ -216,17 +287,42 @@ async def _try_forward(strategy, db, request_body, is_stream):
     raise HTTPException(502, detail=f"All attempts failed: {last_error}")
 
 
-async def _handle_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db):
+async def _handle_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db, out_format="openai"):
     start = time.monotonic()
 
     token_counter = {"prompt": 0, "completion": 0}
 
-    output_proto = get_output_protocol()
+    # 端点决定客户端格式（responses/claude/gemini）；openai 端点沿用全局设置兜底
+    output_proto = get_output_protocol() if out_format == "openai" else out_format
     completion_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+    writer = None
+    if output_proto == "responses":
+        writer = ResponsesStreamWriter(
+            model_id=request_body.get("model") or model.model_id,
+            instructions=_instructions_of(request_body),
+            max_output_tokens=request_body.get("max_tokens"),
+        )
+    # 客户端格式与上游协议一致：forward_stream 原样吐出上游帧，直接下发
+    passthrough = request_body.get("_raw_body") is not None and request_body.get("_client_format") == provider.protocol
+
+    def _sse(events) -> str:
+        return "".join(
+            f"event: {etype}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+            for etype, payload in events
+        )
 
     async def generate():
         try:
             async for chunk in forwarder.forward_stream(strategy, rule, provider, model, api_key, request_body):
+                if passthrough:
+                    if chunk.strip():
+                        p, c = _passthrough_stream_usage(request_body.get("_client_format"), chunk)
+                        if p:
+                            token_counter["prompt"] = p
+                        if c:
+                            token_counter["completion"] = c
+                    yield chunk
+                    continue
                 if chunk.startswith("data: ") and chunk.strip() != "data: [DONE]":
                     try:
                         import json as _json
@@ -237,23 +333,44 @@ async def _handle_stream(strategy, rule, provider, model, api_key, request_body,
                             token_counter["completion"] = u.get("completion_tokens", 0) or 0
                     except Exception:
                         pass
-                if output_proto != "openai" and chunk.startswith("data: ") and chunk.strip() != "data: [DONE]":
+                if output_proto == "responses":
+                    if chunk.strip() == "data: [DONE]":
+                        continue
                     try:
                         import json as _json
                         obj = _json.loads(chunk[6:])
-                        if output_proto == "claude":
-                            converted = convert_openai_stream_to_claude_chunks(obj, completion_id)
-                            if converted:
-                                yield converted
-                                continue
-                        elif output_proto == "gemini":
-                            converted = convert_openai_stream_to_gemini_chunks(obj)
-                            if converted:
-                                yield converted
-                                continue
                     except Exception:
-                        pass
+                        continue
+                    events = writer.feed(obj)
+                    if writer.finished:
+                        # error / failed 之后不再收尾
+                        yield _sse(events)
+                        break
+                    if events:
+                        yield _sse(events)
+                    continue
+                if output_proto != "openai" and chunk.strip() == "data: [DONE]":
+                    # 非 OpenAI 输出协议：不透传 OpenAI 的 [DONE] 终止符
+                    continue
+                if output_proto != "openai" and chunk.startswith("data: "):
+                    # 非 OpenAI 输出协议：chunk 一律转换，无法转换的（如 reasoning）
+                    # 直接丢弃，绝不把内部 chat chunk 泄漏给客户端
+                    try:
+                        import json as _json
+                        obj = _json.loads(chunk[6:])
+                    except Exception:
+                        continue
+                    if output_proto == "claude":
+                        converted = convert_openai_stream_to_claude_chunks(obj, completion_id)
+                    else:
+                        converted = convert_openai_stream_to_gemini_chunks(obj)
+                    if converted:
+                        yield converted
+                    continue
                 yield chunk
+            else:
+                if output_proto == "responses" and not writer.finished and not passthrough:
+                    yield _sse(writer.finish())
             latency = int((time.monotonic() - start) * 1000)
             total = token_counter["prompt"] + token_counter["completion"]
             await forwarder.log_request(
@@ -282,6 +399,30 @@ async def _handle_stream(strategy, rule, provider, model, api_key, request_body,
                 await db.commit()
             except Exception:
                 pass
+            if output_proto == "responses" and not passthrough:
+                try:
+                    await forwarder.log_request(
+                        strategy.id, provider.id, api_key.id, model.model_id,
+                        request_body, 500, latency, True, str(e)[:500],
+                    )
+                except Exception as log_exc:
+                    print(
+                        f"[router] WARNING: failed to write stream error log: {log_exc}",
+                        flush=True,
+                    )
+                yield _sse(writer.fail(str(e)[:200]))
+                return
+            if passthrough:
+                # 保持客户端格式的错误信封
+                try:
+                    await forwarder.log_request(
+                        strategy.id, provider.id, api_key.id, model.model_id,
+                        request_body, 500, latency, True, str(e)[:500],
+                    )
+                except Exception:
+                    pass
+                yield _passthrough_error_event(str(e)[:200])
+                return
             try:
                 await forwarder.log_request(
                     strategy.id, provider.id, api_key.id, model.model_id,
@@ -298,7 +439,7 @@ async def _handle_stream(strategy, rule, provider, model, api_key, request_body,
     return StreamingResponse(generate(), media_type="text/event-stream")
 
 
-async def _handle_non_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db):
+async def _handle_non_stream(strategy, rule, provider, model, api_key, request_body, forwarder, db, out_format="openai"):
     start = time.monotonic()
     resp = await forwarder.forward(strategy, rule, provider, model, api_key, request_body, is_stream=False)
     latency = int((time.monotonic() - start) * 1000)
@@ -327,25 +468,52 @@ async def _handle_non_stream(strategy, rule, provider, model, api_key, request_b
         if resp.status_code in (401, 403, 429):
             # 凭证被拒/限流属于 key 级问题：抛给上层换一把 key 再试
             resp.raise_for_status()
+        output_proto = get_output_protocol() if out_format == "openai" else out_format
+        if output_proto == "responses":
+            return JSONResponse(
+                status_code=resp.status_code,
+                content={"error": {"message": error_text, "type": "upstream_error", "code": "upstream_error"}},
+            )
         return JSONResponse(status_code=resp.status_code, content={"error": {"message": error_text}})
 
     data = resp.json()
 
-    if provider.protocol == "claude":
-        data = claude_response_to_openai(data, model.model_id)
-    elif provider.protocol == "gemini":
-        data = gemini_response_to_openai(data, model.model_id)
+    # 客户端格式与上游协议一致：上游响应即客户端所需格式，零转换直返
+    passthrough = request_body.get("_raw_body") is not None and request_body.get("_client_format") == provider.protocol
 
-    output_proto = get_output_protocol()
-    if output_proto == "claude":
-        data = openai_to_claude_response(data)
-    elif output_proto == "gemini":
-        data = openai_to_gemini_response(data)
+    if not passthrough:
+        if provider.protocol == "claude":
+            data = claude_response_to_openai(data, model.model_id)
+        elif provider.protocol == "gemini":
+            data = gemini_response_to_openai(data, model.model_id)
 
-    usage = data.get("usage", {})
-    prompt_tok = usage.get("prompt_tokens", 0) or 0
-    completion_tok = usage.get("completion_tokens", 0) or 0
-    total_tok = usage.get("total_tokens", 0) or (prompt_tok + completion_tok)
+    output_proto = get_output_protocol() if out_format == "openai" else out_format
+    if not passthrough:
+        if output_proto == "responses":
+            data = chat_completion_to_response(
+                data,
+                request_body.get("model") or data.get("model") or model.model_id,
+                instructions=_instructions_of(request_body),
+                max_output_tokens=request_body.get("max_tokens"),
+            )
+        elif output_proto == "claude":
+            data = openai_to_claude_response(data)
+        elif output_proto == "gemini":
+            data = openai_to_gemini_response(data)
+
+    if passthrough:
+        prompt_tok, completion_tok, total_tok = _passthrough_usage(
+            request_body.get("_client_format"), data)
+    else:
+        usage = data.get("usage", {}) or {}
+        if output_proto == "responses":
+            prompt_tok = (usage.get("input_tokens", 0) or 0)
+            completion_tok = (usage.get("output_tokens", 0) or 0)
+            total_tok = usage.get("total_tokens", 0) or (prompt_tok + completion_tok)
+        else:
+            prompt_tok = usage.get("prompt_tokens", 0) or 0
+            completion_tok = usage.get("completion_tokens", 0) or 0
+            total_tok = usage.get("total_tokens", 0) or (prompt_tok + completion_tok)
 
     await forwarder.log_request(
         strategy.id, provider.id, api_key.id, model.model_id,
@@ -359,8 +527,113 @@ async def _handle_non_stream(strategy, rule, provider, model, api_key, request_b
     return JSONResponse(content=data)
 
 
-async def _chat_completions_impl(request: Request, db: AsyncSession):
-    body = await request.json()
+async def _resolve_direct_model(model_name: str, db: AsyncSession):
+    """Resolve a "provider_id/model_id" (or "provider_name/model_id") direct call.
+
+    Returns (provider, model) or None when the name is not in direct form or
+    nothing matches. Strategy names always win: this is only tried after the
+    strategy lookup fails.
+    """
+    pid, sep, model_id = (model_name or "").partition("/")
+    if not sep or not model_id:
+        return None
+
+    provider = None
+    if pid.isdigit():
+        provider = await db.get(Provider, int(pid))
+    if provider is None:
+        result = await db.execute(select(Provider).where(Provider.name == pid))
+        provider = result.scalar_one_or_none()
+    if not provider or not provider.is_active:
+        return None
+
+    result = await db.execute(
+        select(Model).where(Model.provider_id == provider.id, Model.model_id == model_id, Model.is_active == True)
+    )
+    model_obj = result.scalar_one_or_none()
+    if not model_obj:
+        result = await db.execute(
+            select(Model).where(Model.provider_id == provider.id, Model.display_name == model_id, Model.is_active == True)
+        )
+        model_obj = result.scalar_one_or_none()
+    if not model_obj:
+        return None
+    return provider, model_obj
+
+
+def _direct_pseudo_strategy(provider: Provider, model_obj: Model) -> Strategy:
+    """Pseudo strategy for direct calls: key rotation follows the platform's
+    own multi-key policy (Strategy settings stay authoritative for strategy
+    routing)."""
+    return Strategy(
+        id=0, name=f"__direct__{provider.name}__{model_obj.model_id}",
+        lb_strategy="round_robin", is_active=True,
+        timeout=120, retry_count=0,
+        key_strategy=getattr(provider, "key_strategy", None) or "round_robin",
+        key_switch_mode=getattr(provider, "key_switch_mode", None) or "none",
+        key_rpm_threshold=getattr(provider, "key_rpm_threshold", 0) or 0,
+        key_count_threshold=getattr(provider, "key_count_threshold", 0) or 0,
+    )
+
+
+async def _mark_direct_key_error(api_key: ApiKey, status_code: int, db: AsyncSession):
+    """Mirror _try_forward's key bookkeeping for direct calls."""
+    if status_code == 429:
+        api_key.status = "rate_limited"
+        api_key.last_error = "Rate limited"
+        await db.commit()
+    elif status_code in (401, 403):
+        api_key.status = "inactive"
+        api_key.last_error = f"Auth error: {status_code}"
+        await db.commit()
+
+
+async def _forward_direct(provider: Provider, model_obj: Model, db: AsyncSession,
+                          body: dict, is_stream: bool, out_format: str):
+    """Forward a direct (provider/model) call, using the platform key policy."""
+    balancer = Balancer(db)
+    pseudo_strategy = _direct_pseudo_strategy(provider, model_obj)
+    api_key = await balancer.select_key(provider.id, pseudo_strategy)
+    if not api_key:
+        raise HTTPException(503, detail=f"No active API key for provider {provider.name}")
+
+    pseudo_rule = StrategyRule(
+        id=0, strategy_id=0, provider_id=provider.id,
+        model_id=model_obj.id, priority=1, weight=1, is_active=True,
+    )
+    pseudo_strategy.rules = [pseudo_rule]
+
+    forwarder = Forwarder(db)
+    if is_stream:
+        return await _handle_stream(pseudo_strategy, pseudo_rule, provider, model_obj,
+                                    api_key, body, forwarder, db, out_format)
+    resp = await _handle_non_stream(pseudo_strategy, pseudo_rule, provider, model_obj,
+                                    api_key, body, forwarder, db, out_format)
+    if getattr(resp, "status_code", 200) >= 400:
+        await _mark_direct_key_error(api_key, resp.status_code, db)
+    return resp
+
+
+async def _dispatch_by_model(model_name: str, db: AsyncSession, body: dict,
+                             is_stream: bool, out_format: str):
+    """Strategy routing first; fall back to 'provider_id/model_id' direct mode."""
+    try:
+        strategy = await _resolve(model_name, db)
+    except HTTPException:
+        direct = await _resolve_direct_model(model_name, db)
+        if direct:
+            return await _forward_direct(direct[0], direct[1], db, body, is_stream, out_format)
+        if "/" in (model_name or ""):
+            raise HTTPException(
+                404,
+                detail=f"Direct model '{model_name}' not found: check the provider id/name and the model id",
+            )
+        raise
+    return await _try_forward(strategy, db, body, is_stream, out_format)
+
+
+async def _chat_completions_impl(request: Request, db: AsyncSession, out_format="openai", body_override: dict | None = None):
+    body = body_override if body_override is not None else await request.json()
     model_name = body.get("model", "")
     is_stream = body.get("stream", False)
 
@@ -383,36 +656,10 @@ async def _chat_completions_impl(request: Request, db: AsyncSession):
             model_obj = result2.scalar_one_or_none()
         if not model_obj or not model_obj.is_active:
             raise HTTPException(404, detail=f"Model '{model_name}' not found or inactive for provider {provider.name}")
+        return await _forward_direct(provider, model_obj, db, body, is_stream, out_format)
 
-        # Select an API key
-        key_result = await db.execute(
-            select(ApiKey).where(ApiKey.provider_id == int(direct_provider_id), ApiKey.status == "active")
-        )
-        api_key = key_result.scalars().first()
-        if not api_key:
-            raise HTTPException(503, detail=f"No active API key for provider {provider.name}")
-
-        # Create pseudo-strategy and rule for forwarding
-        pseudo_strategy = Strategy(
-            id=0, name=f"__direct__{provider.name}__{model_name}",
-            lb_strategy="round_robin", is_active=True,
-            timeout=120, retry_count=0,
-        )
-        pseudo_rule = StrategyRule(
-            id=0, strategy_id=0, provider_id=provider.id,
-            model_id=model_obj.id, priority=1, weight=1, is_active=True,
-        )
-        pseudo_strategy.rules = [pseudo_rule]
-
-        forwarder = Forwarder(db)
-        if is_stream:
-            return await _handle_stream(pseudo_strategy, pseudo_rule, provider, model_obj, api_key, body, forwarder, db)
-        else:
-            return await _handle_non_stream(pseudo_strategy, pseudo_rule, provider, model_obj, api_key, body, forwarder, db)
-
-    # Normal strategy mode
-    strategy = await _resolve(model_name, db)
-    return await _try_forward(strategy, db, body, is_stream)
+    # Strategy routing first, then "provider_id/model_id" direct mode
+    return await _dispatch_by_model(model_name, db, body, is_stream, out_format)
 
 
 @router.post("/v1/chat/completions")
@@ -433,6 +680,164 @@ async def completions(request: Request, db: AsyncSession = Depends(get_db)):
     }
     strategy = await _resolve(model_name, db)
     return await _try_forward(strategy, db, chat_body, body.get("stream", False))
+
+
+async def _completions_impl(body: dict, db: AsyncSession, is_stream: bool, out_format: str = "openai"):
+    """Legacy /v1/completions: same routing as chat completions."""
+    prompt = body.get("prompt", "")
+    model_name = body.get("model", "")
+    chat_body = {
+        "model": model_name,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": body.get("max_tokens", 1024),
+        "stream": is_stream,
+    }
+    return await _dispatch_by_model(model_name, db, chat_body, is_stream, out_format)
+
+
+# ============================================================
+# OpenAI Responses API (POST /v1/responses)
+# 入站请求/响应为 Responses 语义，内部复用 chat.completions 转发链路。
+# 无状态：`store` / `previous_response_id` 不落库，由客户端自带完整历史。
+# ============================================================
+
+async def _responses_impl(request: Request, db: AsyncSession):
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(400, detail="Request body must be a JSON object")
+    chat_body = responses_request_to_chat(body)
+    if not chat_body["messages"]:
+        raise HTTPException(400, detail="'input' is required (string or non-empty array)")
+    return await _chat_completions_impl(request, db, out_format="responses", body_override=chat_body)
+
+
+@router.post("/v1/responses")
+async def responses(request: Request, db: AsyncSession = Depends(get_db)):
+    """OpenAI-compatible Responses API proxy (non-streaming and streaming)."""
+    return await _responses_impl(request, db)
+
+
+# ============================================================
+# Anthropic Messages API (POST /v1/messages)
+# 入站为 Claude 请求/响应语义；若上游同样是 claude 协议则原样透传。
+# ============================================================
+
+async def _messages_impl(request: Request, db: AsyncSession):
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(400, detail="Request body must be a JSON object")
+    chat_body = claude_request_to_chat(body)
+    if not chat_body.get("messages"):
+        raise HTTPException(400, detail="'messages' is required")
+    if body.get("_direct_provider_id") is not None:
+        chat_body["_direct_provider_id"] = body["_direct_provider_id"]
+    chat_body["_client_format"] = "claude"
+    chat_body["_raw_body"] = {k: v for k, v in body.items() if not k.startswith("_")}
+    return await _chat_completions_impl(request, db, out_format="claude", body_override=chat_body)
+
+
+@router.post("/v1/messages")
+async def anthropic_messages(request: Request, db: AsyncSession = Depends(get_db)):
+    """Anthropic-compatible Messages API proxy (same routing as chat completions)."""
+    return await _messages_impl(request, db)
+
+
+# ============================================================
+# Google Gemini GenerateContent (POST /v1beta/models/{model}:{action})
+# 路径与官方一致，Gemini 官方 SDK 只改 base_url 即可接入。
+# 若上游同样是 gemini 协议则原样透传。
+# ============================================================
+
+def _split_gemini_path(rest: str) -> tuple[str, str]:
+    """Split '/v1beta/models/{rest}' into (model, action).
+
+    Model names may contain '/' (e.g. opencode/ling-3.1-flash-free), so the
+    action is taken from the last ':' segment.
+    """
+    rest = (rest or "").strip("/")
+    if ":" not in rest:
+        raise HTTPException(404, detail="Not found. Use /v1beta/models/{model}:generateContent")
+    model, _, action = rest.rpartition(":")
+    model = model.strip("/")
+    if not model or not action:
+        raise HTTPException(404, detail="Not found. Use /v1beta/models/{model}:generateContent")
+    return model, action
+
+
+async def _gemini_impl(request: Request, db: AsyncSession, model: str, action: str):
+    if action not in ("generateContent", "streamGenerateContent"):
+        raise HTTPException(400, detail=f"Unsupported action '{action}'")
+    body = await request.json()
+    if not isinstance(body, dict):
+        raise HTTPException(400, detail="Request body must be a JSON object")
+    model_name = (model or "").strip()
+    if not model_name:
+        raise HTTPException(400, detail="model is required in the URL path")
+    chat_body = gemini_request_to_chat(body, model_name)
+    if not chat_body.get("messages"):
+        raise HTTPException(400, detail="'contents' is required")
+    if action == "streamGenerateContent":
+        chat_body["stream"] = True
+    if body.get("_direct_provider_id") is not None:
+        chat_body["_direct_provider_id"] = body["_direct_provider_id"]
+    chat_body["_client_format"] = "gemini"
+    chat_body["_raw_body"] = {k: v for k, v in body.items() if not k.startswith("_")}
+    return await _chat_completions_impl(request, db, out_format="gemini", body_override=chat_body)
+
+
+@router.post("/v1beta/models/{rest:path}")
+async def gemini_generate(request: Request, rest: str,
+                          db: AsyncSession = Depends(get_db)):
+    """Gemini-compatible GenerateContent proxy (model = strategy name)."""
+    model, action = _split_gemini_path(rest)
+    return await _gemini_impl(request, db, model, action)
+
+
+@router.get("/v1beta/models")
+async def gemini_list_models(db: AsyncSession = Depends(get_db)):
+    """Gemini-style model list (strategies as model names)."""
+    return {
+        "models": [
+            {
+                "name": f"models/{m['id']}",
+                "id": m["id"],
+                "object": "model",
+                "displayName": m["id"],
+                "supportedGenerationMethods": ["generateContent", "streamGenerateContent"],
+            }
+            for m in (await _models_impl(db))["data"]
+        ],
+    }
+
+
+@alias_router.post("/k/{client_key}/v1/messages")
+async def alias_messages(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _key: None = Depends(verify_alias_client_key),
+):
+    return await _messages_impl(request, db)
+
+
+@alias_router.post("/k/{client_key}/v1beta/models/{rest:path}")
+async def alias_gemini_generate(
+    request: Request,
+    client_key: str,
+    rest: str,
+    db: AsyncSession = Depends(get_db),
+    _key: None = Depends(verify_alias_client_key),
+):
+    model, action = _split_gemini_path(rest)
+    return await _gemini_impl(request, db, model, action)
+
+
+@alias_router.get("/k/{client_key}/v1beta/models")
+async def alias_gemini_list_models(
+    client_key: str,
+    db: AsyncSession = Depends(get_db),
+    _key: None = Depends(verify_alias_client_key),
+):
+    return await gemini_list_models(db)
 
 
 async def _models_impl(db: AsyncSession):
@@ -1233,6 +1638,15 @@ async def alias_chat_completions(
     _key: None = Depends(verify_alias_client_key),
 ):
     return await _chat_completions_impl(request, db)
+
+
+@alias_router.post("/k/{client_key}/v1/responses")
+async def alias_responses(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    _key: None = Depends(verify_alias_client_key),
+):
+    return await _responses_impl(request, db)
 
 
 @alias_router.get("/k/{client_key}/v1/models")

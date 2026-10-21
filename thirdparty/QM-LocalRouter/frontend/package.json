@@ -1,7 +1,7 @@
 {
   "name": "llm-api-router",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -28,7 +28,9 @@
     "@radix-ui/react-label": "^2.1.0",
     "@radix-ui/react-separator": "^1.1.0",
     "lucide-react": "^0.441.0",
-    "recharts": "^2.13.0"
+    "recharts": "^2.13.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",

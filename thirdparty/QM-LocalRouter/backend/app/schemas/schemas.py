@@ -13,6 +13,10 @@ class ProviderCreate(_Base):
     protocol: str = Field(default="openai", pattern=r"^(openai|gemini|claude|custom)$")
     base_url: str = Field(..., max_length=500)
     auth_type: str = Field(default="api_key", max_length=20)
+    key_strategy: str = Field(default="round_robin", pattern=r"^(round_robin|random|failover)$")
+    key_switch_mode: str = Field(default="none", pattern=r"^(none|rpm_threshold|count_threshold)$")
+    key_rpm_threshold: int = 0
+    key_count_threshold: int = 0
     description: str = ""
     icon: str = ""
     homepage: str = ""
@@ -24,6 +28,10 @@ class ProviderUpdate(_Base):
     protocol: Optional[str] = None
     base_url: Optional[str] = None
     auth_type: Optional[str] = None
+    key_strategy: Optional[str] = Field(default=None, pattern=r"^(round_robin|random|failover)$")
+    key_switch_mode: Optional[str] = Field(default=None, pattern=r"^(none|rpm_threshold|count_threshold)$")
+    key_rpm_threshold: Optional[int] = None
+    key_count_threshold: Optional[int] = None
     description: Optional[str] = None
     icon: Optional[str] = None
     homepage: Optional[str] = None
@@ -36,6 +44,10 @@ class ProviderOut(_Base):
     protocol: str
     base_url: str
     auth_type: str = "api_key"
+    key_strategy: str = "round_robin"
+    key_switch_mode: str = "none"
+    key_rpm_threshold: int = 0
+    key_count_threshold: int = 0
     description: str
     icon: str = ""
     homepage: str = ""

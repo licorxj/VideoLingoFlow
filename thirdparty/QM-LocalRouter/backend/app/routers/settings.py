@@ -1,9 +1,13 @@
 import json
 import socket
 import asyncio
+import os
+import sys
+import threading
+import time
 from pathlib import Path
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 router = APIRouter(prefix="/api/settings", tags=["settings"])
 
@@ -23,8 +27,11 @@ DEFAULTS = {
     "oauth_token_hours": 24,
 }
 
+OUTPUT_PROTOCOLS = ("openai", "responses", "claude", "gemini")
+
+
 class AppSettings(BaseModel):
-    output_protocol: str = "openai"
+    output_protocol: str = Field(default="openai", pattern=r"^(openai|responses|claude|gemini)$")
     default_model: str = ""
     default_provider_id: int = 0
     lan_access: bool = False
@@ -123,19 +130,52 @@ async def _repository_status(fetch: bool) -> dict:
         "working_tree_clean": not bool(status),
     }
 
+
+def _schedule_self_restart(delay: float = 2.0) -> None:
+    """Restart the running backend process in place so freshly pulled Python
+    code takes effect.
+
+    Uses os.execv which replaces the current process image while keeping the
+    same PID, so any parent supervisor (service_manager, the Docker entrypoint,
+    or a launcher script) keeps managing the same process. Git revisions are
+    read from disk only at startup, so a restart is required for backend code
+    changes to apply. Dev deployments launched with uvicorn --reload skip this
+    (they hot-reload automatically); see update_repository().
+    """
+    def _restart() -> None:
+        time.sleep(delay)
+        try:
+            os.execv(sys.executable, [sys.executable, *sys.argv[1:]])
+        except Exception:
+            # As a last resort, exit and let a supervisor restart us.
+            os._exit(0)
+
+    threading.Thread(target=_restart, daemon=True).start()
+
 _SENSITIVE_SETTINGS = ("jwt_secret", "admin_password_hash")
+
+
+def _with_runtime_fields(data: dict) -> dict:
+    """Attach runtime-only fields (never persisted into app_settings.json).
+
+    backend_port: the port this backend actually listens on, so the frontend can
+    build the access URL instead of hardcoding the upstream default (12002).
+    """
+    from app.config import settings as app_config
+    return {**{k: v for k, v in data.items() if k not in _SENSITIVE_SETTINGS},
+            "backend_port": app_config.PORT}
+
 
 @router.get("")
 async def get_settings():
-    data = _get_settings()
-    return {k: v for k, v in data.items() if k not in _SENSITIVE_SETTINGS}
+    return _with_runtime_fields(_get_settings())
 
 @router.put("")
 async def update_settings(data: AppSettings):
     current = _get_settings()
     current.update(data.model_dump(exclude_unset=True))
     _save_settings(current)
-    return current
+    return _with_runtime_fields(current)
 
 @router.get("/lan-ip")
 async def lan_ip():
@@ -155,6 +195,8 @@ async def update_repository():
     if not status["update_available"]:
         return {**status, "updated": False, "build_output": "Already up to date."}
 
+    old_head = status["local_commit"]
+
     code, output, error = await _run_command("git", "pull", "--ff-only", "origin", status["branch"], cwd=REPOSITORY_ROOT)
     if code != 0:
         raise HTTPException(502, error or output or "Unable to update the repository")
@@ -164,4 +206,21 @@ async def update_repository():
         raise HTTPException(500, error or build_output or "Frontend build failed after the repository update")
 
     updated_status = await _repository_status(fetch=False)
-    return {**updated_status, "updated": True, "build_output": build_output}
+
+    # Restart the server only when backend (Python) code actually changed, so
+    # the update takes effect. Frontend-only changes are served from disk on
+    # the next request, no restart needed. Dev uvicorn --reload hot-reloads on
+    # its own, so we skip the explicit restart there.
+    restarting = False
+    if old_head and updated_status["local_commit"] != old_head and "--reload" not in sys.argv:
+        _, changed, _ = await _run_command(
+            "git", "diff", "--name-only",
+            f"{old_head}..{updated_status['local_commit']}",
+            cwd=REPOSITORY_ROOT,
+        )
+        restarting = any(line.strip().endswith(".py") for line in changed.splitlines())
+
+    result = {**updated_status, "updated": True, "build_output": build_output, "restarting": restarting}
+    if restarting:
+        _schedule_self_restart(delay=2.0)
+    return result

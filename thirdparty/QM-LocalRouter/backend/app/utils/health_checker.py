@@ -30,6 +30,39 @@ async def check_key_health(db: AsyncSession, api_key: ApiKey, provider: Provider
         }
 
     try:
+        if str(provider.auth_type or "").startswith("workbuddy"):
+            # WorkBuddy 没有 /models 端点，用官方配置接口验证凭据
+            from app.services import workbuddy
+            from app.services.oauth_providers import ensure_fresh_token
+            await ensure_fresh_token(db, api_key)
+            credential = workbuddy.load_credential(api_key, real_key)
+            region = workbuddy.resolve_region(credential, provider.base_url or "")
+            await workbuddy.fetch_catalog(region, credential)
+            elapsed = int((time.monotonic() - start) * 1000)
+            return {"success": True, "message": "OK", "latency_ms": elapsed}
+
+        if str(provider.auth_type or "") == "opencode":
+            # OpenCode：本地服务端健康检查 /global/health（Basic 认证）
+            from app.services import opencode as opencode_svc
+            client = opencode_svc.OpenCodeClient(provider.base_url or opencode_svc.DEFAULT_BASE_URL, real_key)
+            elapsed = int((time.monotonic() - start) * 1000)
+            try:
+                healthy = await client.health()
+            except Exception as e:
+                return {"success": False, "message": str(e)[:200], "latency_ms": elapsed}
+            return {"success": healthy, "message": "OK" if healthy else "服务未就绪", "latency_ms": elapsed}
+
+        if str(provider.auth_type or "") == "cline":
+            # Cline：拉取模型目录（GET /models）作为可达性健康检查
+            from app.services import cline as cline_svc
+            client = cline_svc.ClineClient(provider.base_url or cline_svc.CLINE_API_BASE, real_key)
+            elapsed = int((time.monotonic() - start) * 1000)
+            try:
+                ok = await client.health()
+            except Exception as e:
+                return {"success": False, "message": str(e)[:200], "latency_ms": elapsed}
+            return {"success": ok, "message": "OK" if ok else "Cline 上游不可达", "latency_ms": elapsed}
+
         if provider.protocol == "openai":
             async with httpx.AsyncClient(timeout=15) as client:
                 resp = await client.get(

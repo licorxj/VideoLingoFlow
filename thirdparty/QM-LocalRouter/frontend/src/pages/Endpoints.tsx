@@ -32,8 +32,10 @@ export default function Endpoints() {
   const [appSettings, setAppSettings] = useState<any>({});
   useEffect(() => { if (appSettingsData) setAppSettings(appSettingsData); }, [appSettingsData]);
 
-  const proxyUrl = appSettings.lan_access && lanIp ? `http://${lanIp}:12002/v1` : "http://127.0.0.1:12002/v1";
-  const localProxyUrl = "http://127.0.0.1:12002/v1";
+  //接入地址端口取后端真实监听端口（appSettings.backend_port），不写死上游默认值
+  const backendPort = appSettings.backend_port || 12002;
+  const proxyUrl = appSettings.lan_access && lanIp ? `http://${lanIp}:${backendPort}/v1` : `http://127.0.0.1:${backendPort}/v1`;
+  const localProxyUrl = `http://127.0.0.1:${backendPort}/v1`;
 
   // --- Virtual keys ---
   const [newKeyName, setNewKeyName] = useState("");

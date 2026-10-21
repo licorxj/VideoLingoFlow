@@ -1,0 +1,115 @@
+name: Build Release (Windows / macOS / Linux)
+
+# Build native single-file executables for the three desktop platforms and
+# attach them to a GitHub Release when a version tag (v*) is pushed.
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            asset: apirouter-linux
+          - os: macos-latest
+            asset: apirouter-macos
+          - os: windows-latest
+            asset: apirouter-windows
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Install backend dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install -r requirements-build.txt
+        shell: bash
+
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npm run build
+        shell: bash
+
+      - name: Generate version metadata
+        run: |
+          TAG=$(git describe --tags --always 2>/dev/null || echo "")
+          COMMIT=$(git rev-parse --short HEAD)
+          if [ -n "$(git status --porcelain)" ]; then DIRTY=true; else DIRTY=false; fi
+          cat > version.json <<EOF
+          {
+            "git_tag": "$TAG",
+            "git_commit": "$COMMIT",
+            "git_dirty": $DIRTY
+          }
+          EOF
+          echo "Built version: $TAG ($COMMIT, dirty=$DIRTY)"
+        shell: bash
+
+      - name: Build executable with PyInstaller
+        run: pyinstaller build_pyinstaller.spec --noconfirm --clean
+        shell: bash
+
+      - name: Stage package (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          ASSET="${{ matrix.asset }}"
+          STAGE="release-stage"
+          rm -rf "$STAGE" && mkdir -p "$STAGE"
+          cp "dist/apirouter" "$STAGE/apirouter"
+          chmod +x "$STAGE/apirouter"
+          cp "release/run.sh" "$STAGE/run.sh"
+          chmod +x "$STAGE/run.sh"
+          if [ -d frontend/dist ]; then
+            mkdir -p "$STAGE/frontend"
+            cp -r frontend/dist "$STAGE/frontend/dist"
+          fi
+          [ -f .env.example ] && cp .env.example "$STAGE/.env.example"
+          ( cd "$STAGE" && zip -r "../$ASSET.zip" . )
+        shell: bash
+
+      - name: Stage package (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $asset = "${{ matrix.asset }}"
+          $stage = "release-stage"
+          Remove-Item -Recurse -Force $stage -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+          Copy-Item "dist/apirouter.exe" "$stage/apirouter.exe"
+          Copy-Item "release/run.bat" "$stage/run.bat"
+          if (Test-Path "frontend/dist") { Copy-Item -Recurse "frontend/dist" "$stage/frontend/dist" }
+          if (Test-Path ".env.example") { Copy-Item ".env.example" "$stage/.env.example" }
+          Compress-Archive -Path "$stage/*" -DestinationPath "$asset.zip" -Force
+        shell: pwsh
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ matrix.asset }}.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

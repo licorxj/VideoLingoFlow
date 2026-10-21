@@ -1,4 +1,5 @@
 import os
+import sys
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +19,7 @@ from app.routers import client_keys
 from app.routers import oauth_login
 from app.routers import oauth_flow
 from app.routers import cli_import
+from app.version import get_version_info
 
 
 class DynamicCORSMiddleware(BaseHTTPMiddleware):
@@ -101,17 +103,34 @@ app.include_router(proxy.router)
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", "version": settings.APP_VERSION}
+    info = get_version_info()
+    return {
+        "status": "ok",
+        "version": info["version"],
+        "git_tag": info["git_tag"],
+        "git_commit": info["git_commit"],
+        "git_dirty": info["git_dirty"],
+        "build_type": info["build_type"],
+    }
+
+
+@app.get("/api/version")
+async def version():
+    """Version identifier plus git/release metadata for the UI footer."""
+    return get_version_info()
 
 
 # --- Production frontend serving ---
 # In production the built SPA (frontend/dist) is served by this same process,
 # so a single uvicorn handles UI + API on one port. The Vite dev server is
 # used during development and takes precedence there (nginx fronts dist in Docker).
-_FRONTEND_DIST = os.path.join(
-    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
-    "frontend", "dist",
-)
+_repo_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_FRONTEND_CANDIDATES = []
+if getattr(sys, "frozen", False):
+    # PyInstaller one-file build ships frontend/dist next to the executable.
+    _FRONTEND_CANDIDATES.append(os.path.join(os.path.dirname(sys.executable), "frontend", "dist"))
+_FRONTEND_CANDIDATES.append(os.path.join(_repo_root, "frontend", "dist"))
+_FRONTEND_DIST = next((c for c in _FRONTEND_CANDIDATES if os.path.isdir(c)), _FRONTEND_CANDIDATES[-1])
 
 if os.path.isdir(_FRONTEND_DIST):
     _assets_dir = os.path.join(_FRONTEND_DIST, "assets")

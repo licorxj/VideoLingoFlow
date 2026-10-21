@@ -62,11 +62,21 @@ if !NODE_MAJOR! LSS 18 (
 echo [2/5] Node.js OK: v!NODE_VER!
 
 REM ---- [3/5] Backend: venv + dependencies + database ----
-echo [3/5] Setting up backend (venv, dependencies, database)...
-!PYTHON! scripts\init_db.py
-if !ERRORLEVEL! NEQ 0 (
-    echo [ERROR] Backend setup failed. Check the output above.
-    goto :fail
+REM Skip pip when the venv already has a complete dependency set.
+set "SKIP_BACKEND=0"
+if exist "backend\venv\Scripts\python.exe" (
+    "backend\venv\Scripts\python.exe" -c "import fastapi, litellm, uvicorn, sqlalchemy, cryptography" >nul 2>&1
+    if !ERRORLEVEL! EQU 0 set "SKIP_BACKEND=1"
+)
+if "!SKIP_BACKEND!"=="1" (
+    echo [3/5] Backend dependencies already installed, skipping. Use update.bat to apply requirement changes.
+) else (
+    echo [3/5] Setting up backend (venv, dependencies, database^)...
+    !PYTHON! scripts\init_db.py
+    if !ERRORLEVEL! NEQ 0 (
+        echo [ERROR] Backend setup failed. Check the output above.
+        goto :fail
+    )
 )
 
 REM ---- [4/5] Frontend: npm install ----

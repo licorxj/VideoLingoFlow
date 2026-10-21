@@ -8,6 +8,8 @@ import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '.
 import { Textarea } from '../components/ui/textarea';
 import { Send, Trash2, Paperclip, Image as ImageIcon, FileText, Loader2, Bot, User, Copy, Check, Plus, MessageSquare, Search, Zap, Boxes, Volume2, Film, Download } from 'lucide-react';
 import { Switch } from '../components/ui/switch';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type ModelType = 'text' | 'image' | 'tts' | 'video' | 'embedding' | 'audio';
 
@@ -45,6 +47,121 @@ const MODEL_TYPE_COLORS: Record<ModelType, string> = {
   audio: 'bg-green-500/10 text-green-600 dark:text-green-400',
   embedding: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
 };
+
+type MediaKind = 'image' | 'audio' | 'video' | 'file';
+
+const getMediaKind = (url: string): MediaKind => {
+  const lower = url.toLowerCase().split('?')[0];
+  if (/\.(png|jpg|jpeg|gif|webp|svg|bmp|ico|avif|tiff?)$/i.test(lower)) return 'image';
+  if (/\.(mp3|wav|ogg|m4a|aac|flac|wma|opus)$/i.test(lower)) return 'audio';
+  if (/\.(mp4|webm|ogg|mov|mkv|avi|flv|m4v)$/i.test(lower)) return 'video';
+  return 'file';
+};
+
+const downloadUrl = async (url: string, filename?: string) => {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('fetch failed');
+    const blob = await res.blob();
+    const blobUrl = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = filename || url.split('/').pop()?.split('?')[0] || 'download';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(blobUrl);
+  } catch {
+    window.open(url, '_blank');
+  }
+};
+
+const MediaPreview: React.FC<{ url: string }> = ({ url }) => {
+  const { t } = useI18n();
+  const kind = getMediaKind(url);
+  const name = decodeURIComponent(url.split('/').pop()?.split('?')[0] || url);
+  return (
+    <div className='rounded-lg border bg-background/50 p-2 space-y-1.5 max-w-sm'>
+      {kind === 'image' && (
+        <a href={url} target='_blank' rel='noopener noreferrer' className='block'>
+          <img src={url} alt={name} className='max-w-full max-h-64 rounded-md object-contain hover:opacity-90 transition-opacity' />
+        </a>
+      )}
+      {kind === 'audio' && <audio controls src={url} className='w-full h-10' />}
+      {kind === 'video' && <video controls src={url} className='max-w-full max-h-64 rounded-md' />}
+      {kind === 'file' && (
+        <div className='flex items-center gap-2 text-xs text-muted-foreground'>
+          <FileText className='h-4 w-4 flex-shrink-0' />
+          <span className='truncate'>{name}</span>
+        </div>
+      )}
+      <button onClick={() => downloadUrl(url, name)} className='flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors'>
+        <Download className='h-3 w-3' />{t('chat.downloadFile')}
+      </button>
+    </div>
+  );
+};
+
+const ReactMarkdownAny = ReactMarkdown as any;
+
+const MarkdownRenderer: React.FC<{ content: string; className?: string }> = ({ content, className }) => {
+  const { t } = useI18n();
+  const standaloneMedia = React.useMemo(() => {
+    const markdownImageRegex = /!\[([^\]]*)\]\(([^)]+)\)/g;
+    const imageUrls = new Set<string>();
+    let m: RegExpExecArray | null;
+    while ((m = markdownImageRegex.exec(content)) !== null) { imageUrls.add(m[2]); }
+    const urlRegex = /https?:\/\/[^\s<>"{}|\\^`]+/g;
+    const allUrls = Array.from(new Set(content.match(urlRegex) || []));
+    return allUrls.filter(url => getMediaKind(url) !== 'file' && !imageUrls.has(url));
+  }, [content]);
+
+  const components: any = {
+    a: ({ href, children }: any) => {
+      if (!href) return <>{children}</>;
+      const kind = getMediaKind(href);
+      if (kind === 'file') {
+        return <a href={href} target='_blank' rel='noopener noreferrer' className='underline break-all'>{children}</a>;
+      }
+      return (
+        <span className='inline-flex items-center gap-1'>
+          <a href={href} target='_blank' rel='noopener noreferrer' className='underline break-all'>{children}</a>
+          <button onClick={() => downloadUrl(href)} className='inline-flex items-center text-muted-foreground hover:text-foreground' title={t('chat.downloadFile')}>
+            <Download className='h-3 w-3' />
+          </button>
+        </span>
+      );
+    },
+    img: ({ src, alt }: any) => (
+      <a href={src} target='_blank' rel='noopener noreferrer' className='block'>
+        <img src={src} alt={alt} className='max-w-xs max-h-80 rounded-lg border object-contain hover:opacity-90 transition-opacity' />
+      </a>
+    ),
+    code: ({ inline, className, children }: any) => {
+      if (inline) {
+        return <code className={`${className || ''} bg-black/10 dark:bg-white/10 rounded px-1 py-0.5 text-xs`}>{children}</code>;
+      }
+      return <pre className='bg-black/5 dark:bg-white/5 p-3 rounded-lg overflow-x-auto text-xs'><code className={className}>{children}</code></pre>;
+    },
+    table: ({ children }: any) => <table className='border-collapse text-xs my-2'>{children}</table>,
+    th: ({ children }: any) => <th className='border px-2 py-1 bg-muted'>{children}</th>,
+    td: ({ children }: any) => <td className='border px-2 py-1'>{children}</td>,
+  };
+
+  return (
+    <div className={className}>
+      <ReactMarkdownAny remarkPlugins={[remarkGfm]} components={components}>
+        {content}
+      </ReactMarkdownAny>
+      {standaloneMedia.length > 0 && (
+        <div className='mt-3 flex flex-wrap gap-2'>
+          {standaloneMedia.map(url => <MediaPreview key={url} url={url} />)}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function Chat() {
   const { t } = useI18n();
   const [convList, setConvList] = useState<ConversationItem[]>([]);
@@ -297,7 +414,7 @@ export default function Chat() {
                 {msg.richType === 'image' && msg.imageUrls && msg.imageUrls.length > 0 && <div className='flex flex-wrap gap-2 mb-2'>{msg.imageUrls.map((url, ui) => <a key={ui} href={url} target='_blank' rel='noopener noreferrer' className='block'><img src={url} alt={'Generated ' + (ui + 1)} className='max-w-xs max-h-80 rounded-lg border object-contain hover:opacity-90 transition-opacity' /></a>)}</div>}
                 {msg.richType === 'audio' && msg.audioUrl && <div className='mb-2'><audio controls src={msg.audioUrl} className='w-full max-w-sm h-10' /><a href={msg.audioUrl} download='speech.mp3' className='flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1'><Download className='h-3 w-3' />{t('chat.downloadAudio')}</a></div>}
                 {msg.richType === 'video_task' && msg.videoTask && <div className='mb-2'>{msg.videoTask.status === 'completed' && msg.videoTask.videoUrl ? <div><video controls src={msg.videoTask.videoUrl} className='max-w-sm max-h-64 rounded-lg border' /><a href={msg.videoTask.videoUrl} target='_blank' rel='noopener noreferrer' className='flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-1'><Download className='h-3 w-3' />{t('chat.downloadVideo')}</a></div> : <div className='flex items-center gap-2 text-xs text-muted-foreground'>{msg.videoTask.status !== 'failed' && <Loader2 className='h-4 w-4 animate-spin text-orange-500' />}<span className='font-medium'>{t('chat.videoStatus')}: </span><span className={msg.videoTask.status === 'failed' ? 'text-destructive' : 'text-orange-600 dark:text-orange-400'}>{msg.videoTask.status}</span>{msg.videoTask.id && <span className='text-[10px] opacity-60'> ({msg.videoTask.id})</span>}</div>}</div>}
-                {msg.content ? <div className='whitespace-pre-wrap break-words'>{msg.content}</div> : msg.role === 'assistant' && isStreaming && idx === messages.length - 1 && <div className='flex items-center gap-1.5 text-muted-foreground'><Loader2 className='h-3.5 w-3.5 animate-spin' /><span className='text-xs'>{t('chat.thinking')}</span></div>}
+                {msg.content ? <MarkdownRenderer content={msg.content} className='break-words' /> : msg.role === 'assistant' && isStreaming && idx === messages.length - 1 && <div className='flex items-center gap-1.5 text-muted-foreground'><Loader2 className='h-3.5 w-3.5 animate-spin' /><span className='text-xs'>{t('chat.thinking')}</span></div>}
                 {msg.role === 'assistant' && msg.content && <button onClick={() => copyMessage(msg.content, idx)} className='mt-2 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors'>{copiedIdx === idx ? <Check className='h-3 w-3' /> : <Copy className='h-3 w-3' />}{copiedIdx === idx ? t('common.copied') : t('common.copy')}</button>}
               </div>
               {msg.role === 'user' && <div className='flex-shrink-0 h-8 w-8 rounded-full bg-muted flex items-center justify-center'><User className='h-4 w-4' /></div>}
@@ -309,7 +426,7 @@ export default function Chat() {
         <div className='border-t px-6 py-3 bg-background/80 backdrop-blur-sm'>
           {attachedFiles.length > 0 && <div className='flex flex-wrap gap-2 mb-2'>{attachedFiles.map((f, i) => <div key={i} className='flex items-center gap-1.5 text-xs bg-muted rounded-lg px-2 py-1'>{f.preview ? <img src={f.preview} alt='' className='h-6 w-6 rounded object-cover' /> : <FileText className='h-3 w-3' />}<span className='max-w-[120px] truncate'>{f.name}</span><button onClick={() => removeFile(i)} className='text-muted-foreground hover:text-destructive ml-1'>x</button></div>)}</div>}
           <div className='flex items-end gap-2'>
-            {selectedModelType === 'text' && <div className='flex gap-1'><Button variant='ghost' size='sm' className='h-9 w-9 p-0' onClick={() => fileInputRef.current?.click()}><Paperclip className='h-4 w-4' /></Button><Button variant='ghost' size='sm' className='h-9 w-9 p-0' onClick={() => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.onchange = (e: any) => { Array.from(e.target.files || []).forEach(file => { const reader = new FileReader(); reader.onload = () => setAttachedFiles(prev => [...prev, { name: file.name, type: file.type, file, preview: reader.result as string }]); reader.readAsDataURL(file); }); }; inp.click(); }}><ImageIcon className='h-4 w-4' /></Button></div>}
+            {selectedModelType === 'text' && <div className='flex gap-1'><Button variant='ghost' size='sm' className='h-9 w-9 p-0' onClick={() => fileInputRef.current?.click()}><Paperclip className='h-4 w-4' /></Button><Button variant='ghost' size='sm' className='h-9 w-9 p-0' onClick={() => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = 'image/*'; inp.multiple = true; inp.onchange = (e: any) => { Array.from<File>(e.target.files || []).forEach(file => { const reader = new FileReader(); reader.onload = () => setAttachedFiles(prev => [...prev, { name: file.name, type: file.type, file, preview: reader.result as string }]); reader.readAsDataURL(file); }); }; inp.click(); }}><ImageIcon className='h-4 w-4' /></Button></div>}
             <input ref={fileInputRef} type='file' multiple className='hidden' onChange={handleFileAttach} />
             <Textarea ref={textareaRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={handleKeyDown} placeholder={isReady ? placeholderText : t('chat.selectModelFirst')} className='flex-1 min-h-[40px] max-h-[200px] resize-none text-sm' disabled={isStreaming} />
             <Button size='sm' className='h-10 w-10 p-0' onClick={sendMessage} disabled={isStreaming || !isReady || (!input.trim() && attachedFiles.length === 0)}>{isStreaming ? <Loader2 className='h-4 w-4 animate-spin' /> : <Send className='h-4 w-4' />}</Button>

@@ -35,11 +35,12 @@ CLI_PLATFORMS: dict[str, dict] = {
             (os.path.join(os.environ.get("APPDATA", ""), "Code", "User", "globalStorage", "saoudrizwan.claude-dev", "settings", "cline_mcp_settings.json") if os.environ.get("APPDATA") else "", "scan", "Cline VS Code"),
         ],
         "token_fields": ["access_token", "refresh_token"],
-        "refresh": {"url": "https://api.cline.bot/api/v1/auth/refresh", "style": "json", "field": "refreshToken"},
+        "refresh": {"url": "https://api.cline.bot/api/v1/auth/refresh", "style": "json", "field": "refreshToken", "platform": "cline"},
         "upstream": {
-            "api_base": "https://api.cline.bot",
-            "auth": "bearer-workos",  # Cline rejects plain Bearer; token must be prefixed with workos:
-            "extra_headers": {"Referer": "https://app.cline.bot/", "X-Title": "LocalRouter"},
+            "api_base": "https://api.cline.bot/api/v1",     # cline2api 真实端点（含 /api/v1）
+            "auth": "cline-bearer",                          # 由 services/cline.py 用 Bearer workos:<token>
+            "profile_id": "cline",                           # 走专用 cline 转发分支
+            "extra_headers": {},                             # 指纹头由 cline.py 统一注入
             "protocols": ["openai", "custom"],
         },
         "match_keywords": ["cline", "api.cline.bot"],
@@ -60,22 +61,26 @@ CLI_PLATFORMS: dict[str, dict] = {
         "match_keywords": ["trae", "core-normal.trae.ai"],
     },
     "opencode": {
-        "label": "OpenCode Free",
+        # 参照 TiaraBasori/opencode2api：OpenCode 通过本地服务端（opencode serve，
+        # 默认 http://127.0.0.1:10001）通信，认证为 HTTP Basic(opencode:<password>)，
+        # 不是托管 zen/v1 端点（免费层会拒绝非官方客户端）。
+        "label": "OpenCode (本地服务端 / Zen 免费模型)",
         "flow": "local_cli",
         "import_modes": ["add", "detect", "paste"],
         "detect_paths": [
+            ("~/.config/opencode/config.json", "opencode_server", "OpenCode 服务端配置"),
             ("~/.local/share/opencode/auth.json", "opencode_auth", "OpenCode CLI"),
+            (os.path.join(os.environ.get("USERPROFILE", ""), ".config", "opencode", "config.json") if os.environ.get("USERPROFILE") else "", "opencode_server", "OpenCode 服务端配置"),
             (os.path.join(os.environ.get("USERPROFILE", ""), ".local", "share", "opencode", "auth.json") if os.environ.get("USERPROFILE") else "", "opencode_auth", "OpenCode CLI"),
         ],
-        "no_credential_ok": True,  # public free endpoint: no token required
+        "no_credential_ok": True,  # 服务端可无密码（留空即不鉴权）
         "refresh": None,
         "upstream": {
-            "api_base": "https://opencode.ai/zen/v1",
-            "chat_path": "/chat/completions",
-            "auth": "bearer",  # free endpoint works without a key; a Zen key raises limits
-            "protocols": ["openai", "custom"],
+            "api_base": "http://127.0.0.1:4096",  # 本地 opencode serve 固定端口（10001 常被占用）
+            "auth": "opencode-basic",               # 由 services/opencode.py 用 Basic 认证
+            "protocols": ["opencode", "custom"],
         },
-        "match_keywords": ["opencode"],
+        "match_keywords": ["opencode", "opencode.ai"],
     },
     "amazon-q": {
         "label": "Amazon Q (Kiro 凭据导入)",
@@ -118,7 +123,46 @@ CLI_PLATFORMS: dict[str, dict] = {
         },
         "match_keywords": ["antigravity", "agy"],
     },
+    "workbuddy": {
+        "label": "WorkBuddy / CodeBuddy 国内版 (cn)",
+        "flow": "local_cli",
+        "import_modes": ["browser", "detect", "paste"],
+        "detect_paths": [
+            ("~/.workbuddy/auth.json", "json", "WorkBuddy CLI"),
+            ("~/.codebuddy/auth.json", "json", "CodeBuddy CLI"),
+            (os.path.join(os.environ.get("USERPROFILE", ""), ".workbuddy", "auth.json") if os.environ.get("USERPROFILE") else "", "json", "WorkBuddy CLI"),
+            (os.path.join(os.environ.get("USERPROFILE", ""), ".codebuddy", "auth.json") if os.environ.get("USERPROFILE") else "", "json", "CodeBuddy CLI"),
+        ],
+        "token_fields": ["access_token", "refresh_token", "uid", "enterprise_id", "department", "region"],
+        "regions": ["cn"],
+        "refresh": {"custom": "workbuddy"},  # 由 services/workbuddy.py 处理（X-Refresh-Token 头）
+        "upstream": {
+            "api_base": "https://www.workbuddy.cn",
+            "chat_path": "/v2/chat/completions",
+            "auth": "bearer",
+            "protocols": ["openai", "custom"],
+        },
+        "match_keywords": ["workbuddy.cn", "codebuddy.cn"],
+    },
+    "workbuddy-intl": {
+        "label": "WorkBuddy / CodeBuddy 国际版 (gl)",
+        "flow": "local_cli",
+        "import_modes": ["browser", "paste"],
+        "token_fields": ["access_token", "refresh_token", "uid", "enterprise_id", "department", "region"],
+        "regions": ["intl"],
+        "refresh": {"custom": "workbuddy"},
+        "upstream": {
+            "api_base": "https://www.workbuddy.ai",
+            "chat_path": "/v2/chat/completions",
+            "auth": "bearer",
+            "protocols": ["openai", "custom"],
+        },
+        "match_keywords": ["workbuddy.ai", "codebuddy.ai"],
+    },
 }
+
+# WorkBuddy 平台条目 -> 官方区域（浏览器登录与上游调用都按条目固定区域）
+WORKBUDDY_REGION_BY_PLATFORM = {"workbuddy": "cn", "workbuddy-intl": "intl"}
 
 
 def load_cli_platforms() -> dict:
@@ -160,7 +204,8 @@ def detect_credentials(platform_id: str) -> list[dict]:
                 data = _read_json(mp)
                 if not isinstance(data, dict):
                     continue
-                if data.get("refresh_token") or data.get("access_token"):
+                if data.get("refresh_token") or data.get("access_token") \
+                        or data.get("refreshToken") or data.get("accessToken"):
                     found.append({
                         "path": mp.replace(HOME, "~"),
                         "source": source,
@@ -183,6 +228,16 @@ def detect_credentials(platform_id: str) -> list[dict]:
                         "source": source,
                         "fields": ["zen api key"],
                     })
+            elif kind == "opencode_server":
+                data = _read_json(mp) or {}
+                srv = data.get("server") if isinstance(data.get("server"), dict) else {}
+                pwd = srv.get("password") or data.get("password")
+                if pwd:
+                    found.append({
+                        "path": mp.replace(HOME, "~"),
+                        "source": source,
+                        "fields": ["server password"],
+                    })
             elif kind == "scan":
                 data = _read_json(mp)
                 if data:
@@ -203,6 +258,9 @@ def extract_credentials(platform_id: str, path: str) -> dict:
     if platform_id == "opencode":
         entry = (data.get("opencode") or {})
         key = entry.get("key") or entry.get("api_key")
+        if not key:
+            srv = data.get("server") if isinstance(data.get("server"), dict) else {}
+            key = srv.get("password") or data.get("password")
         if key:
             out["access_token"] = key
         return out
@@ -221,6 +279,10 @@ async def refresh_cli_token(db: AsyncSession, api_key: ApiKey) -> None:
     """Refresh a CLI-imported credential via its platform endpoint. Commits on success."""
     platform = CLI_PLATFORMS.get(api_key.oauth_profile)
     if not platform:
+        return
+    if (platform.get("refresh") or {}).get("custom") == "workbuddy":
+        from app.services import workbuddy
+        await workbuddy.refresh_key(db, api_key)
         return
     refresh_cfg = platform.get("refresh")
     if not refresh_cfg:
@@ -266,16 +328,27 @@ async def refresh_cli_token(db: AsyncSession, api_key: ApiKey) -> None:
                 resp = await client.post(url, data=form, headers=headers)
         else:
             headers = {"Content-Type": "application/json", "Accept": "application/json"}
+            # Cline 刷新：body 为 {refreshToken, grantType}；响应嵌套在 data.data
+            body = {refresh_cfg.get("field", "refreshToken"): blob.get("refresh_token", "")}
+            if blob.get("refresh_token"):
+                body["grantType"] = "refresh_token"
             async with httpx.AsyncClient(timeout=30, trust_env=False) as client:
-                resp = await client.post(url, json={refresh_cfg.get("field", "refresh_token"): blob.get("refresh_token", "")},
-                                         headers=headers)
+                resp = await client.post(url, json=body, headers=headers)
         resp.raise_for_status()
         data = resp.json()
-        api_key.key_value = encrypt_value(data.get("access_token", ""))
-        if data.get("refresh_token"):
-            new_blob = {**blob, "refresh_token": data["refresh_token"]}
+        # Cline 返回 {data:{accessToken, refreshToken, expiresAt}}，兼容顶层回退
+        inner = data.get("data") if isinstance(data, dict) and isinstance(data.get("data"), dict) else data
+        access = inner.get("accessToken") or inner.get("access_token") or data.get("access_token", "")
+        new_refresh = inner.get("refreshToken") or inner.get("refresh_token") or data.get("refresh_token")
+        expires = inner.get("expiresAt") or inner.get("expires_in") or data.get("expires_in", 3600)
+        api_key.key_value = encrypt_value(access)
+        if new_refresh:
+            new_blob = {**blob, "refresh_token": new_refresh}
             api_key.oauth_refresh = encrypt_value(json.dumps(new_blob))
-        api_key.oauth_expires_at = int(time.time() + data.get("expires_in", 3600))
+        try:
+            api_key.oauth_expires_at = int(time.time() + (float(expires) if isinstance(expires, (int, float)) else 3600))
+        except (TypeError, ValueError):
+            api_key.oauth_expires_at = int(time.time() + 3600)
     api_key.status = "active"
     api_key.last_error = ""
     await db.commit()
@@ -473,6 +546,72 @@ async def complete_antigravity_code(provider_id: int, code: str, client_id: str,
     return await store_cli_key(db, provider_id, "antigravity", credential)
 
 
+async def start_workbuddy_session(provider_id: int, platform_id: str = "workbuddy") -> dict:
+    """WorkBuddy 官方网页授权：打开授权页后在官方站点完成登录，本地轮询结果。
+
+    与上游 workbuddy_to_api 一致：官方站点不回调本地，靠 1s 间隔轮询 state 换取令牌。
+    """
+    from app.services import workbuddy
+    platform_id = platform_id if platform_id in WORKBUDDY_REGION_BY_PLATFORM else "workbuddy"
+    region = workbuddy.normalize_region(WORKBUDDY_REGION_BY_PLATFORM[platform_id])
+    login = await workbuddy.start_login(region)
+    session_id, session = _new_session(provider_id, platform_id, "cli-workbuddy")
+    session.update({
+        "region": region,
+        "state": login["state"],
+        "authorize_url": login["auth_url"],
+        "interval": 1,          # 秒
+        "last_poll": 0,
+        "created": time.time(),
+    })
+    return {
+        "session_id": session_id,
+        "flow": "cli-workbuddy",
+        "region": region,
+        "authorize_url": login["auth_url"],
+        "interval_ms": 1000,
+    }
+
+
+async def poll_workbuddy_session(session_id: str, db: AsyncSession) -> dict:
+    """轮询 WorkBuddy 授权状态，成功后写入 ApiKey。"""
+    from app.services import workbuddy
+    session = _cli_sessions.get(session_id)
+    if not session:
+        return {"status": "expired"}
+    if session["status"] != "pending":
+        return {"status": session["status"], "key_id": session.get("key_id"), "error": session.get("error", "")}
+
+    now = time.time()
+    if now - session.get("last_poll", 0) < session.get("interval", 1):
+        return {"status": "pending", "authorize_url": session.get("authorize_url", "")}
+    session["last_poll"] = now
+    session["created"] = now  # 轮询期间保持会话存活
+
+    try:
+        result = await workbuddy.poll_login(session["region"], session["state"])
+    except Exception as e:
+        _complete_cli(session_id, 0, str(e)[:200])
+        return {"status": "failed", "error": str(e)[:200]}
+
+    if result.get("status") != "complete":
+        return {"status": "pending", "authorize_url": session.get("authorize_url", "")}
+
+    credential = dict(result["credential"])
+    expires_at = credential.pop("expires_at", 0)
+    provider_id = await ensure_provider(db, session["platform_id"], session["provider_id"])
+    try:
+        key = await store_cli_key(db, provider_id, session["platform_id"], credential)
+    except ValueError as e:
+        _complete_cli(session_id, 0, str(e)[:200])
+        return {"status": "failed", "error": str(e)[:200]}
+    if expires_at:
+        key.oauth_expires_at = int(expires_at / 1000)
+        await db.commit()
+    _complete_cli(session_id, key.id)
+    return {"status": "success", "key_id": key.id, "account": result.get("account", {})}
+
+
 async def ensure_provider(db: AsyncSession, platform_id: str, provider_id: int) -> int:
     """Return the provider id; reuse or auto-create the platform's CLI provider."""
     if provider_id:
@@ -526,10 +665,8 @@ async def store_cli_key(db: AsyncSession, provider_id: int, platform_id: str, cr
                "id_token": "id_token", "access_token": "access_token", "refresh_token": "refresh_token"}
     for k, v in credential.items():
         norm[mapping.get(k, k)] = v
-    access = norm.get("access_token") or norm.get("refresh_token") or norm.get("id_token")
-    if not access and platform_id == "opencode":
-        access = "KEYLESS"  # free-tier models work without any Authorization header (OmniRoute #8467)
-    if not access:
+    access = norm.get("access_token") or norm.get("refresh_token") or norm.get("id_token") or ""
+    if not access and not CLI_PLATFORMS.get(platform_id, {}).get("no_credential_ok"):
         raise ValueError("credential payload has no usable token")
     blob = {k: v for k, v in norm.items() if k != "access_token"}
 

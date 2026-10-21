@@ -317,8 +317,45 @@ response = client.chat.completions.create(
 | **Open WebUI** | `OPENAI_API_BASE_URL=http://localhost:12002/v1` |
 | **Cursor** | 设置 > 模型 > Base URL: `http://localhost:12002/v1` |
 | **Continue (VS Code)** | 添加模型 + OpenAI 兼容供应商，配置 Base URL |
+| **Codex CLI / Cline** | 使用下方的 Responses 端点（不支持 Header 时用 `/k/{key}/v1`） |
 
 > **注意**: `api_key` 可填任意值。`model` 字段必须填策略名称。
+
+### Responses API（Codex / Cline）
+
+使用 Responses 新协议的客户端（Codex CLI、Cline）可直接对接网关：
+
+```
+POST http://localhost:12002/v1/responses
+```
+
+```json
+{
+  "model": "my-strategy",
+  "instructions": "You are concise.",
+  "input": "Hello!",
+  "max_output_tokens": 256,
+  "stream": false
+}
+```
+
+```bash
+curl http://localhost:12002/v1/responses \
+  -H "Content-Type: application/json" \
+  -d '{"model":"my-strategy","input":"写一首诗","stream":true}'
+```
+
+- 路由方式与聊天补全一致：`model` 填**策略名**。
+- `input` 支持纯字符串或条目数组（`message`、`function_call`、
+  `function_call_output`）；`instructions` 会作为 system 提示词。
+- 网关内部转成 `/v1/chat/completions` 转发，因此策略负载均衡、Key 轮换、
+  请求日志与 token 计费全部照常生效。
+- **无状态**：`store` 恒为 `false`，`previous_response_id` 会被忽略 ——
+  每次请求都需带上完整对话历史。
+- 仅转发 `function` 类型的工具（`web_search_preview` 等内置工具会被丢弃）。
+
+无法携带 `Authorization` 头的客户端可用 key 内嵌路径别名：
+`POST /k/{client_key}/v1/responses`。
 
 ---
 
@@ -378,12 +415,44 @@ response = client.chat.completions.create(
 - 显示需要配置到客户端的代理地址
 - 提供 curl 测试示例
 
+### 请求端点
+
+一个网关，四种客户端格式。响应格式由请求端点决定，后端自动转换；同格式请求直接透传，不增加额外延迟：
+
+| 端点 | 客户端格式 |
+|------|------------|
+| `POST /v1/chat/completions` | OpenAI Chat Completions |
+| `POST /v1/responses` | OpenAI Responses API（Codex / Cline） |
+| `POST /v1/messages` | Anthropic Messages API（Claude SDK，base_url 指向 `/v1`） |
+| `POST /v1beta/models/{model}:generateContent` | Gemini GenerateContent（Gemini SDK，base_url 指向 `/v1beta`） |
+
+`model` 字段支持**策略名**或**直连**形式 `平台id/模型id`（例如
+`33/opencode/ling-3.1-flash-free`）。平台管理页模型 ID 旁的复制按钮可直接复制
+`平台id/模型id` 字符串。
+
+### 平台多 Key 策略
+
+平台管理页 API Keys 右上角的「**多key调用策略**」按钮，可设置该平台多个 Key 的
+选择与轮换方式（Key 选择、切换触发、阈值，选项与路由策略编辑器一致）。该设置仅在
+通过 `平台id/模型id` 直连调用时生效；走路由策略链路时以策略的 Key 策略设置为准。
+
 ### 输出协议
 | 模式 | 说明 |
 |------|------|
 | **OpenAI 格式** | 默认 — 兼容大多数客户端 |
+| **Responses 格式** | OpenAI Responses API 格式 — 适用于 Codex / Cline 客户端 |
 | **Claude 格式** | Anthropic Messages API 格式 |
 | **Gemini 格式** | Gemini GenerateContent 格式 |
+
+> 上方「请求端点（客户端格式）」卡片列出了每种格式对应的端点，这是选择格式的推荐方式。
+> 这里的 `Responses` 是旧的全局覆盖项，只影响 `/v1/chat/completions`；专用端点
+> （`/v1/responses`、`/v1/messages`、`/v1beta/models/*`）始终按自身格式返回。
+>
+> 客户端与上游同格式时直接透传（不做来回转换），不增加额外延迟。
+
+> 选择 `Responses` 后，**所有**代理对话响应都会使用 Responses 格式
+> （`object: "response"`，流式为 `response.*` 事件）。除非所有客户端都支持
+> Responses 协议，否则请保持 `OpenAI`。
 
 ### 路由管理
 - **默认模型** — 路由管理器的默认模型，留空使用策略路由

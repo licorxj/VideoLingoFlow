@@ -23,6 +23,7 @@
 - **🔑 Multi-Key Load Balancing** — Distribute requests across multiple API keys per provider with RPM/count threshold switching
 - **🤖 Multi-Model Auto Scheduling** — Automatically route to the best available model based on strategy rules
 - **🛡️ Protocol Auto-Conversion** — Seamless conversion between OpenAI, Claude, and Gemini formats — use any SDK to call any model
+- **🧩 Local CLI Platform Integration** — Import OpenCode / Cline CLI credentials with auto-renewal, translate private protocols to OpenAI format
 - **🔒 Zero Public Exposure** — Runs entirely on your local machine; no data leaves your network
 - **🌐 LAN Sharing** — Once deployed, all devices on your local network can share API keys and strategies through a single access point
 
@@ -126,6 +127,75 @@ LocalRouter is designed for **local area network (LAN)** deployment from day one
 
 ---
 
+## Local CLI Platform Integration
+
+Beyond standard API keys, LocalRouter can import credentials from **local / third-party CLI
+tools**, auto-renew them, and translate their private protocols into OpenAI-compatible format.
+Forwarding adapters are complete for **OpenCode** and **Cline**.
+
+| Platform | Connection | Needs local process |
+|----------|------------|---------------------|
+| **OpenCode** | Relay — forwards to local `opencode serve` | **Yes** |
+| **Cline** | Direct — forwards to `https://api.cline.bot/api/v1` | No |
+
+> The two use "CLI" differently: OpenCode actually drives the CLI runtime on your machine,
+> while Cline only means **the credential comes from a Cline account** — requests go straight
+> to its cloud, with no local process involved.
+
+### OpenCode (local runtime relay)
+
+1. Install the CLI: `npm install -g opencode-ai`
+2. Start the server: double-click `启动_opencode服务端.bat` in the project root, or run
+   ```bash
+   opencode serve --port 4096 --hostname 127.0.0.1
+   ```
+   > Port note: examples use **4096**. OpenCode's usual port 10001 is often taken by other
+   > software (e.g. Xiaomi PC Manager on Windows), which breaks the connection.
+3. Go to **Providers → Import local CLI credentials**, pick **OpenCode**, fill in the server
+   URL and password (leave the password empty when the server has no auth)
+4. Click **Test** to verify, then **Sync Provider Models** to pull the free models
+
+Implementation notes:
+
+- Chat uses OpenCode's private **session / message** protocol (not an OpenAI endpoint)
+- Output is collected incrementally over the **SSE event stream** `GET /global/event`
+  (no polling); it falls back to polling automatically if the stream is unavailable
+- Event payloads are nested as `{payload:{type,properties}}` and must be unwrapped;
+  `type=="sync"` events are duplicate deliveries and are de-duplicated
+
+### Cline (direct to cloud + client impersonation)
+
+1. Go to **Import local CLI credentials**, pick **Cline**, click **Open browser authorization**
+   to sign in; the credential is saved and renewed automatically
+2. Click **Sync Provider Models** to pull the free models (e.g. `cline-free/deepseek-v4.1-flash`)
+
+Implementation notes (Cline is not a standard OpenAI endpoint — it must speak the official
+plugin's private protocol):
+
+- Endpoint `https://api.cline.bot/api/v1/chat/completions`, auth `Bearer workos:<accessToken>`
+- Must send Cline client fingerprint headers (`User-Agent: Cline/3.0.47`,
+  `X-CLIENT-TYPE: cline-sdk`, `X-PLATFORM: terminal`, …), otherwise free models return
+  `403 only available via Cline product surfaces`
+- Sending `max_tokens` makes free models return 500, so it is stripped automatically
+- Non-streaming requests on the free channel get rate-limited, so the upstream is forced to
+  stream and the result is re-aggregated
+
+### Tool calling (function calling)
+
+| Platform | Support |
+|----------|---------|
+| **Cline** | ✅ Client `tools` are passed through; standard `tool_calls` returned |
+| **OpenCode** | ⚠️ Only its built-in tools (bash / websearch, executed server-side); standard function calling is unreliable on the free tier |
+
+Why OpenCode is limited (measured): its models ship with 27 built-in tools and ignore
+externally injected tool descriptions; disabling those tools trips the free-tier guard —
+mismatched names flood `session.error` and stall the request, and disabling them all makes the
+upstream return `403 OpenCode's free tier can only be used from within OpenCode`.
+The bridge is preserved and can be enabled explicitly via `OpenCodeClient(bridge_tools=True)`
+for self-hosted paid-model setups.
+
+---
+
 ## Architecture
 
 ```
@@ -140,7 +210,7 @@ Client (OpenAI SDK / Third-party App)
   |                (5 LB strategies / 3 key strategies)
   v
 [forwarder.py] -- Protocol adaptation + upstream request
-  |                (OpenAI / Claude / Gemini)
+  |                (OpenAI / Claude / Gemini / local CLI private protocols)
   v
 [protocol_adapter.py] -- Optional output format conversion
   |
@@ -232,9 +302,24 @@ npm run dev
 
 All proxy endpoints are at `/v1/` and are fully compatible with the OpenAI SDK.
 
+The response format is decided by the **endpoint** you call (no global switch):
+
+| Endpoint | Client format |
+|----------|---------------|
+| `POST /v1/chat/completions` | OpenAI Chat Completions (streaming + non-streaming) |
+| `POST /v1/responses` | OpenAI Responses API (Codex/Cline clients, stateless) |
+| `POST /v1/messages` | Anthropic Messages API (Claude SDK, base_url = `/v1`) |
+| `POST /v1beta/models/{model}:generateContent` | Gemini GenerateContent (Gemini SDK, base_url = `/v1beta`) |
+| `GET /v1beta/models` | Gemini-style model list |
+
+The backend converts each format to the upstream protocol automatically; when
+client and upstream already speak the same protocol the request is forwarded
+untouched.
+
 | Endpoint | Description |
 |----------|-------------|
 | `POST /v1/chat/completions` | Chat completions (streaming + non-streaming) |
+| `POST /v1/responses` | Responses API (Codex/Cline clients, streaming + non-streaming, stateless) |
 | `POST /v1/completions` | Text completions |
 | `POST /v1/embeddings` | Embeddings proxy |
 | `POST /v1/images/generations` | Image generation proxy |

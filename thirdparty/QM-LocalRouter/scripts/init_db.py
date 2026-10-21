@@ -69,7 +69,9 @@ def install_deps() -> bool:
 
     print_step("Installing backend dependencies...")
     pip = get_pip()
-    return run_cmd([pip, "install", "-r", str(REQUIREMENTS)])
+    # --prefer-binary: pick wheel-compatible versions over newest sdists,
+    # so no Rust toolchain is needed to compile from source.
+    return run_cmd([pip, "install", "--prefer-binary", "-r", str(REQUIREMENTS)])
 
 
 def setup_env() -> bool:
@@ -82,7 +84,7 @@ def setup_env() -> bool:
     try:
         ENV_FILE.write_text(
             "APP_NAME=LLM API Router\n"
-            "APP_VERSION=1.0.0\n"
+            "APP_VERSION=2.0.5\n"
             f"HOST=127.0.0.1\n"
             f"BACKEND_PORT=12002\n"
             f"LOG_RETENTION_DAYS=30\n"

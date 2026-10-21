@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.api_key import ApiKey
+from app.models.model import Model
 from app.models.provider import Provider
 from app.schemas.schemas import ApiKeyOut
 from app.services import local_cli
@@ -53,6 +54,7 @@ class CliImport(BaseModel):
     code: str = ""                 # paste-back: auth code or full callback URL (cline/antigravity)
     redirect_uri: str = ""         # paste-back: the redirect_uri used in the authorize request
     detected_path: str = ""        # import mode from a detected local file
+    server_url: str = ""           # opencode: 本地 opencode serve 地址（覆盖默认 127.0.0.1:10001）
 
 
 @router.post("/import", response_model=ApiKeyOut, status_code=201)
@@ -104,14 +106,23 @@ async def cli_import(data: CliImport, db: AsyncSession = Depends(get_db)):
         if data.region:
             credential["region"] = data.region.strip()
         if not credential:
-            if data.platform == "opencode":
-                credential = {"access_token": "opencode-free"}  # public endpoint, no key needed
+            platform_cfg = local_cli.CLI_PLATFORMS.get(data.platform, {})
+            if platform_cfg.get("no_credential_ok"):
+                credential = {}  # opencode 等：服务端可无密码
             else:
                 raise HTTPException(400, "No credential provided (token or refresh_token)")
 
     # Resolve or auto-create the provider (deduped by auth_type)
+    if data.platform in local_cli.WORKBUDDY_REGION_BY_PLATFORM:
+        # WorkBuddy 按条目固定区域（cn / intl），避免刷新或调用时走错站点
+        credential["region"] = (data.region or local_cli.WORKBUDDY_REGION_BY_PLATFORM[data.platform]).strip()
+
     provider_id = await local_cli.ensure_provider(db, data.platform, data.provider_id)
     provider = await db.get(Provider, provider_id)
+    # opencode：允许用导入时填写的本地服务端地址覆盖默认
+    if data.server_url and data.platform == "opencode":
+        provider.base_url = data.server_url.strip().rstrip("/")
+        await db.commit()
 
     try:
         key = await local_cli.store_cli_key(db, provider_id, data.platform, credential)
@@ -138,6 +149,7 @@ class CliBrowserStart(BaseModel):
     provider_id: int = 0
     client_id: str = ""      # antigravity: from detect/paste
     client_secret: str = ""
+    region: str = ""         # workbuddy: cn / intl(gl)
 
 
 @router.post("/browser-start")
@@ -150,6 +162,8 @@ async def cli_browser_start(data: CliBrowserStart):
             return lc.start_amazonq_session(data.provider_id)
         if data.platform == "antigravity":
             return lc.start_antigravity_session(data.provider_id, data.client_id, data.client_secret)
+        if data.platform in lc.WORKBUDDY_REGION_BY_PLATFORM:
+            return await lc.start_workbuddy_session(data.provider_id, data.platform)
     except ValueError as e:
         raise HTTPException(400, str(e))
     except Exception as e:
@@ -193,4 +207,106 @@ async def cli_status(session_id: str, db: AsyncSession = Depends(get_db)):
         result.setdefault("user_code", session.get("user_code", ""))
         result.setdefault("verification_uri", session.get("verification_uri", ""))
         return result
+    if session["flow"] == "cli-workbuddy" and session["status"] == "pending":
+        result = await lc.poll_workbuddy_session(session_id, db)
+        result.setdefault("authorize_url", session.get("authorize_url", ""))
+        return result
     return {"status": session["status"], "key_id": session["key_id"], "error": session["error"]}
+
+
+# ---------------------------------------------------------------- WorkBuddy
+
+class WorkBuddyModelsRequest(BaseModel):
+    provider_id: int = 0     # 0 => 自动定位 workbuddy provider
+    key_id: int = 0          # 指定凭据；0 => 取该 provider 第一把 active key
+    region: str = ""         # 留空则用凭据里保存的区域
+    sync: bool = False       # True => 写入/更新 Model 表
+
+
+async def _resolve_workbuddy_credential(data: "WorkBuddyModelsRequest", db: AsyncSession):
+    """返回 (provider, api_key, region, credential)。"""
+    from app.services import workbuddy
+    from sqlalchemy import select
+
+    provider = None
+    if data.provider_id:
+        provider = await db.get(Provider, data.provider_id)
+    else:
+        result = await db.execute(
+            select(Provider).where(Provider.auth_type.in_(["workbuddy", "workbuddy-intl"])).order_by(Provider.id)
+        )
+        provider = result.scalars().first()
+    if not provider:
+        raise HTTPException(404, "未找到 WorkBuddy 供应商，请先完成 CLI 导入")
+
+    if data.key_id:
+        api_key = await db.get(ApiKey, data.key_id)
+    else:
+        result = await db.execute(
+            select(ApiKey).where(ApiKey.provider_id == provider.id, ApiKey.status == "active").limit(1)
+        )
+        api_key = result.scalar_one_or_none()
+    if not api_key:
+        raise HTTPException(400, "该供应商没有可用凭据，请先导入 WorkBuddy 账号")
+
+    from app.services.oauth_providers import ensure_fresh_token
+    await ensure_fresh_token(db, api_key)
+    credential = workbuddy.load_credential(api_key)
+    region = data.region or workbuddy.resolve_region(credential, provider.base_url or "")
+    return provider, api_key, region, credential
+
+
+@router.post("/workbuddy/models")
+async def workbuddy_models(data: WorkBuddyModelsRequest, db: AsyncSession = Depends(get_db)):
+    """拉取 WorkBuddy 官方模型目录（/v3/config），sync=true 时同步进 Model 表。"""
+    from app.services import workbuddy
+
+    provider, api_key, region, credential = await _resolve_workbuddy_credential(data, db)
+    try:
+        items = await workbuddy.list_models(region, credential)
+    except Exception as e:
+        raise HTTPException(502, f"WorkBuddy 模型目录拉取失败: {str(e)[:300]}")
+
+    synced = 0
+    if data.sync:
+        synced = await _upsert_models(db, provider.id, items)
+    return {
+        "provider_id": provider.id,
+        "region": region,
+        "account": credential.get("nickname") or credential.get("uid") or "",
+        "models": items,
+        "synced": synced,
+    }
+
+
+async def _upsert_models(db: AsyncSession, provider_id: int, items: list[dict]) -> int:
+    """按 model_id 幂等写入 Model 表。"""
+    from sqlalchemy import select as _select
+
+    existing_result = await db.execute(_select(Model).where(Model.provider_id == provider_id))
+    existing = {m.model_id: m for m in existing_result.scalars().all()}
+    touched = 0
+    for item in items:
+        model_id = item["model_id"]
+        target = existing.get(model_id)
+        if target is None:
+            target = Model(
+                provider_id=provider_id,
+                model_id=model_id,
+                display_name=item.get("display_name") or model_id,
+                is_multimodal=bool(item.get("is_multimodal")),
+                model_type="text",
+                context_window=item.get("context_window"),
+            )
+            db.add(target)
+        else:
+            if item.get("display_name"):
+                target.display_name = item["display_name"]
+            if item.get("is_multimodal"):
+                target.is_multimodal = True
+            if item.get("context_window"):
+                target.context_window = item["context_window"]
+        touched += 1
+    if touched:
+        await db.commit()
+    return touched

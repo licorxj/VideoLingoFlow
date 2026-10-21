@@ -58,17 +58,106 @@ class Forwarder:
         upstream["profile_id"] = api_key.oauth_profile
         return upstream
 
-    OPENCODE_FREE_MODELS = {"big-pickle", "deepseek-v4-flash-free", "mimo-v2.5-free",
-                            "hy3-free", "nemotron-3-ultra-free", "north-mini-code-free"}
+    # ---------------------------------------------------------------- OpenCode
+    # OpenCode 不是 OpenAI 端点，而是本地服务端（opencode serve）：Basic(opencode:password)
+    # 认证 + session/prompt/poll 协议。翻译 OpenAI 请求到 OpenCode 协议。
+    def _opencode_context(self, provider: Provider, api_key: ApiKey, real_key: str):
+        from app.services import opencode as opencode_svc
+        return opencode_svc.OpenCodeClient(provider.base_url or opencode_svc.DEFAULT_BASE_URL, real_key)
 
-    def _opencode_keyless_gate(self, upstream: dict, real_key: str, model_id: str):
-        """Keyless opencode connections may only call free-tier models (no auth header);
-        premium models get a clear error instead of an upstream 401."""
-        if upstream.get("profile_id") != "opencode" or real_key not in ("KEYLESS", "opencode-free"):
-            return None
-        if model_id.endswith("-free") or model_id in self.OPENCODE_FREE_MODELS:
-            return {"skip_auth": True}
-        raise ValueError("This model requires an opencode API key — use a '-free' model or import your Zen key (本地CLI 检测本机凭据)")
+    async def _forward_opencode(self, provider: Provider, model: Model, api_key: ApiKey,
+                               real_key: str, request_body: dict, timeout: int) -> httpx.Response:
+        from app.services import opencode as opencode_svc
+        oc = self._opencode_context(provider, api_key, real_key)
+        messages = request_body.get("messages", [])
+        effort = request_body.get("reasoning_effort") or (request_body.get("reasoning") or {}).get("effort")
+        temperature = request_body.get("temperature", 0.7)
+        max_tokens = request_body.get("max_tokens") or request_body.get("max_completion_tokens")
+        tools = request_body.get("tools")
+        tool_choice = request_body.get("tool_choice")
+        try:
+            value = await oc.chat_completion(messages, model.model_id, effort, temperature, max_tokens,
+                                             tools, tool_choice)
+        except opencode_svc.OpenCodeError as e:
+            payload = {"error": {"message": e.message, "type": e.code, "code": e.code}}
+            return httpx.Response(status_code=e.status or 502,
+                                  content=json.dumps(payload, ensure_ascii=False).encode(),
+                                  headers={"content-type": "application/json"})
+        value["model"] = model.model_id
+        return httpx.Response(status_code=200, content=json.dumps(value, ensure_ascii=False).encode(),
+                              headers={"content-type": "application/json"})
+
+    async def _forward_opencode_stream(self, provider: Provider, model: Model, api_key: ApiKey,
+                                      real_key: str, request_body: dict, timeout: int):
+        from app.services import opencode as opencode_svc
+        oc = self._opencode_context(provider, api_key, real_key)
+        messages = request_body.get("messages", [])
+        effort = request_body.get("reasoning_effort") or (request_body.get("reasoning") or {}).get("effort")
+        temperature = request_body.get("temperature", 0.7)
+        max_tokens = request_body.get("max_tokens") or request_body.get("max_completion_tokens")
+        tools = request_body.get("tools")
+        tool_choice = request_body.get("tool_choice")
+        try:
+            async for chunk in oc.stream_chunks(messages, model.model_id, effort, temperature, max_tokens,
+                                                tools, tool_choice):
+                chunk["model"] = model.model_id
+                yield "data: " + json.dumps(chunk, ensure_ascii=False) + "\n\n"
+        except opencode_svc.OpenCodeError as e:
+            yield "data: " + json.dumps({"error": {"message": e.message, "type": e.code, "code": e.code}},
+                                       ensure_ascii=False) + "\n\n"
+            return
+        yield "data: [DONE]\n\n"
+
+    # ---------------------------------------------------------------- Cline
+    # Cline（cline.bot）白嫖模型：私有协议（Bearer workos:<token> + 客户端指纹头 +
+    # 剥离 max_tokens + 免费通道非流式强制走 stream 再聚合）。翻译在 services/cline.py。
+    async def _forward_cline(self, provider: Provider, model: Model, api_key: ApiKey,
+                            real_key: str, request_body: dict, timeout: int) -> httpx.Response:
+        from app.services import cline as cline_svc
+        client = cline_svc.ClineClient(provider.base_url or cline_svc.CLINE_API_BASE, real_key, timeout)
+        messages = request_body.get("messages", [])
+        effort = request_body.get("reasoning_effort") or (request_body.get("reasoning") or {}).get("effort")
+        temperature = request_body.get("temperature", 0.7)
+        try:
+            value = await client.chat_completion(
+                messages, model.model_id, stream=False,
+                temperature=temperature, reasoning_effort=effort, extra=request_body)
+        except cline_svc.ClineError as e:
+            payload = {"error": {"message": e.message, "type": e.code, "code": e.code}}
+            return httpx.Response(status_code=e.status or 502,
+                                  content=json.dumps(payload, ensure_ascii=False).encode(),
+                                  headers={"content-type": "application/json"})
+        value["model"] = model.model_id
+        return httpx.Response(status_code=200, content=json.dumps(value, ensure_ascii=False).encode(),
+                              headers={"content-type": "application/json"})
+
+    async def _forward_cline_stream(self, provider: Provider, model: Model, api_key: ApiKey,
+                                   real_key: str, request_body: dict, timeout: int):
+        from app.services import cline as cline_svc
+        client = cline_svc.ClineClient(provider.base_url or cline_svc.CLINE_API_BASE, real_key, timeout)
+        messages = request_body.get("messages", [])
+        effort = request_body.get("reasoning_effort") or (request_body.get("reasoning") or {}).get("effort")
+        temperature = request_body.get("temperature", 0.7)
+        try:
+            async for chunk in client.stream_chunks(
+                messages, model.model_id, temperature=temperature,
+                reasoning_effort=effort, extra=request_body):
+                chunk["model"] = model.model_id
+                yield "data: " + json.dumps(chunk, ensure_ascii=False) + "\n\n"
+        except cline_svc.ClineError as e:
+            yield "data: " + json.dumps({"error": {"message": e.message, "type": e.code, "code": e.code}},
+                                       ensure_ascii=False) + "\n\n"
+            return
+        yield "data: [DONE]\n\n"
+
+    # ---------------------------------------------------------------- WorkBuddy
+    # WorkBuddy/CodeBuddy 上游不是标准 OpenAI 端点：需要 IDE 身份头 + 会话头，
+    # 且只提供 SSE 流式对话（/v2/chat/completions），非流式在本地聚合。
+    def _workbuddy_context(self, provider: Provider, model: Model, api_key: ApiKey, real_key: str):
+        from app.services import workbuddy
+        credential = workbuddy.load_credential(api_key, real_key)
+        region = workbuddy.resolve_region(credential, provider.base_url or "")
+        return workbuddy, credential, region
 
     @staticmethod
     def _apply_upstream_auth(headers: dict, upstream: dict, real_key: str) -> dict:
@@ -84,6 +173,56 @@ class Forwarder:
             headers["Authorization"] = f"Bearer {real_key}"
         return headers
 
+    # ------------------------------------------------------------ passthrough
+    # 客户端请求格式与上游协议一致时原样透传：不做 messages->claude 之类的
+    # 双向转换，省一次序列化/反序列化，也不丢字段。
+    def _passthrough_plan(
+        self, provider: Provider, api_key: ApiKey, real_key: str,
+        request_body: dict, upstream: dict, is_stream: bool, protocol: str,
+    ) -> tuple[dict, str, dict] | None:
+        """Return (upstream_body, url, headers) when the request can be forwarded as-is."""
+        client_format = request_body.get("_client_format")
+        raw_body = request_body.get("_raw_body")
+        if raw_body is None:
+            return None
+        # custom 上游与 OpenAI 线上格式一致
+        if not (client_format == protocol or (protocol == "custom" and client_format == "openai")):
+            return None
+
+        profile_id = str(upstream.get("profile_id", ""))
+        if profile_id in ("opencode", "cline") or profile_id.startswith("workbuddy"):
+            return None
+        if upstream.get("upstream_style") == "responses":
+            return None
+        # 自定义鉴权（cloud-ide-jwt / bearer-workos / none）不走通用直通
+        if protocol in ("openai", "custom") and upstream.get("auth") and upstream.get("auth") != "bearer":
+            return None
+
+        base_url = provider.base_url.rstrip("/")
+        extra_headers = upstream.get("extra_headers") or {}
+        body = {k: v for k, v in raw_body.items() if not k.startswith("_")}
+
+        if protocol == "claude":
+            url = f"{base_url}/messages"
+            headers = {
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+                **(self._claude_auth_headers(real_key) if api_key.oauth_profile else {"x-api-key": real_key}),
+                **extra_headers,
+            }
+        elif protocol == "gemini":
+            action = "streamGenerateContent" if is_stream else "generateContent"
+            url = f"{base_url}/models/{body.get('model', '')}:{action}?key={real_key}"
+            headers = {"content-type": "application/json", **extra_headers}
+        else:  # openai / custom
+            chat_path = upstream.get("chat_path") or "/chat/completions"
+            url = f"{base_url}{chat_path}"
+            headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json", **extra_headers}
+
+        if is_stream:
+            body["stream"] = True
+        return body, url, headers
+
     async def forward(
         self, strategy: Strategy, rule: StrategyRule,
         provider: Provider, model: Model, api_key: ApiKey,
@@ -95,6 +234,27 @@ class Forwarder:
         upstream = self._oauth_upstream(api_key) or {}
         extra_headers = upstream.get("extra_headers") or {}
         responses_style = upstream.get("upstream_style") == "responses"
+
+        if str(upstream.get("profile_id", "")).startswith("workbuddy"):
+            return await self._forward_workbuddy(provider, model, api_key, real_key,
+                                                 request_body, strategy.timeout or 120)
+
+        if upstream.get("profile_id") == "opencode":
+            return await self._forward_opencode(provider, model, api_key, real_key,
+                                               request_body, strategy.timeout or 120)
+
+        if upstream.get("profile_id") == "cline":
+            return await self._forward_cline(provider, model, api_key, real_key,
+                                            request_body, strategy.timeout or 120)
+
+        # 客户端格式与上游协议一致：原样透传，跳过所有协议转换
+        plan = self._passthrough_plan(provider, api_key, real_key, request_body,
+                                      upstream, is_stream, protocol)
+        if plan:
+            upstream_body, url, headers = plan
+            timeout = strategy.timeout or 120
+            async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+                return await client.post(url, headers=headers, json=upstream_body)
 
         # Build upstream request based on protocol
         if responses_style:
@@ -112,13 +272,10 @@ class Forwarder:
             return resp
 
         if protocol == "openai" or protocol == "custom":
-            keyless = self._opencode_keyless_gate(upstream, real_key, model.model_id)
             if upstream.get("auth") and upstream.get("auth") != "bearer":
                 headers = self._apply_upstream_auth({"Content-Type": "application/json"}, upstream, real_key)
             else:
                 headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
-            if keyless and keyless.get("skip_auth"):
-                headers.pop("Authorization", None)
             headers.update(extra_headers)
             chat_path = upstream.get("chat_path") or "/chat/completions"
             url = f"{base_url}{chat_path}"
@@ -153,6 +310,34 @@ class Forwarder:
             "POST", url, timeout=timeout, headers=headers, json=upstream_body
         )
 
+    async def _forward_workbuddy(self, provider: Provider, model: Model, api_key: ApiKey,
+                                 real_key: str, request_body: dict, timeout: int) -> httpx.Response:
+        """WorkBuddy 非流式：上游流式返回 -> 本地聚合成 chat.completion。"""
+        wb, credential, region = self._workbuddy_context(provider, model, api_key, real_key)
+        conversation_id = str(request_body.get("conversation_id") or "").strip()
+        try:
+            value = await wb.chat_completion(region, credential, model.model_id,
+                                             request_body, conversation_id, timeout or 120)
+        except wb.WorkBuddyError as e:
+            payload = {"error": {"message": e.message, "type": e.code, "code": e.code}}
+            return httpx.Response(status_code=e.status or 502,
+                                  content=json.dumps(payload, ensure_ascii=False).encode(),
+                                  headers={"content-type": "application/json"})
+        value["model"] = model.model_id
+        return httpx.Response(status_code=200, content=json.dumps(value, ensure_ascii=False).encode(),
+                              headers={"content-type": "application/json"})
+
+    async def _forward_workbuddy_stream(self, provider: Provider, model: Model, api_key: ApiKey,
+                                        real_key: str, request_body: dict, timeout: int):
+        """WorkBuddy 流式：把上游 SSE chunk 转成 OpenAI 风格增量后原样下发。"""
+        wb, credential, region = self._workbuddy_context(provider, model, api_key, real_key)
+        conversation_id = str(request_body.get("conversation_id") or "").strip()
+        async for chunk in wb.stream_chunks(region, credential, model.model_id,
+                                            request_body, conversation_id, timeout or 120):
+            chunk["model"] = model.model_id
+            yield "data: " + json.dumps(chunk, ensure_ascii=False) + "\n\n"
+        yield "data: [DONE]\n\n"
+
     async def forward_stream(
         self, strategy: Strategy, rule: StrategyRule,
         provider: Provider, model: Model, api_key: ApiKey,
@@ -164,6 +349,45 @@ class Forwarder:
         base_url = provider.base_url.rstrip("/")
         upstream = self._oauth_upstream(api_key) or {}
         extra_headers = upstream.get("extra_headers") or {}
+
+        if str(upstream.get("profile_id", "")).startswith("workbuddy"):
+            async for line in self._forward_workbuddy_stream(
+                provider, model, api_key, real_key, request_body, strategy.timeout or 120
+            ):
+                yield line
+            return
+
+        if upstream.get("profile_id") == "opencode":
+            async for line in self._forward_opencode_stream(
+                provider, model, api_key, real_key, request_body, strategy.timeout or 120
+            ):
+                yield line
+            return
+
+        if upstream.get("profile_id") == "cline":
+            async for line in self._forward_cline_stream(
+                provider, model, api_key, real_key, request_body, strategy.timeout or 120
+            ):
+                yield line
+            return
+
+        # 客户端格式与上游协议一致：原样转发上游字节流，不做 chunk 级转换
+        plan = self._passthrough_plan(provider, api_key, real_key, request_body,
+                                      upstream, True, protocol)
+        if plan:
+            upstream_body, url, headers = plan
+            timeout = strategy.timeout or 120
+            async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+                async with client.stream("POST", url, headers=headers, json=upstream_body) as resp:
+                    if resp.status_code != 200:
+                        body = await resp.aread()
+                        raise httpx.HTTPStatusError(
+                            f"Upstream error {resp.status_code}", request=resp.request, response=resp
+                        )
+                    async for line in resp.aiter_lines():
+                        # 逐行原样输出：SSE 帧（claude/openai）与裸 JSON 行（gemini）都保持原样
+                        yield line + "\n"
+            return
 
         if upstream.get("upstream_style") == "responses":
             # Codex OAuth upstream: Responses API streaming -> OpenAI chunks
@@ -195,13 +419,10 @@ class Forwarder:
             return
 
         if protocol == "openai" or protocol == "custom":
-            keyless = self._opencode_keyless_gate(upstream, real_key, model.model_id)
             if upstream.get("auth") and upstream.get("auth") != "bearer":
                 headers = self._apply_upstream_auth({"Content-Type": "application/json"}, upstream, real_key)
             else:
                 headers = {"Authorization": f"Bearer {real_key}", "Content-Type": "application/json"}
-            if keyless and keyless.get("skip_auth"):
-                headers.pop("Authorization", None)
             headers.update(extra_headers)
             chat_path = upstream.get("chat_path") or "/chat/completions"
             url = f"{base_url}{chat_path}"

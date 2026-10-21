@@ -22,6 +22,109 @@ import time
 import httpx
 
 
+async def _workbuddy_catalog(provider: Provider, key_obj: ApiKey, db: AsyncSession):
+    """WorkBuddy/CodeBuddy 模型目录来自官方 /v3/config，而非 OpenAI /models。
+
+    返回 FetchModelItem 字典列表；拉取失败返回 None（回退到常规逻辑）。
+    """
+    if not str(provider.auth_type or "").startswith("workbuddy") or not key_obj:
+        return None
+    from app.services import workbuddy
+    from app.services.oauth_providers import ensure_fresh_token
+
+    try:
+        await ensure_fresh_token(db, key_obj)
+        credential = workbuddy.load_credential(key_obj)
+        region = workbuddy.resolve_region(credential, provider.base_url or "")
+        items = await workbuddy.list_models(region, credential)
+    except Exception:
+        return None
+
+    out = []
+    for item in items:
+        known = get_known_model_params(item["model_id"]) or {}
+        out.append({
+            "model_id": item["model_id"],
+            "display_name": known.get("display_name") or item.get("display_name") or item["model_id"],
+            "is_multimodal": known.get("is_multimodal", bool(item.get("is_multimodal"))),
+            "model_type": known.get("model_type", "text"),
+            "context_window": known.get("context_window") or item.get("context_window"),
+            "temperature": known.get("temperature"),
+            "price_input": known.get("price_input"),
+            "price_output": known.get("price_output"),
+            "already_added": False,
+        })
+    return out
+
+
+async def _opencode_catalog(provider: Provider, key_obj: ApiKey):
+    """OpenCode 模型目录来自本地服务端的 /config/providers，而非 OpenAI /models。
+
+    返回 FetchModelItem 字典列表；拉取失败返回 None（回退到常规逻辑）。
+    """
+    if str(provider.auth_type or "") != "opencode":
+        return None
+    from app.services import opencode as opencode_svc
+    from app.utils.crypto import decrypt_value
+
+    password = decrypt_value(key_obj.key_value) if key_obj and key_obj.key_value else ""
+    client = opencode_svc.OpenCodeClient(provider.base_url or opencode_svc.DEFAULT_BASE_URL, password)
+    try:
+        models = await client.list_models()
+    except Exception:
+        return None
+
+    out = []
+    for item in models:
+        model_id = item["id"]
+        known = get_known_model_params(model_id) or {}
+        out.append({
+            "model_id": model_id,
+            "display_name": known.get("display_name") or item.get("name") or model_id,
+            "is_multimodal": known.get("is_multimodal", False),
+            "model_type": known.get("model_type", "text"),
+            "context_window": known.get("context_window"),
+            "temperature": known.get("temperature"),
+            "price_input": known.get("price_input"),
+            "price_output": known.get("price_output"),
+            "already_added": False,
+        })
+    return out
+
+
+async def _cline_catalog(provider: Provider, key_obj: ApiKey):
+    """Cline 模型目录来自官方 /models + recommended-models，而非 OpenAI /models。
+
+    返回 FetchModelItem 字典列表；拉取失败返回 None（回退到常规逻辑）。
+    """
+    if str(provider.auth_type or "") != "cline":
+        return None
+    from app.services import cline as cline_svc
+    from app.utils.crypto import decrypt_value
+
+    token = decrypt_value(key_obj.key_value) if key_obj and key_obj.key_value else ""
+    client = cline_svc.ClineClient(provider.base_url or cline_svc.CLINE_API_BASE, token)
+    try:
+        models = await client.list_models()
+    except Exception:
+        return None
+
+    out = []
+    for item in models:
+        model_id = item["id"]
+        known = get_known_model_params(model_id) or {}
+        out.append({
+            "model_id": model_id,
+            "display_name": known.get("display_name") or item.get("name") or model_id,
+            "is_multimodal": known.get("is_multimodal", False),
+            "model_type": known.get("model_type", "text"),
+            "context_window": known.get("context_window"),
+            "temperature": known.get("temperature"),
+            "price_input": known.get("price_input"),
+            "price_output": known.get("price_output"),
+            "already_added": False,
+        })
+    return out
 
 router = APIRouter(prefix="/api", tags=["models"])
 
@@ -117,6 +220,19 @@ async def fetch_models(provider_id: int, db: AsyncSession = Depends(get_db)):
         select(ApiKey).where(ApiKey.provider_id == provider_id, ApiKey.status == "active").limit(1)
     )
     key_obj = result.scalar_one_or_none()
+
+    # WorkBuddy: 官方目录 /v3/config
+    wb_items = await _workbuddy_catalog(provider, key_obj, db)
+    if wb_items is None:
+        wb_items = await _opencode_catalog(provider, key_obj)
+    if wb_items is None:
+        wb_items = await _cline_catalog(provider, key_obj)
+    if wb_items is not None:
+        existing_result = await db.execute(select(Model).where(Model.provider_id == provider_id))
+        existing_ids = {m.model_id for m in existing_result.scalars().all()}
+        for item in wb_items:
+            item["already_added"] = item["model_id"] in existing_ids
+        return wb_items
 
     models_data = []
 
@@ -331,6 +447,15 @@ async def sync_models(provider_id: int, db: AsyncSession = Depends(get_db)):
         pass
 
 
+
+    # WorkBuddy: 官方目录 /v3/config
+    wb_items = await _workbuddy_catalog(provider, key_obj, db)
+    if wb_items is None:
+        wb_items = await _opencode_catalog(provider, key_obj)
+    if wb_items is None:
+        wb_items = await _cline_catalog(provider, key_obj)
+    if wb_items is not None:
+        models_data = wb_items
 
     # Upsert models - preserve manual edits, update synced fields
 

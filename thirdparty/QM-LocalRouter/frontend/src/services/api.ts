@@ -84,6 +84,7 @@ export const deleteBackup = (filename: string) => api.delete('/api/backup/' + en
 export const downloadBackupUrl = (filename: string) => '/api/backup/download/' + encodeURIComponent(filename);
 
 // App Settings
+export const getVersion = () => api.get("/api/version");
 export const getSettings = () => api.get("/api/settings");
 export const updateSettings = (data: any) => api.put("/api/settings", data);
 export const getLanIp = () => api.get("/api/settings/lan-ip");

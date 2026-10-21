@@ -18,6 +18,10 @@ endpoints_router = APIRouter(prefix="/api", tags=["endpoints"])
 ENDPOINT_DESCRIPTIONS = {
     # (group, method, path): (zh, en)
     ("openai", "POST", "/v1/chat/completions"): ("OpenAI 兼容对话（核心端点，按策略名或直连模型路由）", "OpenAI-compatible chat completions (core)"),
+    ("openai", "POST", "/v1/responses"): ("OpenAI Responses API（Codex/Cline 客户端可直接接入，无状态）", "OpenAI Responses API (Codex-compatible, stateless)"),
+    ("openai", "POST", "/v1/messages"): ("Anthropic Messages API（Claude 官方 SDK 改 base_url 即可接入）", "Anthropic Messages API (Claude SDK, point base_url here)"),
+    ("openai", "POST", "/v1beta/models/{rest:path}"): ("Gemini GenerateContent（官方 SDK 改 base_url 即可接入）", "Gemini GenerateContent (Gemini SDK, point base_url here)"),
+    ("openai", "GET", "/v1beta/models"): ("Gemini 风格模型列表（策略名作为模型名）", "Gemini-style model list (strategies as model names)"),
     ("openai", "POST", "/v1/completions"): ("OpenAI 兼容文本补全（旧版接口）", "OpenAI-compatible text completions (legacy)"),
     ("openai", "GET", "/v1/models"): ("模型目录：返回所有启用中的策略（作为模型名使用）", "Model catalog: lists active strategies (usable as model names)"),
     ("openai", "POST", "/v1/embeddings"): ("文本向量化（openai/gemini 协议）", "Text embeddings (openai/gemini protocols)"),
@@ -29,6 +33,10 @@ ENDPOINT_DESCRIPTIONS = {
     ("multi", "POST", "/v1/multi/chat/completions"): ("多模型并发对话（聚合多个策略/模型结果）", "Multi-model concurrent chat (aggregated)"),
     ("multi", "POST", "/v1/multi/stream/chat/completions"): ("多模型并发流式对话", "Multi-model concurrent streaming chat"),
     ("alias", "POST", "/k/{client_key}/v1/chat/completions"): ("Key 内嵌路径别名：供无法携带 Header 的客户端使用", "Key-in-path alias for clients that cannot send headers"),
+    ("alias", "POST", "/k/{client_key}/v1/responses"): ("Key 内嵌路径别名：Responses API", "Key-in-path alias: Responses API"),
+    ("alias", "POST", "/k/{client_key}/v1/messages"): ("Key 内嵌路径别名：Messages API", "Key-in-path alias: Messages API"),
+    ("alias", "POST", "/k/{client_key}/v1beta/models/{rest:path}"): ("Key 内嵌路径别名：Gemini GenerateContent", "Key-in-path alias: Gemini GenerateContent"),
+    ("alias", "GET", "/k/{client_key}/v1beta/models"): ("Key 内嵌路径别名：Gemini 风格模型列表", "Key-in-path alias: Gemini-style model list"),
     ("alias", "GET", "/k/{client_key}/v1/models"): ("Key 内嵌路径别名：模型目录", "Key-in-path alias: model catalog"),
 }
 

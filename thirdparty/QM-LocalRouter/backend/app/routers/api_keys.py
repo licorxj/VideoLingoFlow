@@ -217,6 +217,32 @@ async def _probe_key(key: ApiKey, provider: Provider) -> dict:
             "kind": kind,
         }
 
+    # --- 特殊 auth_type：本地 CLI 服务端健康检查（opencode / cline）---
+    if str(provider.auth_type or "") == "opencode" or key.oauth_profile == "opencode":
+        from app.services import opencode as opencode_svc
+        client = opencode_svc.OpenCodeClient(
+            provider.base_url or opencode_svc.DEFAULT_BASE_URL, real_key
+        )
+        try:
+            healthy = await client.health()
+            return _done(healthy, "Key is valid" if healthy else "OpenCode 服务未就绪",
+                         "ok" if healthy else "unreachable")
+        except Exception as e:
+            return _done(False, str(e), classify_exception(e))
+
+    if str(provider.auth_type or "") == "cline" or key.oauth_profile == "cline":
+        from app.services import cline as cline_svc
+        client = cline_svc.ClineClient(
+            provider.base_url or cline_svc.CLINE_API_BASE, real_key
+        )
+        try:
+            ok = await client.health()
+            return _done(ok, "Key is valid" if ok else "Cline 上游不可达",
+                         "ok" if ok else "unreachable")
+        except Exception as e:
+            return _done(False, str(e), classify_exception(e))
+
+    # --- 常规协议探测 ---
     try:
         if provider.protocol == "openai":
             async with httpx.AsyncClient(timeout=15) as client:
@@ -281,6 +307,8 @@ async def test_key(key_id: int, db: AsyncSession = Depends(get_db)):
     if not provider:
         raise HTTPException(404, "Provider not found")
 
+    # 与批量测试共用同一探测实现（含 opencode/cline 本地服务端分支），
+    # 状态写入走 key_health 状态机（连不通不弃用）
     probe = await _probe_key(key, provider)
     await _apply_probe(key, probe, db)
     return ApiKeyTestResult(

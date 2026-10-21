@@ -40,9 +40,11 @@ fail() {
 }
 
 # --- [1/5] Python >= 3.10 ---
+# Candidate must actually run: on Windows Git Bash, command -v may find the
+# Microsoft Store python3 stub, which exits with code 49 instead of executing.
 PYTHON=""
 for cmd in python3 python; do
-    if command -v "$cmd" >/dev/null 2>&1; then
+    if command -v "$cmd" >/dev/null 2>&1 && "$cmd" -c 'import sys' >/dev/null 2>&1; then
         PYTHON="$cmd"
         break
     fi
@@ -75,9 +77,22 @@ fi
 echo "[2/5] Node.js OK: v$(node -p 'process.versions.node')  (npm: $(npm --version))"
 
 # --- [3/5] Backend: venv + dependencies + database ---
-echo "[3/5] Setting up backend (venv, dependencies, database)..."
-"$PYTHON" scripts/init_db.py || fail "Backend setup failed." \
-    "On Debian/Ubuntu make sure python3-venv and python3-pip are installed."
+# Skip pip when the venv already has a complete dependency set: pip
+# re-resolution can otherwise upgrade pinned deps or build from source.
+VENV_PY=""
+for p in "$SCRIPT_DIR/backend/venv/bin/python" "$SCRIPT_DIR/backend/venv/Scripts/python.exe"; do
+    if [ -x "$p" ]; then
+        VENV_PY="$p"
+        break
+    fi
+done
+if [ -n "$VENV_PY" ] && "$VENV_PY" -c 'import fastapi, litellm, uvicorn, sqlalchemy, cryptography' >/dev/null 2>&1; then
+    echo "[3/5] Backend dependencies already installed, skipping. Use update.sh to apply requirement changes."
+else
+    echo "[3/5] Setting up backend (venv, dependencies, database)..."
+    "$PYTHON" scripts/init_db.py || fail "Backend setup failed." \
+        "On Debian/Ubuntu make sure python3-venv and python3-pip are installed."
+fi
 
 # --- [4/5] Frontend: npm install ---
 if [ -d "$SCRIPT_DIR/frontend/node_modules" ]; then
@@ -101,7 +116,7 @@ chmod +x "$SCRIPT_DIR/start.sh" "$SCRIPT_DIR/stop.sh" "$SCRIPT_DIR/scripts/"*.sh
 echo ""
 echo -e "${GREEN}========================================"
 echo "  Installation complete!"
-echo "========================================${NC}"
+echo -e "========================================${NC}"
 echo ""
 echo "Next steps:"
 echo "  ./start.sh      Start all services (manager, backend, frontend)"

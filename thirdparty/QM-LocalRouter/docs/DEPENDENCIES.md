@@ -66,6 +66,8 @@ Source: `frontend/package.json`
 | **@radix-ui/react-separator** | ^1.1.0 | Radix UI primitive 鈥?Separator |
 | **lucide-react** | ^0.441.0 | Icon library |
 | **recharts** | ^2.13.0 | Charting library (Dashboard) |
+| **react-markdown** | ^10.1.0 | Markdown rendering in chat messages |
+| **remark-gfm** | ^4.0.1 | GitHub Flavored Markdown plugin (tables, task lists, etc.) |
 
 ### Development Dependencies
 

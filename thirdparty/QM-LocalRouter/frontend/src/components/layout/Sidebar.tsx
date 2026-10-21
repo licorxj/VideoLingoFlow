@@ -3,9 +3,10 @@ import { NavLink } from "react-router-dom";
 import { useI18n } from "../../i18n";
 import {
   LayoutDashboard, Server, GitBranch, ScrollText, Settings, MessageSquare,
-  Play, Loader2, Network,
+  Play, Loader2, Network, Route,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { getVersion } from "../../services/api";
 
 function useNavItems() {
   const { t } = useI18n();
@@ -16,6 +17,7 @@ function useNavItems() {
     { to: "/strategies", icon: GitBranch, label: t("sidebar.strategies") },
     { to: "/logs", icon: ScrollText, label: t("sidebar.logs") },
     { to: "/endpoints", icon: Network, label: t("sidebar.endpoints") },
+    { to: "/forwarding", icon: Route, label: t("sidebar.forwarding") },
     { to: "/settings", icon: Settings, label: t("sidebar.settings") },
   ];
 }
@@ -27,6 +29,7 @@ export default function Sidebar() {
   const [checking, setChecking] = useState(true);
   const [starting, setStarting] = useState(false);
   const [showDialog, setShowDialog] = useState(false);
+  const [versionInfo, setVersionInfo] = useState<any>(null);
 
   const checkHealth = useCallback(async () => {
     try {
@@ -44,6 +47,10 @@ export default function Sidebar() {
     const interval = setInterval(checkHealth, 8000);
     return () => clearInterval(interval);
   }, [checkHealth]);
+
+  useEffect(() => {
+    getVersion().then((r) => setVersionInfo(r.data)).catch(() => {});
+  }, []);
 
   const MANAGER_PORT = 12003;
 
@@ -158,7 +165,21 @@ export default function Sidebar() {
             )}
           </button>
         )}
-        <p className="text-[11px] text-muted-foreground/50 mt-1.5 font-mono tracking-wider">v1.0.0</p>
+        <div className="mt-1.5 flex items-center gap-1.5 font-mono text-[11px] text-muted-foreground/50 tracking-wider">
+          {versionInfo ? (
+            <>
+              <span>v{versionInfo.version}</span>
+              {versionInfo.git_commit && (
+                <span className="opacity-70">#{String(versionInfo.git_commit).slice(0, 7)}</span>
+              )}
+              {versionInfo.build_type === "release" && (
+                <span className="rounded bg-cyan-500/10 px-1 text-cyan-500">rel</span>
+              )}
+            </>
+          ) : (
+            <span>v1.0.0</span>
+          )}
+        </div>
       </div>
 
       <Dialog open={showDialog} onOpenChange={setShowDialog}>
@@ -170,7 +191,7 @@ export default function Sidebar() {
             <p>{t("sidebar.startServiceDesc")}</p>
             <div className="bg-muted rounded-lg p-3 font-mono text-xs space-y-1">
               <p className="text-foreground font-semibold">cd backend</p>
-              <p className="text-foreground font-semibold">python -m uvicorn app.main:app --host 0.0.0.0 --port 12002 --reload</p>
+              <p className="text-foreground font-semibold">python -m uvicorn app.main:app --host 0.0.0.0 --port {window.location.port || 12002} --reload</p>
             </div>
           </div>
         </DialogContent>

@@ -1,16 +1,22 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
 import os
+import sys
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+if getattr(sys, "frozen", False):
+    # PyInstaller one-file build: BASE_DIR/backend lives inside the read-only
+    # bundle, so keep user data (sqlite db, backups, icons) next to the exe.
+    BASE_DIR = Path(sys.executable).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
 class Settings(BaseSettings):
     APP_NAME: str = "LLM API Router"
-    APP_VERSION: str = "1.0.0"
+    APP_VERSION: str = "2.0.5"
     HOST: str = "127.0.0.1"
     BACKEND_PORT: int = 12002
+    FRONTEND_PORT: int = 12001
     DATABASE_URL: str = f"sqlite+aiosqlite:///{DATA_DIR / 'app.db'}"
     ENCRYPTION_KEY: str = ""
     LOG_RETENTION_DAYS: int = 30
@@ -29,8 +35,13 @@ class Settings(BaseSettings):
     def PORT(self) -> int:
         return self.BACKEND_PORT
 
-    class Config:
-        env_file = str(BASE_DIR / ".env")
-        env_file_encoding = "utf-8"
+    # extra="ignore" keeps startup resilient: a packaged .env (copied from
+    # .env.example) or a stale user .env may carry keys this build does not
+    # declare, and an unknown key must never crash the app at import time.
+    model_config = SettingsConfigDict(
+        env_file=str(BASE_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+    )
 
 settings = Settings()

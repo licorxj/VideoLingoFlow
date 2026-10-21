@@ -70,6 +70,7 @@ The Vite dev server proxies /api/* and /v1/* to http://127.0.0.1:8800.
 
 `
 Client -> POST /v1/chat/completions (model="strategy-name")
+         or POST /v1/responses (model="strategy-name")
   -> proxy.py: resolve strategy
   -> balancer.py: select rule + key
   -> forwarder.py: protocol adapt + send to upstream
@@ -91,14 +92,14 @@ Client -> POST /v1/chat/completions (model="strategy-name")
 | pp/models/ | SQLAlchemy ORM models (Provider, ApiKey, Model, Strategy, StrategyRule, RequestLog) |
 | pp/schemas/schemas.py | Pydantic request/response models |
 | pp/routers/ | API route handlers |
-| pp/routers/proxy.py | Core proxy endpoints (/v1/chat/completions, /v1/models) |
+| pp/routers/proxy.py | Core proxy endpoints (/v1/chat/completions, /v1/responses, /v1/models) |
 | pp/routers/settings.py | App settings (output protocol, etc.) |
 | pp/routers/icons.py | Icon search (Baidu) + local storage |
 | pp/routers/backup.py | Backup/restore with auto-backup |
 | pp/services/balancer.py | Load balancing engine (5 strategies) |
 | pp/services/forwarder.py | HTTP request forwarding with retry |
 | pp/services/stream_handler.py | SSE stream processing |
-| pp/utils/protocol_adapter.py | Claude/Gemini <-> OpenAI format conversion |
+| pp/utils/protocol_adapter.py | Claude/Gemini <-> OpenAI format conversion, Responses <-> chat conversion |
 | pp/utils/crypto.py | Fernet symmetric encryption for API keys |
 
 #### Frontend (rontend/)
@@ -289,6 +290,79 @@ Input and output are OpenAI Chat Completions format, no conversion needed.
 ole mapping, generationConfig)
 - **Response**: Gemini response -> OpenAI format (candidates[0].content.parts[0].text -> choices[0].message.content)
 
+### Responses Protocol
+Used in both directions, all in `app/utils/protocol_adapter.py`:
+
+- **Inbound** (`POST /v1/responses`): Responses request -> chat body
+  (`responses_request_to_chat`: `instructions` -> leading system message,
+  `input` string/array -> `messages`, `max_output_tokens` -> `max_tokens`,
+  function tools -> chat tools). Chat results are converted back with
+  `chat_completion_to_response` (usage renamed to
+  `input_tokens`/`output_tokens`/`total_tokens`, `finish_reason` mapped to
+  `status` + `incomplete_details`, `tool_calls` -> `function_call` items).
+- **Streaming**: `ResponsesStreamWriter` accumulates `chat.completion.chunk`
+  deltas and emits the official event sequence
+  (`response.created` ... `response.output_text.delta`* ... `response.completed`),
+  with monotonic `sequence_number` and no `data: [DONE]` terminator. Failures
+  become `event: error` + `event: response.failed`.
+- **Outbound** (Codex OAuth upstream, `upstream_style == "responses"`):
+  `chat_to_responses_request` / `responses_to_chat` /
+  `responses_stream_chunk_to_chat`.
+
+The inbound endpoint is stateless: `store` is always `false` and
+`previous_response_id` is ignored.
+
+### Anthropic / Gemini client formats
+`POST /v1/messages` and `POST /v1beta/models/{rest:path}` translate the inbound
+request with `claude_request_to_chat` / `gemini_request_to_chat`
+(`system`/`systemInstruction` -> system message, content blocks/parts ->
+OpenAI content blocks, `generationConfig` -> temperature/top_p/max_tokens,
+tools -> chat tools) and convert results back with `openai_to_claude_response` /
+`openai_to_gemini_response` plus the streaming variants
+`convert_openai_stream_to_claude_chunks` /
+`convert_openai_stream_to_gemini_chunks`. Chunks that cannot be represented in
+the target format (e.g. `reasoning_content`) are dropped instead of leaked, and
+the OpenAI `data: [DONE]` terminator is not forwarded.
+
+The format is chosen per endpoint (`out_format` in `proxy.py`); the global
+`output_protocol` setting only remains as a legacy override for
+`/v1/chat/completions`.
+
+### Direct model names (`platform_id/model_id`)
+`proxy._resolve_direct_model` splits on the **first** `/` (model ids may contain
+`/`), resolves the platform by numeric id or by unique name, then the model by
+`model_id` or `display_name`. `_dispatch_by_model` resolves strategy names first
+and only falls back to direct mode, so existing clients are unaffected;
+`_forward_direct` builds a pseudo strategy whose `key_*` fields come from the
+new provider columns (`key_strategy`, `key_switch_mode`, `key_rpm_threshold`,
+`key_count_threshold`, added in `database._add_missing_columns`), so
+`Balancer.select_key` applies the platform multi-key policy — strategy routing
+keeps using the strategy's own policy. Auth (401/403) and 429 failures mark the
+key like `_try_forward` does.
+
+### Passthrough (same format)
+`Forwarder._passthrough_plan` forwards the request byte-for-byte when the client
+format equals the upstream protocol (`custom` counts as OpenAI): same URL
+(`/messages`, `:generateContent`, `chat_path`), same auth headers, no
+messages<->protocol conversion in either direction. Skipped for CLI profiles
+(opencode/cline/workbuddy), `upstream_style == "responses"` and non-bearer
+upstream auth. `_handle_non_stream` / `_handle_stream` detect the same condition
+via `_raw_body` + `_client_format` and return the upstream body/frames verbatim,
+extracting tokens from `usage`, `message_start`/`message_delta` or
+`usageMetadata` for logging.
+
+### OpenCode upstream retry events
+When the OpenCode upstream fails (e.g. `Upstream request failed: Model is
+unavailable.`), `opencode serve` does **not** emit `message.updated.error`
+immediately: it first sends `session.status{type:"retry", attempt, message}` and
+retries on its own (4 attempts, 5s/10s/20s/40s backoff). No text delta arrives
+during that window, so a collector that only checks `message.updated.error` is cut
+off by the 45s idle timeout and returns HTTP 200 with `content: null`, losing the
+real error. `OpenCodeClient._collect` therefore records the retry message and
+treats it as activity; a collect that ends on idle/first-delta timeout returns the
+recorded message as an error, which the caller turns into HTTP 502. The full list
+of SSE pitfalls is documented at the top of `services/opencode.py`.
+
 ---
 
 ## Load Balancing Engine
@@ -332,6 +406,9 @@ pm_threshold | Switch when requests/min exceeds threshold |
 The system supports converting the response format before returning to clients:
 
 - **openai** (default): Standard OpenAI format
+- **responses**: Converts to the OpenAI Responses API format (same objects the
+  `/v1/responses` endpoint returns; non-streaming `object: "response"`,
+  streaming `response.*` SSE events). Only function tools survive the round trip.
 - **claude**: Converts to Anthropic Messages API format
 - **gemini**: Converts to Gemini GenerateContent format
 

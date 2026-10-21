@@ -42,6 +42,7 @@ Thumbs.db
 
 # === Logs ===
 *.log
+*.err
 logs/
 run/
 
@@ -53,6 +54,15 @@ backend/.env
 
 # === Runtime caches (auto-fetched, not seed data) ===
 backend/data/online_providers.json
+
+# === Build-time generated version metadata (release workflow) ===
+version.json
+
+# === Local build / scratch artifacts ===
+.omo/
+release/*.exe
+release/build/
+release/dist/
 
 # === Generated / Scratch files ===
 *_gen.py

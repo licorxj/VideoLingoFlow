@@ -7,6 +7,7 @@ import Providers from "./pages/Providers";
 import Strategies from "./pages/Strategies";
 import Logs from "./pages/Logs";
 import SettingsPage from "./pages/Settings";
+import ForwardingPage from "./pages/Forwarding";
 import Endpoints from "./pages/Endpoints";
 import Chat from "./pages/Chat";
 
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/strategies" element={<Strategies />} />
           <Route path="/logs" element={<Logs />} />
           <Route path="/endpoints" element={<Endpoints />} />
+          <Route path="/forwarding" element={<ForwardingPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>

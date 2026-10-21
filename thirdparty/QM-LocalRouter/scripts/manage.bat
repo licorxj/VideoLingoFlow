@@ -7,6 +7,13 @@ set "PROJECT_ROOT=%~dp0.."
 set "RUN_DIR=%PROJECT_ROOT%\run"
 set "BACKEND_DIR=%PROJECT_ROOT%\backend"
 set "FRONTEND_DIR=%PROJECT_ROOT%\frontend"
+:: --- Load ports from root .env (if present) for parity with Linux start.sh ---
+if exist "%PROJECT_ROOT%\.env" (
+    for /f "usebackq tokens=1,* delims==" %%a in (`findstr /B /C:"BACKEND_PORT=" /C:"FRONTEND_PORT=" /C:"MANAGER_PORT=" "%PROJECT_ROOT%\.env"`) do (
+        if not defined %%a set "%%a=%%b"
+    )
+)
+
 set "BACKEND_PORT=%BACKEND_PORT%"
 if "%BACKEND_PORT%"=="" set "BACKEND_PORT=12002"
 set "FRONTEND_PORT=%FRONTEND_PORT%"
@@ -66,10 +73,13 @@ if !ERRORLEVEL! EQU 0 (
     exit /b 0
 )
 echo Starting Backend (uvicorn) on port %BACKEND_PORT%...
-cd "%BACKEND_DIR%"
-start "Backend" /min "%PYTHON%" -m uvicorn app.main:app --host 0.0.0.0 --port %BACKEND_PORT%
-cd "%PROJECT_ROOT%"
-echo   Backend started
+for /f %%i in ('powershell -NoProfile -Command "(Start-Process -FilePath '%PYTHON%' -ArgumentList '-m','uvicorn','app.main:app','--host','0.0.0.0','--port','%BACKEND_PORT%' -WorkingDirectory '%BACKEND_DIR%' -WindowStyle Minimized -PassThru).Id"') do set "NEWPID=%%i"
+if not defined NEWPID (
+    echo   [ERROR] Failed to start Backend.
+    exit /b 1
+)
+call :write_pid "%BACKEND_PIDFILE%" !NEWPID!
+echo   Backend started (PID: !NEWPID!)
 exit /b 0
 
 ::------------------------------------------------------
@@ -105,10 +115,13 @@ if !ERRORLEVEL! EQU 0 (
     exit /b 0
 )
 echo Starting Frontend (Vite) on port %FRONTEND_PORT%...
-cd "%FRONTEND_DIR%"
-start "Frontend" /min cmd /c "set FRONTEND_PORT=%FRONTEND_PORT% && npm run dev"
-cd "%PROJECT_ROOT%"
-echo   Frontend started
+for /f %%i in ('powershell -NoProfile -Command "$env:FRONTEND_PORT='%FRONTEND_PORT%'; (Start-Process -FilePath 'npm' -ArgumentList 'run','dev' -WorkingDirectory '%FRONTEND_DIR%' -WindowStyle Minimized -PassThru).Id"') do set "NEWPID=%%i"
+if not defined NEWPID (
+    echo   [ERROR] Failed to start Frontend.
+    exit /b 1
+)
+call :write_pid "%FRONTEND_PIDFILE%" !NEWPID!
+echo   Frontend started (PID: !NEWPID!)
 exit /b 0
 
 ::------------------------------------------------------
@@ -141,8 +154,13 @@ if "%PYTHON%"=="" (
     exit /b 1
 )
 echo Starting Service Manager on port %MANAGER_PORT%...
-start "ServiceManager" /min "%PYTHON%" "%PROJECT_ROOT%\service_manager.py"
-echo   Service Manager started
+for /f %%i in ('powershell -NoProfile -Command "(Start-Process -FilePath '%PYTHON%' -ArgumentList '%PROJECT_ROOT%\service_manager.py' -WorkingDirectory '%PROJECT_ROOT%' -WindowStyle Minimized -PassThru).Id"') do set "NEWPID=%%i"
+if not defined NEWPID (
+    echo   [ERROR] Failed to start Service Manager.
+    exit /b 1
+)
+call :write_pid "%MANAGER_PIDFILE%" !NEWPID!
+echo   Service Manager started (PID: !NEWPID!)
 exit /b 0
 
 ::------------------------------------------------------

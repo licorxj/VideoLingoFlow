@@ -21,6 +21,10 @@ from app.services import browser_auth
 ENDPOINT_GROUPS: dict[str, list[tuple[str, str]]] = {
     "openai": [
         ("POST", "/v1/chat/completions"),
+        ("POST", "/v1/responses"),
+        ("POST", "/v1/messages"),
+        ("POST", "/v1beta/models/{rest:path}"),
+        ("GET", "/v1beta/models"),
         ("POST", "/v1/completions"),
         ("GET", "/v1/models"),
         ("POST", "/v1/embeddings"),
@@ -38,17 +42,28 @@ ENDPOINT_GROUPS: dict[str, list[tuple[str, str]]] = {
     ],
     "alias": [
         ("POST", "/k/{client_key}/v1/chat/completions"),
+        ("POST", "/k/{client_key}/v1/responses"),
+        ("POST", "/k/{client_key}/v1/messages"),
+        ("POST", "/k/{client_key}/v1beta/models/{rest:path}"),
         ("GET", "/k/{client_key}/v1/models"),
+        ("GET", "/k/{client_key}/v1beta/models"),
     ],
 }
 
 
 def _match_pattern(pattern: str, path: str) -> bool:
-    """Match a route pattern like /v1/videos/{task_id} against a concrete path."""
+    """Match a route pattern like /v1/videos/{task_id} against a concrete path.
+
+    A trailing `{name:path}` segment matches any number of remaining path
+    segments (used for /v1beta/models/{rest:path}).
+    """
     p_parts, a_parts = pattern.strip("/").split("/"), path.strip("/").split("/")
-    if len(p_parts) != len(a_parts):
-        return False
-    return all(pp.startswith("{") or pp == ap for pp, ap in zip(p_parts, a_parts))
+    for i, pp in enumerate(p_parts):
+        if pp.startswith("{") and pp.endswith(":path}"):
+            return i == len(p_parts) - 1 and i < len(a_parts)
+        if i >= len(a_parts) or not (pp.startswith("{") or pp == a_parts[i]):
+            return False
+    return len(p_parts) == len(a_parts)
 
 
 def resolve_endpoint_group(method: str, path: str) -> str | None:

@@ -1,0 +1,4 @@
+# Build-time dependency for producing native single-file executables.
+# Not needed at runtime; only used by .github/workflows/build-release.yml
+# (and by `pyinstaller build_pyinstaller.spec` locally).
+pyinstaller==6.11.1

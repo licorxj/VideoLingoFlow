@@ -1,5 +1,14 @@
 {
   "output_protocol": "openai",
   "default_model": "mimo-v2-flash",
-  "default_provider_id": 16
+  "default_provider_id": 16,
+  "lan_access": false,
+  "auth_mode": "open",
+  "enabled_groups": {
+    "openai": true,
+    "media": true,
+    "multi": true,
+    "alias": true
+  },
+  "oauth_token_hours": 24
 }

@@ -23,6 +23,7 @@
 - **🔑 多 Key 负载均衡** — 每个平台可配置多个 API Key，支持 RPM 阈值和计数阈值自动切换
 - **🤖 多 Model 自动调度** — 根据策略规则自动选择最优模型，支持模型级别自动降级
 - **🛡️ 协议自动转换** — OpenAI / Claude / Gemini 三种协议自动互转，任意 SDK 调用任意模型
+- **🧩 本地 CLI 平台接入** — 导入 OpenCode / Cline 等 CLI 工具凭据并自动续期，私有协议翻译成 OpenAI 格式
 - **🔒 数据安全** — 纯本地运行，API Key 使用 Fernet 加密存储，零数据外泄
 - **🌐 局域网共享** — 部署后局域网内所有设备共享 API Key 和路由策略，只需一个接入点
 
@@ -128,6 +129,70 @@ LocalRouter 从设计之初就为**局域网（LAN）部署**而优化。开启�
 
 ---
 
+## 本地 CLI 平台接入
+
+除标准 API Key 外，LocalRouter 支持导入**本地 / 第三方 CLI 工具的凭据**并自动续期，
+把它们的私有协议翻译成 OpenAI 兼容格式。目前已完成转发适配的是 **OpenCode** 与 **Cline**。
+
+| 平台 | 连接方式 | 需要本地进程 |
+|------|----------|--------------|
+| **OpenCode** | 中转 —— 转发到本机 `opencode serve` | **需要** |
+| **Cline** | 直连 —— 转发到 `https://api.cline.bot/api/v1` | 不需要 |
+
+> 两者的"CLI"含义不同：OpenCode 真的调用了本机 CLI 的运行时；Cline 只是**凭据来自
+> Cline 账号**，请求直连其云端，不依赖任何本地进程。
+
+### OpenCode（本地运行时中转）
+
+1. 安装 CLI：`npm install -g opencode-ai`
+2. 启动服务端：双击项目根目录的 `启动_opencode服务端.bat`，或手动执行
+   ```bash
+   opencode serve --port 4096 --hostname 127.0.0.1
+   ```
+   > 端口说明：示例统一使用 **4096**。OpenCode 官方常用端口 10001 常被小米电脑管家等
+   > 软件占用，会导致连接失败。
+3. 进入 **平台管理 → 导入本地 CLI 凭据**，选择 **OpenCode**，填写服务器地址与服务端
+   密码（服务端未启用鉴权时密码留空）
+4. 点「测试」验证连通，再点「同步平台模型」拉取免费模型
+
+实现要点：
+
+- 对话走 OpenCode 私有的 **session / message** 协议（并非 OpenAI 端点）
+- 输出走 **SSE 事件流** `GET /global/event` 实时收集增量（非轮询）；服务端不支持时
+  自动降级为轮询，不影响可用性
+- 事件报文为嵌套结构 `{payload:{type,properties}}`，需解包后使用；其中
+  `type=="sync"` 是同一事件的重复推送，已去重
+
+### Cline（直连云端 + 客户端伪装）
+
+1. 进入 **导入本地 CLI 凭据**，选择 **Cline**，点「打开浏览器授权」完成登录，凭据会
+   自动保存并自动续期
+2. 点「同步平台模型」拉取免费模型（如 `cline-free/deepseek-v4.1-flash`）
+
+实现要点（Cline 不是标准 OpenAI 端点，必须按官方插件的私有协议通信）：
+
+- 端点 `https://api.cline.bot/api/v1/chat/completions`，鉴权为 `Bearer workos:<accessToken>`
+- 必须携带 Cline 客户端指纹头（`User-Agent: Cline/3.0.47`、`X-CLIENT-TYPE: cline-sdk`、
+  `X-PLATFORM: terminal` 等），否则免费模型返回
+  `403 only available via Cline product surfaces`
+- 请求体携带 `max_tokens` 会让免费模型直接 500，已自动剥离
+- 免费通道的非流式请求会被限流，已强制上游走流式再聚合返回
+
+### 工具调用（function calling）
+
+| 平台 | 支持情况 |
+|------|----------|
+| **Cline** | ✅ 客户端 `tools` 原样透传，返回标准 `tool_calls` |
+| **OpenCode** | ⚠️ 仅支持其内置工具（bash / websearch 等，在服务端执行）；标准 function calling 在免费层不可靠 |
+
+OpenCode 的限制原因（实测结论）：其模型自带 27 个内置工具，会直接忽略外部注入的工具
+说明；而试图禁用内置工具则会触发免费层风控 —— 名字不匹配会引发大量 `session.error`
+并挂死请求，全部禁用成功后上游立刻返回
+`403 OpenCode's free tier can only be used from within OpenCode`。
+桥接实现已保留，可通过 `OpenCodeClient(bridge_tools=True)` 显式开启，供自建付费模型场景使用。
+
+---
+
 ## 系统架构
 
 ```
@@ -142,7 +207,7 @@ LocalRouter 从设计之初就为**局域网（LAN）部署**而优化。开启�
   |                (5 种负载均衡策略 / 3 种 Key 策略)
   v
 [forwarder.py] -- 协议适配 + 发送上游请求
-  |                (OpenAI / Claude / Gemini)
+  |                (OpenAI / Claude / Gemini / 本地 CLI 私有协议)
   v
 [protocol_adapter.py] -- 可选输出格式转换
   |
@@ -234,9 +299,23 @@ npm run dev
 
 所有代理端点位于 `/v1/`，与 OpenAI SDK 完全兼容。
 
+响应格式由**请求端点**决定（不再有全局开关）：
+
+| 端点 | 客户端格式 |
+|------|------------|
+| `POST /v1/chat/completions` | OpenAI Chat Completions（流式 + 非流式） |
+| `POST /v1/responses` | OpenAI Responses API（Codex/Cline 客户端，无状态） |
+| `POST /v1/messages` | Anthropic Messages API（Claude SDK，base_url 指向 `/v1`） |
+| `POST /v1beta/models/{model}:generateContent` | Gemini GenerateContent（Gemini SDK，base_url 指向 `/v1beta`） |
+| `GET /v1beta/models` | Gemini 风格模型列表 |
+
+后端自动把入站格式转成上游协议；当客户端格式与上游协议一致时直接透传，
+不做无用转换。
+
 | 端点 | 说明 |
 |------|------|
 | `POST /v1/chat/completions` | 聊天补全（流式 + 非流式） |
+| `POST /v1/responses` | Responses API（Codex/Cline 客户端可直接接入，流式 + 非流式，无状态） |
 | `POST /v1/completions` | 文本补全 |
 | `POST /v1/embeddings` | 向量嵌入 |
 | `POST /v1/images/generations` | 图像生成 |

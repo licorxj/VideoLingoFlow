@@ -316,8 +316,47 @@ response = client.chat.completions.create(
 | **Open WebUI** | `OPENAI_API_BASE_URL=http://localhost:12002/v1` |
 | **Cursor** | Settings > Models > Base URL: `http://localhost:12002/v1` |
 | **Continue (VS Code)** | Add model + OpenAI-compatible provider, set Base URL accordingly |
+| **Codex CLI / Cline** | Use the Responses endpoint below (or `/k/{key}/v1` when headers are not supported) |
 
 > **Note**: You can use any value for `api_key`. The `model` field must be your strategy name.
+
+### Responses API (Codex / Cline)
+
+Clients that speak the newer Responses protocol (Codex CLI, Cline) can point
+directly at the gateway:
+
+```
+POST http://localhost:12002/v1/responses
+```
+
+```json
+{
+  "model": "my-strategy",
+  "instructions": "You are concise.",
+  "input": "Hello!",
+  "max_output_tokens": 256,
+  "stream": false
+}
+```
+
+```bash
+curl http://localhost:12002/v1/responses \
+  -H "Content-Type: application/json" \
+  -d '{"model":"my-strategy","input":"Write a poem","stream":true}'
+```
+
+- Same routing as chat completions: `model` is the **strategy name**.
+- `input` takes a plain string or an item array (`message`, `function_call`,
+  `function_call_output`); `instructions` becomes the system prompt.
+- The gateway translates to `/v1/chat/completions` internally, so strategy
+  balancing, key rotation, logging and token accounting work unchanged.
+- **Stateless**: `store` is always `false` and `previous_response_id` is ignored —
+  send the whole conversation on every request.
+- Only `function` tools are forwarded (built-in tools like `web_search_preview`
+  are dropped).
+
+Clients that cannot send an `Authorization` header can use the key-in-path
+alias: `POST /k/{client_key}/v1/responses`.
 
 ---
 
@@ -377,12 +416,51 @@ The **Settings** page (gear icon in sidebar) provides:
 - Displays the proxy address to configure in your client
 - Shows a curl example for quick testing
 
+### Request Endpoints
+
+One gateway, four client formats. The response format is decided by the endpoint
+you call — the backend converts automatically, and same-format requests are
+forwarded untouched (no extra latency):
+
+| Endpoint | Client format |
+|----------|---------------|
+| `POST /v1/chat/completions` | OpenAI Chat Completions |
+| `POST /v1/responses` | OpenAI Responses API (Codex / Cline) |
+| `POST /v1/messages` | Anthropic Messages API (Claude SDK base_url = `/v1`) |
+| `POST /v1beta/models/{model}:generateContent` | Gemini GenerateContent (Gemini SDK base_url = `/v1beta`) |
+
+The `model` field accepts a **strategy name** or a **direct** `platform_id/model_id`
+form (e.g. `33/opencode/ling-3.1-flash-free`). The copy button next to a model id
+in the platform page copies the ready-to-use `platform_id/model_id` string.
+
+### Multi-key policy per platform
+
+On the platform page, the **多key调用策略** button next to the API Keys table opens
+the key rotation rules for that platform (key selection + switch trigger +
+thresholds, the same options as the strategy editor). They apply when you call a
+model directly via `platform_id/model_id`; strategy routing keeps using the
+strategy's own key policy.
+
 ### Output Protocol
 | Mode | Description |
 |------|-------------|
 | **OpenAI Format** | Default 鈥?compatible with most clients |
+| **Responses Format** | OpenAI Responses API format - for Codex / Cline clients |
 | **Claude Format** | Anthropic Messages API format |
 | **Gemini Format** | Gemini GenerateContent format |
+
+> The **Request Endpoints** card above lists one endpoint per client format and
+> is the recommended way to pick a format. `Responses` here is a legacy global
+> override that only affects `/v1/chat/completions`; the dedicated endpoints
+> (`/v1/responses`, `/v1/messages`, `/v1beta/models/*`) always answer in their
+> own format.
+>
+> Same-format requests are forwarded untouched (no conversion round-trip), so
+> there is no extra latency.
+
+> Choosing `Responses` makes **every** proxied chat response use the Responses
+> format (`object: "response"`, streaming `response.*` events). Leave it on
+> `OpenAI` unless all your clients speak the Responses protocol.
 
 ### Route Management
 - **Default Model** 鈥?Default model for router management (leave empty for strategy-based routing)

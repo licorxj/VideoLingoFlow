@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { toast } from "../stores/toast";
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getDashboardStats, getStrategies, getProviders, clearTodayStats } from '../services/api';
+import { getDashboardStats, getStrategies, getProviders, clearTodayStats, getSettings } from '../services/api';
 import { useI18n } from '../i18n';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
@@ -36,6 +36,13 @@ export default function Dashboard() {
     queryKey: ['strategies'],
     queryFn: () => getStrategies().then((r) => r.data),
   });
+
+  // 接入示例用后端真实监听端口，不写死上游默认值
+  const { data: appSettings } = useQuery({
+    queryKey: ['appSettings'],
+    queryFn: () => getSettings().then((r) => r.data),
+  });
+  const backendPort = appSettings?.backend_port || 12002;
 
   const { data: providers = [] } = useQuery({
     queryKey: ['providers'],
@@ -138,7 +145,7 @@ export default function Dashboard() {
             <div className='pt-2 border-t border-border'>
               <p className='text-xs text-muted-foreground mb-2'>{t('dashboard.requestEndpoint')}</p>
               <code className='text-xs bg-muted px-3 py-1.5 rounded-md font-mono text-foreground block'>
-                POST http://127.0.0.1:12002/v1/chat/completions
+                POST http://127.0.0.1:{backendPort}/v1/chat/completions
               </code>
             </div>
           </CardContent>
