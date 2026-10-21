@@ -940,7 +940,17 @@ def list_generation_tasks(creation_id: str = "", *, kind: str = "", target_type:
             stmt = stmt.where(GenerationTask.status == status)
         if step_id:
             stmt = stmt.where(GenerationTask.step_id == step_id)
-        rows = session.scalars(stmt.order_by(GenerationTask.created_at.desc()).limit(limit)).all()
+        # 排序用 updated_at 主键：占位台账模式下同一目标每轮 attempt 只有一行、
+        # 状态流转 running→success/failed 都发生在 update 上；只按 created_at
+        # 倒序会在「同一秒内发起重试」时把旧 attempt 排前面，导致
+        # 「最近一次失败」判断与矩阵角标误判。
+        # COALESCE 兜底历史 NULL（迁移漂移期插入的行没有 updated_at）。
+        rows = session.scalars(
+            stmt.order_by(
+                func.coalesce(GenerationTask.updated_at, GenerationTask.created_at).desc(),
+                GenerationTask.created_at.desc(),
+            ).limit(limit)
+        ).all()
         return [row_to_dict(r) for r in rows]
 
 

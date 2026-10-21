@@ -1,0 +1,604 @@
+{
+  "id": "1715b8c78c7c",
+  "name": "音乐MV创作",
+  "description": "下载-分离-失败-创作MV",
+  "nodes": [
+    {
+      "id": "node_1_1792280596747",
+      "type": "workflow",
+      "position": {
+        "x": 3420,
+        "y": 1485
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "audio"
+          ],
+          "videoPath": "",
+          "audioPath": "X:/KwDownload/song/刘凤瑶、、u0026曾一鸣、、u0026张玮、、u0026李琦、、u0026派克特-窝囊废.mp3",
+          "subtitlePath": "",
+          "url": "http://www.kuwo.cn/down/single/240174480",
+          "filePath": "",
+          "text": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "url": "http://www.kuwo.cn/down/single/240174480",
+          "audio": "Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\input_audio.mp3",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 529
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1792367064859",
+      "type": "workflow",
+      "position": {
+        "x": 4110,
+        "y": 1185
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "audio_multitrack_preview",
+        "label": "音频多轨预览",
+        "config": {
+          "sync_play": true,
+          "solo_mode": false
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio1": "Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\input_audio.mp3"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 354
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1792367212713",
+      "type": "workflow",
+      "position": {
+        "x": 4665,
+        "y": 1725
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "audio_multitrack_preview",
+        "label": "音频多轨预览",
+        "config": {
+          "sync_play": true,
+          "solo_mode": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio1": "output/vocals_node_4_1792367483674.wav",
+          "audio2": "output/background_node_4_1792367483674.wav"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 441
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_4_1792367483674",
+      "type": "workflow",
+      "position": {
+        "x": 4095,
+        "y": 1650
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "vocal_separation",
+        "label": "人声分离",
+        "config": {
+          "method": "demucs",
+          "model": "htdemucs_6s",
+          "format": "wav"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "output/vocals_node_4_1792367483674.wav",
+          "background": "output/background_node_4_1792367483674.wav"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] start node_type=vocal_separation node_id=node_4_1792367483674 pid=35888",
+          "[step_worker] step instance created: StepVocalSeparation",
+          "[step_worker] step_inputs keys=['audio']",
+          "[step_worker] node_config keys=['method', 'model', 'format']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76, kwargs=['callback', 'cancel_callback'])",
+          "[VocalSeparation] Using upstream audio: Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\input_audio.mp3",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs', 'output_vocals', 'output_background']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\.step_node_4_1792367483674_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 418
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_8_1792370238082",
+      "type": "workflow",
+      "position": {
+        "x": 5325,
+        "y": 1740
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "moss",
+          "language": "zh",
+          "model": "openmoss/MOSS-Transcribe-Diarize",
+          "compute_type": "",
+          "batch_size": 0,
+          "word_timestamps": true,
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": "",
+          "post_vad": true,
+          "post_alignment": true,
+          "post_diarization": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/asr_result_node_8_1792370238082.json"
+        },
+        "error": "",
+        "logLines": [
+          "[Punctuation] sherpa-onnx 恢复标点：110 段",
+          "[ASRBase._apply_punctuation] processor.restore done",
+          "[ASRBase._apply_punctuation] END",
+          "[Pipeline.PUNC] <<< END",
+          "[Pipeline] all stages done",
+          "[ASR PostProcess] Post-processing complete, segments=110",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\.step_node_8_1792370238082_result.json, exiting 0"
+        ],
+        "note": "歌词获取",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 507
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_3_1792435455406",
+      "type": "workflow",
+      "position": {
+        "x": 5880,
+        "y": 1890
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "sentence_split",
+        "label": "句子分割",
+        "config": {
+          "processing_language": "from_input",
+          "max_sentence_length": 30,
+          "use_llm_split": false,
+          "split_sentence_ends": false,
+          "split_clause_breaks": false,
+          "merge_min_duration": 0.5,
+          "merge_max_gap": 0.5,
+          "pause_split_threshold": 1,
+          "split_on_speaker": false,
+          "merge_short_enabled": false,
+          "merge_gap_enabled": false,
+          "pause_split_enabled": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/sentences_node_3_1792435455406.json",
+          "text": "cache/sentences_text_node_3_1792435455406.txt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 600
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1792476979085",
+      "type": "workflow",
+      "position": {
+        "x": 6960,
+        "y": 2370
+      },
+      "data": {
+        "nodeType": "desk_edit",
+        "label": "剪辑编排",
+        "config": {
+          "project": "",
+          "mode": "ai_script",
+          "ops": [],
+          "instruction": "",
+          "dry_run": true,
+          "use_task_output_dir": false,
+          "data_dir": "",
+          "timeout": 1800
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 467
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1792477064308",
+      "type": "workflow",
+      "position": {
+        "x": 7635,
+        "y": 2655
+      },
+      "data": {
+        "nodeType": "step_music_txt2music",
+        "label": "免费AI音乐-文生音乐",
+        "config": {
+          "model": "",
+          "custom_prompt": "",
+          "custom_lyrics": "",
+          "lm_optimize": true,
+          "thinking": false,
+          "duration": 260,
+          "audio_format": "mp3",
+          "poll_timeout": 900,
+          "batch_size": 2
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 675
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1792477106319",
+      "type": "workflow",
+      "position": {
+        "x": 8085,
+        "y": 2655
+      },
+      "data": {
+        "nodeType": "step_music_natural",
+        "label": "免费AI音乐-自然语言创作",
+        "config": {
+          "model": "",
+          "custom_prompt": "一首浪漫温暖的pop风格流行音乐。",
+          "custom_lyrics": "",
+          "lm_optimize": true,
+          "thinking": false,
+          "duration": "30",
+          "audio_format": "mp3",
+          "poll_timeout": 900,
+          "batch_size": 2
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "params": "cache\\musicgen\\node_4_1792477106319_params.json",
+          "audio_1": "cache\\music\\一首浪漫温暖的pop风格流行音_node_4_1792477106319.mp3"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\.step_node_4_1792477106319_result.json, exiting 0",
+          "[step_worker] start node_type=step_music_natural node_id=node_4_1792477106319 pid=42480",
+          "[step_worker] step instance created: S_StepMusicNatural",
+          "[step_worker] step_inputs keys=[]",
+          "[step_worker] node_config keys=['model', 'custom_prompt', 'custom_lyrics', 'lm_optimize', 'thinking', 'duration', 'audio_format', 'poll_timeout', 'batch_size']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\.step_node_4_1792477106319_result.json, exiting 0"
+        ],
+        "workbench_url": "",
+        "duration": 39.92
+      },
+      "measured": {
+        "width": 420,
+        "height": 777
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1792477117792",
+      "type": "workflow",
+      "position": {
+        "x": 8535,
+        "y": 2655
+      },
+      "data": {
+        "nodeType": "step_music_lyrics2music",
+        "label": "免费AI音乐-歌词生音乐",
+        "config": {
+          "model": "",
+          "custom_prompt": "",
+          "custom_lyrics": "",
+          "lm_optimize": true,
+          "thinking": false,
+          "duration": "30",
+          "audio_format": "mp3",
+          "poll_timeout": 900
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 675
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_6_1792477134039",
+      "type": "workflow",
+      "position": {
+        "x": 8985,
+        "y": 2670
+      },
+      "data": {
+        "nodeType": "step_music_instrumental",
+        "label": "免费AI音乐-纯音乐",
+        "config": {
+          "model": "",
+          "custom_prompt": "",
+          "custom_lyrics": "",
+          "lm_optimize": true,
+          "thinking": false,
+          "duration": "30",
+          "audio_format": "mp3",
+          "poll_timeout": 900
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 585
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1792495434330",
+      "type": "workflow",
+      "position": {
+        "x": 5310,
+        "y": 2460
+      },
+      "data": {
+        "nodeType": "pi_agent",
+        "label": "小pi通用智能体",
+        "config": {
+          "inputCount": 2,
+          "outputCount": 2,
+          "skills": [
+            "elevenlabs-sound-effects"
+          ],
+          "mcps": [],
+          "docs_path": "",
+          "external_doc": "",
+          "persona": "你是本项目的工作流节点执行者，执行我要求的任务，并按照需要输出产物。本次执行的任务是：",
+          "output_items": [
+            {
+              "port": "输出1",
+              "type": "text",
+              "desc": ""
+            },
+            {
+              "port": "输出2",
+              "type": "json",
+              "desc": ""
+            }
+          ]
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 679
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1792280596747",
+      "sourceHandle": "out-audio",
+      "target": "node_1_1792367064859",
+      "targetHandle": "in-audio1",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792280596747out-audio-node_1_1792367064859in-audio1",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "source": "node_1_1792280596747",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1792367483674",
+      "targetHandle": "in-audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792280596747out-audio-node_4_1792367483674in-audio",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_4_1792367483674",
+      "sourceHandle": "out-audio",
+      "target": "node_2_1792367212713",
+      "targetHandle": "in-audio1",
+      "id": "xy-edge__node_4_1792367483674out-audio-node_2_1792367212713in-audio1",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_4_1792367483674",
+      "sourceHandle": "out-background",
+      "target": "node_2_1792367212713",
+      "targetHandle": "in-audio2",
+      "id": "xy-edge__node_4_1792367483674out-background-node_2_1792367212713in-audio2",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "source": "node_2_1792367212713",
+      "sourceHandle": "out-audio1",
+      "target": "node_8_1792370238082",
+      "targetHandle": "in-asr_audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1792367212713out-audio1-node_8_1792370238082in-asr_audio",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "source": "node_8_1792370238082",
+      "sourceHandle": "out-subtitle",
+      "target": "node_3_1792435455406",
+      "targetHandle": "in-subtitle",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_8_1792370238082out-subtitle-node_3_1792435455406in-subtitle",
+      "selected": false,
+      "animated": false
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-18T07:44:59",
+  "updatedAt": "2026-10-20T21:07:04",
+  "revision": 75
+}

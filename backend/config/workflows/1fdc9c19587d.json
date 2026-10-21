@@ -39,11 +39,11 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 564
+        "height": 502
       },
       "selected": false,
       "dragging": false,
@@ -74,14 +74,15 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 310
+        "height": 278
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_3_1781212794939",
@@ -106,14 +107,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 478
+        "height": 418
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781645240103",
@@ -168,7 +170,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 586
+        "height": 635
       },
       "selected": false,
       "dragging": false,
@@ -204,11 +206,11 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 442
+        "height": 401
       },
       "selected": false,
       "dragging": false,
@@ -247,12 +249,12 @@
           "video_adjusted": "Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\cache\\input_video.mp4"
         },
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 755
+        "height": 753
       },
       "selected": false,
       "dragging": false,
@@ -289,11 +291,11 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 655
+        "height": 870
       },
       "selected": false,
       "dragging": false,
@@ -327,7 +329,7 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "logLines": [
           "[step_worker] start node_type=vocal_separation node_id=node_2_1781973904798 pid=40356",
           "[step_worker] step instance created: StepVocalSeparation",
@@ -341,10 +343,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 469
+        "height": 419
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1781987851660",
@@ -374,14 +377,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 478
+        "height": 468
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787067672223",
@@ -401,7 +405,7 @@
           "bitrate": "192"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -412,10 +416,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 439
+        "height": 392
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "n_msyu4zm55ofz",
@@ -435,7 +440,7 @@
           "bitrate": "192"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -446,10 +451,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 439
+        "height": 392
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787654769764",
@@ -476,14 +482,16 @@
           "audio": "output/denoised_audio_node_1_1787654769764.wav"
         },
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 490
+        "height": 497
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787828965709",
@@ -511,7 +519,7 @@
           "post_diarization": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -532,7 +540,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 570
+        "height": 509
       },
       "selected": false,
       "dragging": false,
@@ -556,21 +564,23 @@
           "json": "cache/asr_result_node_1_1787828965709.json"
         },
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 231
+        "height": 245
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_7_1787845973112",
       "type": "workflow",
       "position": {
-        "x": 1335,
-        "y": -1035
+        "x": 1155,
+        "y": -945
       },
       "data": {
         "nodeType": "llm_request",
@@ -584,7 +594,7 @@
           "log_request": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "台词改写",
         "progress": 100,
         "message": "Completed",
@@ -607,7 +617,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 603
+        "height": 537
       },
       "selected": false,
       "dragging": false,
@@ -634,14 +644,16 @@
           "json": "Y:\\VideoLingoLc\\control_plane_workspaces\\fad7dd4e6e9640ad91695b8abff013cd\\output/LLM_node_7_1787845973112.json"
         },
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 340
+        "height": 305
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_4_1788954192528",
@@ -659,7 +671,7 @@
           "wait_seconds": 300
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "等待你检查和编辑json",
         "progress": 100,
         "message": "Completed",
@@ -671,7 +683,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 271
+        "height": 245
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -734,10 +746,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1781973904798",
       "sourceHandle": "out-audio",
@@ -747,10 +759,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780650299385",
       "sourceHandle": "out-audio",
@@ -760,10 +772,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780590163157",
       "sourceHandle": "out-video",
@@ -773,10 +785,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780650299385",
       "sourceHandle": "out-audio",
@@ -786,10 +798,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780590163157",
       "sourceHandle": "out-video",
@@ -799,10 +811,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1781973904798",
       "sourceHandle": "out-background",
@@ -813,10 +826,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787654769764",
       "sourceHandle": "out-audio",
@@ -826,10 +839,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "n_msyu4zm55ofz",
       "sourceHandle": "out-audio",
@@ -840,10 +854,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-audio",
@@ -853,10 +867,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#f59e0b",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-dub_srt",
@@ -866,10 +880,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-video_adjusted",
@@ -879,10 +893,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_7_1787845973112",
       "sourceHandle": "out-result",
@@ -892,10 +906,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787828965709",
       "sourceHandle": "out-subtitle",
@@ -909,19 +923,19 @@
       "target": "node_4_1788954192528",
       "targetHandle": "in-input",
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "id": "xy-edge__node_2_1787847309484out-json-node_4_1788954192528in-input"
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_4_1788954192528",
       "sourceHandle": "out-output",
@@ -931,10 +945,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787844335859",
       "sourceHandle": "out-json",
@@ -945,6 +959,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-27T23:30:57",
-  "updatedAt": "2026-09-09T22:13:26",
-  "revision": 24
+  "updatedAt": "2026-10-16T07:59:17",
+  "revision": 33
 }

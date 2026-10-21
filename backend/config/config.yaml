@@ -178,10 +178,10 @@ aigc:
     use_wsl: false
     timeout: 120
 videogen:
-  method: agnes_video
-  default_t2v_model: 'agnes-video-2.5-flash'
-  default_i2v_model: 'agnes-video-2.5-flash'
-  default_v2v_model: ''
+  method: kieai_video
+  default_t2v_model: 'wan/3-0-video'
+  default_i2v_model: 'bytedance/seedance-2-fast'
+  default_v2v_model: 'bytedance/seedance-2-fast'
   v2v_interface: kieai_video
   t2v_interface: kieai_video
   i2v_interface: seedance_video
@@ -218,5 +218,9 @@ voiceforge:
   text:
     source_limit: 10000
   synthesis:
-    concurrency: 5
+    concurrency: 2
     retry_count: 1
+    retry_delay: 5
+musicgen:
+  method: acestep_music
+  default_model: 'acemusic/acestep-v1.5-xl-turbo'

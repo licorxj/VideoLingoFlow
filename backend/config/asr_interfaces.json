@@ -452,7 +452,7 @@
       "type": "sdk",
       "builtin": true,
       "enabled": true,
-      "description": "【五星首选-端到端联合识别+说话人分离+时间戳对齐-50+语言】OpenMOSS 0.9B MoE 模型，单次推理联合完成语音识别、说话人分离与段级时间戳对齐，并感知声音事件。模型经 ModelScope 自动下载至 _model_cache。需 transformers>=5.6 / torch>=2.8。",
+      "description": "【五星首选-端到端联合识别+说话人分离+时间戳对齐-50+语言-数独较慢】OpenMOSS 0.9B MoE 模型，单次推理联合完成语音识别、说话人分离与段级时间戳对齐，并感知声音事件。模型经 ModelScope 自动下载至 _model_cache。需 transformers>=5.6 / torch>=2.8。",
       "capabilities": {
         "vad": true,
         "word_timestamps": true,
@@ -575,7 +575,7 @@
       "type": "sdk",
       "builtin": true,
       "enabled": true,
-      "description": "【轻量本地-CPU 可跑-无 torch 依赖】k2-fsa/sherpa-onnx（C++ / onnxruntime）离线识别，内置 Silero VAD 分段与字级时间戳；模型自动下载到 _model_cache/sherpa-onnx（默认 hf-mirror 镜像）。支持中/英/日/韩/粤自动语种检测。provider 选 cuda 时若无 GPU 版会自动回退 cpu。",
+      "description": "【轻量本地快速-CPU 可跑-无 torch 依赖】k2-fsa/sherpa-onnx（C++ / onnxruntime）离线识别，内置 Silero VAD 分段与字级时间戳；模型自动下载到 _model_cache/sherpa-onnx（默认 hf-mirror 镜像）。支持中/英/日/韩/粤自动语种检测。provider 选 cuda 时若无 GPU 版会自动回退 cpu。",
       "capabilities": {
         "vad": true,
         "word_timestamps": true,

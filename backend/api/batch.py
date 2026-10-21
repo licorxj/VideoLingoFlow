@@ -66,11 +66,22 @@ async def get_config():
 
 @router.put("/config")
 async def update_config(req: ConfigUpdateRequest):
-    """Update batch configuration."""
+    """Update batch configuration.
+
+    注意：Celery worker 的 --concurrency 是启动时冻结值（manager 启动时从同一配置
+    读取），本接口改的是「批量执行器内部调度」的并发与 config.yaml；worker 实际
+    并行度需重启后端进程后才变化。响应里带 worker_restart_required 明示此点，
+    避免用户改完以为没生效（前端 BatchWorkshop 已有对应提示）。
+    """
     be = get_batch_executor()
     be.set_max_workers(req.max_concurrent_tasks)
     be.set_task_start_interval(req.task_start_interval)
-    return {"max_concurrent_tasks": req.max_concurrent_tasks, "task_start_interval": req.task_start_interval}
+    return {
+        "max_concurrent_tasks": req.max_concurrent_tasks,
+        "task_start_interval": req.task_start_interval,
+        "worker_restart_required": True,
+        "note": "批量执行器内部调度立即生效；Celery worker 实际并发为启动时冻结值，需重启后端进程",
+    }
 
 
 @router.post("/stop-all")

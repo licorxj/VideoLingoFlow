@@ -1,0 +1,371 @@
+{
+  "id": "35821b657fc6",
+  "name": "免费生图生视频接口测试",
+  "description": "agnes免费接口测试",
+  "nodes": [
+    {
+      "id": "node_1_1792395747769",
+      "type": "workflow",
+      "position": {
+        "x": 3045,
+        "y": 825
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video",
+            "text"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "text": "一个女孩在在黑夜中惊恐的表情看着一个传送门",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "一个女孩在在黑夜中惊恐的表情看着一个传送门",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 590
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1792396862837",
+      "type": "workflow",
+      "position": {
+        "x": 3660,
+        "y": 840
+      },
+      "data": {
+        "nodeType": "prompt_opt_image",
+        "label": "生图提示词优化",
+        "config": {
+          "custom_prompt": "",
+          "opt_template": "image",
+          "llm_model": "vlf-create",
+          "style_template_id": "builtin-cn-3d",
+          "assemble_result": "国产三维动画风格，厚涂质感，东方审美，细腻光影，电影级构图，中景，冷光恐怖氛围"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "国产三维动画风格，厚涂质感，东方审美，细腻光影，电影级构图，中景，冷光恐怖氛围。黑发散乱的东亚少女脸色惨白，圆睁盈满惧意的眼，双唇发颤，身着洗旧的米白睡裙，惊惶望向身前翻涌黑雾、泛幽蓝冷光的诡异传送门，背景是浓黑夜色里模糊的老旧残墙。",
+          "file_path": "Y:\\VideoLingoLc\\control_plane_workspaces\\841960ece953458aa591c9868e5c9eb4\\cache\\prompt_opt_image_node_3_1792396862837.txt"
+        },
+        "error": "",
+        "workbench_url": "",
+        "duration": 48.11
+      },
+      "measured": {
+        "width": 420,
+        "height": 634
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1792397210621",
+      "type": "workflow",
+      "position": {
+        "x": 4290,
+        "y": 1035
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "image_gen",
+        "label": "AI生图",
+        "config": {
+          "mode": "txt2img",
+          "interface": "agnes",
+          "model": "agnes-image-2.5-flash",
+          "resolution": "1K",
+          "aspect_ratio": "16:9",
+          "num_images": 1,
+          "custom_prompt_enabled": false,
+          "custom_prompt": "",
+          "output_prefix": "img"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "images": "['output/img_1_gen_image_node_5_1792397210621.png']",
+          "text": "output/img_1_gen_image_node_5_1792397210621.png"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\841960ece953458aa591c9868e5c9eb4\\cache\\.step_node_5_1792397210621_result.json, exiting 0",
+          "[step_worker] start node_type=image_gen node_id=node_5_1792397210621 pid=42100",
+          "[step_worker] step instance created: S_ImageGen",
+          "[step_worker] step_inputs keys=['text']",
+          "[step_worker] node_config keys=['mode', 'interface', 'model', 'resolution', 'aspect_ratio', 'num_images', 'custom_prompt_enabled', 'custom_prompt', 'output_prefix']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\841960ece953458aa591c9868e5c9eb4, kwargs=['callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\841960ece953458aa591c9868e5c9eb4\\cache\\.step_node_5_1792397210621_result.json, exiting 0"
+        ],
+        "workbench_url": "",
+        "duration": 15.86
+      },
+      "measured": {
+        "width": 420,
+        "height": 619
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_7_1792397275300",
+      "type": "workflow",
+      "position": {
+        "x": 4980,
+        "y": 1035
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "image_preview",
+        "label": "图片预览器",
+        "config": {
+          "fit": "contain"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "image": "output/img_1_gen_image_node_5_1792397210621.png"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": "",
+        "duration": 0.03
+      },
+      "measured": {
+        "width": 420,
+        "height": 496
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_8_1792397303500",
+      "type": "workflow",
+      "position": {
+        "x": 3660,
+        "y": 1710
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "prompt_opt_video",
+        "label": "生视频提示词优化",
+        "config": {
+          "custom_prompt": "",
+          "opt_template": "video",
+          "llm_model": "vlf-create",
+          "style_template_id": "v-ink-wash-motion",
+          "assemble_result": "远景，缓慢横移，柔和漫射光，墨色为主，淡彩点缀，5 秒，节奏舒缓"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "text": "水墨淡彩质感，墨色为主、淡彩点缀，柔和漫射光笼罩。浓黑夜幕下，穿素布裙的年轻女孩攥紧衣角，下意识后撤半步，满脸惊恐地盯着身前墨色翻涌的传送门，门缘晕着淡紫微光。远景，镜头缓慢横移，节奏舒缓，时长5秒。",
+          "file_path": "Y:\\VideoLingoLc\\control_plane_workspaces\\841960ece953458aa591c9868e5c9eb4\\cache\\prompt_opt_video_node_8_1792397303500.txt"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 634
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_9_1792397358132",
+      "type": "workflow",
+      "position": {
+        "x": 4425,
+        "y": 1785
+      },
+      "data": {
+        "nodeType": "ai_video_gen",
+        "label": "AI生视频",
+        "config": {
+          "prompt_prefix": "",
+          "interface": "agnes_video",
+          "model": "agnes-video-2.5-flash",
+          "mode": "img2video",
+          "resolution": "720P",
+          "ratio": "16:9",
+          "duration": 5,
+          "num_videos": 1,
+          "sound": "on",
+          "negative_prompt": "",
+          "output_prefix": "video",
+          "optimize_prompt": true,
+          "poll_timeout": 1800,
+          "extract_last_frame": false
+        },
+        "status": "failed",
+        "disableExecute": false,
+        "progress": -1,
+        "message": "视频生成未返回结果，请检查接口配置与日志。",
+        "outputs": {},
+        "error": "视频生成未返回结果，请检查接口配置与日志。",
+        "workbench_url": "",
+        "duration": 67.26
+      },
+      "measured": {
+        "width": 420,
+        "height": 409
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_2_1792433420942",
+      "type": "workflow",
+      "position": {
+        "x": 5940,
+        "y": 1665
+      },
+      "data": {
+        "nodeType": "music_txt2music",
+        "label": "AI音乐-文生音乐",
+        "config": {
+          "interface": "kieai_music",
+          "model": "",
+          "custom_prompt_enabled": false,
+          "custom_prompt": "",
+          "poll_timeout": 600,
+          "instrumental": false,
+          "duration": "60"
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 412
+      },
+      "selected": true,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1792395747769",
+      "sourceHandle": "out-text",
+      "target": "node_3_1792396862837",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_1_1792395747769out-text-node_3_1792396862837in-text"
+    },
+    {
+      "source": "node_3_1792396862837",
+      "sourceHandle": "out-text",
+      "target": "node_5_1792397210621",
+      "targetHandle": "in-text",
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1792396862837out-text-node_5_1792397210621in-text"
+    },
+    {
+      "source": "node_5_1792397210621",
+      "sourceHandle": "out-text",
+      "target": "node_7_1792397275300",
+      "targetHandle": "in-image",
+      "type": "bezier",
+      "style": {
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_5_1792397210621out-text-node_7_1792397275300in-image"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ef4444",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_8_1792397303500",
+      "sourceHandle": "out-text",
+      "target": "node_9_1792397358132",
+      "targetHandle": "in-prompt",
+      "id": "xy-edge__node_8_1792397303500out-text-node_9_1792397358132in-prompt"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#ef4444",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1792397210621",
+      "sourceHandle": "out-text",
+      "target": "node_9_1792397358132",
+      "targetHandle": "in-image1",
+      "id": "xy-edge__node_5_1792397210621out-text-node_9_1792397358132in-image1"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1792395747769",
+      "sourceHandle": "out-text",
+      "target": "node_8_1792397303500",
+      "targetHandle": "in-text",
+      "id": "xy-edge__node_1_1792395747769out-text-node_8_1792397303500in-text"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-19T15:43:00",
+  "updatedAt": "2026-10-20T02:43:17",
+  "revision": 36
+}

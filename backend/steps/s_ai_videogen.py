@@ -28,6 +28,7 @@
 时长(duration) 支持手动输入：前端下拉首项为「手动输入」，此时 duration 可能是任意正整数
 （含超出模型预设区间/ 小数取整），由 _to_positive_int 宽松解析，非法值回落5。
 """
+import inspect
 import os
 import shutil
 import logging
@@ -36,6 +37,28 @@ from typing import Callable, Optional
 from backend.steps.base_step import BaseStep
 
 logger = logging.getLogger(__name__)
+
+
+class _VideogenCancelled(Exception):
+    """on_progress 取消探针抛出的内部异常（与引擎真实故障区分，外层转 TaskCancelledError）。"""
+
+
+def _make_cancel_probe(cancel_callback: Callable) -> Callable:
+    """把协作取消探针包装成引擎 on_progress 回调。
+
+    各 SDK 的 on_progress 签名不一（(msg) / (progress, status) / (progress)），
+    统一用 *args 适配；只在检测到取消时抛 _VideogenCancelled，其余情况静默
+    （不干扰引擎自身的进度上报）。探针查询异常不中断生成。
+    """
+    def _probe(*_args):
+        try:
+            cancelled = bool(cancel_callback())
+        except Exception:  # noqa: BLE001 - 探针查询异常不中断生成
+            return
+        if cancelled:
+            raise _VideogenCancelled()
+
+    return _probe
 
 
 def _read_input_as_text(value, task_dir: str = "") -> str:
@@ -164,7 +187,8 @@ class S_AiVideoGen(BaseStep):
     def validate_inputs(self, task_dir: str) -> bool:
         return True
 
-    def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
+    def run(self, task_dir: str, callback: Optional[Callable] = None,
+            cancel_callback: Optional[Callable] = None) -> dict:
         node_id = getattr(self, "_node_id", "unknown")
         node_config = getattr(self, "_node_config", {}) or {}
         step_inputs = getattr(self, "_step_inputs", {}) or {}
@@ -280,6 +304,19 @@ class S_AiVideoGen(BaseStep):
         if poll_timeout:
             extra["poll_timeout"] = int(poll_timeout)
 
+        # 协作取消：thread 域节点无法强杀，云引擎轮询最长 poll_timeout（默认 1800s），
+        # 期间必须可停止。经引擎 on_progress 探针在每次进度轮询时查取消——仅当引擎
+        # 签名支持（**kwargs 或显式 on_progress）时透传，避免 TypeError。
+        # 注意：agnes 包装层会吞掉回调异常（仅日志），该路径的取消仍靠节点超时/进程杀兜底。
+        cancel_probe = _make_cancel_probe(cancel_callback) if cancel_callback is not None else None
+        if cancel_probe is not None:
+            try:
+                _params = inspect.signature(engine.generate).parameters
+            except (TypeError, ValueError):
+                _params = {}
+            if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in _params.values()) or "on_progress" in _params:
+                extra["on_progress"] = cancel_probe
+
         try:
             result_paths = engine.generate(
                 prompt=final_prompt,
@@ -296,6 +333,10 @@ class S_AiVideoGen(BaseStep):
                 audio=sound,
                 **extra,
             )
+        except _VideogenCancelled:
+            from backend.control_plane.runtime import TaskCancelledError
+
+            raise TaskCancelledError("user_requested")
         except Exception as e:
             raise RuntimeError(f"视频生成失败：{e}") from e
 

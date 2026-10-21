@@ -58,11 +58,20 @@ def _task_node_state(node) -> dict:
         outputs = {}
     # error 字段：failed 时优先返回真实错误信息（payload.message），回退错误分类（error_class）
     node_error = (payload.get("message") or node.error_class or "") if node.status == "failed" else (node.error_class or "")
+    # 进度统一读 payload.progress（执行期由 _emit_progress/progress() 实时写入，终态由成功块置 100）；
+    # 旧逻辑硬编码 100/0，与 WS 事件流、task.json 三个源互相矛盾（前端曾加兼容补丁择优）
+    raw_progress = payload.get("progress")
+    if node.status == "succeeded":
+        progress = 100
+    elif isinstance(raw_progress, (int, float)) and not isinstance(raw_progress, bool) and raw_progress >= 0:
+        progress = raw_progress
+    else:
+        progress = 0
     return {
         "nodeType": data.get("nodeType", ""),
         "label": data.get("label", data.get("nodeType", "")),
         "status": NODE_STATUS_MAP.get(node.status, node.status),
-        "progress": 100 if node.status == "succeeded" else 0,
+        "progress": progress,
         "message": "Completed" if node.status == "succeeded" else (payload.get("message", "") if node.status == "failed" else ""),
         "outputs": outputs if isinstance(outputs, dict) else {},
         "error": node_error,
@@ -110,15 +119,16 @@ def _load_task(task_id: str):
         return payload
 
 
-def _legacy_task_json_lock():
-    """取 workflow_runtime 保护 task.json 读-改-写的锁（编译产物 pyd 中同样存在该符号）。
+def _legacy_task_json_lock(task_id: str):
+    """取 workflow_runtime 保护 task.json 读-改-写的上下文（编译产物 pyd 中同样存在该符号）。
 
+    优先用跨进程文件锁（_legacy_json_guard：进程内全局锁 + 按任务文件锁）；
     拿不到时退化为一把进程内私有锁：仍能防止本接口自身并发，但无法与节点落盘互斥。
     """
     try:
-        from backend.control_plane.workflow_runtime import _legacy_lock
+        from backend.control_plane.workflow_runtime import _legacy_json_guard
 
-        return _legacy_lock
+        return _legacy_json_guard(task_id)
     except Exception:
         return threading.Lock()
 
@@ -291,7 +301,7 @@ async def update_task_name(task_id: str, req: TaskNameUpdateRequest):
             raise HTTPException(404, "Task not found")
         # 与 workflow_runtime._write_legacy_task 共用同一把锁，避免与执行期节点落盘竞争：
         # 那边的落盘以磁盘 task.json 为权威并反向吸收 task_name，抢跑会把新名字刷回旧值。
-        with _legacy_task_json_lock():
+        with _legacy_task_json_lock(task_id):
             path = workspace / "task.json"
             try:
                 data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}

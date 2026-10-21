@@ -644,12 +644,27 @@ def creation_matrix(creation_id: str):
         if created > shot_stage_time.get(f"{sid}:{stage}", ""):
             shot_stage_time[f"{sid}:{stage}"] = created
 
-    # 失败台账：(章节, 步骤) → 失败次数
+    # 失败台账：按「同目标最近一次结果」计数——旧逻辑累加全部 failed 行，
+    # 表现为失败一次重跑成功后红色角标永远留着（资产已绿、角标仍红）。
+    # 策略：先取失败行得到候选目标集（大项目下不会被成功行挤出窗口），
+    # 再按 (章节, 步骤, 目标) 取最新一行，仅当最新为 failed 才计入。
     failed: dict[tuple[str, str], int] = {}
     try:
+        candidates: set[tuple[str, str, str, str]] = set()
         for t in agi.list_generation_tasks(creation_id, status="failed", limit=500):
-            key = (t.get("chapter_id") or "", t.get("step_id") or "")
-            failed[key] = failed.get(key, 0) + 1
+            candidates.add((t.get("chapter_id") or "", t.get("step_id") or "",
+                            t.get("target_type") or "", t.get("target_id") or ""))
+        latest_by_target: dict[tuple[str, str, str, str], str] = {}
+        for t in agi.list_generation_tasks(creation_id, limit=1000):
+            tkey = (t.get("chapter_id") or "", t.get("step_id") or "",
+                    t.get("target_type") or "", t.get("target_id") or "")
+            if tkey in candidates and tkey not in latest_by_target:  # 倒序：首见即最新
+                latest_by_target[tkey] = t.get("status") or ""
+        for tkey in candidates:
+            status = latest_by_target.get(tkey, "failed")  # 窗口外无更新 → 失败行即最新
+            if status == "failed":
+                key = (tkey[0], tkey[1])
+                failed[key] = failed.get(key, 0) + 1
     except Exception:  # noqa: BLE001
         failed = {}
 

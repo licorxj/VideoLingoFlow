@@ -23,7 +23,7 @@ import subprocess
 import uuid
 import re
 
-from backend.steps.base_step import BaseStep
+from backend.steps.base_step import BaseStep, step_check_cancel
 from backend.utils.video_encoder import build_video_encode_args
 
 
@@ -609,15 +609,96 @@ def _get_gen_ctx() -> dict:
     return dict(getattr(_gen_ctx, "data", None) or {})
 
 
+def _iso_age_seconds(value) -> float:
+    """ISO 时间戳距今年龄（秒）；解析失败/缺失返回 inf（视为陈旧，允许重新占位）。"""
+    if not value:
+        return float("inf")
+    try:
+        from datetime import datetime, timezone
+
+        dt = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return max(0.0, (datetime.now(timezone.utc) - dt).total_seconds())
+    except Exception:  # noqa: BLE001
+        return float("inf")
+
+
+# 生成占位（claim）视为孤立的超时：进程崩溃/被强杀后 running 台账无人收尾，
+# 超过该时长允许其他执行重新占位，避免目标被永久跳过。
+_CLAIM_STALE_SECONDS = 1800
+
+
+def _claim_target(kind: str) -> str | None:
+    """生成前占位：同目标已有新鲜 running 台账 → None（调用方跳过）。
+
+    把「资产存在性」这种 read-then-act 判重升级为「有没有人在跑」：两个任务
+    同时对同一分镜生图时都会看到无资产而双双进入生成、双双登记资产；
+    占位行让后到者知难而退。任何异常都 fail-open（返回 "" 按无占位继续），
+    台账故障不阻塞生成。
+    """
+    try:
+        from backend import creation as agi
+
+        ctx = _get_gen_ctx()
+        creation_id = ctx.get("creation_id") or ""
+        target_id = ctx.get("target_id") or ""
+        if not creation_id or not target_id:
+            return ""
+        for row in agi.list_generation_tasks(
+            creation_id, kind=kind,
+            target_type=ctx.get("target_type") or "",
+            target_id=target_id, status="running", limit=5,
+        ):
+            if _iso_age_seconds(row.get("created_at")) > _CLAIM_STALE_SECONDS:
+                # 孤立占位（执行方已死）：标记废弃后允许重新占位
+                try:
+                    agi.update_generation_task(row["id"], status="abandoned",
+                                               error="claim stale, reclaimed")
+                except Exception:  # noqa: BLE001
+                    pass
+                continue
+            return None
+        row = agi.add_generation_task(
+            creation_id, kind=kind,
+            target_type=ctx.get("target_type") or "",
+            target_id=target_id,
+            chapter_id=ctx.get("chapter_id") or "",
+            step_id=ctx.get("step_id") or "",
+            status="running",
+        )
+        return row.get("id") or ""
+    except Exception:  # noqa: BLE001
+        return ""
+
+
 def _log_generation(kind: str, *, prompt: str = "", interface: str = "", model: str = "",
                     mode: str = "", result=None, error=None, duration_ms: int = 0) -> None:
-    """登记一次生成调用到台账；台账写入异常不得影响主生成流程。"""
+    """登记一次生成调用到台账；台账写入异常不得影响主生成流程。
+
+    优先更新本次生成前的占位行（_claim_target 插入的 running 行）：同目标
+    一轮只留一行、状态流转 running→success/failed，矩阵失败角标按「同目标
+    最近一次结果」计数才不会只增不减。无占位（未启用/异常退过）时按旧行为
+    插入新行。
+    """
     try:
         from backend import creation as agi
         ctx = _get_gen_ctx()
         creation_id = ctx.get("creation_id") or ""
         if not creation_id:
             return
+        status = "failed" if error else "success"
+        result_json = json.dumps([os.path.abspath(p) for p in (result or [])], ensure_ascii=False)
+        claim_id = ctx.get("claim_id") or ""
+        if claim_id:
+            try:
+                agi.update_generation_task(
+                    claim_id, status=status, result=result_json,
+                    error=str(error or "")[:2000], duration_ms=int(duration_ms or 0),
+                )
+                return
+            except Exception:  # noqa: BLE001 - 占位行丢失等：回落插入新行
+                pass
         agi.add_generation_task(
             creation_id,
             kind=kind,
@@ -628,8 +709,8 @@ def _log_generation(kind: str, *, prompt: str = "", interface: str = "", model: 
             interface=interface, model=model, mode=mode,
             prompt=prompt,
             upstream_task_id=ctx.get("upstream_task_id") or "",
-            status="failed" if error else "success",
-            result=json.dumps([os.path.abspath(p) for p in (result or [])], ensure_ascii=False),
+            status=status,
+            result=result_json,
             error=str(error or "")[:2000],
             duration_ms=int(duration_ms or 0),
         )
@@ -704,6 +785,9 @@ def _gen_images(prompt: str, out_dir: str, cfg: dict, num: int = 1, aspect: str 
                   aspect_ratio=aspect, num_images=num,
                   ref_images=list(ref_images) if ref_images else None,
                   seed=seed, **params)
+        # 分级超时：生图默认 600s（cfg.image_timeout 可覆盖）；_call_engine 按引擎
+        # 签名过滤，不支持的引擎自动剔除
+        kw["timeout"] = _as_int(cfg.get("image_timeout"), 600)
         if image:
             kw["image"] = image
         paths = _call_engine(engine.generate, **kw) or []
@@ -736,6 +820,9 @@ def _gen_video(prompt: str, out_dir: str, cfg: dict, ref_images=None,
         "duration": duration,
         "num_videos": max(1, _as_int(cfg.get("num_videos"), 1)),
         "ref_images": ref_images or None,
+        # 分级超时：生视频默认 1800s（云引擎提交+轮询全流程，cfg.video_timeout 可覆盖）；
+        # 与引擎侧 poll_timeout 默认值对齐，_call_engine 按签名过滤
+        "timeout": _as_int(cfg.get("video_timeout"), 1800),
     }
     if aspect:
         # 节点「比例」配置（原实现漏传，导致该项设置不生效）
@@ -780,6 +867,9 @@ def _tts(text: str, out_path: str, cfg: dict, ref_audio: str = None) -> bool:
         if cfg.get("tts_voice"):
             kwargs["voice"] = cfg.get("tts_voice")
     t0, err = time.time(), None
+    # 分级超时：TTS 默认 300s（cfg.tts_timeout 可覆盖）。经 _call_engine 按引擎
+    # 签名过滤——不支持的引擎自动剔除，不会 TypeError；网络挂起不再拖到节点 1h 超时。
+    kwargs["timeout"] = _as_int(cfg.get("tts_timeout"), 300)
     try:
         ok = _call_engine(engine.synthesize, (text, str(out_path)), **kwargs)
         if not ok or not os.path.exists(out_path) or os.path.getsize(out_path) == 0:
@@ -1254,6 +1344,7 @@ class S_AGI_Project(BaseStep):
         prompt = (f"为 AI 漫剧项目《{name}》搭建故事骨架。\n【创意/要求】\n{brief}{_style_line}\n\n"
                   f"返回 JSON：{{worldview:世界观设定, outline:整体故事大纲, "
                   f"script_text:可分集展开的总剧本文本}}。")
+        step_check_cancel(cancel_callback)  # LLM 单次阻塞调用：调用前兜底取消检查
         resp = _llm(self.step_id, prompt, system=system, json_mode=True,
                             model=(cfg.get("llm_model") or ""))
         worldview, outline, script = "", "", ""
@@ -1383,6 +1474,7 @@ class S_AGI_Deepen(BaseStep):
                 agi.remove_chapter(ch["id"])  # 级联删除其下分镜
         chapters = []
         for c in (data.get("chapters") or []):
+            step_check_cancel(cancel_callback)
             chapters.append(agi.add_chapter(
                 creation_id,
                 title=str(c.get("title") or "").strip(),
@@ -1394,6 +1486,7 @@ class S_AGI_Deepen(BaseStep):
         # 入库 4：人物设计提炼（同名更新，新增写入；造型锚点并入 personality）
         characters = []
         for c in (data.get("characters") or []):
+            step_check_cancel(cancel_callback)
             name = str(c.get("name") or "").strip()
             look = str(c.get("visual_anchor") or "").strip()
             personality = (f"【造型】{look}；" if look else "") + str(c.get("personality") or "").strip()
@@ -1492,6 +1585,7 @@ class S_AGI_Character(BaseStep):
         if style:
             prompt += f"\n整体画风要求：{style}"
 
+        step_check_cancel(cancel_callback)  # LLM 单次阻塞调用：调用前兜底取消检查
         resp = _llm(self.step_id, prompt, system=system, json_mode=True,
                             model=(cfg.get("llm_model") or ""))
         chars = _extract_list(resp)
@@ -1515,6 +1609,7 @@ class S_AGI_Character(BaseStep):
         tags = [t.strip() for t in (cfg.get("genre_tags") or "").replace("，", ",").split(",") if t.strip()]
 
         for i, c in enumerate(chars):
+            step_check_cancel(cancel_callback)
             if not isinstance(c, dict):
                 continue
             name = (c.get("name") or f"人物{i+1}").strip()
@@ -1630,6 +1725,9 @@ class S_AGI_Character(BaseStep):
                                                      (view_files if lib_role else saved)],
                                                     ensure_ascii=False))
                 except Exception as e:  # noqa: BLE001
+                    # 落失败台账：只 callback 的话矩阵/抽屉看不到任何错误痕迹
+                    # （节点最终仍 succeeded，失败信息不能只存在于日志里）
+                    _log_generation("image", error=f"人物 {name} 立绘生成失败：{e}")
                     if callback:
                         callback(80, f"人物 {name} 立绘生成失败（跳过）：{e}")
 
@@ -1822,6 +1920,7 @@ class S_AGI_Voice(BaseStep):
         created, samples, failed = [], [], []
         total = max(1, len(targets))
         for i, t in enumerate(targets):
+            step_check_cancel(cancel_callback)
             c = t["character"]
             name = t["name"]
             if c.get("voice_ref") and not overwrite:
@@ -1944,6 +2043,7 @@ class S_AGI_Scene(BaseStep):
         if style:
             prompt += f"\n整体画风：{style}"
 
+        step_check_cancel(cancel_callback)  # LLM 单次阻塞调用：调用前兜底取消检查
         resp = _llm(self.step_id, prompt, system=system, json_mode=True,
                             model=(cfg.get("llm_model") or ""))
         scenes = _extract_list(resp)
@@ -1954,6 +2054,7 @@ class S_AGI_Scene(BaseStep):
         scene_meta = []
         scene_ids = []
         for i, s in enumerate(scenes):
+            step_check_cancel(cancel_callback)
             if not isinstance(s, dict):
                 s = {"name": f"场景{i+1}", "description": str(s)}
             location = str(s.get("location") or "").strip()
@@ -1997,6 +2098,8 @@ class S_AGI_Scene(BaseStep):
                         agi.update_scene(scene["id"], image_url=abs_p)
                     images.extend(saved)
                 except Exception as e:  # noqa: BLE001
+                    # 落失败台账：只 callback 的话矩阵/抽屉看不到任何错误痕迹
+                    _log_generation("image", error=f"场景 {name} 配图生成失败：{e}")
                     if callback:
                         callback(80, f"场景 {name} 配图生成失败（跳过）：{e}")
             if callback:
@@ -2071,6 +2174,7 @@ class S_AGI_Prop(BaseStep):
         prop_meta = []
         prop_ids = []
         for i, p in enumerate(props):
+            step_check_cancel(cancel_callback)
             if not isinstance(p, dict):
                 p = {"name": f"道具{i+1}", "description": str(p)}
             name = str(p.get("name") or f"道具{i+1}").strip()
@@ -2107,6 +2211,8 @@ class S_AGI_Prop(BaseStep):
                         agi.update_prop(prop["id"], image_url=abs_p)
                     images.extend(saved)
                 except Exception as e:  # noqa: BLE001
+                    # 落失败台账：只 callback 的话矩阵/抽屉看不到任何错误痕迹
+                    _log_generation("image", error=f"道具 {name} 配图生成失败：{e}")
                     if callback:
                         callback(80, f"道具 {name} 配图生成失败（跳过）：{e}")
             if callback:
@@ -2190,6 +2296,7 @@ class S_AGI_Extract(BaseStep):
 
         char_ids, char_meta = [], []
         for c in (_extract_list(data.get("characters")) or []):
+            step_check_cancel(cancel_callback)
             if not isinstance(c, dict):
                 continue
             name = str(c.get("name") or "").strip()
@@ -2219,6 +2326,7 @@ class S_AGI_Extract(BaseStep):
 
         scene_ids, scene_meta = [], []
         for s in (_extract_list(data.get("scenes")) or []):
+            step_check_cancel(cancel_callback)
             if not isinstance(s, dict):
                 s = {"name": str(s)}
             location = str(s.get("location") or "").strip()
@@ -2353,6 +2461,7 @@ class S_AGI_Prompt(BaseStep):
         system = "你是 AI 漫剧的生图提示词工程师，把资产描述与整体画风融合成高质量生图提示词。"
         results = []
         for i, a in enumerate(assets):
+            step_check_cancel(cancel_callback)
             if asset_type == "character":
                 look = _extract_look(a.get("personality") or "")
                 src = (f"姓名：{a.get('name')}\n性别：{a.get('gender')}\n年龄：{a.get('age')}\n"
@@ -2460,6 +2569,7 @@ class S_AGI_Chapter(BaseStep):
                   f"{style_line}"
                   f"返回 JSON 数组，每个元素：{{title:章节标题, original_text:章节剧情原文, "
                   f"summary:本章简述}}。")
+        step_check_cancel(cancel_callback)  # LLM 单次阻塞调用：调用前兜底取消检查
         resp = _llm(self.step_id, prompt, system=system, json_mode=True,
                             model=(cfg.get("llm_model") or ""))
         chapters = _extract_list(resp)
@@ -2471,6 +2581,7 @@ class S_AGI_Chapter(BaseStep):
         existing = {ch["order_no"]: ch for ch in agi.list_chapters(creation_id)}
         produced, skipped = [], []
         for i, c in enumerate(chapters):
+            step_check_cancel(cancel_callback)
             if not isinstance(c, dict):
                 c = {"title": f"第{i+1}章", "original_text": str(c), "summary": ""}
             order_no = i + 1
@@ -2584,6 +2695,7 @@ class S_AGI_Shot(BaseStep):
                   f"atmosphere:氛围与光影, location:地点, time:时间段, "
                   f"duration_seconds:本分镜时长(秒,8-15), "
                   f"bgm_design:背景音乐设计, sfx_design:音效设计}}。")
+        step_check_cancel(cancel_callback)  # LLM 单次阻塞调用：调用前兜底取消检查
         resp = _llm(self.step_id, prompt, system=system, json_mode=True,
                             model=(cfg.get("llm_model") or ""))
         shots = _extract_list(resp)
@@ -2596,6 +2708,7 @@ class S_AGI_Shot(BaseStep):
         existing_shots = {s["order_no"]: s for s in (_chap.get("shots") or [])}
         produced, skipped = [], []
         for i, s in enumerate(shots):
+            step_check_cancel(cancel_callback)
             if not isinstance(s, dict):
                 s = {"scene_descriptions": [str(s)]}
             dur = s.get("duration_seconds")
@@ -2844,6 +2957,14 @@ class S_AGI_ShotFrames(BaseStep):
                     callback(int(90 * (idx + 1) / len(targets)), f"分镜 {idx + 1} 首尾帧已存在，跳过")
                 results.append({"shot_id": sid, "first_frame": "", "last_frame": ""})
                 continue
+            # 并发占位：同分镜已有新鲜 running 台账 → 另一任务正在生成，跳过（防双跑双登记）
+            claim = _claim_target("image")
+            if claim is None:
+                if callback:
+                    callback(int(90 * (idx + 1) / len(targets)), f"分镜 {idx + 1} 正在其他任务中生成，跳过")
+                results.append({"shot_id": sid, "first_frame": "", "last_frame": ""})
+                continue
+            _set_gen_ctx(claim_id=claim)
             scene_txt = "；".join(shot.get("scene_descriptions") or [])
             _looks = _character_looks(creation)
             char_txt = "、".join(
@@ -2992,6 +3113,14 @@ class S_AGI_ShotVideo(BaseStep):
                     callback(int(90 * idx / len(targets)), f"分镜 {idx + 1} 视频已存在，跳过")
                 results.append({"shot_id": sid, "video": _p})
                 continue
+            # 并发占位：同分镜已有新鲜 running 台账 → 另一任务正在生成，跳过（防双跑双登记）
+            claim = _claim_target("video")
+            if claim is None:
+                if callback:
+                    callback(int(90 * idx / len(targets)), f"分镜 {idx + 1} 视频正在其他任务中生成，跳过")
+                results.append({"shot_id": sid, "video": ""})
+                continue
+            _set_gen_ctx(claim_id=claim)
 
             first = last = None
             if not batch:
@@ -3150,6 +3279,14 @@ class S_AGI_ShotDub(BaseStep):
                     callback(int(90 * idx / len(targets)), f"分镜 {idx + 1} 配音已存在，跳过")
                 results.append({"shot_id": sid, "audio": _p, "subtitle": _st, "duration": _a.get("duration_seconds") or 0.0})
                 continue
+            # 并发占位：同分镜已有新鲜 running 台账 → 另一任务正在配音，跳过（防双跑双登记）
+            claim = _claim_target("tts")
+            if claim is None:
+                if callback:
+                    callback(int(90 * idx / len(targets)), f"分镜 {idx + 1} 配音正在其他任务中生成，跳过")
+                results.append({"shot_id": sid, "audio": "", "subtitle": "", "duration": 0.0})
+                continue
+            _set_gen_ctx(claim_id=claim)
             dialogues = [d for d in (shot.get("dialogues") or [])
                          if isinstance(d, dict) and d.get("content")]
             if not dialogues:

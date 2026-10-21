@@ -17,6 +17,7 @@ NODE_CATEGORIES = [
     {"value": "agi_shot", "label": "漫剧·分镜链", "color": "#9333ea", "icon": "Clapperboard"},
     {"value": "agi_render", "label": "漫剧·成片链", "color": "#7c3aed", "icon": "FileVideo"},
     {"value": "agi_data", "label": "漫剧·数据链", "color": "#0891b2", "icon": "Database"},
+    {"value": "ai_desk", "label": "AI剪辑链", "color": "#0ea5e9", "icon": "Scissors"},
     {"value": "aigc", "label": "AIGC流程链", "color": "#22c55e", "icon": "Boxes"},
     {"value": "asset", "label": "素材库", "color": "#84cc16", "icon": "Library"},
     {"value": "agent", "label": "智能体", "color": "#a855f7", "icon": "Bot"},

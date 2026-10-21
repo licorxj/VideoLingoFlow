@@ -175,7 +175,7 @@ def _dynamic_ports(node: dict, direction: str) -> dict[str, str]:
     if node_type == "json_get":
         if direction == "source":
             _add("out", _count("outputCount", 1), ports)
-    elif node_type in ("pi_agent", "opencode_agent"):
+    elif node_type in ("pi_agent", "expert_agent", "opencode_agent"):
         if direction == "source":
             _add("output", _count("outputCount", 2), ports)
         else:

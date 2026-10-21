@@ -1,0 +1,417 @@
+{
+  "id": "1c325247deb8",
+  "name": "口播视频剪辑",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1792053385482",
+      "type": "workflow",
+      "position": {
+        "x": 3255,
+        "y": 1440
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "text": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 411
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1792053421664",
+      "type": "workflow",
+      "position": {
+        "x": 3930,
+        "y": 1410
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "extract_audio",
+        "label": "音频分离",
+        "config": {
+          "format": "auto"
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 187
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1792053445728",
+      "type": "workflow",
+      "position": {
+        "x": 4530,
+        "y": 1410
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "audio_enhance",
+        "label": "音频增强",
+        "config": {
+          "method": "mdx_net_onnx",
+          "model": "Reverb_HQ_By_FoxJoy",
+          "format": "wav"
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 299
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_4_1792053477320",
+      "type": "workflow",
+      "position": {
+        "x": 5055,
+        "y": 1410
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "vocal_separation",
+        "label": "人声分离",
+        "config": {
+          "method": "demucs",
+          "model": "mdx",
+          "format": "wav"
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 300
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1792053509391",
+      "type": "workflow",
+      "position": {
+        "x": 5595,
+        "y": 1395
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "asr",
+        "label": "语音识别 (ASR)",
+        "config": {
+          "engine": "whisperx_local",
+          "language": "auto",
+          "model": "large-v3",
+          "compute_type": "",
+          "batch_size": "20",
+          "word_timestamps": true,
+          "vad_onset": 0.5,
+          "vad_offset": 0.363,
+          "hotwords_enabled": false,
+          "hotwords": "",
+          "post_vad": true,
+          "post_alignment": true,
+          "post_diarization": false
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 404
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1792309594073",
+      "type": "workflow",
+      "position": {
+        "x": 3855,
+        "y": 2085
+      },
+      "data": {
+        "nodeType": "desk_project",
+        "label": "新建剪辑工程",
+        "config": {
+          "name": "",
+          "size": "",
+          "fps": "",
+          "data_dir": ""
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 388
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_3_1792309596058",
+      "type": "workflow",
+      "position": {
+        "x": 4770,
+        "y": 1935
+      },
+      "data": {
+        "nodeType": "desk_material",
+        "label": "剪辑素材导入",
+        "config": {
+          "project": "",
+          "path": "",
+          "paths": "",
+          "folder": "",
+          "asset_ids": "",
+          "add_to_track": true,
+          "track": "V1",
+          "clip_type": "",
+          "from_frame": 0,
+          "duration_frames": 0,
+          "dry_run": true,
+          "data_dir": "",
+          "timeout": 1800
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 879
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1792309597516",
+      "type": "workflow",
+      "position": {
+        "x": 5340,
+        "y": 1965
+      },
+      "data": {
+        "nodeType": "desk_edit",
+        "label": "剪辑编排",
+        "config": {
+          "project": "",
+          "mode": "ai_script",
+          "ops": [
+            {
+              "tool": "",
+              "args": {}
+            }
+          ],
+          "instruction": "",
+          "dry_run": true,
+          "data_dir": "",
+          "timeout": 1800
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 786
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1792309599427",
+      "type": "workflow",
+      "position": {
+        "x": 5880,
+        "y": 1965
+      },
+      "data": {
+        "nodeType": "desk_export",
+        "label": "剪辑台渲染导出",
+        "config": {
+          "project": "",
+          "mode": "render",
+          "out_name": "",
+          "resolution": "",
+          "fps": "",
+          "codec": "",
+          "draft_name": "",
+          "dry_run": true,
+          "data_dir": "",
+          "timeout": 1800,
+          "creation_id": "",
+          "chapter_id": ""
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 695
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1792365303215",
+      "type": "workflow",
+      "position": {
+        "x": 3870,
+        "y": 1785
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "get_task_info",
+        "label": "获取任务信息",
+        "config": {},
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 118
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1792053385482",
+      "sourceHandle": "out-video",
+      "target": "node_2_1792053421664",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792053385482out-video-node_2_1792053421664in-video",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "source": "node_2_1792053421664",
+      "sourceHandle": "out-audio",
+      "target": "node_3_1792053445728",
+      "targetHandle": "in-audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1792053421664out-audio-node_3_1792053445728in-audio",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "source": "node_3_1792053445728",
+      "sourceHandle": "out-audio",
+      "target": "node_4_1792053477320",
+      "targetHandle": "in-audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1792053445728out-audio-node_4_1792053477320in-audio",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "source": "node_4_1792053477320",
+      "sourceHandle": "out-audio",
+      "target": "node_5_1792053509391",
+      "targetHandle": "in-asr_audio",
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_4_1792053477320out-audio-node_5_1792053509391in-asr_audio",
+      "selected": false,
+      "animated": false
+    },
+    {
+      "source": "node_1_1792053385482",
+      "sourceHandle": "out-no_input",
+      "target": "node_1_1792365303215",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792053385482out-no_input-node_1_1792365303215in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1792365303215",
+      "sourceHandle": "out-task_name",
+      "target": "node_2_1792309594073",
+      "targetHandle": "in-name",
+      "id": "xy-edge__node_1_1792365303215out-task_name-node_2_1792309594073in-name"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_2_1792309594073",
+      "sourceHandle": "out-project",
+      "target": "node_3_1792309596058",
+      "targetHandle": "in-project",
+      "id": "xy-edge__node_2_1792309594073out-project-node_3_1792309596058in-project"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-15T16:36:36",
+  "updatedAt": "2026-10-19T07:41:44",
+  "revision": 41
+}

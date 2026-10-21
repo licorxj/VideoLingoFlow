@@ -134,6 +134,7 @@ from backend.steps.s_musicgen import (
     S_StepMusicTxt2Music, S_StepMusicNatural, S_StepMusicLyrics2Music,
     S_StepMusicInstrumental,
 )
+from backend.steps.s_music_prompt import S_MusicPromptOptimizer
 from backend.steps.s_kie_image_upscale import S_KieImageUpscale
 from backend.steps.s_kie_video_upscale import S_KieVideoUpscale
 from backend.steps.s_kie_lip_sync import S_KieLipSync
@@ -464,6 +465,8 @@ _STEPS = {
     "s_step_music_lyrics2music": S_StepMusicLyrics2Music(),
     "step_music_instrumental": S_StepMusicInstrumental(),
     "s_step_music_instrumental": S_StepMusicInstrumental(),
+    "music_prompt_optimizer": S_MusicPromptOptimizer(),
+    "s_music_prompt_optimizer": S_MusicPromptOptimizer(),
     # KIE AI 图片高清放大（直接调用 kieai_sdk，置于 AI生成类节点 分组）
     "kie_image_upscale": S_KieImageUpscale(),
     "s_kie_image_upscale": S_KieImageUpscale(),

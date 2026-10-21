@@ -41,7 +41,12 @@ SECRET_FIELD_NAMES: Set[str] = {
     "password",
 }
 
-_CACHE_TTL_SECONDS = 30.0
+# 缓存 TTL。注意：工作流节点（execution_domain=thread，如 ai_video_gen）跑在常驻
+# celery worker 进程内，而 invalidate() 只清调用进程的缓存。若用户在「密钥管理」
+# 保存密钥后立刻运行工作流，worker 会在本 TTL 窗口内继续用旧密钥（旧密钥已被服务端
+# 吊销时表现为上游 HTTP 401 Invalid token，曾于 2026-10-19 复现）。密钥读取并非热
+# 路径（每次生成任务约几次本地 SQLite 查询），故取较短 TTL 缩小竞态窗口。
+_CACHE_TTL_SECONDS = 5.0
 # 缓存结构（均为进程内状态，name 为密钥名）：
 #   _cache[name]           = (keys_list, rotate, expire)  密钥列表 + 轮询开关
 #   _index_cache[name]     = (current_index, expire)      手动模式的当前下标（DB 同步）

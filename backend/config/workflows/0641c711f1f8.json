@@ -269,7 +269,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 371
+        "height": 870
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -472,9 +472,7 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "skipped": true
-        },
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
@@ -503,9 +501,7 @@
         "status": "completed",
         "progress": 100,
         "message": "Completed",
-        "outputs": {
-          "skipped": true
-        },
+        "outputs": {},
         "error": "",
         "disableExecute": false,
         "workbench_url": ""
@@ -1543,7 +1539,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 327
+        "height": 407
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1574,7 +1570,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 417
+        "height": 497
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1605,7 +1601,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 417
+        "height": 497
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1952,7 +1948,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 417
+        "height": 497
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -1986,16 +1982,15 @@
         },
         "status": "failed",
         "disableExecute": false,
-        "progress": -1,
-        "message": "视频生成未返回结果，请检查接口配置与日志。",
+        "progress": 0,
+        "message": "",
         "outputs": {},
-        "error": "视频生成未返回结果，请检查接口配置与日志。",
-        "workbench_url": "",
-        "duration": 0.14
+        "error": "permanent",
+        "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 410
+        "height": 390
       },
       "selected": false,
       "dragging": false,
@@ -2067,6 +2062,116 @@
       },
       "selected": false,
       "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_8_1792310460551",
+      "type": "workflow",
+      "position": {
+        "x": 12675,
+        "y": 345
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "audio_asset_library",
+        "label": "音频素材库",
+        "config": {
+          "source": "ffde5d77242341899f59f0d003772b73",
+          "asset_name": "need you氛围版"
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\need you氛围版_1.mp3",
+          "info": {
+            "source": "ffde5d77242341899f59f0d003772b73",
+            "source_type": "voiceforge_asset",
+            "file": {
+              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\need you氛围版_1.mp3",
+              "name": "need you氛围版_1.mp3",
+              "size_bytes": 1882820,
+              "from": "X:\\KwDownload\\song\\我期待的不是你-NEED YOU (氛围混搭版).mp3"
+            },
+            "asset": {
+              "id": "ffde5d77242341899f59f0d003772b73",
+              "name": "need you氛围版",
+              "asset_type": "bgm",
+              "category": "romantic",
+              "storage_key": "external/ffde5d77242341899f59f0d003772b73",
+              "file_name": "我期待的不是你-NEED YOU (氛围混搭版).mp3",
+              "file_size": 1882820,
+              "mime_type": "audio/mpeg",
+              "duration": 117.577143,
+              "description": "",
+              "legacy_source_id": null,
+              "legacy_import_batch_id": null,
+              "created_at": "2026-10-07 03:25:49",
+              "updated_at": "2026-10-07 03:25:49",
+              "external_path": "X:\\KwDownload\\song\\我期待的不是你-NEED YOU (氛围混搭版).mp3",
+              "sample_rate": 44100,
+              "channels": 2,
+              "format": "mp3",
+              "is_favorite": 0,
+              "path_key": "x:/kwdownload/song/我期待的不是你-need you (氛围混搭版).mp3",
+              "tags": [
+                "钢琴曲",
+                "轻柔音乐",
+                "浪漫"
+              ],
+              "absolute_path": "X:\\KwDownload\\song\\我期待的不是你-NEED YOU (氛围混搭版).mp3"
+            }
+          }
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] start node_type=audio_asset_library node_id=node_8_1792310460551 pid=29264",
+          "[step_worker] step instance created: S_AudioAssetLibrary",
+          "[step_worker] step_inputs keys=['any']",
+          "[step_worker] node_config keys=['source', 'asset_name']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\0533049ba5d3405d9f1c1b3894366b8f\\cache\\.step_node_8_1792310460551_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 430
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_9_1792310480031",
+      "type": "workflow",
+      "position": {
+        "x": 13350,
+        "y": 120
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "merge_dub_video",
+        "label": "音视频合成",
+        "config": {
+          "video_mute": true,
+          "audio_volume": 1,
+          "audio_fade_in": 0,
+          "audio_fade_out": 0
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_dubbed.mp4"
+        },
+        "error": "",
+        "duration": 0.89
+      },
+      "measured": {
+        "width": 420,
+        "height": 357
+      },
       "dragHandle": ".wf-node-drag-handle"
     }
   ],
@@ -2820,10 +2925,49 @@
       "target": "node_2_1791450756337",
       "targetHandle": "in-segment2",
       "id": "xy-edge__n_muzcc5vn35buout-video-node_2_1791450756337in-segment2"
+    },
+    {
+      "source": "node_2_1791450756337",
+      "sourceHandle": "out-video",
+      "target": "node_8_1792310460551",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1791450756337out-video-node_8_1792310460551in-any"
+    },
+    {
+      "source": "node_2_1791450756337",
+      "sourceHandle": "out-video",
+      "target": "node_9_1792310480031",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1791450756337out-video-node_9_1792310480031in-video"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_8_1792310460551",
+      "sourceHandle": "out-audio",
+      "target": "node_9_1792310480031",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_8_1792310460551out-audio-node_9_1792310480031in-audio"
     }
   ],
   "type": "user",
   "createdAt": "2026-10-01T07:35:21",
-  "updatedAt": "2026-10-10T07:11:46",
-  "revision": 194
+  "updatedAt": "2026-10-18T16:03:02",
+  "revision": 196
 }

@@ -23,6 +23,30 @@ def find_artifact(directory: str, base_name: str) -> Optional[str]:
     return candidates[0] if candidates else None
 
 
+def step_check_cancel(cancel_callback: Optional[Callable]) -> None:
+    """协作取消检查点：thread 域步骤在批处理迭代边界主动查询取消。
+
+    thread 域步骤跑在 worker 线程内、无法被强杀，只能靠步骤主动查询取消状态退出。
+    框架已在每次 callback() 时检查取消（``_run_node`` 的 progress 闭包 /
+    step_worker 的行协议回调），本检查点覆盖「两次 callback 之间的长耗时引擎
+    调用」间隙：命中后抛 ``TaskCancelledError``，不再启动下一轮迭代；已启动的
+    引擎调用返回后由 callback 抛出终止。
+
+    ``cancel_callback`` 为 None（步骤未声明该参数 / 框架未注入）时静默跳过；
+    探针自身异常不冒充取消、不中断主流程。
+    """
+    if cancel_callback is None:
+        return
+    try:
+        cancelled = bool(cancel_callback())
+    except Exception:  # noqa: BLE001 - 检查点自身异常不应中断主流程
+        return
+    if cancelled:
+        from backend.control_plane.runtime import TaskCancelledError
+
+        raise TaskCancelledError("user_requested")
+
+
 class BaseStep(ABC):
     """Abstract base class for pipeline steps. Each step has fixed inputs, outputs, and artifacts."""
 

@@ -105,6 +105,63 @@ BUILTIN_NODE_TYPES = [
         },
     },
     {
+        "id": "video_loader",
+        "name": "视频加载器",
+        "execution_domain": "thread",
+        "category": "io",
+        "description": "在卡片上选择或输入视频文件路径，卡片内直接预览（带播放/暂停控制），输出视频绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。",
+        "icon": "Film",
+        "color": "#3b82f6",
+        "inputs": [
+            {"id": "any", "label": "输入", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "filepath", "label": "文件路径", "type": "any"},
+        ],
+        "defaultConfig": {
+            "filePath": "",
+        },
+        "configFields": [],
+    },
+    {
+        "id": "image_loader",
+        "name": "图片加载器",
+        "execution_domain": "thread",
+        "category": "io",
+        "description": "在卡片上选择或输入图片文件路径，卡片内直接预览（右上角全屏按钮），输出图片绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。",
+        "icon": "Image",
+        "color": "#3b82f6",
+        "inputs": [
+            {"id": "any", "label": "输入", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "filepath", "label": "文件路径", "type": "any"},
+        ],
+        "defaultConfig": {
+            "filePath": "",
+        },
+        "configFields": [],
+    },
+    {
+        "id": "audio_loader",
+        "name": "音频加载器",
+        "execution_domain": "thread",
+        "category": "io",
+        "description": "在卡片上选择或输入音频文件路径，卡片内直接预览（带播放/暂停控制，右上角全屏按钮），输出音频绝对路径给下游节点。按扩展名校验，不拷贝、不转码、不落盘。",
+        "icon": "Volume2",
+        "color": "#3b82f6",
+        "inputs": [
+            {"id": "any", "label": "输入", "type": "any", "required": False},
+        ],
+        "outputs": [
+            {"id": "filepath", "label": "文件路径", "type": "any"},
+        ],
+        "defaultConfig": {
+            "filePath": "",
+        },
+        "configFields": [],
+    },
+    {
         "id": "specified_node_package",
         "name": "指定调用节点包",
         "execution_domain": "thread",
@@ -4614,7 +4671,7 @@ BUILTIN_NODE_TYPES = [
         "name": "在线去水印去字幕",
         "execution_domain": "thread",
         "category": "video",
-        "description": "晴沐智坊提供的在线高质量去除视频中的水印服务，使用前确保注册登录晴沐智坊账号，使用将消耗软件的通用积分，确保积分足够视频消耗，1.3分钱每秒。详情访问晴沐hub：https://www.licorxj.online/capability-hub",
+        "description": "VLF官方节点，登录即可使用，消耗积分1.3积分每秒。请使用【媒体转链接节点】前置获取上传云端信息",
         "icon": "Eraser",
         "color": "#8b5cf6",
         "inputs": [
@@ -5985,13 +6042,47 @@ _STEP_MUSIC_FORMAT_OPTIONS = [
     {"value": "aac", "label": "AAC"},
 ]
 
-# 模型选择两项：本地整合包 / 免费在线模型（值传给 wrapper 决定契约分路）
-_STEP_MUSIC_MODEL_OPTIONS = [
+# 接口类型两项：本地整合包 / 免费在线模型（值传给 wrapper 决定契约分路）
+_STEP_MUSIC_TYPE_OPTIONS = [
     {"value": "local", "label": "step-music（本地整合包）"},
     {"value": "cloud", "label": "免费在线模型（获取key）"},
 ]
 
 _STEP_MUSIC_PACK_URL = "https://pan.quark.cn/s/f4b561117d63"
+
+# 调性常用选项（可下拉可自由输入，12 大小调）
+_STEP_MUSIC_KEY_OPTIONS = [
+    {"value": "C Major", "label": "C 大调"}, {"value": "A Minor", "label": "A 小调"},
+    {"value": "G Major", "label": "G 大调"}, {"value": "E Minor", "label": "E 小调"},
+    {"value": "D Major", "label": "D 大调"}, {"value": "B Minor", "label": "B 小调"},
+    {"value": "A Major", "label": "A 大调"}, {"value": "F# Minor", "label": "F# 小调"},
+    {"value": "E Major", "label": "E 大调"}, {"value": "C# Minor", "label": "C# 小调"},
+    {"value": "B Major", "label": "B 大调"}, {"value": "G# Minor", "label": "G# 小调"},
+    {"value": "F# Major", "label": "F# 大调"}, {"value": "D# Minor", "label": "D# 小调"},
+    {"value": "Db Major", "label": "Db 大调"}, {"value": "Bb Minor", "label": "Bb 小调"},
+    {"value": "Ab Major", "label": "Ab 大调"}, {"value": "F Minor", "label": "F 小调"},
+    {"value": "Eb Major", "label": "Eb 大调"}, {"value": "C Minor", "label": "C 小调"},
+    {"value": "Bb Major", "label": "Bb 大调"}, {"value": "G Minor", "label": "G 小调"},
+    {"value": "F Major", "label": "F 大调"}, {"value": "D Minor", "label": "D 小调"},
+]
+
+# 曲速 BPM 常用选项（可下拉可自由输入）
+_STEP_MUSIC_BPM_OPTIONS = [
+    {"value": v, "label": v} for v in (
+        "60", "66", "70", "76", "80", "84", "88", "90", "92", "96",
+        "100", "104", "108", "110", "112", "116", "120", "124", "126", "128",
+        "132", "136", "140", "144", "150", "160", "170", "180", "190", "200",
+    )
+]
+
+# 节拍选项（time_signature：2/3/4/6 → 2/4、3/4、4/4、6/8 拍；空 = 由模型决定）
+_STEP_MUSIC_TS_OPTIONS = [
+    {"value": "", "label": "由模型决定（默认）"},
+    {"value": "2", "label": "2/4 拍"},
+    {"value": "3", "label": "3/4 拍"},
+    {"value": "4", "label": "4/4 拍"},
+    {"value": "6", "label": "6/8 拍"},
+]
 
 
 def _step_music_node(node_id, name, description, capability, icon="Music",
@@ -6006,12 +6097,19 @@ def _step_music_node(node_id, name, description, capability, icon="Music",
          "url": _STEP_MUSIC_KEY_URL},
         {"key": "btn_download_pack", "label": "下载整合包", "type": "button", "colSpan": "half",
          "url": _STEP_MUSIC_PACK_URL},
-        {"key": "model", "label": "模型", "type": "select", "colSpan": "half",
-         "options": _STEP_MUSIC_MODEL_OPTIONS,
+        {"key": "api_type", "label": "接口类型", "type": "select", "colSpan": "half",
+         "options": _STEP_MUSIC_TYPE_OPTIONS,
          "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"},
+        {"key": "model", "label": "模型", "type": "api-select", "colSpan": "half",
+         "apiEndpoint": f"{MUSIC_IFACE_API}/{_STEP_MUSIC_IFACE}/models-for-node?mode={capability}&api_type={{api_type}}",
+         "dependsOn": "api_type",
+         "placeholder": "跟随接口默认模型"},
         {"key": "custom_prompt", "label": "自定义提示词", "type": "textarea", "colSpan": "full",
          "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
-         "description": "节点自定义输入优先于接入输入"},
+         "description": "节点自定义输入优先于接入输入",
+         "dice": True,
+         "diceEndpoint": f"{MUSIC_IFACE_API}/prompt-example/random?mode={capability}",
+         "diceTitle": "随机示例：抽取一条官方提示词示例填充到节点（不匹配的项自动忽略）"},
     ]
     if with_lyrics:
         fields.append(
@@ -6025,12 +6123,21 @@ def _step_music_node(node_id, name, description, capability, icon="Music",
                         "（质量更高、耗时略增）；关闭则按原文生成"},
         {"key": "thinking", "label": "LM深度思考", "type": "toggle", "colSpan": "half",
          "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"},
+        {"key": "batch_size", "label": "批次生成数量", "type": "number", "min": 1, "max": 4,
+         "colSpan": "half", "description": "单次生成的音频数量（1~4），多结果时超额产物记录在生成参数JSON"},
         {"key": "duration", "label": "时长(秒)", "type": "number", "min": 10, "max": 600,
          "colSpan": "half", "description": "10~600 秒，留空由 LM 自动决定"},
-        {"key": "bpm", "label": "曲速 BPM", "type": "number", "min": 30, "max": 300,
-         "colSpan": "half", "description": "30~300，留空自动决定"},
-        {"key": "key_scale", "label": "调性", "type": "text", "colSpan": "half",
-         "placeholder": "如：C Major / A Minor", "description": "留空自动决定"},
+        {"key": "bpm", "label": "曲速 BPM", "type": "combobox", "colSpan": "half",
+         "options": _STEP_MUSIC_BPM_OPTIONS,
+         "placeholder": "如：120（可下拉选择或手动输入）",
+         "description": "30~300，留空自动决定"},
+        {"key": "key_scale", "label": "调性", "type": "combobox", "colSpan": "half",
+         "options": _STEP_MUSIC_KEY_OPTIONS,
+         "placeholder": "如：C Major / A Minor（可下拉选择或手动输入）",
+         "description": "留空自动决定"},
+        {"key": "time_signature", "label": "节拍", "type": "select", "colSpan": "half",
+         "options": _STEP_MUSIC_TS_OPTIONS,
+         "description": "节拍/拍号；留空由模型根据风格自动决定"},
         {"key": "vocal_language", "label": "演唱语言", "type": "select", "colSpan": "half",
          "options": _STEP_MUSIC_LANG_OPTIONS,
          "description": "歌词演唱语言；纯音乐节点忽略"},
@@ -6052,15 +6159,20 @@ def _step_music_node(node_id, name, description, capability, icon="Music",
         "outputs": [
             {"id": "audio_1", "label": "音频1", "type": "audio"},
             {"id": "audio_2", "label": "音频2", "type": "audio"},
+            {"id": "audio_3", "label": "音频3", "type": "audio"},
+            {"id": "audio_4", "label": "音频4", "type": "audio"},
             {"id": "params", "label": "生成参数JSON", "type": "json"},
         ],
         "defaultConfig": {
-            "model": "cloud",
+            "api_type": "cloud",
+            "model": "",
             "custom_prompt": "",
             "custom_lyrics": "",
             "lm_optimize": True,
             "thinking": False,
+            "batch_size": "2",
             "duration": "30",
+            "time_signature": "",
             "audio_format": "mp3",
             "poll_timeout": 900,
         },
@@ -6090,7 +6202,69 @@ _STEP_MUSIC_NODES = [
         "官方标价 $0 免费；适合视频配乐。",
         "step_instrumental", icon="Music", with_lyrics=False),
 ]
-BUILTIN_NODE_TYPES.extend(_STEP_MUSIC_NODES)
+
+# 音乐提示词优化节点（LLM 扩写：简单描述 → 平台提示词 / 歌词 / 全信息 JSON）
+_MUSIC_PROMPT_OPTIMIZER_NODE = {
+    "id": "music_prompt_optimizer",
+    "name": "音乐提示词优化",
+    "execution_domain": "process",
+    "category": "music_step",
+    "description": (
+        "把对音乐的简单描述按目标平台（ACE-Step / Suno）提示词规范，用 LLM 扩写成"
+        "中文提示词、英文提示词、歌词与全信息 JSON；纯音乐模式下不生成歌词。"
+        "结果可直接接入「免费AI音乐step music」或「AI音乐」节点使用。"),
+    "icon": "Brain",
+    "color": "#22c55e",
+    "inputs": [
+        {"id": "text", "label": "音乐简单描述", "type": "text"},
+    ],
+    "outputs": [
+        {"id": "prompt_zh", "label": "中文提示词", "type": "text"},
+        {"id": "prompt_en", "label": "英文提示词", "type": "text"},
+        {"id": "lyrics", "label": "歌词", "type": "text"},
+        {"id": "params", "label": "全信息Json", "type": "json"},
+    ],
+    "defaultConfig": {
+        "custom_description": "",
+        "platform": "ace",
+        "instrumental": False,
+        "vocal_language": "zh",
+        "singer_gender": "female",
+        "llm_model": "",
+        "temperature": "0.7",
+    },
+    "configFields": [
+        {"key": "custom_description", "label": "自定义音乐描述", "type": "textarea", "colSpan": "full",
+         "placeholder": "填写后优先于连线输入的描述；留空则使用连线接入值（如：一首关于夏天旅行的欢快流行歌）",
+         "description": "节点自定义输入优先于接入输入"},
+        {"key": "platform", "label": "优化平台", "type": "select", "colSpan": "half",
+         "options": [
+             {"value": "ace", "label": "ACE"},
+             {"value": "suno", "label": "Suno"},
+         ],
+         "description": "按所选平台的提示词规范扩写（读取对应平台指导文档）"},
+        {"key": "instrumental", "label": "是否纯音乐", "type": "checkbox", "colSpan": "half",
+         "description": "勾选后生成纯音乐提示词：不输出歌词端口，描述强调器乐/配乐"},
+        {"key": "vocal_language", "label": "歌词语言", "type": "select", "colSpan": "half",
+         "options": _STEP_MUSIC_LANG_OPTIONS,
+         "dependsOn": "instrumental", "dependsValue": False,
+         "description": "生成歌词的演唱语言（纯音乐模式忽略）"},
+        {"key": "singer_gender", "label": "歌者性别", "type": "select", "colSpan": "half",
+         "options": [
+             {"value": "male", "label": "男声"},
+             {"value": "female", "label": "女声"},
+             {"value": "duet", "label": "对唱"},
+         ],
+         "dependsOn": "instrumental", "dependsValue": False,
+         "description": "人声声部（纯音乐模式忽略）"},
+        {"key": "llm_model", "label": "LLM模型", "type": "text", "colSpan": "half",
+         "placeholder": "留空跟随全局 LLM 配置",
+         "description": "执行优化的 LLM 模型名（覆盖全局步骤模型路由）"},
+        {"key": "temperature", "label": "温度", "type": "number", "min": 0, "max": 2,
+         "colSpan": "half", "description": "LLM 采样温度，留空用全局默认"},
+    ],
+}
+BUILTIN_NODE_TYPES.append(_MUSIC_PROMPT_OPTIMIZER_NODE)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

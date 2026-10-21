@@ -3,12 +3,14 @@
 单个任务的归档流程：
 1. 在归档目标文件夹下以「task.json 中的 task_name」新建文件夹；
 2. 复制 workflow.json / task.json（必归档）以及用户勾选的其他文件，保持原始相对结构；
-3. 复制成功后删除本地任务目录（删除失败则跳过，不阻断归档）；
-4. 数据库中将任务标记为已归档（status=archived）并记录归档路径，供后续载回。
+3. 复制任务工作文件夹根目录的 desktop.ini，让归档目录保持与原目录一致的外观属性（图标/自定义名称）；
+4. 复制成功后删除本地任务目录（删除失败则跳过，不阻断归档）；
+5. 数据库中将任务标记为已归档（status=archived）并记录归档路径，供后续载回。
 """
 
 from __future__ import annotations
 
+import ctypes
 import json
 import os
 import re
@@ -23,6 +25,9 @@ from backend.control_plane.workflow_runtime import _workspace
 ARCHIVED_STATUS = "archived"
 REQUIRED_FILES = ("workflow.json", "task.json")
 RUNNING_STATUSES = {"running", "stopping", "queued"}
+# Windows 文件夹「外观属性」（图标 / 自定义名称）保存在该目录下的 desktop.ini 中，
+# 归档时需一并复制，资源管理器才会让目标文件夹沿用同样的外观。
+DESKTOP_INI = "desktop.ini"
 
 VIDEO_EXTS = {"mp4", "avi", "mkv", "mov", "wmv", "flv", "webm", "m4v", "mpg", "mpeg", "ts", "m2ts"}
 SUBTITLE_EXTS = {"srt", "ass", "ssa", "vtt", "sub", "lrc"}
@@ -124,6 +129,45 @@ def task_archive_name(task_id: str) -> str:
 def _safe_folder_name(name: str, fallback: str) -> str:
     cleaned = _INVALID_NAME_CHARS.sub("_", name).strip().strip(".")
     return cleaned or fallback
+
+
+def _mark_hidden(path: Path) -> None:
+    """给文件补上 Windows「隐藏」属性（保留已有属性），使资源管理器能够读取 desktop.ini。
+
+    shutil.copy2 只复制时间戳与只读位，隐藏属性不会保留，故此处显式补齐；
+    任何失败都不影响归档结果，静默忽略。
+    """
+    if os.name != "nt":
+        return
+    hidden_flag = 0x2  # FILE_ATTRIBUTE_HIDDEN
+    invalid_attrs = 0xFFFFFFFF
+    try:
+        kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+        attrs = kernel32.GetFileAttributesW(str(path))
+        if attrs == invalid_attrs or attrs & hidden_flag:
+            return
+        kernel32.SetFileAttributesW(str(path), attrs | hidden_flag)
+    except Exception:  # noqa: BLE001 - 打隐藏标记失败静默忽略
+        pass
+
+
+def copy_folder_appearance(source_dir: Path, dest_dir: Path) -> bool:
+    """把源文件夹根目录的 desktop.ini 复制到目标文件夹，保持文件夹外观属性一致。
+
+    该文件与归档内容无关（缺失、被占用、无权限等都属正常情况），任何异常一律静默
+    处理，不计入归档失败列表。返回是否实际复制成功。
+    """
+    try:
+        source = source_dir / DESKTOP_INI
+        if not source.is_file():
+            return False
+        dest_dir.mkdir(parents=True, exist_ok=True)
+        target = dest_dir / DESKTOP_INI
+        shutil.copy2(source, target)
+        _mark_hidden(target)
+        return True
+    except Exception:  # noqa: BLE001 - 外观属性复制失败静默忽略
+        return False
 
 
 def describe_batch_tasks(tasks: list[Task]) -> list[dict]:
@@ -279,6 +323,10 @@ def _archive_one(
         target = dest / rel
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, target)
+
+    # 顺带搬走任务目录根部的 desktop.ini，让归档目录保留原目录的外观属性（图标/自定义名称）；
+    # 该步骤失败静默处理，不影响归档结果
+    copy_folder_appearance(task_dir, dest)
 
     # 复制成功后再删除本地任务目录；删除失败（占用/权限）则跳过，不影响归档结果
     shutil.rmtree(task_dir, ignore_errors=True)

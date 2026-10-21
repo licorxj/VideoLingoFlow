@@ -1,8 +1,10 @@
 """s_video_publish: Publish video to social platforms via the publish service layer."""
 import json
 import os
+import re
 import subprocess
-from typing import Callable, Optional
+from contextlib import contextmanager
+from typing import Callable, Dict, Iterator, Optional
 
 from backend.steps.base_step import BaseStep
 from backend.steps.io_resolve import resolve_json_input
@@ -71,6 +73,120 @@ def _detect_video_orientation(video_path: str) -> str:
     return "landscape"
 
 
+# Windows 文件名非法字符 + 控制字符
+_ILLEGAL_NAME_CHARS = re.compile(r'[\\/:*?"<>|\x00-\x1f]')
+# 草稿名称最大长度（留出后缀与扩展名空间）
+_MAX_DRAFT_NAME_LEN = 60
+
+
+def _sanitize_draft_name(text: str, max_len: int = _MAX_DRAFT_NAME_LEN) -> str:
+    """把任务名/发布标题清洗为可安全用作文件名的文本。
+
+    - 替换 Windows 非法字符（``\\ / : * ? " < > |``）与控制字符
+    - 压缩连续空白、去掉首尾的点/空白（Windows 不允许点结尾）
+    - 超长截断
+    """
+    name = _ILLEGAL_NAME_CHARS.sub("_", (text or "").strip())
+    name = re.sub(r"\s+", " ", name).strip(" .")
+    if len(name) > max_len:
+        name = name[:max_len].rstrip(" .")
+    return name
+
+
+def _task_name_of(task_dir: str) -> str:
+    """读取 task.json 的 task_name（任务名），缺失时兜底工作区目录名。"""
+    task_json = os.path.join(task_dir, "task.json")
+    if os.path.exists(task_json):
+        try:
+            with open(task_json, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            name = str(data.get("task_name") or "").strip()
+            if name:
+                return name
+        except Exception as e:
+            print(f"[VideoPublish] 读取 task.json 任务名失败: {e}", flush=True)
+    return os.path.basename(os.path.normpath(task_dir))
+
+
+def _build_draft_staging(base_name: str, video_path: str,
+                         cover_landscape: str, cover_portrait: str) -> Dict[str, str]:
+    """按草稿基名生成 ``{原路径: 临时路径}`` 映射（仅本地草稿模式使用）。
+
+    命名规则：
+    - 视频：``{基名}{原扩展名}``
+    - 封面：横竖各一张时为 ``{基名}_封面横`` / ``{基名}_封面竖``；
+      横竖共用同一张图时为 ``{基名}_封面``
+    """
+    staging: Dict[str, str] = {}
+    if not base_name:
+        return staging
+
+    def _target(path: str, suffix: str) -> str:
+        ext = os.path.splitext(path)[1] or ""
+        return os.path.join(os.path.dirname(path), f"{base_name}{suffix}{ext}")
+
+    if video_path:
+        dst = _target(video_path, "")
+        if dst != video_path:
+            staging[video_path] = dst
+
+    same_cover = (
+        bool(cover_landscape) and bool(cover_portrait)
+        and os.path.normpath(cover_landscape) == os.path.normpath(cover_portrait)
+    )
+    if same_cover:
+        dst = _target(cover_landscape, "_封面")
+        if dst != cover_landscape:
+            staging[cover_landscape] = dst
+    else:
+        if cover_landscape:
+            dst = _target(cover_landscape, "_封面横")
+            if dst != cover_landscape:
+                staging[cover_landscape] = dst
+        if cover_portrait:
+            dst = _target(cover_portrait, "_封面竖")
+            if dst != cover_portrait and dst not in staging.values():
+                staging[cover_portrait] = dst
+    return staging
+
+
+@contextmanager
+def _staged_draft_files(staging: Dict[str, str]) -> Iterator[None]:
+    """把待推送文件临时改名为草稿名称，退出时（含异常）恢复原名。
+
+    同目录重命名是元数据操作，不复制文件内容：推送期间第三方拿到的
+    文件名即草稿名称（方便在素材库/草稿箱里标识任务），退出后工作流内
+    其他节点引用的原路径依然有效。
+    """
+    renamed = []
+    try:
+        for src, dst in staging.items():
+            if not src or not dst or src == dst or not os.path.isfile(src):
+                continue
+            try:
+                if os.path.exists(dst):
+                    os.remove(dst)
+                os.rename(src, dst)
+                renamed.append((src, dst))
+                print(f"[VideoPublish] 草稿命名: {os.path.basename(src)} -> {os.path.basename(dst)}", flush=True)
+            except OSError as e:
+                print(f"[VideoPublish] Warning: 草稿命名失败({src} -> {dst}): {e}", flush=True)
+        yield
+    finally:
+        for src, dst in renamed:
+            try:
+                if not os.path.exists(dst):
+                    continue
+                if os.path.exists(src):
+                    # 原名已被占用：保留草稿名文件，避免覆盖工作流产物
+                    print(f"[VideoPublish] Warning: 恢复失败，原文件已存在: {src}", flush=True)
+                    continue
+                os.rename(dst, src)
+                print(f"[VideoPublish] 草稿命名已恢复: {os.path.basename(dst)} -> {os.path.basename(src)}", flush=True)
+            except OSError as e:
+                print(f"[VideoPublish] Warning: 恢复原名失败({dst} -> {src}): {e}", flush=True)
+
+
 class S_VideoPublish(BaseStep):
     step_id = "s_video_publish"
     step_name = "视频发布"
@@ -112,6 +228,10 @@ class S_VideoPublish(BaseStep):
         publish_mode = node_config.get("publish_mode", "publish")
         if isinstance(publish_mode, list):
             publish_mode = publish_mode[0] if publish_mode else "publish"
+        draft_name_mode = node_config.get("draft_name_mode", "task_name")
+        if isinstance(draft_name_mode, list):
+            draft_name_mode = draft_name_mode[0] if draft_name_mode else "task_name"
+        draft_name_mode = str(draft_name_mode or "").strip() or "task_name"
         declaration = node_config.get("declaration", "")
         if isinstance(declaration, list):
             declaration = declaration[0] if declaration else ""
@@ -205,6 +325,12 @@ class S_VideoPublish(BaseStep):
         from backend.publish.platform_config import PLATFORMS
         platform_key = PLATFORMS.get(platform_type, {}).get("key", "unknown")
 
+        # --- 8.5 草稿名称（仅本地草稿模式）：任务名 / 发布标题 ---
+        draft_base = ""
+        if publish_mode == "local_draft":
+            name_source = title if draft_name_mode == "publish_title" else _task_name_of(task_dir)
+            draft_base = _sanitize_draft_name(name_source) or "draft"
+
         if callback:
             mode_labels = {"publish": "发布视频", "platform_draft": "保存平台草稿", "local_draft": "保存本地草稿"}
             callback(30, f"{mode_labels.get(publish_mode, '处理')}到 {len(account_ids)} 个账号...")
@@ -216,23 +342,31 @@ class S_VideoPublish(BaseStep):
         if publish_mode == "local_draft":
             # Save as local draft (visible in the UI draft box)
             print(f"[VideoPublish] local_draft: video={video_path}, "
-                  f"cover_l={cover_landscape or '(none)'}, cover_p={cover_portrait or '(none)'}", flush=True)
+                  f"cover_l={cover_landscape or '(none)'}, cover_p={cover_portrait or '(none)'}, "
+                  f"draft_base={draft_base!r}", flush=True)
             try:
                 account_ids_int = [int(aid) for aid in account_ids]
-                result = client.create_video_draft(
-                    title=title,
-                    file_paths=[video_path],
-                    account_ids=account_ids_int,
-                    platform_key=platform_key,
-                    description=description if description else None,
-                    tags=tags,
-                    thumbnail_landscape=cover_landscape if cover_landscape else None,
-                    thumbnail_portrait=cover_portrait if cover_portrait else None,
-                    schedule_time=actual_schedule,
-                    video_orientation=video_orientation,
-                    is_original=is_original,
-                    declaration=declaration,
-                )
+                # 推送期间把文件临时改名为草稿名称，退出 with 后恢复原名，
+                # 保证工作流内其他节点对原产物的引用不受影响
+                staging = _build_draft_staging(draft_base, video_path, cover_landscape, cover_portrait)
+                staged_video = staging.get(video_path, video_path)
+                staged_l = staging.get(cover_landscape, cover_landscape)
+                staged_p = staging.get(cover_portrait, cover_portrait)
+                with _staged_draft_files(staging):
+                    result = client.create_video_draft(
+                        title=title,
+                        file_paths=[staged_video],
+                        account_ids=account_ids_int,
+                        platform_key=platform_key,
+                        description=description if description else None,
+                        tags=tags,
+                        thumbnail_landscape=staged_l if staged_l else None,
+                        thumbnail_portrait=staged_p if staged_p else None,
+                        schedule_time=actual_schedule,
+                        video_orientation=video_orientation,
+                        is_original=is_original,
+                        declaration=declaration,
+                    )
                 results.append({"status": "success", "result": result})
             except Exception as e:
                 errors.append({"status": "error", "error": str(e)})
@@ -290,6 +424,8 @@ class S_VideoPublish(BaseStep):
                 "description": description,
                 "tags": tags,
                 "publish_mode": publish_mode,
+                "draft_name_mode": draft_name_mode if publish_mode == "local_draft" else "",
+                "draft_base_name": draft_base,
                 "schedule_time": actual_schedule,
                 "is_original": is_original,
                 "video_orientation": video_orientation,

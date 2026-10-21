@@ -6,6 +6,7 @@
   - output_language  输出语言
   - var1             变量1
   - var2             变量2
+  - task_dir         任务目录（当前任务文件夹的绝对路径）
 
 所有取值均来自「输入节点」的配置（最终落到 task.json 的 input 段）与 task.json 顶层 task_name，
 数据以内存方式传递给下游，不落盘。
@@ -33,6 +34,9 @@ class S_GetTaskInfo(BaseStep):
     def run(self, task_dir: str, callback: Optional[Callable] = None) -> dict:
         node_id = getattr(self, "_node_id", "unknown")
         step_inputs = getattr(self, "_step_inputs", {}) or {}
+
+        # 任务目录：当前任务文件夹的绝对路径
+        task_dir = os.path.abspath(task_dir)
 
         task_json_path = os.path.join(task_dir, "task.json")
         workflow_path = os.path.join(task_dir, "workflow.json")
@@ -74,7 +78,8 @@ class S_GetTaskInfo(BaseStep):
         if callback:
             callback(100, f"已获取任务信息: name={task_name or '-'}, "
                            f"in_lang={input_language or '-'}, out_lang={output_language or '-'}, "
-                           f"var1={var1 or '-'}, var2={var2 or '-'}")
+                           f"var1={var1 or '-'}, var2={var2 or '-'}, "
+                           f"dir={task_dir}")
 
         return {
             "artifacts": [],
@@ -84,5 +89,6 @@ class S_GetTaskInfo(BaseStep):
                 "output_language": output_language,
                 "var1": var1,
                 "var2": var2,
+                "task_dir": task_dir,
             },
         }
