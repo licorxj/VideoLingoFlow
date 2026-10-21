@@ -19,9 +19,13 @@ Quick start
             # video (Veo 3.1)
             vid = await client.generate(
                 "generate-veo-3-video", model="veo3_fast", prompt="a dog playing")
-            # music (Suno)
-            song = await client.generate(
-                "generate-music", model="V4_5", prompt="lofi beat", customMode=False)
+            # music (Suno) — prefer the dedicated SunoMusicClient for chaining
+            from .suno import SunoMusicClient
+            async with SunoMusicClient() as music:
+                task = await music.generate(custom_mode=False,
+                                            instrumental=False, model="V6",
+                                            prompt="lofi beat")
+                print("music taskId:", task["taskId"])
             # file upload
             up = await client.upload(method="url", fileUrl="https://x/y.jpg")
 
@@ -41,6 +45,13 @@ from .exceptions import (
 )
 from .models import Catalog, ModelEntry, Param
 from .pricing import KiePricing, PriceRecord, fetch_prices, find_records
+from .suno import (
+    CREATE_TASK_URL,
+    RECORD_INFO_URL,
+    SUNO_OPERATIONS,
+    SunoMusicClient,
+    validate_params,
+)
 
 __all__ = [
     "KieClient",
@@ -52,6 +63,11 @@ __all__ = [
     "PriceRecord",
     "fetch_prices",
     "find_records",
+    "SunoMusicClient",
+    "SUNO_OPERATIONS",
+    "validate_params",
+    "CREATE_TASK_URL",
+    "RECORD_INFO_URL",
     "KieError",
     "KieModelNotFound",
     "KieRequestError",

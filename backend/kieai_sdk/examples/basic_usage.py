@@ -35,13 +35,13 @@ async def main():
         )
         print("VIDEO result:", video)
 
-        # ---- 3. Music generation (Suno) -----------------------------------
+        # ---- 3. Music generation (Suno, unified createTask pattern) -------
         music = await client.generate(
-            "generate-music",                 # family "suno"
-            model="V4_5",
-            prompt="a relaxing lo-fi beat",
-            customMode=False,
+            "suno-generate",                  # family "suno" (ai-music-api)
+            custom_mode=False,                # or use SunoMusicClient helpers
             instrumental=False,
+            model="V6",
+            prompt="a relaxing lo-fi beat",
         )
         print("MUSIC result:", music)
 

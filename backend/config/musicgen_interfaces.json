@@ -17,8 +17,11 @@
         "sdk_module": "backend.musicgen.sdk.kieai_music_wrapper",
         "sdk_function": "generate",
         "sdk_api_key": "secret://KIEAI_API_KEY",
-        "default_model": "V5_5",
+        "default_model": "V6",
         "model_options": [
+          "V6",
+          "V6_MINI",
+          "V6_WILD",
           "V4",
           "V4_5",
           "V4_5PLUS",
@@ -27,6 +30,111 @@
           "V5_5"
         ],
         "model_metadata": {
+          "V6": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          },
+          "V6_MINI": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          },
+          "V6_WILD": {
+            "modes": [
+              "txt2music",
+              "instrumental",
+              "lyrics",
+              "extend",
+              "cover",
+              "add_instrumental",
+              "add_vocals",
+              "separate",
+              "to_wav",
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
+            ],
+            "price": "0.06",
+            "durations": [
+              15,
+              30,
+              60,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          },
           "V4": {
             "modes": [
               "txt2music",
@@ -38,7 +146,18 @@
               "add_vocals",
               "separate",
               "to_wav",
-              "upload_extend"
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
             ],
             "price": "0.06",
             "durations": [
@@ -62,7 +181,18 @@
               "add_vocals",
               "separate",
               "to_wav",
-              "upload_extend"
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
             ],
             "price": "0.06",
             "durations": [
@@ -86,7 +216,18 @@
               "add_vocals",
               "separate",
               "to_wav",
-              "upload_extend"
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
             ],
             "price": "0.06",
             "durations": [
@@ -110,7 +251,18 @@
               "add_vocals",
               "separate",
               "to_wav",
-              "upload_extend"
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
             ],
             "price": "0.06",
             "durations": [
@@ -134,7 +286,18 @@
               "add_vocals",
               "separate",
               "to_wav",
-              "upload_extend"
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
             ],
             "price": "0.06",
             "durations": [
@@ -158,7 +321,18 @@
               "add_vocals",
               "separate",
               "to_wav",
-              "upload_extend"
+              "upload_extend",
+              "persona",
+              "replace_section",
+              "music_video",
+              "timestamped",
+              "sounds",
+              "mashup",
+              "boost_style",
+              "cover_art",
+              "voice_clone",
+              "midi",
+              "recovery"
             ],
             "price": "0.06",
             "durations": [
@@ -212,6 +386,50 @@
           "upload_extend": {
             "enabled": true,
             "endpoint": ""
+          },
+          "persona": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "replace_section": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "music_video": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "timestamped": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "sounds": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "mashup": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "boost_style": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "cover_art": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "voice_clone": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "midi": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "recovery": {
+            "enabled": true,
+            "endpoint": ""
           }
         },
         "sdk_extra_args": {
@@ -222,6 +440,110 @@
         "poll_timeout": 600,
         "api_key_env": "KIEAI_API_KEY",
         "base_url": "https://kieai.erweima.ai"
+      }
+    },
+    {
+      "id": "acestep_music",
+      "name": "ACE-Step step music（免费）",
+      "type": "sdk",
+      "enabled": true,
+      "builtin": true,
+      "balance": null,
+      "description": "ACE-Step 1.5 开源音乐大模型（MIT 许可，官方标价 \\ 免费）。双契约分路：云端直连 api.acemusic.ai（OpenRouter 兼容同步接口，Key 在 acemusic.ai/api-key 免费领取）或本地整合包 /release_task 轮询；支持文生音乐 / 自然语言创作 / 歌词生音乐 / 纯音乐四种模式。",
+      "api_source_url": "https://acemusic.ai/api-key",
+      "model_docs_url": "https://github.com/ace-step/ACE-Step-1.5",
+      "config": {
+        "api_url": "https://api.acemusic.ai",
+        "api_key": "",
+        "sdk_package": "",
+        "sdk_module": "backend.musicgen.sdk.acestep_music_wrapper",
+        "sdk_function": "generate",
+        "sdk_api_key": "secret://ACESTEP_API_KEY",
+        "default_model": "acemusic/acestep-v1.5-xl-turbo",
+        "model_options": [
+          "acemusic/acestep-v1.5-turbo",
+          "acemusic/acestep-v1.5-xl-turbo"
+        ],
+        "model_metadata": {
+          "acemusic/acestep-v1.5-turbo": {
+            "modes": [
+              "step_txt2music",
+              "step_natural",
+              "step_lyrics2music",
+              "step_instrumental",
+              "txt2music",
+              "instrumental",
+              "lyrics"
+            ],
+            "price": "0",
+            "durations": [
+              10,
+              15,
+              30,
+              60,
+              90,
+              120,
+              180,
+              240,
+              300
+            ],
+            "max_ref_audios": 0,
+            "supports_lyrics": true,
+            "params": {
+              "audio_format": "mp3",
+              "inference_steps": 8,
+              "guidance_scale": 7,
+              "temperature": 0.85,
+              "top_p": 0.9,
+              "vocal_language": "en",
+              "batch_size": 1,
+              "timeout": 900,
+              "lm_optimize": true,
+              "thinking": false
+            }
+          },
+          "acemusic/acestep-v1.5-xl-turbo": {
+            "modes": [
+              "txt2music",
+              "lyrics",
+              "instrumental"
+            ],
+            "price": "0",
+            "durations": [
+              60,
+              15,
+              30,
+              120,
+              240
+            ],
+            "max_ref_audios": 1,
+            "supports_lyrics": true
+          }
+        },
+        "modes": {
+          "step_txt2music": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "step_natural": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "step_lyrics2music": {
+            "enabled": true,
+            "endpoint": ""
+          },
+          "step_instrumental": {
+            "enabled": true,
+            "endpoint": ""
+          }
+        },
+        "sdk_extra_args": {},
+        "max_concurrent": 1,
+        "timeout": 600,
+        "poll_timeout": 600,
+        "api_mode": "cloud",
+        "api_key_env": "ACESTEP_API_KEY"
       }
     }
   ]

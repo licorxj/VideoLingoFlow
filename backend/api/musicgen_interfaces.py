@@ -1,8 +1,11 @@
 """音乐生成接口 API 路由（结构镜像 videogen_interfaces.py，针对音乐生成参数）。"""
 import os
+import json
 import uuid
+import random
 import asyncio
 import logging
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Query, Body
 from fastapi.responses import FileResponse
@@ -96,7 +99,8 @@ async def list_musicgen_interfaces():
 @router.get("/enabled")
 async def list_enabled_musicgen_interfaces():
     mgr = get_musicgen_interface_manager()
-    return {"interfaces": mgr.get_enabled()}
+    # get_enabled() 已解析 secret:// 为明文密钥，下发前必须脱敏（与 GET / 、GET /{id} 一致）
+    return {"interfaces": mask_deep(mgr.get_enabled())}
 
 
 @router.get("/{iface_id}")
@@ -143,6 +147,29 @@ async def update_musicgen_interface(iface_id: str, data: MusicGenInterfaceUpdate
         raise HTTPException(status_code=400, detail=str(e))
 
 
+@router.get("/prompt-example/random")
+async def get_random_prompt_example(
+    mode: str = Query("step_txt2music", description="节点能力：step_natural（自然语言）/ step_txt2music / step_lyrics2music / step_instrumental"),
+):
+    """随机抽取一条 ACE-Step 提示词示例。
+
+    step_natural（自然语言生成模式）→ simple_example_*.json（description 驱动）；
+    其余 step 模式（全指令生成模式）→ example_*.json（caption + lyrics 等全字段）。
+    返回原始示例 JSON，由前端按节点字段渲染（不匹配的键静默忽略）。
+    """
+    base = Path(__file__).resolve().parent.parent / "config" / "prompt_guide" / "ace_music"
+    prefix = "simple_example" if mode == "step_natural" else "example"
+    files = sorted(base.glob(f"{prefix}*.json"))
+    if not files:
+        raise HTTPException(status_code=404, detail=f"未找到示例文件（{prefix}*.json）")
+    chosen = random.choice(files)
+    try:
+        data = json.loads(chosen.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as e:
+        raise HTTPException(status_code=500, detail=f"示例文件解析失败 {chosen.name}: {e}")
+    return {"file": chosen.name, "mode": mode, "example": data}
+
+
 @router.delete("/{iface_id}")
 async def delete_musicgen_interface(iface_id: str):
     mgr = get_musicgen_interface_manager()
@@ -178,10 +205,28 @@ async def get_musicgen_models(iface_id: str):
 @router.get("/{iface_id}/models-for-node")
 async def get_musicgen_models_for_node(
     iface_id: str,
-    mode: str = Query("t2m", description="节点模式: t2m / i2m / lyr / ext / cov / ai / av / sep / wav / uext"),
+    mode: str = Query("t2m", description="节点模式: t2m / i2m / lyr / ext / cov / ai / av / sep / wav / uext 或官方能力全名"),
+    api_type: str = Query("", description="接口类型过滤: cloud（acemusic/ 前缀在线模型）/ local（本地部署模型），空不过滤"),
 ):
-    """供节点使用的模型列表与参数 schema（按模式过滤支持的模型）。"""
+    """供节点使用的模型列表与参数 schema（按模式过滤支持的模型）。
+
+    iface_id 传 "default" 时跟随全局默认接口（全局设置 → AI音乐生成），
+    未配置默认接口时回退首个启用接口 —— 供不设「接口选择」的专用节点使用。
+    """
     mgr = get_musicgen_interface_manager()
+    if iface_id == "default":
+        resolved = ""
+        try:
+            from backend.config.config_manager import config as app_config
+            resolved = str(app_config.get("musicgen.method") or "").strip()
+        except Exception:
+            resolved = ""
+        if not resolved or not mgr.get(resolved):
+            enabled = mgr.get_enabled()
+            resolved = enabled[0]["id"] if enabled else ""
+        if not resolved:
+            raise HTTPException(status_code=404, detail="未配置任何音乐生成接口")
+        iface_id = resolved
     iface = mgr.get(iface_id)
     if not iface:
         raise HTTPException(status_code=404, detail="接口不存在")
@@ -190,6 +235,11 @@ async def get_musicgen_models_for_node(
     target_mode = MUSIC_MODE_ALIASES.get(mode, mode)
     models = config.get("model_options", [])
     supported = [m for m in models if target_mode in (metadata.get(m, {}).get("modes", []))]
+    if api_type in ("local", "cloud"):
+        # 接口类型过滤：cloud = acemusic/ 前缀在线模型；local = 本地部署模型
+        supported = [m for m in supported
+                     if (m.startswith("acemusic/") if api_type == "cloud"
+                         else not m.startswith("acemusic/"))]
     sample_meta = metadata.get(supported[0], {}) if supported else {}
     param_schema = {
         "model": {

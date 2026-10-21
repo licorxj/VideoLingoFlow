@@ -8,17 +8,18 @@ Design (mirrors the video/image generation factories):
   returning a list of local audio (and/or lyrics) file paths.
 
 Music generation capabilities are expressed through MODES (see musicgen_interface_manager.MUSIC_MODES).
-Each mode maps to a specific KieAI/Suno catalog model (see kieai_music_wrapper.MODE_CATALOG):
-  txt2music        -> generate-music   (lyrics / text prompt, instrumental=false)
-  instrumental     -> generate-music   (instrumental=true, no vocals)
-  lyrics           -> generate-lyrics  (text -> song lyrics only)
-  extend           -> extend-music     (continue an existing track by audioId)
-  cover            -> upload-and-cover-audio  (style transfer / cover from a reference audio URL)
-  add_instrumental -> add-instrumental (add accompaniment to an uploaded track)
-  add_vocals       -> add-vocals       (add vocals to an uploaded track)
-  separate         -> separate-vocals  (stem separation)
-  to_wav           -> convert-to-wav   (transcode to WAV)
-  upload_extend    -> upload-and-extend-audio (upload + extend)
+Each mode maps to a KieAI/Suno official "ai-music-api/*" operation (unified
+createTask/recordInfo flow, see kieai_music_wrapper.MODE_OPS + kieai/suno.py):
+  txt2music        -> ai-music-api/generate               (custom_mode / lyrics)
+  instrumental     -> ai-music-api/generate               (instrumental=true)
+  lyrics           -> ai-music-api/generate-lyrics        (text -> lyrics only)
+  extend           -> ai-music-api/extend                 (continue by audio_id)
+  cover            -> ai-music-api/upload-and-cover-audio (style transfer from audio/task)
+  add_instrumental -> ai-music-api/add-instrumental       (add accompaniment)
+  add_vocals       -> ai-music-api/add-vocals             (add vocals)
+  separate         -> ai-music-api/separate-vocals        (stem separation)
+  to_wav           -> ai-music-api/convert-to-wav-format  (transcode to WAV)
+  upload_extend    -> ai-music-api/upload-and-extend-audio(upload + extend)
 """
 from typing import List
 

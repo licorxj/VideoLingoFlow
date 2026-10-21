@@ -13629,2100 +13629,6 @@
       }
     },
     {
-      "id": "add-instrumental",
-      "name": "Add Instrumental to Music",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/add-instrumental",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": [
-        "V4_5PLUS",
-        "V5",
-        "V5_5"
-      ],
-      "description": "Generate instrumental accompaniment based on uploaded audio files. This interface allows you to upload audio files and add instrumental tracks to them. ### Usage Guide - Use this interface to add instrumental tracks to existing audio - Supports generation of various music style accompaniments - Allows customization of style, exclusion of specific elements, etc. ### Parameter Details - `uploadUrl` specifies the audio file URL to be processed - `title` specifies the title for the generated music - `tags` and `negativeTags` are used to control music style - Supports various optional parameters for fine-tuning generation effects ### Developer Notes - Generated files will be retained for 14 days - Callback process has three stages: `text` (text generation), `first` (first track completed), `complete` (all completed)",
-      "params": [
-        {
-          "name": "uploadUrl",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "URL of the uploaded audio file. Specifies the source audio file location for adding accompaniment."
-        },
-        {
-          "name": "model",
-          "type": "string",
-          "required": false,
-          "default": "V4_5PLUS",
-          "enum": [
-            "V4_5PLUS",
-            "V5",
-            "V5_5"
-          ],
-          "description": "The AI model version to use for generation. - Available options: - **`V5_5`**：Custom Models Tailored to Your Unique Taste. - **`V5`**: Superior musical expression, faster generation. - **`V4_5PLUS`**: V4.5+ is richer sound, new ways to create."
-        },
-        {
-          "name": "title",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Title of the generated music. Will be displayed in the player interface and file name."
-        },
-        {
-          "name": "negativeTags",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Music styles or characteristics to exclude from the generated audio. Used to avoid specific unwanted music elements."
-        },
-        {
-          "name": "tags",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Music styles or tags to include in the generated music. Defines the desired music style and characteristics."
-        },
-        {
-          "name": "vocalGender",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "m",
-            "f"
-          ],
-          "description": "Vocal gender preference. Optional. 'm' for male, 'f' for female. Based on practice, this parameter can only increase the probability but cannot guarantee adherence to male/female voice instructions."
-        },
-        {
-          "name": "styleWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Adherence strength to specified style. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "weirdnessConstraint",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Controls experimental/creative deviation level. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "audioWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Relative weight of audio elements. Optional. Range 0–1, up to 2 decimal places."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\add-instrumental",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, add-instrumental",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fadd-instrumental",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "add-vocals",
-      "name": "Add Vocals to Music",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/add-vocals",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": [
-        "V4_5PLUS",
-        "V5",
-        "V5_5"
-      ],
-      "description": "Generate music with vocals based on uploaded audio files. This interface allows you to upload audio files and add vocal singing to them. ### Usage Guide - Use this interface to add vocal singing to existing audio - Supports custom lyric content and singing styles - Allows control of vocal gender, style weight, and other parameters ### Parameter Details - `uploadUrl` specifies the audio file URL to be processed - `prompt` defines lyric content and singing style - `style` and `negativeTags` are used to control music and vocal style - Supports various optional parameters for fine-tuning generation effects ### Developer Notes - Generated files will be retained for 14 days - Callback process has three stages: `text` (text generation), `first` (first track completed), `complete` (all completed)",
-      "params": [
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Prompt for generating audio. Usually text describing audio content, used to guide vocal singing content and style."
-        },
-        {
-          "name": "model",
-          "type": "string",
-          "required": false,
-          "default": "V4_5PLUS",
-          "enum": [
-            "V4_5PLUS",
-            "V5",
-            "V5_5"
-          ],
-          "description": "The AI model version to use for generation. - Available options: - **`V5_5`**：Custom Models Tailored to Your Unique Taste. - **`V5`**: Superior musical expression, faster generation. - **`V4_5PLUS`**: V4.5+ is richer sound, new ways to create."
-        },
-        {
-          "name": "title",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Music title. Will be displayed in the player interface and file name."
-        },
-        {
-          "name": "negativeTags",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Excluded music styles. Used to avoid including specific styles or elements in the generated music."
-        },
-        {
-          "name": "style",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Music style. Such as jazz, electronic, classical and other music types."
-        },
-        {
-          "name": "vocalGender",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "m",
-            "f"
-          ],
-          "description": "Vocal gender preference. Optional. 'm' for male, 'f' for female. Based on practice, this parameter can only increase the probability but cannot guarantee adherence to male/female voice instructions."
-        },
-        {
-          "name": "styleWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Adherence strength to specified style. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "weirdnessConstraint",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Controls experimental/creative deviation level. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "audioWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Relative weight of audio elements. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "uploadUrl",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "URL of the uploaded audio file. Specifies the source audio file location for adding vocals."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\add-vocals",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, add-vocals",
-        "anchor": "https://kie.ai/suno-api",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "boost-music-style",
-      "name": "Boost Music Style",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/style/generate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Boost Music Style",
-      "params": [
-        {
-          "name": "content",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Style description. Please describe in concise and clear language the music style you expect to generate. Example: 'Pop, Mysterious'"
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.002",
-      "kie_price": "0.002",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\boost-music-style",
-      "pricing": {
-        "official_price": "0.002",
-        "kie_price": "0.002",
-        "credit_price": "0.4",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Boost Music Style Boost",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fboost-music-style",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "convert-to-wav",
-      "name": "Convert to WAV Format",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/wav/generate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Convert an existing music track to high-quality WAV format. ### Usage Guide - Use this endpoint to obtain WAV format files from your generated music - WAV files provide uncompressed audio for professional editing and processing - Converted files maintain the full quality of the original audio ### Parameter Details - `taskId` identifies the original music generation task - `audioId` specifies which audio track to convert when multiple variations exist ### Developer Notes - Generated WAV files are retained for 14 days - WAV files are typically 5-10 times larger than MP3 equivalents - Processing time may vary depending on the length of the original audio",
-      "params": [
-        {
-          "name": "taskId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Unique identifier of the music generation task. This should be a taskId returned from either the \"Generate Music\" or \"Extend Music\" endpoints."
-        },
-        {
-          "name": "audioId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Unique identifier of the specific audio track to convert. This ID is returned in the callback data after music generation completes."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.002",
-      "kie_price": "0.002",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\convert-to-wav",
-      "pricing": {
-        "official_price": "0.002",
-        "kie_price": "0.002",
-        "credit_price": "0.4",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, convert-to-wav-format",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fconvert-to-wav-format",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "generate-cover",
-      "name": "Generate Music Cover",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/suno/cover/generate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Generate personalized cover images based on original music tasks. ### Usage Guide - Use this interface to create personalized cover images for generated music - Requires the taskId of the original music task - Each music task can only generate a Cover once; duplicate requests will return the existing taskId - Results will be notified through the callback URL upon completion ### Parameter Details - `taskId` identifies the unique identifier of the original music generation task - `callBackUrl` receives callback address for completion notifications ### Developer Notes - Cover image file URLs will be retained for 14 days - If a Cover has already been generated for this music task, a 400 status code and existing taskId will be returned - It's recommended to call this interface after music generation is complete - Usually generates 2 different style images for selection",
-      "params": [
-        {
-          "name": "taskId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Original music task ID, should be the taskId returned by the music generation interface."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\cover-suno",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Extend Music",
-        "anchor": "https://kie.ai/suno-api",
-        "variants": 1,
-        "approx": true
-      }
-    },
-    {
-      "id": "create-music-video",
-      "name": "Create Music Video",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/mp4/generate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Create a video with visualizations based on your generated music track. ### Usage Guide - Use this endpoint to turn your audio tracks into visually appealing videos - Add artist attribution and branding to your music videos - Videos can be shared on social media or embedded in websites ### Parameter Details - `taskId` identifies the original music generation task - `audioId` specifies which audio track to visualize when multiple variations exist - Optional `author` and `domainName` add customized branding to the video ### Developer Notes - Generated video files are retained for 14 days - Videos are optimized for social media sharing - Processing time varies based on audio length and server load",
-      "params": [
-        {
-          "name": "taskId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Unique identifier of the music generation task. This should be a taskId returned from either the \"Generate Music\" or \"Extend Music\" endpoints."
-        },
-        {
-          "name": "audioId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Unique identifier of the specific audio track to visualize. This ID is returned in the callback data after music generation completes."
-        },
-        {
-          "name": "author",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Artist or creator name to display as a signature on the video cover. Maximum 50 characters. This creates attribution for the music creator."
-        },
-        {
-          "name": "domainName",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Website or brand to display as a watermark at the bottom of the video. Maximum 50 characters. Useful for promotional branding or attribution."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.01",
-      "kie_price": "0.01",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\create-music-video",
-      "pricing": {
-        "official_price": "0.01",
-        "kie_price": "0.01",
-        "credit_price": "2.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, create-music-video",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fcreate-music-video",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "extend-music",
-      "name": "Extend Music",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/extend",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": [
-        "V4",
-        "V4_5",
-        "V4_5PLUS",
-        "V4_5ALL",
-        "V5",
-        "V5_5"
-      ],
-      "description": "Extend or modify existing music by creating a continuation based on a source audio track. ### Usage Guide - This endpoint allows you to extend existing music tracks - You can choose to use original parameters or set new custom parameters - Extended music will maintain style consistency with the source track ### Parameter Details - With Custom Parameters (`defaultParamFlag: true`): - `prompt`, `style`, `title` and `continueAt` are required - Character limits vary by model: - **V4**: `prompt` 3000 characters, `style` 200 characters, `title` 80 characters - **V4_5 & V4_5PLUS**: `prompt` 5000 characters, `style` 1000 characters, `title` 100 characters - **V4_5ALL**: `prompt` 5000 characters, `style` 1000 characters, `title` 80 characters - **V5_5 & V5**: `prompt` 5000 characters, `style` 1000 characters, `title` 100 characters - With Original Parameters (`defaultParamFlag: false`): - Only `audioId` is required - Other parameters will be inherited from the source audio ### Developer Notes - Generated files are retained for 14 days - Model version must match the source audio's model version - Callback process follows the same pattern as the music generation endpoint",
-      "params": [
-        {
-          "name": "defaultParamFlag",
-          "type": "boolean",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Controls parameter source for extension. - If `true`: Use custom parameters specified in this request. Requires `continueAt`, `prompt`, `style`, and `title`. - If `false`: Use original audio parameters. Only `audioId` is required, other parameters are inherited."
-        },
-        {
-          "name": "taskId",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Task ID from the original music generation. Optional."
-        },
-        {
-          "name": "audioId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Unique identifier of the audio track to extend. Required for all extension requests."
-        },
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Prompt describing the desired audio extension content. - Required when `defaultParamFlag` is `true` (this parameter is not needed if `instrumental` is `true`). - Character limits by model: - **V4**: Max 3,000 characters - **V4_5 and V4_5PLUS**: Max 5,000 characters - **V4_5ALL**: Max 5,000 characters - **V5_5 and V5**: Max 5,000 characters - Describe how the music should continue or evolve in the extended section."
-        },
-        {
-          "name": "style",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Music style specification for the extended audio. - Required when `defaultParamFlag` is `true`. - Character limits by model: - **V4**: Maximum 200 characters - **V4_5 & V4_5PLUS**: Maximum 1000 characters - **V4_5ALL**: Maximum 1000 characters - **V5_5 & V5**: Maximum 1000 characters - Should typically align with the original audio's style for best results."
-        },
-        {
-          "name": "title",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Title for the extended music track. - Required when `defaultParamFlag` is `true`. - Character limits by model: - **V4**: Maximum 80 characters - **V4_5 & V4_5PLUS**: Maximum 100 characters - **V4_5ALL**: Maximum 80 characters - **V5_5 & V5**: Maximum 100 characters - Will be displayed in player interfaces and filenames."
-        },
-        {
-          "name": "continueAt",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "The time point (in seconds) from which to start extending the music. - Required when `defaultParamFlag` is `true`. - Value range: greater than 0 and less than the total duration of the generated audio. - Specifies the position in the original track where the extension should begin."
-        },
-        {
-          "name": "model",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": [
-            "V4",
-            "V4_5",
-            "V4_5PLUS",
-            "V4_5ALL",
-            "V5",
-            "V5_5"
-          ],
-          "description": "The AI model version to use for generation. - Required for all requests. - Available options: - **`V5_5`**：Custom Models Tailored to Your Unique Taste. - **`V5`**: Superior musical expression, faster generation. - **`V4_5PLUS`**: V4.5+ delivers richer sound, new ways to create, max 8 min. - **`V4_5`**: V4.5 enables smarter prompts, faster generations, max 8 min. - **`V4_5ALL`**: V4.5ALL enables smarter prompts, faster generations, max 8 min. - **`V4`**: V4 improves vocal quality, max 4 min."
-        },
-        {
-          "name": "negativeTags",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Music styles or traits to exclude from the extended audio. Optional. Use to avoid specific undesired characteristics."
-        },
-        {
-          "name": "vocalGender",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "m",
-            "f"
-          ],
-          "description": "Vocal gender preference. Optional. 'm' denotes a male voice, and 'f' denotes a female voice. In practice, this parameter only influences the probability and does not guarantee strict adherence to the gender instruction. This parameter is not required if `instrumental` is set to `true`."
-        },
-        {
-          "name": "styleWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Strength of adherence to the specified style. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "weirdnessConstraint",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Controls experimental/creative deviation. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "audioWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Balance weight for audio features vs. other factors. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "personaId",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Only available when Custom Mode (`customMode: true`) is enabled. Persona ID or Voice ID to apply to the generated music. Optional. Use this to apply a specific persona style to your music generation. To generate a persona ID, use the [Generate Persona](https://docs.kie.ai/suno-api/generate-persona) endpoint to create a personalized music Persona based on generated music. To generate a Voice ID, use the [Generate Voice](https://docs.kie.ai/suno-api/suno-voice-generate)endpoint"
-        },
-        {
-          "name": "personaModel",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "style_persona",
-            "voice_persona"
-          ],
-          "description": "The persona model is only available for models version 5 and 5.5."
-        },
-        {
-          "name": "instrumental",
-          "type": "boolean",
-          "required": false,
-          "default": false,
-          "enum": null,
-          "description": "Indicates whether it is an instrumental track. If true, passing the `prompt` and `vocalGender` parameters is prohibited."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\extend-music",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Extend Music",
-        "anchor": "https://kie.ai/suno-api",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "generate-lyrics",
-      "name": "Generate Lyrics",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/lyrics",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Generate creative lyrics content based on a text prompt. ### Usage Guide - Use this endpoint to create lyrics for music composition - Multiple variations of lyrics will be generated for each request - Each generated lyric set includes title and structured verse/chorus sections ### Parameter Details - `prompt` should describe the theme, style, or subject of the desired lyrics - A detailed prompt yields more targeted and relevant lyrics ### Developer Notes - Generated lyrics are retained for 14 days - Callback occurs once with all generated variations when complete - Typically returns 2-3 different lyric variations per request - Each lyric set is formatted with standard section markers ([Verse], [Chorus], etc.)",
-      "params": [
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Description of the desired lyrics content. Be specific about theme, mood, style, or story elements you want in the lyrics. More detailed prompts yield better results. The maximum word limit is 200 characters."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.002",
-      "kie_price": "0.002",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\generate-lyrics",
-      "pricing": {
-        "official_price": "0.002",
-        "kie_price": "0.002",
-        "credit_price": "0.4",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Generate Lyrics",
-        "anchor": "https://docs.kie.ai/suno-api/generate-lyrics",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "generate-mashup",
-      "name": "Generate Mashup Music",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/mashup",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": [
-        "V4",
-        "V4_5",
-        "V4_5PLUS",
-        "V4_5ALL",
-        "V5",
-        "V5_5"
-      ],
-      "description": "> Create remix music using AI models by combining multiple audio tracks. ## Usage Guide - This interface creates remix music from up to 2 uploaded audio files. - It combines elements from multiple tracks into a coherent new piece. - You can control the level of detail using custom mode and instrumental settings. ## Parameter Details - `uploadUrlList` is required and must contain exactly 2 audio file URLs. ### In Custom Mode (`customMode: true`) Character limits for `prompt` across different models: | Model | `prompt` Limit | `style` Limit | |:---|:---|:---| | **V4** | 3000 characters | 200 characters | | **V4_5** and **V4_5PLUS** | 5000 characters | 1000 characters | | **V4_5ALL** | 5000 characters | 1000 characters | | **V5** and **V5_5** | 5000 characters | 1000 characters | - `title` length limit: 80 characters (all models). ### In Non-Custom Mode (`customMode: false`) - `prompt` length limit: 500 characters. - `instrumental`: Whether to generate instrumental music. - Other parameters should be left empty. ## Developer Notes :::tip New users are advised to start with `customMode: false`, which is simpler. ::: - Generated files will be retained for 14 days. - The callback process has three stages: `text` (text generation), `first` (first track complete), `complete` (all complete). - Uploaded audio files must have publicly accessible URLs. - `uploadUrlList` must contain exactly 2 audio file URLs to initiate remix generation. ## Optional Parameters | Parameter | Type | Description | |:---|:---|:---| | `vocalGender` | string | Vocal gender preference. `m` for male, `f` for female. **Note**: This parameter only takes effect when `customMode` is `true`. In practice, this parameter only increases the probability but does not guarantee adherence to the specified vocal gender. | | `styleWeight` | number | Strength of adherence to style. **Note**: This parameter only takes effect when `customMode` is `true`. Range is 0–1, with two decimal places. Example: `0.61`. | | `weirdnessConstraint` | number | Creativity/discreteness level. **Note**: This parameter only takes effect when `customMode` is `true`. Range is 0–1, with two decimal places. Example: `0.72`. | | `audioWeight` | number | Weight of audio elements. **Note**: This parameter only takes effect when `customMode` is `true`. Range is 0–1, with two decimal places. Example: `0.65`. |",
-      "params": [
-        {
-          "name": "uploadUrlList",
-          "type": "array<string>",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Array of audio file URLs to mashup. Must contain exactly 2 URLs. Each URL must be publicly accessible."
-        },
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "A description of the desired audio content. - In Custom Mode (`customMode: true`): Required if `instrumental` is `false`. The prompt will be strictly used as the lyrics and sung in the generated track. Character limits by model: - **V4**: Maximum 3000 characters - **V4_5 & V4_5PLUS**: Maximum 5000 characters - **V4_5ALL**: Maximum 5000 characters - **V5 & V5_5**: Maximum 5000 characters Example: \"A calm and relaxing piano track with soft melodies\" - In Non-custom Mode (`customMode: false`): Always required. The prompt serves as the core idea, and lyrics will be automatically generated based on it (not strictly matching the input). Maximum 500 characters. Example: \"A short relaxing piano tune\""
-        },
-        {
-          "name": "style",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Music style specification for the generated audio. - Only available and required in Custom Mode (`customMode: true`). Defines the genre, mood, or artistic direction. - Character limits by model: - **V4**: Maximum 200 characters - **V4_5 & V4_5PLUS**: Maximum 1000 characters - **V4_5ALL**: Maximum 1000 characters - **V5 & V5_5**: Maximum 1000 characters - Common examples: Jazz, Classical, Electronic, Pop, Rock, Hip-hop, etc."
-        },
-        {
-          "name": "title",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Title for the generated music track. - Only available and required in Custom Mode (`customMode: true`). - Max length: 80 characters. - Will be displayed in player interfaces and filenames."
-        },
-        {
-          "name": "customMode",
-          "type": "boolean",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Determines if advanced parameter customization is enabled. - If `true`: Allows detailed control with specific requirements for `style` and `title` fields. - If `false`: Simplified mode where only `prompt` is required and other parameters are ignored."
-        },
-        {
-          "name": "instrumental",
-          "type": "boolean",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Determines if the audio should be instrumental (no lyrics). - In Custom Mode (`customMode: true`): - If `true`: Only `style` and `title` are required. - If `false`: `style`, `title`, and `prompt` are required (with prompt used as the exact lyrics). - In Non-custom Mode (`customMode: false`): No impact on required fields (prompt only)."
-        },
-        {
-          "name": "model",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": [
-            "V4",
-            "V4_5",
-            "V4_5PLUS",
-            "V4_5ALL",
-            "V5",
-            "V5_5"
-          ],
-          "description": "The AI model version to use for generation. - Required for all requests. - Available options: - **`V5_5`**: Custom Models Tailored to Your Unique Taste. - **`V5`**: Superior musical expression, faster generation. - **`V4_5PLUS`**: V4.5+ delivers richer sound, new ways to create, max 8 min. - **`V4_5`**: V4.5 enables smarter prompts, faster generations, max 8 min. - **`V4_5ALL`**: V4.5ALL enables smarter prompts, faster generations, max 8 min. - **`V4`**: V4 improves vocal quality, max 4 min."
-        },
-        {
-          "name": "vocalGender",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "m",
-            "f"
-          ],
-          "description": "Vocal gender preference for the singing voice. - Only available in Custom Mode (`customMode: true`). Optional. Use 'm' for male and 'f' for female. Based on practice, this parameter can only increase the probability but cannot guarantee adherence to male/female voice instructions."
-        },
-        {
-          "name": "styleWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Strength of adherence to the specified style. - Only available in Custom Mode (`customMode: true`). Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "weirdnessConstraint",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Controls experimental/creative deviation. - Only available in Custom Mode (`customMode: true`). Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "audioWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Balance weight for audio features vs. other factors. - Only available in Custom Mode (`customMode: true`). Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "duration",
-          "type": "integer",
-          "required": false,
-          "default": 20,
-          "enum": null,
-          "description": "Duration is selectable; valid only when `custom_mode` is `true` and `model` is `V5_5`."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\generate-mashup",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Extend Music",
-        "anchor": "https://kie.ai/suno-api",
-        "variants": 1,
-        "approx": true
-      }
-    },
-    {
-      "id": "generate-midi",
-      "name": "Generate MIDI from Audio",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/midi/generate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "> Convert separated audio tracks into MIDI format with detailed note information for each instrument. ## Usage Guide * Convert separated audio tracks into structured MIDI data containing pitch, timing, and velocity information * Requires a completed vocal separation task ID (from the Vocal Removal API) * Generates MIDI note data for multiple detected instruments including drums, bass, guitar, keyboards, and more * Ideal for music transcription, notation, remixing, or educational analysis * Best results on clean, well-separated audio tracks with clear instrument parts ## Prerequisites :::warning Required You must first use the [Vocal & Instrument Stem Separation](/suno-api/separate-vocals) API to separate your audio before generating MIDI. ::: ## Parameter Reference | Name | Type | Description | | :--- | :--- | :--- | | **`taskId`** | string | **Required.** Task ID from a completed vocal separation. | | **`callBackUrl`** | string | **Required.** URL to receive MIDI generation completion notifications. | | **`audioId`** | string | **Optional.** Specifies which separated audio track to generate MIDI from. This `audioId` can be obtained from the `originData` array in the [Get Vocal Separation Details](/suno-api/get-vocal-separation-details) endpoint response. Each item in `originData` contains an `id` field that can be used here. If not provided, MIDI will be generated from all separated tracks. | ## Developer Notes * The callback will contain detailed note data for each detected instrument. * Each note includes: `pitch` (MIDI note number), `start` (seconds), `end` (seconds), `velocity` (0-1). * Not all instruments may be detected — depends on audio content. * **Pricing:** Check current per-call credit costs at [**https://kie.ai/pricing**](https://kie.ai/pricing).",
-      "params": [
-        {
-          "name": "taskId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Task ID from a completed vocal separation. This should be the taskId returned from the Vocal & Instrument Stem Separation endpoint."
-        },
-        {
-          "name": "audioId",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Optional. Specifies which separated audio track to generate MIDI from. This audioId can be obtained from the `originData` array in the Get Vocal Separation Details endpoint response. Each item in `originData` contains an `id` field that can be used here. If not provided, MIDI will be generated from all separated tracks."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0",
-      "kie_price": "0",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\generate-midi",
-      "pricing": {
-        "official_price": "0",
-        "kie_price": "0",
-        "credit_price": "0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Generate Midi From Audio",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fgenerate-midi-from-audio",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "generate-music",
-      "name": "Generate Music",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": [
-        "V4",
-        "V4_5",
-        "V4_5PLUS",
-        "V4_5ALL",
-        "V5",
-        "V5_5"
-      ],
-      "description": "Generate music with or without lyrics using AI models. ### Usage Guide - This endpoint creates music based on your text prompt - Multiple variations will be generated for each request - You can control detail level with custom mode and instrumental settings ### Parameter Details - In Custom Mode (`customMode: true`): - If `instrumental: true`: `style` and `title` are required - If `instrumental: false`: `style`, `prompt`, and `title` are required - `duration` is an optional parameter and is only effective when model is set to V5_5. - Character limits vary by model: - **V4**: `prompt` 3000 characters, `style` 200 characters - **V4_5 & V4_5PLUS**: `prompt` 5000 characters, `style` 1000 characters - **V4_5ALL**: `prompt` 5000 characters, `style` 1000 characters - **V5_5 & V5**: `prompt` 5000 characters, `style` 1000 characters - `title` length limit: 80 characters (all models) - In Non-custom Mode (`customMode: false`): - Only `prompt` is required regardless of `instrumental` setting - `prompt` length limit: 3000 characters - Other parameters should be left empty ### Developer Notes - Recommendation for new users: Start with `customMode: false` for simpler usage - Generated files are retained for 14 days - Callback process has three stages: `text` (text generation), `first` (first track complete), `complete` (all tracks complete)",
-      "params": [
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "A description of the desired audio content. - In Custom Mode (`customMode: true`): Required if `instrumental` is `false`. The prompt will be strictly used as the lyrics and sung in the generated track. Character limits by model: - **V4**: Maximum 3000 characters - **V4_5 & V4_5PLUS**: Maximum 5000 characters - **V4_5ALL**: Maximum 5000 characters - **V5_5 & V5**: Maximum 5000 characters Example: \"A calm and relaxing piano track with soft melodies\" - In Non-custom Mode (`customMode: false`): Always required. The prompt serves as the core idea, and lyrics will be automatically generated based on it (not strictly matching the input). Maximum 3000 characters. Example: \"A short relaxing piano tune\""
-        },
-        {
-          "name": "style",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Music style specification for the generated audio. - Required in Custom Mode (`customMode: true`). Defines the genre, mood, or artistic direction. - Character limits by model: - **V4**: Maximum 200 characters - **V4_5 & V4_5PLUS**: Maximum 1000 characters - **V4_5ALL**: Maximum 1000 characters - **V5_5 & V5**: Maximum 1000 characters - Common examples: Jazz, Classical, Electronic, Pop, Rock, Hip-hop, etc."
-        },
-        {
-          "name": "title",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Title for the generated music track. - Required in Custom Mode (`customMode: true`). - Max length: 80 characters. - Will be displayed in player interfaces and filenames."
-        },
-        {
-          "name": "customMode",
-          "type": "boolean",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Determines if advanced parameter customization is enabled. - If `true`: Allows detailed control with specific requirements for `style` and `title` fields. - If `false`: Simplified mode where only `prompt` is required and other parameters are ignored."
-        },
-        {
-          "name": "instrumental",
-          "type": "boolean",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Determines if the audio should be instrumental (no lyrics). - In Custom Mode (`customMode: true`): - If `true`: Only `style` and `title` are required. - If `false`: `style`, `title`, and `prompt` are required (with prompt used as the exact lyrics). - In Non-custom Mode (`customMode: false`): No impact on required fields (prompt only)."
-        },
-        {
-          "name": "model",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": [
-            "V4",
-            "V4_5",
-            "V4_5PLUS",
-            "V4_5ALL",
-            "V5",
-            "V5_5"
-          ],
-          "description": "The AI model version to use for generation. - Required for all requests. - Available options: - **`V5_5`**：Custom Models Tailored to Your Unique Taste. - **`V5`**: Superior musical expression, faster generation. - **`V4_5PLUS`**: V4.5+ delivers richer sound, new ways to create, max 8 min. - **`V4_5`**: V4.5 enables smarter prompts, faster generations, max 8 min. - **`V4_5ALL`**: V4.5ALL enables smarter prompts, faster generations, max 8 min. - **`V4`**: V4 improves vocal quality, max 4 min."
-        },
-        {
-          "name": "negativeTags",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Music styles or traits to exclude from the generated audio. Optional. Use to avoid specific styles."
-        },
-        {
-          "name": "vocalGender",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "m",
-            "f"
-          ],
-          "description": "Vocal gender preference for the singing voice. Optional. Use 'm' for male and 'f' for female. Note: This parameter is only effective when customMode is true. Based on practice, this parameter can only increase the probability but cannot guarantee adherence to male/female voice instructions."
-        },
-        {
-          "name": "styleWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Strength of adherence to the specified style. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "weirdnessConstraint",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Controls experimental/creative deviation. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "audioWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Balance weight for audio features vs. other factors. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "personaId",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Only available when Custom Mode (`customMode: true`) is enabled. Persona ID or Voice ID to apply to the generated music. Optional. Use this to apply a specific persona style to your music generation. To generate a persona ID, use the [Generate Persona](https://docs.kie.ai/suno-api/generate-persona) endpoint to create a personalized music Persona based on generated music. To generate a Voice ID, use the [Generate Voice](https://docs.kie.ai/suno-api/suno-voice-generate)endpoint"
-        },
-        {
-          "name": "personaModel",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "style_persona",
-            "voice_persona"
-          ],
-          "description": "The persona model is only available for models version 5 and 5.5."
-        },
-        {
-          "name": "duration",
-          "type": "number",
-          "required": false,
-          "default": 20,
-          "enum": null,
-          "description": "Audio duration. Optional; only effective when custom_mode is true and model is V5_5."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\generate-music",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Generate Music",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fgenerate",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "generate-persona",
-      "name": "Generate Persona",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/generate-persona",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "> Create a personalized music Persona based on generated music, giving the music a unique identity and characteristics. ## Usage Guide Use this endpoint to create Personas (music characters) for generated music: * Requires the `taskId` from music generation related endpoints (generate, extend) and audio ID * Customize the Persona name and description to give music unique personality * Generated Personas can be used for subsequent music creation and style transfer ## Parameter Details * **`taskId`** (Required): Can be obtained from the following endpoints: * [Generate Music](/suno-api/generate-music) (`/api/v1/generate`) * [Extend Music](/suno-api/extend-music) (`/api/v1/generate/extend`) * **`audioId`** (Required): Specifies the audio ID to create Persona for * **`name`** (Required): Assigns an easily recognizable name to the Persona * **`description`** (Required): Describes the Persona's musical characteristics, style, and personality ## Developer Notes :::caution Important Requirements * **Ensure the music generation task is fully completed** before calling this endpoint. If the music is still generating, this endpoint will return a failure. * **Model Requirement**: Persona generation only supports `taskId` from music generated with models above v3.5 (v3.5 itself is **not** supported). * Each audio ID can only generate a Persona **once**. ::: * It is recommended to provide detailed descriptions for Personas to better capture musical characteristics. * The returned `personaId` can be used in subsequent music generation requests to create music with similar style characteristics. * You can apply the `personaId` to the following endpoints: * [Generate Music](/suno-api/generate-music) * [Extend Music](/suno-api/extend-music) ## Parameter Example",
-      "params": [],
-      "model_date": "N/A",
-      "official_price": "0",
-      "kie_price": "0",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\generate-persona",
-      "pricing": {
-        "official_price": "0",
-        "kie_price": "0",
-        "credit_price": "0",
-        "credit_unit": "per request ",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Generate Persona",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fgenerate-persona",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "generate-sounds",
-      "name": "Generate sounds",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/sounds",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": [
-        "V5",
-        "V5_5"
-      ],
-      "description": "Used for creating a sound generation task (Sounds Task). It supports settings for looping, tempo (BPM), pitch (Key), as well as lyrics subtitle capture, etc. ## 🚀 User Guide - By using this interface, you can generate corresponding audio content based on the input `prompt`. - It supports setting up loop playback effect, which is suitable for background music, ambient sounds, and other scenarios. - It allows specifying BPM (beats per minute) and pitch (Key) to facilitate control over the style of the generated result. - Optional feature to enable lyric subtitle capture for easier display or processing of lyric content later. - Supports asynchronous reception of task completion notifications through callback address. ## 📌 Usage Scenarios - 🎧 Background music creation - 🎮 Game sound effects or looped ambient sounds generation - 🌐 Integration of audio content platforms and creative tools <Card title=\"Poll Query Results\" icon=\"lucide-radar\" href=\"/suno-api/get-music-details\" > Use the get lyrics details endpoint to regularly query task status. We recommend querying every 30 seconds. </Card>",
-      "params": [
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Sound task type limit: 500 characters"
-        },
-        {
-          "name": "model",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": [
-            "V5",
-            "V5_5"
-          ],
-          "description": "Model Name"
-        },
-        {
-          "name": "soundLoop",
-          "type": "boolean",
-          "required": false,
-          "default": false,
-          "enum": null,
-          "description": "Is it a cycle?"
-        },
-        {
-          "name": "soundTempo",
-          "type": "integer",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Do not broadcast."
-        },
-        {
-          "name": "soundKey",
-          "type": "string",
-          "required": false,
-          "default": "Any",
-          "enum": [
-            "Cm",
-            "C#m",
-            "Dm",
-            "D#m",
-            "Em",
-            "Fm",
-            "F#m",
-            "Gm",
-            "G#m",
-            "Am",
-            "A#m",
-            "Bm",
-            "C",
-            "C#",
-            "D",
-            "D#",
-            "E",
-            "F",
-            "F#",
-            "G",
-            "G#",
-            "A",
-            "A#",
-            "B"
-          ],
-          "description": ""
-        },
-        {
-          "name": "grabLyrics",
-          "type": "boolean",
-          "required": false,
-          "default": false,
-          "enum": null,
-          "description": "Whether to capture the lyrics subtitles Will the interface be called after completion to obtain the lyrics subtitles?"
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.0125",
-      "kie_price": "0.0125",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\generate-sounds",
-      "pricing": {
-        "official_price": "0.0125",
-        "kie_price": "0.0125",
-        "credit_price": "2.5",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Generate sounds",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fsounds",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "get-timestamped-lyrics",
-      "name": "Get Timestamped Lyrics",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/get-timestamped-lyrics",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Retrieve synchronized lyrics with precise timestamps for music tracks. ### Usage Guide - Use this endpoint to get lyrics that synchronize with audio playback - Implement karaoke-style lyric displays in your music players - Create visualizations that match audio timing ### Parameter Details - Both `taskId` and `audioId` are required to identify the specific track - The `taskId` comes from \"Generate Music\", \"Extend Music\" ,\"Upload-and-Cover\" or \"Upload-and-Extend\" endpoints - The `audioId` identifies the specific track version when multiple were generated ### Developer Notes - Timestamps are provided in seconds for precise synchronization - Waveform data is included for audio visualization implementations - For instrumental tracks (created with `instrumental=true`), no lyrics data will be returned",
-      "params": [
-        {
-          "name": "taskId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Unique identifier of the music generation task. This should be a taskId returned from either the \"Generate Music\" or \"Extend Music\" endpoints."
-        },
-        {
-          "name": "audioId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Unique identifier of the specific audio track for which to retrieve lyrics. This ID is returned in the callback data after music generation completes."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\get-timestamped-lyrics",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Extend Music",
-        "anchor": "https://kie.ai/suno-api",
-        "variants": 1,
-        "approx": true
-      }
-    },
-    {
-      "id": "recovery-audio",
-      "name": "Recovery Audio",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/suno/recovery",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Recover playable audio links for a music generation task that has already completed. Suno's original links (`source_audio_url`) are only valid for a limited period of time and are deprecated. Submit the `task_id` of the original music generation task and every track of that task will be recovered together. This endpoint only creates the task: it returns a recovery `task_id` immediately and the recovery itself runs asynchronously. ## Query Task Status **This task is NOT queried through the generic Get Task Details endpoint.** Use the dedicated polling endpoint below, with the recovery `task_id` returned by this endpoint:",
-      "params": [],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\recovery-audio",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Extend Music",
-        "anchor": "https://kie.ai/suno-api",
-        "variants": 1,
-        "approx": true
-      }
-    },
-    {
-      "id": "replace-section",
-      "name": "Replace Music Section",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/replace-section",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "> Replace a specific time segment within existing music. This interface can replace specific time segments in already generated music. It requires providing the original music's task ID and the time range to be replaced. The replaced audio will naturally blend with the original music. ## Time Range Instructions * `infillStartS` must be less than `infillEndS`. * Time values are precise to 2 decimal places, e.g., `10.50` seconds. * The replacement time must be at least **10 seconds**. * Replacement duration should not exceed **50%** of the original music's total duration. ## Developer Notes * Replacement segments will be regenerated based on the provided `prompt` and `tags`. * Generated replacement segments will automatically blend with the original music's preceding and following parts. * Generated files will be retained for **14 days**. * Query task status using the same interface as generating music: [Get Music Details](/suno-api/get-music-details).",
-      "params": [
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Replaced lyrics"
-        },
-        {
-          "name": "tags",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Music style tags, such as jazz, electronic, etc."
-        },
-        {
-          "name": "title",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Music title"
-        },
-        {
-          "name": "negativeTags",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Excluded music styles, used to avoid specific style elements in the replacement segment"
-        },
-        {
-          "name": "infillStartS",
-          "type": "number",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Start time point for replacement (seconds), 2 decimal places. Must be less than infillEndS. The time interval (infillEndS - infillStartS) must be at least 10 seconds."
-        },
-        {
-          "name": "infillEndS",
-          "type": "number",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "End time point for replacement (seconds), 2 decimal places. Must be greater than infillStartS. The time interval (infillEndS - infillStartS) must be at least 10 seconds."
-        },
-        {
-          "name": "fullLyrics",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Complete lyrics after modification, combining both modified and unmodified lyrics. This parameter contains the full lyrics text that will be used for the entire song after the section replacement."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.025",
-      "kie_price": "0.025",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\replace-section",
-      "pricing": {
-        "official_price": "0.025",
-        "kie_price": "0.025",
-        "credit_price": "5",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Replace Music Section",
-        "anchor": "https://docs.kie.ai/suno-api/replace-section",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "separate-vocals",
-      "name": "Vocal & Instrument Stem Separation",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/vocal-removal/generate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Use advanced audio processing technology to separate music into vocals, accompaniment, and individual instrumental stems. ### Usage Guide - Separate platform-generated mixes into vocals, accompaniment, and individual instrumental components. - Supports three processing modes: - separate_vocal — 2-stem separation (vocals + accompaniment) - split_stem — Up to 12-stem separation - split_stem_advanced — Advanced multi-stem separation, supporting precise extraction of a single target stem through `stemName` - Suitable for karaoke production, mixing, sample extraction, and detailed post-production. - Works best with professional AI-generated mixes that have clearly separated vocals and instruments. - **Billing:** Each API call consumes credits; **repeated calls for the same audio stem will be charged again** (no server-side caching). - **Pricing:** Please check [**https://kie.ai/pricing**](https://kie.ai/pricing) for the current credit cost per call. ### Separation Mode Description | **Mode (`type`)** | **Returned Stems** | **Typical Use Cases** | **Credit Cost** | | :---------------------------- | :--------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------ | :----------------------------- | | `separate_vocal` *（default）* | **2 stems** — Vocals + accompaniment | Quick vocal removal, karaoke, and basic mixing | **10 credits** | | `split_stem` | **Up to 12 stems** — Vocals, backing vocals, drums, bass, guitar, keyboard, strings, brass, woodwinds, percussion, synthesizer, FX/other; | Advanced mixing, remixing, sound design, and individual instrument extraction |**50 credits**| | `split_stem_advanced` | Up to 12 stems — Same as `split_stem`, with support for specifying a single target stem through `stemName` for precise separation | Individual instrument extraction and detailed post-production | **20 credits** | ### Parameters | Name | Type | Description | | :--------- | :----- | :------------------------------------------------------------------- | | `taskId` | string | The ID of the original music generation task | | `audioUrl` | string | The URL of the user-uploaded audio file. Required when processing user-uploaded audio. Cannot be used together with `audioId`. | | `audioId` | string | Specifies the audio variant to process when multiple versions exist. Cannot be used together with `audioUrl`. | | `type` | string | Separation mode: `separate_vocal`, `split_stem`, or `split_stem_advanced`; defaults to `separate_vocal` | | `stemName` | string | Takes effect only when `type` is `split_stem`; specifies the name of the individual stem/instrument to separate; | ### Developer Notes - All returned audio file URLs are valid for **14 days**. - Separation quality depends on the complexity and mixing characteristics of the original track. - `separate_vocal` returns **2 stems** — vocals + accompaniment. - `split_stem` returns **up to 12 independent stems** — vocals, backing vocals, drums, bass, guitar, keyboard, strings, brass, woodwinds, percussion, synthesizer, and FX/other. - `split_stem_advanced` supports specifying a single target stem through `stemName` for precise extraction. - **Billing:** Each request consumes credits. Repeatedly submitting the same stem will **deduct credits again** (no server-side caching).",
-      "params": [
-        {
-          "name": "type",
-          "type": "string",
-          "required": false,
-          "default": "separate_vocal",
-          "enum": [
-            "separate_vocal",
-            "split_stem",
-            "split_stem_advanced"
-          ],
-          "description": "Separation type, options: - **separate_vocal**: Separate vocals and accompaniment, generating a vocal track and an instrumental track. - **split_stem**: Separate various instrument sounds, generating multiple instrument tracks. - **split_stem_advanced**: Advanced multi-track separation, supporting the specification of a particular instrument track to generate finer instrument tracks."
-        },
-        {
-          "name": "stemName",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": [
-            "Lead Vocal",
-            "Drum Kit",
-            "Kick",
-            "Snare",
-            "Risers",
-            "Bass",
-            "Backing Vocals",
-            "Piano",
-            "Electric Guitar",
-            "Percussion",
-            "String Section",
-            "Synth",
-            "Acoustic Guitar",
-            "Sound Effects",
-            "Synth Pad",
-            "Synth Bass",
-            "Guitar",
-            "Brass Section",
-            "Organ",
-            "Electronic Drum Kit",
-            "Lead Electric Guitar",
-            "Synth Keys",
-            "Rhythm Electric Guitar",
-            "Electric Piano",
-            "Upright Bass",
-            "Keyboards",
-            "Distorted Electric Guitar",
-            "Synth Strings",
-            "Synth Lead",
-            "Woodwinds",
-            "Rhythm Acoustic Guitar",
-            "Flute",
-            "Harp",
-            "Tambourine",
-            "Trumpet",
-            "Arpeggiator",
-            "Accordion",
-            "Fiddle",
-            "Pedal Steel Guitar",
-            "Synth Voice",
-            "Violin",
-            "Digital Piano",
-            "Synth Brass",
-            "Mandolin",
-            "Choir",
-            "Banjo",
-            "Bells",
-            "Clarinet",
-            "Tenor Saxophone",
-            "Trombone",
-            "Shaker",
-            "French Horn",
-            "Glockenspiel",
-            "Electric Bass",
-            "Cello",
-            "Timpani",
-            "Harmonica",
-            "Marimba",
-            "Vibraphone",
-            "Lap Steel Guitar",
-            "Saxophone",
-            "Orchestra",
-            "Horns",
-            "Cymbals",
-            "Hand Clap",
-            "Oboe",
-            "Celesta",
-            "Congas",
-            "Drone",
-            "Alto Saxophone",
-            "Double Bass",
-            "Ukulele",
-            "Harpsichord",
-            "Baritone Saxophone",
-            "Xylophone",
-            "Tuba",
-            "Bass Guitar",
-            "Whistle",
-            "Lead Guitar",
-            "Rhodes",
-            "808",
-            "Bongos",
-            "Bassoon",
-            "Cowbell",
-            "Viola",
-            "Sitar",
-            "Steel Drums",
-            "Piccolo",
-            "Theremin",
-            "Bagpipes",
-            "Hi-Hat",
-            "Music Box",
-            "Melodica",
-            "Tabla",
-            "Koto",
-            "Djembe",
-            "Taiko",
-            "Didgeridoo"
-          ],
-          "description": "Only used when `type` is `split_stem_advanced` to request a specific stem track/instrument name."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\separate-vocals",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Extend Music",
-        "anchor": "https://kie.ai/suno-api",
-        "variants": 1,
-        "approx": true
-      }
-    },
-    {
-      "id": "suno-voice-check-voice",
-      "name": "Suno Voice Check Availability API",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/voice/check-voice",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Check whether a generated Suno custom voice is available. Use this endpoint after voice generation completes to verify that the generated voice can be used in supported Suno generation APIs. Submit the related task ID and check the `isAvailable` value in the response. ## When to Use This endpoint is useful when you need to confirm voice availability before starting a music generation request that depends on the custom voice. <Card title=\"Get Voice Record\" icon=\"lucide-search\" href=\"/suno-api/suno-voice-record-info\" > Query the voice generation task first to obtain the latest task status and generated voice information </Card> Related resources <CardGroup cols={2}> <Card title=\"Generate Voice\" icon=\"lucide-mic\" href=\"/suno-api/suno-voice-generate\"> Create a custom voice from verification audio </Card> <Card title=\"General API\" icon=\"lucide-cog\" href=\"/common-api/get-account-credits\"> View account credits and usage </Card> </CardGroup>",
-      "params": [
-        {
-          "name": "task_id",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Task ID that needs to be checked"
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.002",
-      "kie_price": "0.002",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\suno-voice-check-voice",
-      "pricing": {
-        "official_price": "0.002",
-        "kie_price": "0.002",
-        "credit_price": "0.4",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Boost Music Style Boost",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fboost-music-style",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "suno-voice-generate",
-      "name": "Suno Voice Create Custom Voice API",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/voice/generate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Generate a custom Suno Voice after the user reads the validation phrase. Submit the original validation task ID, the user's verification audio URL, and optional voice metadata such as `voiceName`, `description`, and `style`. The system will validate the recording and create a reusable custom voice. For better results, upload or record a singing voice sample. Clean acapella vocals usually produce the most accurate voice profile. ## Query Task Status After submitting the task, you can check the voice generation progress and obtain the final `voiceId` through the voice record query endpoint: <Card title=\"Get Voice Record\" icon=\"lucide-search\" href=\"/suno-api/suno-voice-record-info\" > Learn how to check the custom voice generation status and obtain the generated voiceId </Card> :::tip[] In the production environment, it is recommended to use the `callBackUrl` parameter to receive automatic notifications when the custom voice is generated, rather than polling the status endpoint. ::: ## Use the Generated Voice When the task succeeds, the response from the query or callback contains `voiceId`. You can use this ID in supported Suno generation endpoints that accept a custom voice. Related resources <CardGroup cols={2}> <Card title=\"Check Voice Availability\" icon=\"lucide-badge-check\" href=\"/suno-api/suno-voice-check-voice\"> Verify whether a generated voice is available for use </Card> <Card title=\"General API\" icon=\"lucide-cog\" href=\"/common-api/get-account-credits\"> View account credits and usage </Card> </CardGroup>",
-      "params": [
-        {
-          "name": "taskId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Task ID"
-        },
-        {
-          "name": "verifyUrl",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Audio URL for the user's recording of the server-returned `validateInfo` validation phrase. For best voice generation results, recording the phrase in a singing voice rather than plain speech is recommended. [Required]"
-        },
-        {
-          "name": "voiceName",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Voice name"
-        },
-        {
-          "name": "description",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Voice description"
-        },
-        {
-          "name": "style",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Voice style"
-        },
-        {
-          "name": "singerSkillLevel",
-          "type": "string",
-          "required": false,
-          "default": "beginner",
-          "enum": [
-            "beginner",
-            "intermediate",
-            "advanced",
-            "professional"
-          ],
-          "description": "Singer skill level. Supported: beginner, intermediate, advanced, professional"
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.002",
-      "kie_price": "0.002",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\suno-voice-generate",
-      "pricing": {
-        "official_price": "0.002",
-        "kie_price": "0.002",
-        "credit_price": "0.4",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Boost Music Style Boost",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fboost-music-style",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "suno-voice-regenerate",
-      "name": "Suno Voice Regenerate Verification Phrase",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/voice/regenerate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Regenerate the validation phrase for an existing Suno Voice task. Use this endpoint when the previous validation phrase failed, expired, or the user needs a new phrase to read. Submit the existing `taskId`; the system will start a new validation phrase generation task and return a task ID for polling. ## Query Task Status After submitting the regeneration task, check the new validation phrase result through the validation phrase query endpoint: <Card title=\"Get Validation Phrase\" icon=\"lucide-search\" href=\"/suno-api/suno-voice-validate-info\" > Learn how to check the regenerated validation phrase task status </Card> ## Continue the Flow Once the regenerated phrase is ready, ask the user to read the new phrase and submit the verification audio to the voice generation endpoint. <Card title=\"Generate Voice\" icon=\"lucide-mic\" href=\"/suno-api/suno-voice-generate\" > Continue custom voice generation with the newly recorded verification audio </Card> Related resources <CardGroup cols={2}> <Card title=\"Generate Validation Phrase\" icon=\"lucide-file-audio\" href=\"/suno-api/suno-voice-validate\"> Start the validation phrase flow from source audio </Card> <Card title=\"Get Voice Record\" icon=\"lucide-list-checks\" href=\"/suno-api/suno-voice-record-info\"> Query the final custom voice generation result </Card> </CardGroup>",
-      "params": [
-        {
-          "name": "taskId",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Task ID"
-        },
-        {
-          "name": "calBackUrl",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Callback URL after the task is completed"
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.002",
-      "kie_price": "0.002",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\suno-voice-regenerate",
-      "pricing": {
-        "official_price": "0.002",
-        "kie_price": "0.002",
-        "credit_price": "0.4",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Boost Music Style Boost",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fboost-music-style",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "suno-voice-validate",
-      "name": "Suno Voice Generate Verification Phrase API",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/voice/validate",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": null,
-      "description": "Generate a validation phrase for the Suno Voice custom voice workflow. Submit the source audio URL and the selected vocal segment. The system will analyze the source voice and create a validation phrase that the user needs to read in the next step. ## Query Task Status After submitting the task, you can check the validation phrase generation progress and obtain the generated phrase through the validation phrase query endpoint: <Card title=\"Get Validation Phrase\" icon=\"lucide-search\" href=\"/suno-api/suno-voice-validate-info\" > Learn how to check the validation phrase task status and obtain the phrase users need to read </Card> :::tip[] In the production environment, it is recommended to use the `callBackUrl` parameter to receive automatic notifications when the validation phrase is ready, rather than polling the status endpoint. ::: ## Next Step After the validation phrase is ready, ask the user to read the phrase and upload the recorded verification audio to continue creating the voice. <Card title=\"Generate Voice\" icon=\"lucide-mic\" href=\"/suno-api/suno-voice-generate\" > Submit the verification audio and generate the final custom voice </Card> Related resources <CardGroup cols={2}> <Card title=\"Regenerate Validation Phrase\" icon=\"lucide-refresh-cw\" href=\"/suno-api/suno-voice-regenerate\"> Generate a new validation phrase for an existing task </Card> <Card title=\"General API\" icon=\"lucide-cog\" href=\"/common-api/get-account-credits\"> View account credits and usage </Card> </CardGroup>",
-      "params": [
-        {
-          "name": "voiceUrl",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "The original recording URL uploaded by the user [Required]"
-        },
-        {
-          "name": "vocalStartS",
-          "type": "integer",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Start time (in seconds) for extracting the vocal segment [Required]"
-        },
-        {
-          "name": "vocalEndS",
-          "type": "integer",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "End time (in seconds) for extracting the vocal segment, must be greater than vocalStartS [Required]"
-        },
-        {
-          "name": "language",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Verify the language of the short phrase. Supported languages ​​include: English (en), Chinese (zh), Spanish (es), French (fr), Portuguese (pt), German (de), Japanese (ja), Korean (ko), Hindi (hi), and Russian (ru)."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.002",
-      "kie_price": "0.002",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\suno-voice-validate",
-      "pricing": {
-        "official_price": "0.002",
-        "kie_price": "0.002",
-        "credit_price": "0.4",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, Boost Music Style Boost",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fboost-music-style",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "upload-and-cover-audio",
-      "name": "Upload And Cover Audio",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/upload-cover",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": [
-        "V4",
-        "V4_5",
-        "V4_5PLUS",
-        "V4_5ALL",
-        "V5",
-        "V5_5"
-      ],
-      "description": "> This API creates a cover version of an audio track by transforming it into a new style while retaining its core melody. It incorporates Suno's upload capability, enabling users to upload an audio file for processing. The expected result is a refreshed audio track with a new style, keeping the original melody intact. ## Parameter Usage Guide :::note Character Limits Character limits vary depending on the model version: * **Model V5_5 and V5**: `style` (max 1000 chars), `title` (max 100 chars), `prompt` (max 5000 chars) * **Models V4.5PLUS and V4.5**: `style` (max 1000 chars), `title` (max 100 chars), `prompt` (max 5000 chars) * **Model V4.5ALL**: `style` (max 1000 chars), `title` (max 80 chars), `prompt` (max 5000 chars) * **Model V4**: `style` (max 200 chars), `title` (max 80 chars), `prompt` (max 3000 chars) ::: * **When `customMode` is `true` (Custom Mode):** * If `instrumental` is `true`: `style`, `title`, and `uploadUrl` are required. * If `instrumental` is `false`: `style`, `prompt`, `title`, and `uploadUrl` are required. * **Character limits vary by model version** (see note above). * `uploadUrl` is used to specify the upload location of the audio file; ensure the uploaded audio does not exceed 8 minutes in length. * **When `customMode` is `false` (Non-custom Mode):** * Only `prompt` and `uploadUrl` are required, regardless of the `instrumental` setting. * `prompt` length limit: 500 characters. * Other parameters should be left empty. ## Developer Notes 1. **Quick Start for New Users:** Set `customMode` to `false`, `instrumental` to `false`, and provide only `prompt` and `uploadUrl`. This is the simplest configuration to quickly test the API and experience the results. 2. Generated files will be deleted after **15 days**. 3. Ensure all required parameters are provided based on the `customMode` and `instrumental` settings to avoid errors. 4. Pay attention to character limits for `prompt`, `style`, and `title` to ensure successful processing. 5. **Callback Process Stages:** The callback process has three stages: `text` (text generation complete), `first` (first track complete), and `complete` (all tracks complete). 6. **Active Status Check:** You can use the [Get Music Generation Details](/suno-api/get-music-details) endpoint to actively check the task status instead of waiting for callbacks. 7. The `uploadUrl` parameter is used to specify the upload location of the audio file; please provide a valid URL. ## Optional Parameters * `vocalGender` (`string`): Vocal gender preference. Use `m` for male, `f` for female. * `styleWeight` (`number`): Strength of adherence to style. Range 0–1, up to 2 decimal places. Example: `0.65`. * `weirdnessConstraint` (`number`): Controls creative deviation. Range 0–1, up to 2 decimal places. Example: `0.65`. * `audioWeight` (`number`): Balance weight for audio features. Range 0–1, up to 2 decimal places. Example: `0.65`. * `personaId` (`string`): Persona ID to apply to the generated music. Only available when Custom Mode is enabled (i.e., `customMode` is `true`). To create one, use [Generate Persona](/suno-api/generate-persona).",
-      "params": [
-        {
-          "name": "uploadUrl",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "The URL for uploading audio files, required regardless of whether customMode and instrumental are true or false. Ensure the uploaded audio does not exceed 8 minutes in length."
-        },
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "A description of the desired audio content. - In Custom Mode (`customMode: true`): Required if `instrumental` is `false`. The prompt will be strictly used as the lyrics and sung in the generated track. Character limits by model: - **V5_5 & V5**: Maximum 5000 characters - **V4_5PLUS & V4_5**: Maximum 5000 characters - **V4_5ALL**: Maximum 5000 characters - **V4**: Maximum 3000 characters Example: \"A calm and relaxing piano track with soft melodies\" - In Non-custom Mode (`customMode: false`): Always required. The prompt serves as the core idea, and lyrics will be automatically generated based on it (not strictly matching the input). Max length: 500 characters. Example: \"A short relaxing piano tune\""
-        },
-        {
-          "name": "style",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "The music style or genre for the audio. - Required in Custom Mode (`customMode: true`). Examples: \"Jazz\", \"Classical\", \"Electronic\". Character limits by model: - **V5_5 & V5**: Maximum 1000 characters - **V4_5PLUS & V4_5**: Maximum 1000 characters - **V4_5ALL**: Maximum 1000 characters - **V4**: Maximum 200 characters Example: \"Classical\" - In Non-custom Mode (`customMode: false`): Leave empty."
-        },
-        {
-          "name": "title",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "The title of the generated music track. - Required in Custom Mode (`customMode: true`). Character limits by model: - **V5_5 & V5**: Maximum 100 characters - **V4_5PLUS & V4_5**: Maximum 100 characters - **V4_5ALL**: Maximum 80 characters - **V4**: Maximum 80 characters Example: \"Peaceful Piano Meditation\" - In Non-custom Mode (`customMode: false`): Leave empty."
-        },
-        {
-          "name": "customMode",
-          "type": "boolean",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Enables Custom Mode for advanced audio generation settings. - Set to `true` to use Custom Mode (requires `style` and `title`; `prompt` required if `instrumental` is `false`). The prompt will be strictly used as lyrics if `instrumental` is `false`. - Set to `false` for Non-custom Mode (only `prompt` is required). Lyrics will be auto-generated based on the prompt."
-        },
-        {
-          "name": "instrumental",
-          "type": "boolean",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Determines if the audio should be instrumental (no lyrics). - In Custom Mode (`customMode: true`): - If `true`: Only `style` and `title` are required. - If `false`: `style`, `title`, and `prompt` are required (with `prompt` used as the exact lyrics). - In Non-custom Mode (`customMode: false`): No impact on required fields (`prompt` only). Lyrics are auto-generated if `instrumental` is `false`."
-        },
-        {
-          "name": "model",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": [
-            "V4",
-            "V4_5",
-            "V4_5PLUS",
-            "V4_5ALL",
-            "V5",
-            "V5_5"
-          ],
-          "description": "The AI model version to use for generation. - Required for all requests. - Available options: - **`V5_5`**：Custom Models Tailored to Your Unique Taste. - **`V5`**: Superior musical expression, faster generation. - **`V4_5PLUS`**: V4.5+ delivers richer sound, new ways to create, max 8 min. - **`V4_5`**: V4.5 enables smarter prompts, faster generations, max 8 min. - **`V4_5ALL`**: V4.5ALL enables smarter prompts, faster generations, max 8 min. - **`V4`**: V4 improves vocal quality, max 4 min."
-        },
-        {
-          "name": "negativeTags",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Music styles or traits to exclude from the generated audio. - Optional. Use to avoid specific styles. Example: \"Heavy Metal, Upbeat Drums\""
-        },
-        {
-          "name": "vocalGender",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "m",
-            "f"
-          ],
-          "description": "Vocal gender preference for the singing voice. Optional. Use 'm' for male and 'f' for female. Note: This parameter is only effective when customMode is true. Based on practice, this parameter can only increase the probability but cannot guarantee adherence to male/female voice instructions."
-        },
-        {
-          "name": "styleWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Strength of adherence to the specified style. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "weirdnessConstraint",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Controls experimental/creative deviation. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "audioWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Balance weight for audio features vs. other factors. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "personaId",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Only available when Custom Mode (`customMode: true`) is enabled. Persona ID or Voice ID to apply to the generated music. Optional. Use this to apply a specific persona style to your music generation. To generate a persona ID, use the [Generate Persona](https://docs.kie.ai/suno-api/generate-persona) endpoint to create a personalized music Persona based on generated music. To generate a Voice ID, use the [Generate Voice](https://docs.kie.ai/suno-api/suno-voice-generate)endpoint"
-        },
-        {
-          "name": "personaModel",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "voice_persona",
-            "style_persona"
-          ],
-          "description": "The persona model is only available for models version 5 and 5.5."
-        },
-        {
-          "name": "duration",
-          "type": "integer",
-          "required": false,
-          "default": 20,
-          "enum": null,
-          "description": "Duration is selectable; valid only when `custom_mode` is `true` and `model` is `V5_5`."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\upload-and-cover-audio",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, upload-and-cover-audio",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fupload-and-cover-audio",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
-      "id": "upload-and-extend-audio",
-      "name": "Upload And Extend Audio",
-      "platform": "Suno",
-      "category": "music",
-      "family": "suno",
-      "request_style": "direct",
-      "endpoint": "https://api.kie.ai/api/v1/generate/upload-extend",
-      "poll_endpoint": "https://api.kie.ai/api/v1/generate/record-info",
-      "poll_id_param": "taskId",
-      "model_ref": null,
-      "model_options": [
-        "V4",
-        "V4_5",
-        "V4_5PLUS",
-        "V4_5ALL",
-        "V5",
-        "V5_5"
-      ],
-      "description": "# Upload and Extend Music This API extends audio while preserving the original style, generating a longer and seamless audio track. ## Parameter Usage Guide :::note Character Limits Character limits vary by model version: - **Models V5\\_5 and V5**: style (maximum 1,000 characters), title (maximum 100 characters), prompt (maximum 5,000 characters) - **Models V4\\_5PLUS and V4\\_5**: style (maximum 1,000 characters), title (maximum 100 characters), prompt (maximum 5,000 characters) - **Model V4\\_5ALL**: style (maximum 1,000 characters), title (maximum 80 characters), prompt (maximum 5,000 characters) - **Model V4**: style (maximum 200 characters), title (maximum 80 characters), prompt (maximum 3,000 characters) ::: ### When `defaultParamFlag` is `true` (Custom Parameter Mode): - `instrumental: true`: Provide `style`, `title`, and `uploadUrl`. `prompt` and `vocalGender` are not required - `instrumental: false`: Provide `style`, `title`, and `uploadUrl`. `prompt` is optional and will be used as a prompt if provided. `vocalGender` is not required - `continueAt`: The point in seconds where the audio extension begins. It must be greater than 0 and less than the total duration of the uploaded audio - `uploadUrl`: The URL of the audio file. The audio must not exceed 8 minutes - Character limits vary by model version. See the details above ### When `defaultParamFlag` is `false` (Non-Custom Parameter Mode): - Regardless of the `instrumental` setting, only `uploadUrl` is required - `prompt` is optional and will be used as a prompt if provided - When `instrumental` is `true`, `prompt` and `vocalGender` are not required - When `instrumental` is `false` and `prompt` is not provided, lyrics will be generated automatically - Other parameters will use the parameters of the original audio ## Developer Notes 1. Generated files will be retained for **14 days**. 2. The model version must match the source music. 3. This feature is suitable for extending existing music. 4. Please provide a valid audio URL for `uploadUrl`. ## Optional Parameters | Parameter | Type | Description | | :--- | :--- | :--- | | `prompt` | `string` | Describes how the music should be extended. Optional. If provided, it will be used as a prompt. Not required when `instrumental` is `true`. | | `vocalGender` | `string` | Vocal gender preference. `m` represents male vocals and `f` represents female vocals. Not required for this API. | | `styleWeight` | `number` | Controls adherence to the specified style. Range: 0–1, with up to two decimal places. Example: `0.65`. | | `weirdnessConstraint` | `number` | Controls the level of creativity. Range: 0–1, with up to two decimal places. Example: `0.65`. | | `audioWeight` | `number` | Controls the weight of audio elements. Range: 0–1, with up to two decimal places. Example: `0.65`. | | `personaId` | `string` | Available only when `defaultParamFlag` is `true`. To generate a personaId, visit [Generate Persona](/cn/suno-api/generate-persona). |",
-      "params": [
-        {
-          "name": "uploadUrl",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "The URL for uploading audio files, required regardless of whether defaultParamFlag is true or false. Ensure the uploaded audio does not exceed 8 minutes in length."
-        },
-        {
-          "name": "defaultParamFlag",
-          "type": "boolean",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "Enable custom mode for advanced audio generation settings. - Set to `true` to use custom parameter mode (requires `style`, `title`, and `uploadUrl`; if `instrumental` is `false`, `uploadUrl` and `prompt` are required). If `instrumental` is `false`, the prompt will be strictly used as lyrics. - Set to `false` to use non-custom mode (only `uploadUrl` required). Lyrics will be automatically generated based on the prompt."
-        },
-        {
-          "name": "instrumental",
-          "type": "boolean",
-          "required": false,
-          "default": false,
-          "enum": null,
-          "description": "Determines whether the audio is instrumental (without lyrics). - In custom parameter mode (`defaultParamFlag: true`): - If `true`: Only `style`, `title`, and `uploadUrl` are required; `prompt` and `vocalGender` do not need to be specified. - If `false`: `style`, `title`, and `uploadUrl` are required; `prompt` is optional (if provided, it serves as a prompt); `vocalGender` does not need to be specified. - In non-custom parameter mode (`defaultParamFlag: false`): Does not affect mandatory fields (only `uploadUrl` is required); `prompt` is optional. If set to `false`, lyrics will be automatically generated. Optional; defaults to `false`."
-        },
-        {
-          "name": "prompt",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Describe how the music should be extended. Optional; if provided, it will be used as a prompt. Subject to model character limits: - **V5_5 & V5**: Max 5,000 characters - **V4_5PLUS & V4_5**: Max 5,000 characters - **V4_5ALL**: Max 5,000 characters - **V4**: Max 3,000 characters"
-        },
-        {
-          "name": "style",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Music style, e.g., Jazz, Classical, Electronic. Character limits by model: - **V5_5 & V5**: Maximum 1000 characters - **V4_5PLUS & V4_5**: Maximum 1000 characters - **V4_5ALL**: Maximum 1000 characters - **V4**: Maximum 200 characters"
-        },
-        {
-          "name": "title",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Music title. Character limits by model: - **V5_5 & V5**: Maximum 100 characters - **V4_5PLUS & V4_5**: Maximum 100 characters - **V4_5ALL**: Maximum 80 characters - **V4**: Maximum 80 characters"
-        },
-        {
-          "name": "continueAt",
-          "type": "number",
-          "required": true,
-          "default": null,
-          "enum": null,
-          "description": "The time point (in seconds) from which to start extending the music. - Required when `defaultParamFlag` is `true`. - Value range: greater than 0 and less than the total duration of the uploaded audio. - Specifies the position in the original track where the extension should begin."
-        },
-        {
-          "name": "model",
-          "type": "string",
-          "required": true,
-          "default": null,
-          "enum": [
-            "V4",
-            "V4_5",
-            "V4_5PLUS",
-            "V4_5ALL",
-            "V5",
-            "V5_5"
-          ],
-          "description": "The AI model version to use for generation. - Required for all requests. - Available options: - **`V5_5`**：Custom Models Tailored to Your Unique Taste. - **`V5`**: Superior musical expression, faster generation. - **`V4_5PLUS`**: V4.5+ delivers richer sound, new ways to create, max 8 min. - **`V4_5`**: V4.5 enables smarter prompts, faster generations, max 8 min. - **`V4_5ALL`**: V4.5ALL enables smarter prompts, faster generations, max 8 min. - **`V4`**: V4 improves vocal quality, max 4 min."
-        },
-        {
-          "name": "negativeTags",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Music styles to exclude from generation"
-        },
-        {
-          "name": "vocalGender",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "m",
-            "f"
-          ],
-          "description": "Vocal gender preference for the singing voice. Optional. Use 'm' for male and 'f' for female. Based on practice, this parameter can only increase the probability but cannot guarantee adherence to male/female voice instructions."
-        },
-        {
-          "name": "styleWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Strength of adherence to the specified style. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "weirdnessConstraint",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Controls experimental/creative deviation. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "audioWeight",
-          "type": "number",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Balance weight for audio features vs. other factors. Optional. Range 0–1, up to 2 decimal places."
-        },
-        {
-          "name": "personaId",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": null,
-          "description": "Only available when Custom Mode (`defaultParamFlag: true`) is enabled. Persona ID or Voice ID to apply to the generated music. Optional. Use this to apply a specific persona style to your music generation. To generate a persona ID, use the [Generate Persona](https://docs.kie.ai/suno-api/generate-persona) endpoint to create a personalized music Persona based on generated music. To generate a Voice ID, use the [Generate Voice](https://docs.kie.ai/suno-api/suno-voice-generate)endpoint"
-        },
-        {
-          "name": "personaModel",
-          "type": "string",
-          "required": false,
-          "default": null,
-          "enum": [
-            "style_persona",
-            "voice_persona"
-          ],
-          "description": "The persona model is only available for models version 5 and 5.5."
-        }
-      ],
-      "model_date": "N/A",
-      "official_price": "0.06",
-      "kie_price": "0.06",
-      "other_info_url": "https://kie.ai/pricing",
-      "doc_url": "https://docs.kie.ai/suno-api\\upload-and-extend-audio",
-      "pricing": {
-        "official_price": "0.06",
-        "kie_price": "0.06",
-        "credit_price": "12.0",
-        "credit_unit": "per request",
-        "discount_rate": 0.0,
-        "provider": "Suno",
-        "interface_type": "music",
-        "example": "Suno, upload-and-extend-audio",
-        "anchor": "https://kie.ai/suno-api?model=ai-music-api%2Fextend",
-        "variants": 1,
-        "approx": false
-      }
-    },
-    {
       "id": "extend-veo3-1-video",
       "name": "Extend Veo3.1 Video",
       "platform": "Veo 3.1",
@@ -15974,6 +13880,2038 @@
         "variants": 1,
         "approx": false
       }
+    },
+    {
+      "id": "suno-generate",
+      "name": "Suno Generate Music",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/generate",
+      "model_options": null,
+      "description": "生成音乐（每请求多个变体曲目）",
+      "params": [
+        {
+          "name": "custom_mode",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "true=高级自定义模式"
+        },
+        {
+          "name": "instrumental",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "true=纯音乐无人声"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": [
+            "V4",
+            "V4_5",
+            "V4_5PLUS",
+            "V4_5ALL",
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_MINI",
+            "V6_WILD"
+          ],
+          "description": "推荐 V6 / V6_MINI / V6_WILD（其余已停用）"
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "自定义模式=歌词；非自定义=创意描述"
+        },
+        {
+          "name": "lyrics",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "歌词，优先级高于 prompt"
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "音乐风格"
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "曲目名称（custom_mode=true 时必填）"
+        },
+        {
+          "name": "negative_tags",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "排除的风格特征"
+        },
+        {
+          "name": "vocal_gender",
+          "type": "boolean",
+          "required": false,
+          "default": null,
+          "enum": [
+            "m",
+            "f"
+          ],
+          "description": "人声性别偏好"
+        },
+        {
+          "name": "style_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "weirdness_constraint",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "audio_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "variety",
+          "type": "string",
+          "required": false,
+          "default": 1,
+          "enum": null,
+          "description": "多样性：0 严格同风格 / 1 正常 / 2 高 / 3 额外 / 4 最大"
+        },
+        {
+          "name": "persona_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "Persona ID / Voice ID"
+        },
+        {
+          "name": "persona_model",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": [
+            "style_persona",
+            "voice_persona"
+          ],
+          "description": "style_persona=Persona ID；voice_persona=Suno Voice ID（仅 V6/V6_MINI/V6_WILD）"
+        },
+        {
+          "name": "duration",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "目标时长（秒），仅 V6 系列有效"
+        },
+        {
+          "name": "image_urls",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "图片参考（非自定义模式，≤5 张）"
+        },
+        {
+          "name": "video_urls",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "视频参考（非自定义模式，≤1 个）"
+        },
+        {
+          "name": "audio_urls",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "音频参考（非自定义模式）"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-extend",
+      "name": "Suno Extend Music",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/extend",
+      "model_options": null,
+      "description": "从已有音轨扩展续写（input: task 产物的 audio_id）",
+      "params": [
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "源音轨 ID"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": [
+            "V4",
+            "V4_5",
+            "V4_5PLUS",
+            "V4_5ALL",
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_MINI",
+            "V6_WILD"
+          ],
+          "description": "必须与源音频模型一致"
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "扩展歌词（无 lyrics 时生效）"
+        },
+        {
+          "name": "lyrics",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "continue_at",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "从原曲第几秒开始扩展"
+        },
+        {
+          "name": "negative_tags",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "vocal_gender",
+          "type": "boolean",
+          "required": false,
+          "default": null,
+          "enum": [
+            "m",
+            "f"
+          ],
+          "description": ""
+        },
+        {
+          "name": "style_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "weirdness_constraint",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "audio_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "variety",
+          "type": "string",
+          "required": false,
+          "default": 1,
+          "enum": null,
+          "description": "多样性：0 严格同风格 / 1 正常 / 2 高 / 3 额外 / 4 最大"
+        },
+        {
+          "name": "persona_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "persona_model",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": [
+            "style_persona",
+            "voice_persona"
+          ],
+          "description": "style_persona=Persona ID；voice_persona=Suno Voice ID（仅 V6/V6_MINI/V6_WILD）"
+        },
+        {
+          "name": "instrumental",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "true=纯音乐，禁止传 lyrics/prompt/vocal_gender"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-upload-and-cover",
+      "name": "Suno Upload And Cover Audio",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/upload-and-cover-audio",
+      "model_options": null,
+      "description": "上传音频翻唱（upload_url 或 task_id+audio_id 二选一）",
+      "params": [
+        {
+          "name": "upload_url",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "源音频 URL（≤8 分钟）"
+        },
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "KIE 已生成任务 ID"
+        },
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "要翻唱的曲目 ID"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": [
+            "V4",
+            "V4_5",
+            "V4_5PLUS",
+            "V4_5ALL",
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_MINI",
+            "V6_WILD"
+          ],
+          "description": "推荐 V6 / V6_MINI / V6_WILD（其余已停用）"
+        },
+        {
+          "name": "instrumental",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "lyrics",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "negative_tags",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "vocal_gender",
+          "type": "boolean",
+          "required": false,
+          "default": null,
+          "enum": [
+            "m",
+            "f"
+          ],
+          "description": ""
+        },
+        {
+          "name": "style_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "weirdness_constraint",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "audio_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "variety",
+          "type": "string",
+          "required": false,
+          "default": 1,
+          "enum": null,
+          "description": "多样性：0 严格同风格 / 1 正常 / 2 高 / 3 额外 / 4 最大"
+        },
+        {
+          "name": "persona_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "persona_model",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": [
+            "style_persona",
+            "voice_persona"
+          ],
+          "description": "style_persona=Persona ID；voice_persona=Suno Voice ID（仅 V6/V6_MINI/V6_WILD）"
+        },
+        {
+          "name": "duration",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-upload-and-extend",
+      "name": "Suno Upload And Extend Audio",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/upload-and-extend-audio",
+      "model_options": null,
+      "description": "上传音频并扩展（始终 custom mode，勿传 custom_mode）",
+      "params": [
+        {
+          "name": "upload_url",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "源音频 URL（≤8 分钟）"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": [
+            "V4",
+            "V4_5",
+            "V4_5PLUS",
+            "V4_5ALL",
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_MINI",
+            "V6_WILD"
+          ],
+          "description": "推荐 V6 / V6_MINI / V6_WILD（其余已停用）"
+        },
+        {
+          "name": "instrumental",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "lyrics",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "continue_at",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "negative_tags",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "vocal_gender",
+          "type": "boolean",
+          "required": false,
+          "default": null,
+          "enum": [
+            "m",
+            "f"
+          ],
+          "description": ""
+        },
+        {
+          "name": "style_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "weirdness_constraint",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "audio_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "variety",
+          "type": "string",
+          "required": false,
+          "default": 1,
+          "enum": null,
+          "description": "多样性：0 严格同风格 / 1 正常 / 2 高 / 3 额外 / 4 最大"
+        },
+        {
+          "name": "persona_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "persona_model",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": [
+            "style_persona",
+            "voice_persona"
+          ],
+          "description": "style_persona=Persona ID；voice_persona=Suno Voice ID（仅 V6/V6_MINI/V6_WILD）"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-add-instrumental",
+      "name": "Suno Add Instrumental to Music",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/add-instrumental",
+      "model_options": null,
+      "description": "为上传音频添加伴奏生成新曲",
+      "params": [
+        {
+          "name": "upload_url",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "negative_tags",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "tags",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "风格标签"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": false,
+          "default": "V6",
+          "enum": [
+            "V4",
+            "V4_5",
+            "V4_5PLUS",
+            "V4_5ALL",
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_MINI",
+            "V6_WILD"
+          ],
+          "description": "推荐 V6 / V6_MINI / V6_WILD（其余已停用）"
+        },
+        {
+          "name": "lyrics",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "vocal_gender",
+          "type": "boolean",
+          "required": false,
+          "default": null,
+          "enum": [
+            "m",
+            "f"
+          ],
+          "description": ""
+        },
+        {
+          "name": "style_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "weirdness_constraint",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "audio_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "variety",
+          "type": "string",
+          "required": false,
+          "default": 1,
+          "enum": null,
+          "description": "多样性：0 严格同风格 / 1 正常 / 2 高 / 3 额外 / 4 最大"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-add-vocals",
+      "name": "Suno Add Vocals to Music",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/add-vocals",
+      "model_options": null,
+      "description": "为上传音频添加人声生成新曲",
+      "params": [
+        {
+          "name": "upload_url",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "negative_tags",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": false,
+          "default": "V6",
+          "enum": [
+            "V4",
+            "V4_5",
+            "V4_5PLUS",
+            "V4_5ALL",
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_MINI",
+            "V6_WILD"
+          ],
+          "description": "推荐 V6 / V6_MINI / V6_WILD（其余已停用）"
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "lyrics",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "vocal_gender",
+          "type": "boolean",
+          "required": false,
+          "default": null,
+          "enum": [
+            "m",
+            "f"
+          ],
+          "description": ""
+        },
+        {
+          "name": "style_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "weirdness_constraint",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "audio_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "variety",
+          "type": "string",
+          "required": false,
+          "default": 1,
+          "enum": null,
+          "description": "多样性：0 严格同风格 / 1 正常 / 2 高 / 3 额外 / 4 最大"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-generate-persona",
+      "name": "Suno Generate Persona",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/generate-persona",
+      "model_options": null,
+      "description": "为生成的音乐创建 Persona（同步返回 persona_id，可串入 generate/extend 的 persona_id）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "原音乐生成任务 ID"
+        },
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "音轨 ID（每条只能生成一次 Persona）"
+        },
+        {
+          "name": "name",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "vocal_start",
+          "type": "string",
+          "required": false,
+          "default": 0,
+          "enum": null,
+          "description": "分析片段起点（秒），与 end 差 10–30 秒"
+        },
+        {
+          "name": "vocal_end",
+          "type": "string",
+          "required": false,
+          "default": 30,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "补充风格标签"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-voice-validate",
+      "name": "Suno Suno Voice Generate Verification Phrase",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/validation-phrase",
+      "model_options": null,
+      "description": "生成验证短语（Voice 链路第 1 步，免费）",
+      "params": [
+        {
+          "name": "voice_url",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "原始录音 URL"
+        },
+        {
+          "name": "vocal_start_s",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "人声片段起点（秒）"
+        },
+        {
+          "name": "vocal_end_s",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "人声片段终点（秒）"
+        },
+        {
+          "name": "language",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": [
+            "en",
+            "zh",
+            "es",
+            "fr",
+            "pt",
+            "de",
+            "ja",
+            "ko",
+            "hi",
+            "ru"
+          ],
+          "description": ""
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-voice-create",
+      "name": "Suno Suno Voice Create Custom Voice",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/create-voice",
+      "model_options": null,
+      "description": "创建自定义音色（Voice 链路第 3 步，voice_id=验证任务 taskId）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "验证短语任务 ID"
+        },
+        {
+          "name": "verify_url",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "用户录制验证短语的音频 URL"
+        },
+        {
+          "name": "voice_name",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "description",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "singer_skill_level",
+          "type": "string",
+          "required": false,
+          "default": "beginner",
+          "enum": [
+            "beginner",
+            "intermediate",
+            "advanced",
+            "professional"
+          ],
+          "description": ""
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-voice-check",
+      "name": "Suno Suno Voice Check Availability",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/check-voice",
+      "model_options": null,
+      "description": "检查自定义音色是否可用（同步返回 isAvailable，免费）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "Create Custom Voice 返回的 taskId"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-voice-regenerate",
+      "name": "Suno Suno Voice Regenerate Verification Phrase",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/regenerate-phrase",
+      "model_options": null,
+      "description": "重新生成验证短语（结果更新在原始验证任务上，免费）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "原验证任务 ID"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-boost-style",
+      "name": "Suno Boost Music Style",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/boost-music-style",
+      "model_options": null,
+      "description": "风格增强改写（结果串回 generate 的 style）",
+      "params": [
+        {
+          "name": "content",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "风格描述，如 'Pop, Mysterious'"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-cover-generate",
+      "name": "Suno Generate Music Cover",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/cover-generate",
+      "model_options": null,
+      "description": "为生成任务的音轨生成封面（2 张）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "原音乐生成任务 ID"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-replace-section",
+      "name": "Suno Replace Music Section",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/replace-section",
+      "model_options": null,
+      "description": "替换音乐片段（infill 时长 10 秒～全曲 50%；来源二选一）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "来源 A：原任务 ID"
+        },
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "来源 A：音轨 ID"
+        },
+        {
+          "name": "upload_url",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "来源 B：上传音频 URL"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": false,
+          "default": "V6",
+          "enum": [
+            "V4",
+            "V4_5",
+            "V4_5PLUS",
+            "V4_5ALL",
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_MINI",
+            "V6_WILD"
+          ],
+          "description": "来源 B 必填（默认 V6）"
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "tags",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "infill_start_s",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "替换起点（秒）"
+        },
+        {
+          "name": "infill_end_s",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "替换终点（秒）"
+        },
+        {
+          "name": "full_lyrics",
+          "type": "array",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "整首完整歌词（含修改段）"
+        },
+        {
+          "name": "lyrics",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "被替换片段的歌词"
+        },
+        {
+          "name": "negative_tags",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "vocal_gender",
+          "type": "boolean",
+          "required": false,
+          "default": null,
+          "enum": [
+            "m",
+            "f"
+          ],
+          "description": ""
+        },
+        {
+          "name": "style_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "weirdness_constraint",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "audio_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "variety",
+          "type": "string",
+          "required": false,
+          "default": 1,
+          "enum": null,
+          "description": "多样性：0 严格同风格 / 1 正常 / 2 高 / 3 额外 / 4 最大"
+        },
+        {
+          "name": "persona_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "persona_model",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": [
+            "style_persona",
+            "voice_persona"
+          ],
+          "description": "style_persona=Persona ID；voice_persona=Suno Voice ID（仅 V6/V6_MINI/V6_WILD）"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-mashup",
+      "name": "Suno Generate Mashup Music",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/mashup",
+      "model_options": null,
+      "description": "混音两段音频（upload_url_list 必须恰好 2 个）",
+      "params": [
+        {
+          "name": "upload_url_list",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "两个可公开访问的音频 URL"
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": [
+            "V4",
+            "V4_5",
+            "V4_5PLUS",
+            "V4_5ALL",
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_MINI",
+            "V6_WILD"
+          ],
+          "description": "推荐 V6 / V6_MINI / V6_WILD（其余已停用）"
+        },
+        {
+          "name": "style",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "title",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "lyrics",
+          "type": "array",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "vocal_gender",
+          "type": "boolean",
+          "required": false,
+          "default": null,
+          "enum": [
+            "m",
+            "f"
+          ],
+          "description": ""
+        },
+        {
+          "name": "style_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "weirdness_constraint",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "audio_weight",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "0–1，两位小数"
+        },
+        {
+          "name": "variety",
+          "type": "string",
+          "required": false,
+          "default": 1,
+          "enum": null,
+          "description": "多样性：0 严格同风格 / 1 正常 / 2 高 / 3 额外 / 4 最大"
+        },
+        {
+          "name": "persona_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "persona_model",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": [
+            "style_persona",
+            "voice_persona"
+          ],
+          "description": "style_persona=Persona ID；voice_persona=Suno Voice ID（仅 V6/V6_MINI/V6_WILD）"
+        },
+        {
+          "name": "duration",
+          "type": "string",
+          "required": false,
+          "default": 20,
+          "enum": null,
+          "description": ""
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-sounds",
+      "name": "Suno Generate Sounds",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/sounds",
+      "model_options": null,
+      "description": "生成音效/循环环境音",
+      "params": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "model",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": [
+            "V5",
+            "V5_5",
+            "V6",
+            "V6_WILD",
+            "V6_MINI"
+          ],
+          "description": ""
+        },
+        {
+          "name": "sound_loop",
+          "type": "boolean",
+          "required": false,
+          "default": false,
+          "enum": null,
+          "description": "是否无缝循环"
+        },
+        {
+          "name": "sound_tempo",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "BPM，省略则自动"
+        },
+        {
+          "name": "sound_key",
+          "type": "string",
+          "required": false,
+          "default": "Any",
+          "enum": [
+            "Any",
+            "Cm",
+            "C#m",
+            "Dm",
+            "D#m",
+            "Em",
+            "Fm",
+            "F#m",
+            "Gm",
+            "G#m",
+            "Am",
+            "A#m",
+            "Bm",
+            "C",
+            "C#",
+            "D",
+            "D#",
+            "E",
+            "F",
+            "F#",
+            "G",
+            "G#",
+            "A",
+            "A#",
+            "B"
+          ],
+          "description": ""
+        },
+        {
+          "name": "grab_lyrics",
+          "type": "array",
+          "required": false,
+          "default": false,
+          "enum": null,
+          "description": "完成后抓取歌词字幕"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-generate-lyrics",
+      "name": "Suno Generate Lyrics",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/generate-lyrics",
+      "model_options": null,
+      "description": "生成歌词（返回 2–3 个变体，结果在 lyricsData[]）",
+      "params": [
+        {
+          "name": "prompt",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "歌词主题/情绪/风格描述"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-timestamped-lyrics",
+      "name": "Suno Get Timestamped Lyrics",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/timeStamped-lyrics",
+      "model_options": null,
+      "description": "获取逐词时间戳歌词（卡拉OK同步）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "音乐生成任务 ID"
+        },
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "音轨 ID"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-separate-vocals",
+      "name": "Suno Vocal & Instrument Stem Separation",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/separate-vocals",
+      "model_options": null,
+      "description": "人声/乐器分轨分离（来源二选一；重复提交同一音轨会重复扣费）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "来源 A：原任务 ID"
+        },
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "来源 A：音轨 ID"
+        },
+        {
+          "name": "audio_url",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "来源 B：上传音频 URL（≤20MB）"
+        },
+        {
+          "name": "type",
+          "type": "string",
+          "required": false,
+          "default": "separate_vocal",
+          "enum": [
+            "separate_vocal",
+            "split_stem",
+            "split_stem_advanced"
+          ],
+          "description": "separate_vocal=人声+伴奏 / split_stem=最多12轨 / split_stem_advanced=提取指定音轨"
+        },
+        {
+          "name": "stem_name",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "仅 split_stem_advanced 必填，如 'Lead Vocal'"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-generate-midi",
+      "name": "Suno Generate MIDI from Audio",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/midi/record-info",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/generate-midi-from-audio",
+      "model_options": null,
+      "description": "从分离任务的 stems 生成 MIDI（免费；音符经 /api/v1/midi/record-info 查询）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "分离任务的 task_id"
+        },
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "指定 stem id（省略=所有 stems）"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-recovery-audio",
+      "name": "Suno Recovery Audio",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/suno/recovery/record-info",
+      "poll_id_param": "task_id",
+      "model_ref": "ai-music-api/suno-recovery-audio",
+      "model_options": null,
+      "description": "恢复历史任务的音频链接（专用轮询端点）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "原音乐生成任务 ID"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-convert-to-wav",
+      "name": "Suno Convert to WAV Format",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/convert-to-wav-format",
+      "model_options": null,
+      "description": "转换为 WAV（重复转换返回 422 + 已有结果，不重复扣费）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "音轨 ID 或分离结果的 stem id"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
+    },
+    {
+      "id": "suno-create-music-video",
+      "name": "Suno Create Music Video",
+      "platform": "suno",
+      "category": "music",
+      "family": "suno",
+      "request_style": "market",
+      "endpoint": "https://api.kie.ai/api/v1/jobs/createTask",
+      "poll_endpoint": "https://api.kie.ai/api/v1/jobs/recordInfo",
+      "poll_id_param": "taskId",
+      "model_ref": "ai-music-api/create-music-video",
+      "model_options": null,
+      "description": "生成音乐可视化 MP4（结果 resultUrls[0]）",
+      "params": [
+        {
+          "name": "task_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": "Generate/Extend 任务 ID"
+        },
+        {
+          "name": "audio_id",
+          "type": "string",
+          "required": true,
+          "default": null,
+          "enum": null,
+          "description": ""
+        },
+        {
+          "name": "author",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "封面署名"
+        },
+        {
+          "name": "domain_name",
+          "type": "string",
+          "required": false,
+          "default": null,
+          "enum": null,
+          "description": "底部水印文字"
+        }
+      ],
+      "model_date": "N/A",
+      "official_price": "N/A",
+      "kie_price": "N/A",
+      "other_info_url": "https://kie.ai/pricing",
+      "doc_url": "https://docs.kie.ai/suno-api",
+      "pricing": null
     }
   ]
 }

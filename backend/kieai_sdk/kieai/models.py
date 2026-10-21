@@ -154,6 +154,13 @@ class Catalog:
         with open(path, "r", encoding="utf-8") as fh:
             inst = cls(json.load(fh))
             inst._path = path
+            # Suno (ai-music-api) 系列以内置规格表为准（官网统一 createTask/recordInfo
+            # 模式），覆盖 catalog.json 中可能过时的 suno 条目。
+            try:
+                from .suno import apply_suno_catalog
+                apply_suno_catalog(inst)
+            except Exception:
+                pass
             return inst
 
     def save(self, path: Optional[str] = None) -> None:

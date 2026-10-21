@@ -257,14 +257,22 @@ class MusicGenInterfaceManager:
         cfg = iface["config"]
         resolved_model = model or cfg.get("default_model", "")
 
-        extra = dict(cfg.get("sdk_extra_args", {}))
+        # 参数合入优先级（低 → 高）：模型参数（model_metadata.*.params，接口 JSON）
+        #   < sdk_extra_args（接口 JSON）< 节点配置 kwargs（由工厂最后 update）
+        meta = (cfg.get("model_metadata") or {}).get(resolved_model) or {}
+        extra = dict(meta.get("params") or {})
+        extra.update(dict(cfg.get("sdk_extra_args", {})))
         ak = (
             api_key
             or kwargs.pop("api_key", None)
             or extra.get("api_key")
+            or cfg.get("sdk_api_key")      # secret:// 引用已由 get() 解析为明文
             or os.getenv(cfg.get("api_key_env", "KIEAI_API_KEY"), "")
         )
         extra["api_key"] = ak
+        # 透传接口级 api_url / api_mode（ACE-Step 双契约分路：cloud / native / auto）
+        extra.setdefault("api_url", cfg.get("api_url") or "")
+        extra.setdefault("api_mode", cfg.get("api_mode") or "")
         if "poll_timeout" in extra:
             extra["poll_timeout"] = int(extra["poll_timeout"])
 

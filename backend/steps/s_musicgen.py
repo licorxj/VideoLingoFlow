@@ -11,14 +11,27 @@
   music_separate          人声 / 分轨分离（separate）
   music_to_wav            转 WAV（to_wav：按 task_id / audio_id）
   music_upload_extend     上传本地音频并扩展（upload_extend）
+  music_persona           生成 Persona（同步返回 persona_id，可串回生成/扩展节点）
+  music_replace_section   替换歌曲片段（replace-section）
+  music_video             音乐视频 MV（create-music-video -> mp4）
+  music_timestamped       逐词时间戳歌词（timestamped-lyrics -> JSON）
+  music_sounds            音效生成（sounds）
+  music_mashup            两段音频混音（mashup）
+  music_boost_style       风格增强（boost-music-style -> 增强后风格文本）
+  music_cover_art         任务封面图 x2（cover-generate）
+  music_voice_clone       Suno Voice 音色克隆（validation-phrase -> create-voice -> check-voice 三步链）
+  music_midi              分离任务 -> MIDI 音符 JSON（generate-midi-from-audio）
+  music_recovery          恢复历史任务音频链接（suno-recovery-audio）
 
 产物统一落盘到 <task_dir>/cache/music，文件名格式：
   <提示词前 15 字符>_<node_id>[_<序号>].<ext>
 
-输出：
-  - audio   : 首个音频路径（歌词节点为歌词文本路径）
-  - audios  : 音频路径列表（歌词 / 转码节点不产出）
-  - params  : 生成参数 JSON 相对路径（含 audio_id / task_id，供下游扩展 / 分离 / 转码节点消费）
+输出（与官方接口对齐，生成类接口每次返回 2 个变体）：
+  - task_id : KIE 任务 ID（大多数节点都有，供下游节点链式消费）
+  - audio_1 : 音频 1（歌词/风格节点为文本路径）
+  - audio_2 : 音频 2（接口只返回 1 条时为空）
+  - params  : 生成参数 JSON 相对路径（含 audio_id / task_id / tracks，供下游扩展 / 分离 / 转码节点消费）
+  - 特殊节点附加端口：persona_id / voice_id / is_available / image_1 / image_2 / video_1 等
 
 提示词来源兼容：开启「使用节点内提示词」(custom_prompt_enabled) 且内容非空时取
 custom_prompt，否则取上游连线 text 输入。
@@ -39,9 +52,16 @@ logger = logging.getLogger(__name__)
 _PASSTHROUGH_STR = (
     "style", "title", "tags", "negative_tags", "vocal_gender",
     "persona_id", "persona_model",
+    "language", "verify_url", "voice_name", "description",
+    "singer_skill_level", "sound_key", "lyrics", "full_lyrics",
+    "section_lyrics", "author", "domain_name", "name",
+    "api_type",
 )
-_PASSTHROUGH_BOOL = ("instrumental", "custom_mode", "default_param_flag")
-_PASSTHROUGH_NUM = ("duration", "continue_at")
+_PASSTHROUGH_BOOL = ("instrumental", "custom_mode", "default_param_flag",
+                     "sound_loop", "grab_lyrics")
+_PASSTHROUGH_NUM = ("duration", "continue_at", "vocal_start", "vocal_end",
+                    "infill_start_s", "infill_end_s", "sound_tempo", "batch_size",
+                    "time_signature")
 
 
 def _read_input_as_text(value, task_dir: str = "") -> str:
@@ -163,8 +183,18 @@ class S_MusicGenBase(BaseStep):
     need_audio = False       # 是否需要本地参考音频（audio 输入口）
     audio_required = False   # 参考音频是否必填
     need_upstream = False    # 是否需要上游参数 JSON（audio_id / task_id）
-    text_output = False      # 输出为文本（歌词节点）
-    list_output = True       # 是否输出 audios 列表
+    text_output = False      # 输出为文本（歌词 / 风格增强节点）
+    audio_output = True      # 是否输出音频/媒体文件端口
+    task_output = True       # 是否输出 task_id 端口（同步端点节点为 False）
+    file_output_prefix = "audio"  # 媒体文件端口前缀（audio_1 / image_1 / video_1）
+    second_audio_input = ""  # 第二路音频输入口 key（混音节点 audio2）
+    result_ports = ()        # 附加输出端口 (port_id, meta_key)，值取自 wrapper 元数据
+    allow_empty_output = False  # 同步 / 链式节点允许无文件产物（仅输出元数据端口）
+    lyrics_input = False     # 独立歌词输入口（lyrics，提示词与歌词分开接入）
+    lyrics_required = False  # 歌词是否必填（纯歌词生音乐模式）
+    direct_custom_input = False  # 节点自定义提示词直接优先于连线输入（免开关）
+    pinned_interface = ""    # 专用节点固定接口 id（空 = 按全局默认 / 首个启用解析）
+    max_audio_outputs = 2    # 音频文件映射的输出端口上限（audio_1 .. audio_N）
 
     # ── BaseStep 接口 ──────────────────────────────────────────────────────
     def check_artifact(self, task_dir: str) -> bool:
@@ -188,16 +218,22 @@ class S_MusicGenBase(BaseStep):
         inputs = getattr(self, "_step_inputs", {}) or {}
 
         # 1. 提示词：节点内自定义优先，其次连线文本输入
-        prompt = ""
-        if config.get("custom_prompt_enabled"):
+        if getattr(self, "direct_custom_input", False):
+            # 免费音乐 step music 系列：节点自定义输入直接优先于连线输入（无需开关）
             prompt = (config.get("custom_prompt", "") or "").strip()
-        if not prompt:
-            prompt = _read_input_as_text(inputs.get("text", ""), task_dir)
+            if not prompt:
+                prompt = _read_input_as_text(inputs.get("text", ""), task_dir)
+        else:
+            prompt = ""
+            if config.get("custom_prompt_enabled"):
+                prompt = (config.get("custom_prompt", "") or "").strip()
+            if not prompt:
+                prompt = _read_input_as_text(inputs.get("text", ""), task_dir)
         if self.prompt_required and not prompt:
             raise ValueError("提示词为空：请连接文本输入，或在节点面板开启「使用节点内提示词」并填写。")
 
-        # 2. 接口 / 模型
-        iface_id = _resolve_interface(config)
+        # 2. 接口 / 模型（专用节点固定接口，不做全局默认解析）
+        iface_id = getattr(self, "pinned_interface", "") or _resolve_interface(config)
         model = (config.get("model") or "").strip()
 
         # 3. 本地参考音频
@@ -206,14 +242,20 @@ class S_MusicGenBase(BaseStep):
             audio_path = _resolve_path(inputs.get("audio", ""), task_dir)
             if not audio_path and self.audio_required:
                 raise ValueError("缺少参考音频：请连接 audio 输入口。")
+        if self.second_audio_input:
+            audio_path2 = _resolve_path(inputs.get(self.second_audio_input, ""), task_dir)
+            if not audio_path2:
+                raise ValueError(f"缺少第二路音频：请连接 {self.second_audio_input} 输入口。")
 
-        # 4. 上游参数 JSON（audio_id / task_id）
+        # 4. 上游参数 JSON / Task ID 输入口（audio_id / task_id）
         upstream = _read_upstream_json(inputs.get("json", ""), task_dir)
         ids = _extract_ids(upstream)
         audio_id = (config.get("audio_id") or "").strip() or ids.get("audio_id", "")
-        task_id = str(upstream.get("task_id") or ids.get("task_id") or "")
+        # Task ID 输入口（上游音乐节点的 task_id 输出）优先于从 JSON 中提取
+        task_id = str(inputs.get("task_id") or "").strip() \
+            or str(upstream.get("task_id") or ids.get("task_id") or "")
         if self.need_upstream and not (audio_id or task_id):
-            raise ValueError("缺少 audio_id / task_id：请连接上游音乐节点的「生成参数JSON」输出。")
+            raise ValueError("缺少 audio_id / task_id：请连接上游音乐节点的「Task ID」或「生成参数JSON」输出。")
 
         # 5. 组装 wrapper 参数
         kwargs = {}
@@ -233,9 +275,24 @@ class S_MusicGenBase(BaseStep):
                 try:
                     kwargs[key] = int(v)
                 except (TypeError, ValueError):
-                    pass
+                    try:
+                        kwargs[key] = float(v)
+                    except (TypeError, ValueError):
+                        pass
+        # 1.5 独立歌词输入（step music 系列）：自定义歌词优先，其次连线歌词输入
+        if getattr(self, "lyrics_input", False):
+            lyrics = (config.get("custom_lyrics", "") or "").strip()
+            if not lyrics:
+                lyrics = _read_input_as_text(inputs.get("lyrics", ""), task_dir)
+            if lyrics:
+                kwargs["lyrics"] = lyrics
+            elif getattr(self, "lyrics_required", False):
+                raise ValueError("歌词为空：请连接上游歌词输入，或在节点上填写自定义歌词。")
+
         if audio_path:
             kwargs["audio_path"] = audio_path
+        if getattr(self, "second_audio_input", "") and audio_path2:
+            kwargs["audio_path2"] = audio_path2
         if audio_id:
             kwargs["audio_id"] = audio_id
         if task_id:
@@ -251,7 +308,9 @@ class S_MusicGenBase(BaseStep):
                 pass
 
         if callback:
-            callback(10, f"AI音乐 准备中（{self.capability} / {model or '默认模型'}）...")
+            _model_label = {"cloud": "免费在线模型", "local": "step-music本地整合包"}.get(
+                (config.get("api_type") or "").strip(), model or "默认模型")
+            callback(10, f"AI音乐 准备中（{self.capability} / {_model_label}）...")
 
         # 6. 调用工厂执行
         from backend.musicgen.musicgen_factory import get_musicgen_engine
@@ -280,7 +339,7 @@ class S_MusicGenBase(BaseStep):
             raise RuntimeError(f"AI音乐生成失败: {e}") from e
 
         paths = [p for p in (paths or []) if p and os.path.exists(p)]
-        if not paths:
+        if not paths and not self.allow_empty_output:
             raise RuntimeError("AI音乐生成未返回任何产物（请检查接口 / 模型 / 参数或 API Key）。")
 
         # 7. 产物落盘（文件名带 node_id，避免同类型多实例互相覆盖）
@@ -293,23 +352,29 @@ class S_MusicGenBase(BaseStep):
             shutil.copy2(src, dest)
             saved.append(os.path.join("cache", "music", name))
 
-        # 8. 生成参数 JSON（含 audio_id / task_id，供下游扩展 / 分离 / 转码消费）
-        result_ids = {}
+        # 8. 生成参数 JSON（含 task_id / audio_id / tracks，供下游链式消费）
+        meta = {}
         meta_path = os.path.join(temp_dir, "_musicgen_result.json")
         if os.path.exists(meta_path):
             try:
                 with open(meta_path, "r", encoding="utf-8") as f:
-                    result_ids = _extract_ids(json.load(f))
+                    meta = json.load(f)
             except Exception:
-                result_ids = {}
+                meta = {}
+        result_ids = _extract_ids(meta)
+        result_task_id = str(meta.get("task_id") or result_ids.get("task_id") or "")
+        track_ids = [str(t.get("id")) for t in (meta.get("tracks") or [])
+                     if isinstance(t, dict) and t.get("id")]
         params = {
             "node_id": node_id,
             "interface": iface_id,
             "mode": self.capability,
             "model": model,
             "prompt": prompt,
+            "task_id": result_task_id or task_id or "",
             "audio_id": result_ids.get("audio_id") or audio_id or "",
-            "task_id": result_ids.get("task_id") or task_id or "",
+            "audio_ids": track_ids,
+            "tracks": meta.get("tracks") or [],
             "saved": saved,
             "created_at": __import__("datetime").datetime.now().isoformat(),
         }
@@ -325,13 +390,18 @@ class S_MusicGenBase(BaseStep):
             callback(100, f"已保存 {len(saved)} 个产物到 cache/music")
 
         # 9. 输出端口（key 与 builtin_node_types 的 outputs 端口 id 一一对应）
+        # task_id 供下游链式串联；生成类接口返回 2 个变体 → audio_1 / audio_2；
+        # 文本类模式输出 text；同步节点（persona / voice 克隆）输出元数据端口
         outputs = {"params": params_rel}
+        if self.task_output:
+            outputs["task_id"] = params.get("task_id", "")
         if self.text_output:
-            outputs["text"] = saved[0]
-        else:
-            outputs["audio"] = saved[0]
-            if self.list_output:
-                outputs["audios"] = saved
+            outputs["text"] = saved[0] if saved else ""
+        elif self.audio_output:
+            for i, p in enumerate(saved[:self.max_audio_outputs]):
+                outputs[f"{self.file_output_prefix}_{i + 1}"] = p
+        for port_id, meta_key in self.result_ports:
+            outputs[port_id] = meta.get(meta_key, "")
 
         return {
             "artifacts": list(saved) + [params_rel],
@@ -362,7 +432,6 @@ class S_MusicLyrics(S_MusicGenBase):
     capability = "lyrics"
     prompt_required = True
     text_output = True
-    list_output = False
 
 
 class S_MusicExtend(S_MusicGenBase):
@@ -415,7 +484,6 @@ class S_MusicToWav(S_MusicGenBase):
     capability = "to_wav"
     prompt_required = False
     need_upstream = True
-    list_output = False
 
 
 class S_MusicUploadExtend(S_MusicGenBase):
@@ -425,3 +493,158 @@ class S_MusicUploadExtend(S_MusicGenBase):
     prompt_required = False
     need_audio = True
     audio_required = True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 官方能力补全节点（persona / replace-section / mv / 时间戳 / 音效 / 混音 /
+# 风格增强 / 封面 / Voice 克隆 / MIDI / 恢复）
+# ─────────────────────────────────────────────────────────────────────────────
+class S_MusicPersona(S_MusicGenBase):
+    step_id = "music_persona"
+    step_name = "AI音乐-Persona生成"
+    capability = "persona"
+    prompt_required = False
+    need_upstream = True
+    audio_output = False
+    task_output = False
+    allow_empty_output = True
+    result_ports = (("persona_id", "persona_id"),)
+
+
+class S_MusicReplaceSection(S_MusicGenBase):
+    step_id = "music_replace_section"
+    step_name = "AI音乐-片段替换"
+    capability = "replace_section"
+    prompt_required = True
+    need_audio = True
+    audio_required = False
+    need_upstream = False   # Task ID / 本地音频 / upload_url 三选一，wrapper 内校验
+
+
+class S_MusicVideo(S_MusicGenBase):
+    step_id = "music_video"
+    step_name = "AI音乐-音乐视频MV"
+    capability = "music_video"
+    prompt_required = False
+    need_upstream = True
+    file_output_prefix = "video"
+
+
+class S_MusicTimestamped(S_MusicGenBase):
+    step_id = "music_timestamped"
+    step_name = "AI音乐-时间戳歌词"
+    capability = "timestamped"
+    prompt_required = False
+    need_upstream = True
+    audio_output = False
+    text_output = True
+
+
+class S_MusicSounds(S_MusicGenBase):
+    step_id = "music_sounds"
+    step_name = "AI音乐-音效生成"
+    capability = "sounds"
+    prompt_required = True
+
+
+class S_MusicMashup(S_MusicGenBase):
+    step_id = "music_mashup"
+    step_name = "AI音乐-混音"
+    capability = "mashup"
+    prompt_required = False
+    need_audio = True
+    audio_required = True
+    second_audio_input = "audio2"
+
+
+class S_MusicBoostStyle(S_MusicGenBase):
+    step_id = "music_boost_style"
+    step_name = "AI音乐-风格增强"
+    capability = "boost_style"
+    prompt_required = True
+    audio_output = False
+    text_output = True
+
+
+class S_MusicCoverArt(S_MusicGenBase):
+    step_id = "music_cover_art"
+    step_name = "AI音乐-封面生成"
+    capability = "cover_art"
+    prompt_required = False
+    need_upstream = True
+    file_output_prefix = "image"
+
+
+class S_MusicVoiceClone(S_MusicGenBase):
+    step_id = "music_voice_clone"
+    step_name = "AI音乐-Suno音色克隆"
+    capability = "voice_clone"
+    prompt_required = False
+    need_audio = True
+    audio_required = True
+    audio_output = False
+    task_output = False
+    allow_empty_output = True
+    result_ports = (("voice_id", "voice_id"), ("is_available", "is_available"))
+
+
+class S_MusicMidi(S_MusicGenBase):
+    step_id = "music_midi"
+    step_name = "AI音乐-音频转MIDI"
+    capability = "midi"
+    prompt_required = False
+    need_upstream = True
+    audio_output = False
+    text_output = True
+
+
+class S_MusicRecovery(S_MusicGenBase):
+    step_id = "music_recovery"
+    step_name = "AI音乐-音频恢复"
+    capability = "recovery"
+    prompt_required = False
+    need_upstream = True
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 免费 AI音乐 step music（ACE-Step 1.5，MIT 许可 / 官方标价 $0）
+#
+# 与 KieAI/Suno 请求契约本质不同，走独立 SDK 分路（接口 JSON sdk_module 路由到
+# backend.musicgen.sdk.acestep_music_wrapper）。提示词与歌词分开接入；
+# 节点自定义输入直接优先于连线输入。
+# ─────────────────────────────────────────────────────────────────────────────
+class S_StepMusicBase(S_MusicGenBase):
+    step_id = "step_music_base"
+    step_name = "免费AI音乐-step music"
+    capability = "step_txt2music"
+    lyrics_input = True          # 独立歌词输入口
+    direct_custom_input = True   # 自定义提示词 / 歌词直接优先于连线输入
+    task_output = False          # 云端同步接口，无可链式复用的任务 ID
+    pinned_interface = "acestep_music"  # ACE-Step 专用：固定走 step music 分路
+    max_audio_outputs = 4        # 批次生成数量最多 4 → audio_1 .. audio_4 按序匹配
+
+
+class S_StepMusicTxt2Music(S_StepMusicBase):
+    step_id = "step_music_txt2music"
+    step_name = "免费AI音乐-文生音乐"
+    capability = "step_txt2music"
+
+
+class S_StepMusicNatural(S_StepMusicBase):
+    step_id = "step_music_natural"
+    step_name = "免费AI音乐-自然语言创作"
+    capability = "step_natural"
+
+
+class S_StepMusicLyrics2Music(S_StepMusicBase):
+    step_id = "step_music_lyrics2music"
+    step_name = "免费AI音乐-歌词生音乐"
+    capability = "step_lyrics2music"
+    prompt_required = False
+    lyrics_required = True
+
+
+class S_StepMusicInstrumental(S_StepMusicBase):
+    step_id = "step_music_instrumental"
+    step_name = "免费AI音乐-纯音乐"
+    capability = "step_instrumental"
