@@ -1471,7 +1471,7 @@ BUILTIN_NODE_TYPES = [
         "name": "长文本TTS",
         "execution_domain": "process",
         "category": "ai_gen",
-        "description": "纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），进程中断也不丢记录，方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。",
+        "description": "纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），进程中断也不丢记录，方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。\n【多角色配音】勾选「多角色配音」后，按文本中的说话人标签识别不同角色并分角色配音。说话人标签格式为「SPEAKER_<标识>」后接全角冒号「：」或半角冒号「:」，例如：\n  SPEAKER_01：你好啊\n  SPEAKER_02：我挺好的，你呢？\n  SPEAKER_AAA：这段由另一个角色朗读\n说明：① 标签后的冒号与角色名一起从朗读文本中剥离，不会读出；② 数字后缀按「编号-1」映射角色（SPEAKER_01→角色1、SPEAKER_02→角色2……），非数字后缀按首次出现顺序编号；③ 标签字符串与前端角色槽位解耦，具体写 SPEAKER_01 还是 SPEAKER_AAA 都只决定角色顺序；④ 无前缀的普通文本归为角色0；⑤ 映射出的角色索引若超过前端已配置的角色数，自动降级到角色0（即复用首个角色）。需同时配置对应模式的角色（克隆多角色填角色1~4参考音频 / 预置角色填朗读者1~4音色 / 音色设计填角色1~4描述）才会真正分角色发声。",
         "icon": "Volume2",
         "color": "#10b981",
         "inputs": [
@@ -1512,6 +1512,8 @@ BUILTIN_NODE_TYPES = [
                 {"value": "controllable_clone", "label": "指令克隆"},
                 {"value": "voice_design", "label": "音色设计"},
             ]},
+            {"key": "multi_role", "label": "多角色配音", "type": "checkbox", "defaultValue": False,
+             "description": "勾选后按文本中的 SPEAKER_xxx： 标记识别不同角色（如 SPEAKER_01：你好），并把各说话人解耦映射到下方配置的角色1~4（按编号/出现顺序对应，标签字符串不绑定具体角色）；标记前无前缀的内容归为角色0。需配合对应模式的角色配置（克隆多角色填角色1~4参考音频 / 预置角色填朗读者1~4音色 / 音色设计填角色1~4描述）才生效。"},
             {"key": "tts_engine", "label": "配音引擎", "type": "api-select", "dependsOn": "tts_mode", "apiEndpoint": "/api/tts-interfaces/by-mode/{tts_mode}", "placeholder": "跟随全局配置", "optionLabel": "name", "optionValue": "id"},
             {"key": "tts_model", "label": "TTS 模型", "type": "api-select", "dependsOn": "tts_engine", "apiEndpoint": "/api/tts-interfaces/{tts_engine}/models-for-node", "placeholder": "跟随接口默认模型", "colSpan": "half"},
             {"key": "clone_source", "label": "克隆音频来源", "type": "select", "dependsOn": "tts_mode", "dependsAnyValues": ["clone", "controllable_clone"], "options": [
@@ -4184,11 +4186,12 @@ BUILTIN_NODE_TYPES = [
         "name": "新建剪辑工程",
         "execution_domain": "process",
         "category": "ai_desk",
-        "description": "AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点",
+        "description": "AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）；连入「主轨视频」时自动把该视频导入媒体池并放到主视频轨 V1。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点",
         "icon": "FolderPlus",
         "color": "#0ea5e9",
         "inputs": [
             {"id": "name", "label": "任意输入", "type": "any"},
+            {"id": "video", "label": "主轨视频", "type": "video"},
         ],
         "outputs": [
             {"id": "project", "label": "剪辑台项目ID", "type": "text"},
@@ -6202,13 +6205,14 @@ _STEP_MUSIC_NODES = [
         "官方标价 $0 免费；适合视频配乐。",
         "step_instrumental", icon="Music", with_lyrics=False),
 ]
+BUILTIN_NODE_TYPES.extend(_STEP_MUSIC_NODES)
 
 # 音乐提示词优化节点（LLM 扩写：简单描述 → 平台提示词 / 歌词 / 全信息 JSON）
 _MUSIC_PROMPT_OPTIMIZER_NODE = {
     "id": "music_prompt_optimizer",
     "name": "音乐提示词优化",
     "execution_domain": "process",
-    "category": "music_step",
+    "category": "prompt_opt",
     "description": (
         "把对音乐的简单描述按目标平台（ACE-Step / Suno）提示词规范，用 LLM 扩写成"
         "中文提示词、英文提示词、歌词与全信息 JSON；纯音乐模式下不生成歌词。"
@@ -7177,7 +7181,7 @@ BUILTIN_NODE_TYPES.append(
         "id": "prompt_opt_image",
         "name": "生图提示词优化",
         "execution_domain": "thread",
-        "category": "ai_gen",
+        "category": "prompt_opt",
         "description": "通用·生图提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/image_prompt_optimize.md）调 LLM 补全主体/构图/光线/风格等静态画面维度，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选画风模板，风格段会作为约束一起发给 LLM",
         "icon": "Sparkles",
         "color": "#8b5cf6",
@@ -7220,7 +7224,7 @@ BUILTIN_NODE_TYPES.append(
         "id": "prompt_opt_video",
         "name": "生视频提示词优化",
         "execution_domain": "thread",
-        "category": "ai_gen",
+        "category": "prompt_opt",
         "description": "通用·生视频提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/video_prompt_optimize.md）调 LLM 补全运动、运镜、景别与镜头状态，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选视频风格模板（景别/运镜/光线/色调/节奏）",
         "icon": "Wand2",
         "color": "#8b5cf6",

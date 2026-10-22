@@ -3927,7 +3927,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "long_text_tts",
     "name": "长文本TTS",
     "category": "ai_gen",
-    "description": "纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），进程中断也不丢记录，方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。",
+    "description": "纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），进程中断也不丢记录，方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。\n【多角色配音】勾选「多角色配音」后，按文本中的说话人标签识别不同角色并分角色配音。说话人标签格式为「SPEAKER_<标识>」后接全角冒号「：」或半角冒号「:」，例如：\n  SPEAKER_01：你好啊\n  SPEAKER_02：我挺好的，你呢？\n  SPEAKER_AAA：这段由另一个角色朗读\n说明：① 标签后的冒号与角色名一起从朗读文本中剥离，不会读出；② 数字后缀按「编号-1」映射角色（SPEAKER_01→角色1、SPEAKER_02→角色2……），非数字后缀按首次出现顺序编号；③ 标签字符串与前端角色槽位解耦，具体写 SPEAKER_01 还是 SPEAKER_AAA 都只决定角色顺序；④ 无前缀的普通文本归为角色0；⑤ 映射出的角色索引若超过前端已配置的角色数，自动降级到角色0（即复用首个角色）。需同时配置对应模式的角色（克隆多角色填角色1~4参考音频 / 预置角色填朗读者1~4音色 / 音色设计填角色1~4描述）才会真正分角色发声。",
     "icon": "Volume2",
     "color": "#10b981",
     "execution_domain": "process",
@@ -4011,6 +4011,13 @@ export const FALLBACK_NODE_TYPES = [
             "label": "音色设计"
           }
         ]
+      },
+      {
+        "key": "multi_role",
+        "label": "多角色配音",
+        "type": "checkbox",
+        "defaultValue": false,
+        "description": "勾选后按文本中的 SPEAKER_xxx： 标记识别不同角色（如 SPEAKER_01：你好），并把各说话人解耦映射到下方配置的角色1~4（按编号/出现顺序对应，标签字符串不绑定具体角色）；标记前无前缀的内容归为角色0。需配合对应模式的角色配置（克隆多角色填角色1~4参考音频 / 预置角色填朗读者1~4音色 / 音色设计填角色1~4描述）才生效。"
       },
       {
         "key": "tts_engine",
@@ -12141,7 +12148,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "desk_project",
     "name": "新建剪辑工程",
     "category": "ai_desk",
-    "description": "AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点",
+    "description": "AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）；连入「主轨视频」时自动把该视频导入媒体池并放到主视频轨 V1。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点",
     "icon": "FolderPlus",
     "color": "#0ea5e9",
     "execution_domain": "process",
@@ -12150,6 +12157,11 @@ export const FALLBACK_NODE_TYPES = [
         "id": "name",
         "label": "任意输入",
         "type": "any"
+      },
+      {
+        "id": "video",
+        "label": "主轨视频",
+        "type": "video"
       }
     ],
     "outputs": [
@@ -18937,9 +18949,1967 @@ export const FALLBACK_NODE_TYPES = [
     "isBuiltIn": true
   },
   {
+    "id": "step_music_txt2music",
+    "name": "免费AI音乐-文生音乐",
+    "category": "music_step",
+    "description": "ACE-Step 1.5 标签模式：按提示词描述生成完整歌曲（可选提供歌词，未提供时由 LM 创作）。官方标价 $0 免费；提示词与歌词分开接入，节点自定义输入优先于连线输入。",
+    "icon": "Music",
+    "color": "#22c55e",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      },
+      {
+        "id": "lyrics",
+        "label": "歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "audio_3",
+        "label": "音频3",
+        "type": "audio"
+      },
+      {
+        "id": "audio_4",
+        "label": "音频4",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "api_type": "cloud",
+      "model": "",
+      "custom_prompt": "",
+      "custom_lyrics": "",
+      "lm_optimize": true,
+      "thinking": false,
+      "batch_size": "2",
+      "duration": "30",
+      "time_signature": "",
+      "audio_format": "mp3",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://acemusic.ai/api-key"
+      },
+      {
+        "key": "btn_download_pack",
+        "label": "下载整合包",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://pan.quark.cn/s/f4b561117d63"
+      },
+      {
+        "key": "api_type",
+        "label": "接口类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "local",
+            "label": "step-music（本地整合包）"
+          },
+          {
+            "value": "cloud",
+            "label": "免费在线模型（获取key）"
+          }
+        ],
+        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/acestep_music/models-for-node?mode=step_txt2music&api_type={api_type}",
+        "dependsOn": "api_type",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+        "description": "节点自定义输入优先于接入输入",
+        "dice": true,
+        "diceEndpoint": "/api/musicgen-interfaces/prompt-example/random?mode=step_txt2music",
+        "diceTitle": "随机示例：抽取一条官方提示词示例填充到节点（不匹配的项自动忽略）"
+      },
+      {
+        "key": "custom_lyrics",
+        "label": "自定义歌词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "支持 [Verse] / [Chorus] 等结构标记；填写后优先于连线输入的歌词",
+        "description": "节点自定义输入优先于接入输入"
+      },
+      {
+        "key": "lm_optimize",
+        "label": "LM优化提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
+      },
+      {
+        "key": "thinking",
+        "label": "LM深度思考",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
+      },
+      {
+        "key": "batch_size",
+        "label": "批次生成数量",
+        "type": "number",
+        "min": 1,
+        "max": 4,
+        "colSpan": "half",
+        "description": "单次生成的音频数量（1~4），多结果时超额产物记录在生成参数JSON"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 600,
+        "colSpan": "half",
+        "description": "10~600 秒，留空由 LM 自动决定"
+      },
+      {
+        "key": "bpm",
+        "label": "曲速 BPM",
+        "type": "combobox",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "60",
+            "label": "60"
+          },
+          {
+            "value": "66",
+            "label": "66"
+          },
+          {
+            "value": "70",
+            "label": "70"
+          },
+          {
+            "value": "76",
+            "label": "76"
+          },
+          {
+            "value": "80",
+            "label": "80"
+          },
+          {
+            "value": "84",
+            "label": "84"
+          },
+          {
+            "value": "88",
+            "label": "88"
+          },
+          {
+            "value": "90",
+            "label": "90"
+          },
+          {
+            "value": "92",
+            "label": "92"
+          },
+          {
+            "value": "96",
+            "label": "96"
+          },
+          {
+            "value": "100",
+            "label": "100"
+          },
+          {
+            "value": "104",
+            "label": "104"
+          },
+          {
+            "value": "108",
+            "label": "108"
+          },
+          {
+            "value": "110",
+            "label": "110"
+          },
+          {
+            "value": "112",
+            "label": "112"
+          },
+          {
+            "value": "116",
+            "label": "116"
+          },
+          {
+            "value": "120",
+            "label": "120"
+          },
+          {
+            "value": "124",
+            "label": "124"
+          },
+          {
+            "value": "126",
+            "label": "126"
+          },
+          {
+            "value": "128",
+            "label": "128"
+          },
+          {
+            "value": "132",
+            "label": "132"
+          },
+          {
+            "value": "136",
+            "label": "136"
+          },
+          {
+            "value": "140",
+            "label": "140"
+          },
+          {
+            "value": "144",
+            "label": "144"
+          },
+          {
+            "value": "150",
+            "label": "150"
+          },
+          {
+            "value": "160",
+            "label": "160"
+          },
+          {
+            "value": "170",
+            "label": "170"
+          },
+          {
+            "value": "180",
+            "label": "180"
+          },
+          {
+            "value": "190",
+            "label": "190"
+          },
+          {
+            "value": "200",
+            "label": "200"
+          }
+        ],
+        "placeholder": "如：120（可下拉选择或手动输入）",
+        "description": "30~300，留空自动决定"
+      },
+      {
+        "key": "key_scale",
+        "label": "调性",
+        "type": "combobox",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "C Major",
+            "label": "C 大调"
+          },
+          {
+            "value": "A Minor",
+            "label": "A 小调"
+          },
+          {
+            "value": "G Major",
+            "label": "G 大调"
+          },
+          {
+            "value": "E Minor",
+            "label": "E 小调"
+          },
+          {
+            "value": "D Major",
+            "label": "D 大调"
+          },
+          {
+            "value": "B Minor",
+            "label": "B 小调"
+          },
+          {
+            "value": "A Major",
+            "label": "A 大调"
+          },
+          {
+            "value": "F# Minor",
+            "label": "F# 小调"
+          },
+          {
+            "value": "E Major",
+            "label": "E 大调"
+          },
+          {
+            "value": "C# Minor",
+            "label": "C# 小调"
+          },
+          {
+            "value": "B Major",
+            "label": "B 大调"
+          },
+          {
+            "value": "G# Minor",
+            "label": "G# 小调"
+          },
+          {
+            "value": "F# Major",
+            "label": "F# 大调"
+          },
+          {
+            "value": "D# Minor",
+            "label": "D# 小调"
+          },
+          {
+            "value": "Db Major",
+            "label": "Db 大调"
+          },
+          {
+            "value": "Bb Minor",
+            "label": "Bb 小调"
+          },
+          {
+            "value": "Ab Major",
+            "label": "Ab 大调"
+          },
+          {
+            "value": "F Minor",
+            "label": "F 小调"
+          },
+          {
+            "value": "Eb Major",
+            "label": "Eb 大调"
+          },
+          {
+            "value": "C Minor",
+            "label": "C 小调"
+          },
+          {
+            "value": "Bb Major",
+            "label": "Bb 大调"
+          },
+          {
+            "value": "G Minor",
+            "label": "G 小调"
+          },
+          {
+            "value": "F Major",
+            "label": "F 大调"
+          },
+          {
+            "value": "D Minor",
+            "label": "D 小调"
+          }
+        ],
+        "placeholder": "如：C Major / A Minor（可下拉选择或手动输入）",
+        "description": "留空自动决定"
+      },
+      {
+        "key": "time_signature",
+        "label": "节拍",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "由模型决定（默认）"
+          },
+          {
+            "value": "2",
+            "label": "2/4 拍"
+          },
+          {
+            "value": "3",
+            "label": "3/4 拍"
+          },
+          {
+            "value": "4",
+            "label": "4/4 拍"
+          },
+          {
+            "value": "6",
+            "label": "6/8 拍"
+          }
+        ],
+        "description": "节拍/拍号；留空由模型根据风格自动决定"
+      },
+      {
+        "key": "vocal_language",
+        "label": "演唱语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          }
+        ],
+        "description": "歌词演唱语言；纯音乐节点忽略"
+      },
+      {
+        "key": "audio_format",
+        "label": "音频格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "wav",
+            "label": "WAV（无损）"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC（无损）"
+          },
+          {
+            "value": "opus",
+            "label": "Opus"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          }
+        ]
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "colSpan": "half",
+        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "step_music_natural",
+    "name": "免费AI音乐-自然语言创作",
+    "category": "music_step",
+    "description": "ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。",
+    "icon": "Sparkles",
+    "color": "#22c55e",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "audio_3",
+        "label": "音频3",
+        "type": "audio"
+      },
+      {
+        "id": "audio_4",
+        "label": "音频4",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "api_type": "cloud",
+      "model": "",
+      "custom_prompt": "",
+      "custom_lyrics": "",
+      "lm_optimize": true,
+      "thinking": false,
+      "batch_size": "2",
+      "duration": "30",
+      "time_signature": "",
+      "audio_format": "mp3",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://acemusic.ai/api-key"
+      },
+      {
+        "key": "btn_download_pack",
+        "label": "下载整合包",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://pan.quark.cn/s/f4b561117d63"
+      },
+      {
+        "key": "api_type",
+        "label": "接口类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "local",
+            "label": "step-music（本地整合包）"
+          },
+          {
+            "value": "cloud",
+            "label": "免费在线模型（获取key）"
+          }
+        ],
+        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/acestep_music/models-for-node?mode=step_natural&api_type={api_type}",
+        "dependsOn": "api_type",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+        "description": "节点自定义输入优先于接入输入",
+        "dice": true,
+        "diceEndpoint": "/api/musicgen-interfaces/prompt-example/random?mode=step_natural",
+        "diceTitle": "随机示例：抽取一条官方提示词示例填充到节点（不匹配的项自动忽略）"
+      },
+      {
+        "key": "lm_optimize",
+        "label": "LM优化提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
+      },
+      {
+        "key": "thinking",
+        "label": "LM深度思考",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
+      },
+      {
+        "key": "batch_size",
+        "label": "批次生成数量",
+        "type": "number",
+        "min": 1,
+        "max": 4,
+        "colSpan": "half",
+        "description": "单次生成的音频数量（1~4），多结果时超额产物记录在生成参数JSON"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 600,
+        "colSpan": "half",
+        "description": "10~600 秒，留空由 LM 自动决定"
+      },
+      {
+        "key": "bpm",
+        "label": "曲速 BPM",
+        "type": "combobox",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "60",
+            "label": "60"
+          },
+          {
+            "value": "66",
+            "label": "66"
+          },
+          {
+            "value": "70",
+            "label": "70"
+          },
+          {
+            "value": "76",
+            "label": "76"
+          },
+          {
+            "value": "80",
+            "label": "80"
+          },
+          {
+            "value": "84",
+            "label": "84"
+          },
+          {
+            "value": "88",
+            "label": "88"
+          },
+          {
+            "value": "90",
+            "label": "90"
+          },
+          {
+            "value": "92",
+            "label": "92"
+          },
+          {
+            "value": "96",
+            "label": "96"
+          },
+          {
+            "value": "100",
+            "label": "100"
+          },
+          {
+            "value": "104",
+            "label": "104"
+          },
+          {
+            "value": "108",
+            "label": "108"
+          },
+          {
+            "value": "110",
+            "label": "110"
+          },
+          {
+            "value": "112",
+            "label": "112"
+          },
+          {
+            "value": "116",
+            "label": "116"
+          },
+          {
+            "value": "120",
+            "label": "120"
+          },
+          {
+            "value": "124",
+            "label": "124"
+          },
+          {
+            "value": "126",
+            "label": "126"
+          },
+          {
+            "value": "128",
+            "label": "128"
+          },
+          {
+            "value": "132",
+            "label": "132"
+          },
+          {
+            "value": "136",
+            "label": "136"
+          },
+          {
+            "value": "140",
+            "label": "140"
+          },
+          {
+            "value": "144",
+            "label": "144"
+          },
+          {
+            "value": "150",
+            "label": "150"
+          },
+          {
+            "value": "160",
+            "label": "160"
+          },
+          {
+            "value": "170",
+            "label": "170"
+          },
+          {
+            "value": "180",
+            "label": "180"
+          },
+          {
+            "value": "190",
+            "label": "190"
+          },
+          {
+            "value": "200",
+            "label": "200"
+          }
+        ],
+        "placeholder": "如：120（可下拉选择或手动输入）",
+        "description": "30~300，留空自动决定"
+      },
+      {
+        "key": "key_scale",
+        "label": "调性",
+        "type": "combobox",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "C Major",
+            "label": "C 大调"
+          },
+          {
+            "value": "A Minor",
+            "label": "A 小调"
+          },
+          {
+            "value": "G Major",
+            "label": "G 大调"
+          },
+          {
+            "value": "E Minor",
+            "label": "E 小调"
+          },
+          {
+            "value": "D Major",
+            "label": "D 大调"
+          },
+          {
+            "value": "B Minor",
+            "label": "B 小调"
+          },
+          {
+            "value": "A Major",
+            "label": "A 大调"
+          },
+          {
+            "value": "F# Minor",
+            "label": "F# 小调"
+          },
+          {
+            "value": "E Major",
+            "label": "E 大调"
+          },
+          {
+            "value": "C# Minor",
+            "label": "C# 小调"
+          },
+          {
+            "value": "B Major",
+            "label": "B 大调"
+          },
+          {
+            "value": "G# Minor",
+            "label": "G# 小调"
+          },
+          {
+            "value": "F# Major",
+            "label": "F# 大调"
+          },
+          {
+            "value": "D# Minor",
+            "label": "D# 小调"
+          },
+          {
+            "value": "Db Major",
+            "label": "Db 大调"
+          },
+          {
+            "value": "Bb Minor",
+            "label": "Bb 小调"
+          },
+          {
+            "value": "Ab Major",
+            "label": "Ab 大调"
+          },
+          {
+            "value": "F Minor",
+            "label": "F 小调"
+          },
+          {
+            "value": "Eb Major",
+            "label": "Eb 大调"
+          },
+          {
+            "value": "C Minor",
+            "label": "C 小调"
+          },
+          {
+            "value": "Bb Major",
+            "label": "Bb 大调"
+          },
+          {
+            "value": "G Minor",
+            "label": "G 小调"
+          },
+          {
+            "value": "F Major",
+            "label": "F 大调"
+          },
+          {
+            "value": "D Minor",
+            "label": "D 小调"
+          }
+        ],
+        "placeholder": "如：C Major / A Minor（可下拉选择或手动输入）",
+        "description": "留空自动决定"
+      },
+      {
+        "key": "time_signature",
+        "label": "节拍",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "由模型决定（默认）"
+          },
+          {
+            "value": "2",
+            "label": "2/4 拍"
+          },
+          {
+            "value": "3",
+            "label": "3/4 拍"
+          },
+          {
+            "value": "4",
+            "label": "4/4 拍"
+          },
+          {
+            "value": "6",
+            "label": "6/8 拍"
+          }
+        ],
+        "description": "节拍/拍号；留空由模型根据风格自动决定"
+      },
+      {
+        "key": "vocal_language",
+        "label": "演唱语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          }
+        ],
+        "description": "歌词演唱语言；纯音乐节点忽略"
+      },
+      {
+        "key": "audio_format",
+        "label": "音频格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "wav",
+            "label": "WAV（无损）"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC（无损）"
+          },
+          {
+            "value": "opus",
+            "label": "Opus"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          }
+        ]
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "colSpan": "half",
+        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "step_music_lyrics2music",
+    "name": "免费AI音乐-歌词生音乐",
+    "category": "music_step",
+    "description": "ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。",
+    "icon": "FileText",
+    "color": "#22c55e",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      },
+      {
+        "id": "lyrics",
+        "label": "歌词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "audio_3",
+        "label": "音频3",
+        "type": "audio"
+      },
+      {
+        "id": "audio_4",
+        "label": "音频4",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "api_type": "cloud",
+      "model": "",
+      "custom_prompt": "",
+      "custom_lyrics": "",
+      "lm_optimize": true,
+      "thinking": false,
+      "batch_size": "2",
+      "duration": "30",
+      "time_signature": "",
+      "audio_format": "mp3",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://acemusic.ai/api-key"
+      },
+      {
+        "key": "btn_download_pack",
+        "label": "下载整合包",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://pan.quark.cn/s/f4b561117d63"
+      },
+      {
+        "key": "api_type",
+        "label": "接口类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "local",
+            "label": "step-music（本地整合包）"
+          },
+          {
+            "value": "cloud",
+            "label": "免费在线模型（获取key）"
+          }
+        ],
+        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/acestep_music/models-for-node?mode=step_lyrics2music&api_type={api_type}",
+        "dependsOn": "api_type",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+        "description": "节点自定义输入优先于接入输入",
+        "dice": true,
+        "diceEndpoint": "/api/musicgen-interfaces/prompt-example/random?mode=step_lyrics2music",
+        "diceTitle": "随机示例：抽取一条官方提示词示例填充到节点（不匹配的项自动忽略）"
+      },
+      {
+        "key": "custom_lyrics",
+        "label": "自定义歌词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "支持 [Verse] / [Chorus] 等结构标记；填写后优先于连线输入的歌词",
+        "description": "节点自定义输入优先于接入输入（本节点歌词必填）"
+      },
+      {
+        "key": "lm_optimize",
+        "label": "LM优化提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
+      },
+      {
+        "key": "thinking",
+        "label": "LM深度思考",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
+      },
+      {
+        "key": "batch_size",
+        "label": "批次生成数量",
+        "type": "number",
+        "min": 1,
+        "max": 4,
+        "colSpan": "half",
+        "description": "单次生成的音频数量（1~4），多结果时超额产物记录在生成参数JSON"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 600,
+        "colSpan": "half",
+        "description": "10~600 秒，留空由 LM 自动决定"
+      },
+      {
+        "key": "bpm",
+        "label": "曲速 BPM",
+        "type": "combobox",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "60",
+            "label": "60"
+          },
+          {
+            "value": "66",
+            "label": "66"
+          },
+          {
+            "value": "70",
+            "label": "70"
+          },
+          {
+            "value": "76",
+            "label": "76"
+          },
+          {
+            "value": "80",
+            "label": "80"
+          },
+          {
+            "value": "84",
+            "label": "84"
+          },
+          {
+            "value": "88",
+            "label": "88"
+          },
+          {
+            "value": "90",
+            "label": "90"
+          },
+          {
+            "value": "92",
+            "label": "92"
+          },
+          {
+            "value": "96",
+            "label": "96"
+          },
+          {
+            "value": "100",
+            "label": "100"
+          },
+          {
+            "value": "104",
+            "label": "104"
+          },
+          {
+            "value": "108",
+            "label": "108"
+          },
+          {
+            "value": "110",
+            "label": "110"
+          },
+          {
+            "value": "112",
+            "label": "112"
+          },
+          {
+            "value": "116",
+            "label": "116"
+          },
+          {
+            "value": "120",
+            "label": "120"
+          },
+          {
+            "value": "124",
+            "label": "124"
+          },
+          {
+            "value": "126",
+            "label": "126"
+          },
+          {
+            "value": "128",
+            "label": "128"
+          },
+          {
+            "value": "132",
+            "label": "132"
+          },
+          {
+            "value": "136",
+            "label": "136"
+          },
+          {
+            "value": "140",
+            "label": "140"
+          },
+          {
+            "value": "144",
+            "label": "144"
+          },
+          {
+            "value": "150",
+            "label": "150"
+          },
+          {
+            "value": "160",
+            "label": "160"
+          },
+          {
+            "value": "170",
+            "label": "170"
+          },
+          {
+            "value": "180",
+            "label": "180"
+          },
+          {
+            "value": "190",
+            "label": "190"
+          },
+          {
+            "value": "200",
+            "label": "200"
+          }
+        ],
+        "placeholder": "如：120（可下拉选择或手动输入）",
+        "description": "30~300，留空自动决定"
+      },
+      {
+        "key": "key_scale",
+        "label": "调性",
+        "type": "combobox",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "C Major",
+            "label": "C 大调"
+          },
+          {
+            "value": "A Minor",
+            "label": "A 小调"
+          },
+          {
+            "value": "G Major",
+            "label": "G 大调"
+          },
+          {
+            "value": "E Minor",
+            "label": "E 小调"
+          },
+          {
+            "value": "D Major",
+            "label": "D 大调"
+          },
+          {
+            "value": "B Minor",
+            "label": "B 小调"
+          },
+          {
+            "value": "A Major",
+            "label": "A 大调"
+          },
+          {
+            "value": "F# Minor",
+            "label": "F# 小调"
+          },
+          {
+            "value": "E Major",
+            "label": "E 大调"
+          },
+          {
+            "value": "C# Minor",
+            "label": "C# 小调"
+          },
+          {
+            "value": "B Major",
+            "label": "B 大调"
+          },
+          {
+            "value": "G# Minor",
+            "label": "G# 小调"
+          },
+          {
+            "value": "F# Major",
+            "label": "F# 大调"
+          },
+          {
+            "value": "D# Minor",
+            "label": "D# 小调"
+          },
+          {
+            "value": "Db Major",
+            "label": "Db 大调"
+          },
+          {
+            "value": "Bb Minor",
+            "label": "Bb 小调"
+          },
+          {
+            "value": "Ab Major",
+            "label": "Ab 大调"
+          },
+          {
+            "value": "F Minor",
+            "label": "F 小调"
+          },
+          {
+            "value": "Eb Major",
+            "label": "Eb 大调"
+          },
+          {
+            "value": "C Minor",
+            "label": "C 小调"
+          },
+          {
+            "value": "Bb Major",
+            "label": "Bb 大调"
+          },
+          {
+            "value": "G Minor",
+            "label": "G 小调"
+          },
+          {
+            "value": "F Major",
+            "label": "F 大调"
+          },
+          {
+            "value": "D Minor",
+            "label": "D 小调"
+          }
+        ],
+        "placeholder": "如：C Major / A Minor（可下拉选择或手动输入）",
+        "description": "留空自动决定"
+      },
+      {
+        "key": "time_signature",
+        "label": "节拍",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "由模型决定（默认）"
+          },
+          {
+            "value": "2",
+            "label": "2/4 拍"
+          },
+          {
+            "value": "3",
+            "label": "3/4 拍"
+          },
+          {
+            "value": "4",
+            "label": "4/4 拍"
+          },
+          {
+            "value": "6",
+            "label": "6/8 拍"
+          }
+        ],
+        "description": "节拍/拍号；留空由模型根据风格自动决定"
+      },
+      {
+        "key": "vocal_language",
+        "label": "演唱语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          }
+        ],
+        "description": "歌词演唱语言；纯音乐节点忽略"
+      },
+      {
+        "key": "audio_format",
+        "label": "音频格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "wav",
+            "label": "WAV（无损）"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC（无损）"
+          },
+          {
+            "value": "opus",
+            "label": "Opus"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          }
+        ]
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "colSpan": "half",
+        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "step_music_instrumental",
+    "name": "免费AI音乐-纯音乐",
+    "category": "music_step",
+    "description": "ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。官方标价 $0 免费；适合视频配乐。",
+    "icon": "Music",
+    "color": "#22c55e",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "提示词",
+        "type": "text"
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio_1",
+        "label": "音频1",
+        "type": "audio"
+      },
+      {
+        "id": "audio_2",
+        "label": "音频2",
+        "type": "audio"
+      },
+      {
+        "id": "audio_3",
+        "label": "音频3",
+        "type": "audio"
+      },
+      {
+        "id": "audio_4",
+        "label": "音频4",
+        "type": "audio"
+      },
+      {
+        "id": "params",
+        "label": "生成参数JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "api_type": "cloud",
+      "model": "",
+      "custom_prompt": "",
+      "custom_lyrics": "",
+      "lm_optimize": true,
+      "thinking": false,
+      "batch_size": "2",
+      "duration": "30",
+      "time_signature": "",
+      "audio_format": "mp3",
+      "poll_timeout": 900
+    },
+    "configFields": [
+      {
+        "key": "btn_get_key",
+        "label": "获取API key",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://acemusic.ai/api-key"
+      },
+      {
+        "key": "btn_download_pack",
+        "label": "下载整合包",
+        "type": "button",
+        "colSpan": "half",
+        "url": "https://pan.quark.cn/s/f4b561117d63"
+      },
+      {
+        "key": "api_type",
+        "label": "接口类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "local",
+            "label": "step-music（本地整合包）"
+          },
+          {
+            "value": "cloud",
+            "label": "免费在线模型（获取key）"
+          }
+        ],
+        "description": "本地整合包 = 本地部署的 ACE-Step（无需 Key）；免费在线模型 = 官方云（Key 免费领取）"
+      },
+      {
+        "key": "model",
+        "label": "模型",
+        "type": "api-select",
+        "colSpan": "half",
+        "apiEndpoint": "/api/musicgen-interfaces/acestep_music/models-for-node?mode=step_instrumental&api_type={api_type}",
+        "dependsOn": "api_type",
+        "placeholder": "跟随接口默认模型"
+      },
+      {
+        "key": "custom_prompt",
+        "label": "自定义提示词",
+        "type": "textarea",
+        "colSpan": "full",
+        "placeholder": "填写后优先于连线输入的提示词；留空则使用连线接入值",
+        "description": "节点自定义输入优先于接入输入",
+        "dice": true,
+        "diceEndpoint": "/api/musicgen-interfaces/prompt-example/random?mode=step_instrumental",
+        "diceTitle": "随机示例：抽取一条官方提示词示例填充到节点（不匹配的项自动忽略）"
+      },
+      {
+        "key": "lm_optimize",
+        "label": "LM优化提示词",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "开启后由 ACE-Step 5Hz LM 思维链改写/增强你的描述与歌词（质量更高、耗时略增）；关闭则按原文生成"
+      },
+      {
+        "key": "thinking",
+        "label": "LM深度思考",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "LM 深度思考模式（生成音频语义码，质量更高但明显更慢），默认关闭"
+      },
+      {
+        "key": "batch_size",
+        "label": "批次生成数量",
+        "type": "number",
+        "min": 1,
+        "max": 4,
+        "colSpan": "half",
+        "description": "单次生成的音频数量（1~4），多结果时超额产物记录在生成参数JSON"
+      },
+      {
+        "key": "duration",
+        "label": "时长(秒)",
+        "type": "number",
+        "min": 10,
+        "max": 600,
+        "colSpan": "half",
+        "description": "10~600 秒，留空由 LM 自动决定"
+      },
+      {
+        "key": "bpm",
+        "label": "曲速 BPM",
+        "type": "combobox",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "60",
+            "label": "60"
+          },
+          {
+            "value": "66",
+            "label": "66"
+          },
+          {
+            "value": "70",
+            "label": "70"
+          },
+          {
+            "value": "76",
+            "label": "76"
+          },
+          {
+            "value": "80",
+            "label": "80"
+          },
+          {
+            "value": "84",
+            "label": "84"
+          },
+          {
+            "value": "88",
+            "label": "88"
+          },
+          {
+            "value": "90",
+            "label": "90"
+          },
+          {
+            "value": "92",
+            "label": "92"
+          },
+          {
+            "value": "96",
+            "label": "96"
+          },
+          {
+            "value": "100",
+            "label": "100"
+          },
+          {
+            "value": "104",
+            "label": "104"
+          },
+          {
+            "value": "108",
+            "label": "108"
+          },
+          {
+            "value": "110",
+            "label": "110"
+          },
+          {
+            "value": "112",
+            "label": "112"
+          },
+          {
+            "value": "116",
+            "label": "116"
+          },
+          {
+            "value": "120",
+            "label": "120"
+          },
+          {
+            "value": "124",
+            "label": "124"
+          },
+          {
+            "value": "126",
+            "label": "126"
+          },
+          {
+            "value": "128",
+            "label": "128"
+          },
+          {
+            "value": "132",
+            "label": "132"
+          },
+          {
+            "value": "136",
+            "label": "136"
+          },
+          {
+            "value": "140",
+            "label": "140"
+          },
+          {
+            "value": "144",
+            "label": "144"
+          },
+          {
+            "value": "150",
+            "label": "150"
+          },
+          {
+            "value": "160",
+            "label": "160"
+          },
+          {
+            "value": "170",
+            "label": "170"
+          },
+          {
+            "value": "180",
+            "label": "180"
+          },
+          {
+            "value": "190",
+            "label": "190"
+          },
+          {
+            "value": "200",
+            "label": "200"
+          }
+        ],
+        "placeholder": "如：120（可下拉选择或手动输入）",
+        "description": "30~300，留空自动决定"
+      },
+      {
+        "key": "key_scale",
+        "label": "调性",
+        "type": "combobox",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "C Major",
+            "label": "C 大调"
+          },
+          {
+            "value": "A Minor",
+            "label": "A 小调"
+          },
+          {
+            "value": "G Major",
+            "label": "G 大调"
+          },
+          {
+            "value": "E Minor",
+            "label": "E 小调"
+          },
+          {
+            "value": "D Major",
+            "label": "D 大调"
+          },
+          {
+            "value": "B Minor",
+            "label": "B 小调"
+          },
+          {
+            "value": "A Major",
+            "label": "A 大调"
+          },
+          {
+            "value": "F# Minor",
+            "label": "F# 小调"
+          },
+          {
+            "value": "E Major",
+            "label": "E 大调"
+          },
+          {
+            "value": "C# Minor",
+            "label": "C# 小调"
+          },
+          {
+            "value": "B Major",
+            "label": "B 大调"
+          },
+          {
+            "value": "G# Minor",
+            "label": "G# 小调"
+          },
+          {
+            "value": "F# Major",
+            "label": "F# 大调"
+          },
+          {
+            "value": "D# Minor",
+            "label": "D# 小调"
+          },
+          {
+            "value": "Db Major",
+            "label": "Db 大调"
+          },
+          {
+            "value": "Bb Minor",
+            "label": "Bb 小调"
+          },
+          {
+            "value": "Ab Major",
+            "label": "Ab 大调"
+          },
+          {
+            "value": "F Minor",
+            "label": "F 小调"
+          },
+          {
+            "value": "Eb Major",
+            "label": "Eb 大调"
+          },
+          {
+            "value": "C Minor",
+            "label": "C 小调"
+          },
+          {
+            "value": "Bb Major",
+            "label": "Bb 大调"
+          },
+          {
+            "value": "G Minor",
+            "label": "G 小调"
+          },
+          {
+            "value": "F Major",
+            "label": "F 大调"
+          },
+          {
+            "value": "D Minor",
+            "label": "D 小调"
+          }
+        ],
+        "placeholder": "如：C Major / A Minor（可下拉选择或手动输入）",
+        "description": "留空自动决定"
+      },
+      {
+        "key": "time_signature",
+        "label": "节拍",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "",
+            "label": "由模型决定（默认）"
+          },
+          {
+            "value": "2",
+            "label": "2/4 拍"
+          },
+          {
+            "value": "3",
+            "label": "3/4 拍"
+          },
+          {
+            "value": "4",
+            "label": "4/4 拍"
+          },
+          {
+            "value": "6",
+            "label": "6/8 拍"
+          }
+        ],
+        "description": "节拍/拍号；留空由模型根据风格自动决定"
+      },
+      {
+        "key": "vocal_language",
+        "label": "演唱语言",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "en",
+            "label": "英语"
+          },
+          {
+            "value": "zh",
+            "label": "中文"
+          },
+          {
+            "value": "ja",
+            "label": "日语"
+          },
+          {
+            "value": "ko",
+            "label": "韩语"
+          },
+          {
+            "value": "es",
+            "label": "西班牙语"
+          },
+          {
+            "value": "fr",
+            "label": "法语"
+          },
+          {
+            "value": "de",
+            "label": "德语"
+          },
+          {
+            "value": "pt",
+            "label": "葡萄牙语"
+          }
+        ],
+        "description": "歌词演唱语言；纯音乐节点忽略"
+      },
+      {
+        "key": "audio_format",
+        "label": "音频格式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "mp3",
+            "label": "MP3"
+          },
+          {
+            "value": "wav",
+            "label": "WAV（无损）"
+          },
+          {
+            "value": "flac",
+            "label": "FLAC（无损）"
+          },
+          {
+            "value": "opus",
+            "label": "Opus"
+          },
+          {
+            "value": "aac",
+            "label": "AAC"
+          }
+        ]
+      },
+      {
+        "key": "seed",
+        "label": "随机种子",
+        "type": "number",
+        "colSpan": "half",
+        "description": "留空随机；固定种子 + 相同参数可复现同一首歌"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
     "id": "music_prompt_optimizer",
     "name": "音乐提示词优化",
-    "category": "music_step",
+    "category": "prompt_opt",
     "description": "把对音乐的简单描述按目标平台（ACE-Step / Suno）提示词规范，用 LLM 扩写成中文提示词、英文提示词、歌词与全信息 JSON；纯音乐模式下不生成歌词。结果可直接接入「免费AI音乐step music」或「AI音乐」节点使用。",
     "icon": "Brain",
     "color": "#22c55e",
@@ -21117,7 +23087,7 @@ export const FALLBACK_NODE_TYPES = [
   {
     "id": "prompt_opt_image",
     "name": "生图提示词优化",
-    "category": "ai_gen",
+    "category": "prompt_opt",
     "description": "通用·生图提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/image_prompt_optimize.md）调 LLM 补全主体/构图/光线/风格等静态画面维度，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选画风模板，风格段会作为约束一起发给 LLM",
     "icon": "Sparkles",
     "color": "#8b5cf6",
@@ -21211,7 +23181,7 @@ export const FALLBACK_NODE_TYPES = [
   {
     "id": "prompt_opt_video",
     "name": "生视频提示词优化",
-    "category": "ai_gen",
+    "category": "prompt_opt",
     "description": "通用·生视频提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/video_prompt_optimize.md）调 LLM 补全运动、运镜、景别与镜头状态，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选视频风格模板（景别/运镜/光线/色调/节奏）",
     "icon": "Wand2",
     "color": "#8b5cf6",

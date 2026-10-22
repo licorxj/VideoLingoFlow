@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-20 23:04:19  
-> 节点总数：183　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-22 22:28:28  
+> 节点总数：184　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -11,7 +11,7 @@
 | 预览节点（`preview`） | 4 |
 | 音频处理节点（`audio`） | 11 |
 | 视频处理节点（`video`） | 19 |
-| AI生成类节点（`ai_gen`） | 23 |
+| AI生成类节点（`ai_gen`） | 21 |
 | 翻译相关节点（`translation`） | 16 |
 | 漫剧·剧本链（`agi_story`） | 4 |
 | 漫剧·资产链（`agi_asset`） | 6 |
@@ -30,6 +30,7 @@
 | hyperframes（`hyperframes`） | 5 |
 | music_gen（`music_gen`） | 21 |
 | music_step（`music_step`） | 4 |
+| prompt_opt（`prompt_opt`） | 3 |
 
 ## 节点详情
 
@@ -117,13 +118,11 @@
 | 图声生视频-kie | `kie_image_audio_to_video` | 用图片 + 声音驱动生成视频（数字人 / 对口型 / 角色演绎）。image1 为必填主图，kling-3.0/video 额外支持 image2~image5 共 5 张参考图；audio 输入口接驱动音频；提示词可来自连线文本或节点内填写。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；用量见「用量日志」。 | process | 主图片(`image1`*:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考图5(`image5`:image); 驱动音频(`audio`*:audio); 提示词(`text`:text) | 生成视频(`video`:video); 视频列表(`videos`:json); 生成参数JSON(`params`:json) |
 | 图片蒙版 | `image_mask` | 上游输入图片，在卡片上用画笔/矩形绘制蒙版，后端合成蒙版图并输出蒙版合成图与黑白蒙版 | thread | 图片(`image`:image) | 蒙版合成图(`image`:image); 蒙版(`mask`:image) |
 | 图片高清放大-kie | `kie_image_upscale` | 调用 KIE AI 对图片做高清放大。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。 | process | 待放大图片(`image`*:image) | 放大后图片(`image`:image); 图片列表(`images`:json); 处理参数JSON(`params`:json) |
-| 生图提示词优化 | `prompt_opt_image` | 通用·生图提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/image_prompt_optimize.md）调 LLM 补全主体/构图/光线/风格等静态画面维度，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选画风模板，风格段会作为约束一起发给 LLM | thread | 原始提示词(`text`:text) | 优化后提示词(`text`:text); 落盘路径(`file_path`:filepath) |
-| 生视频提示词优化 | `prompt_opt_video` | 通用·生视频提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/video_prompt_optimize.md）调 LLM 补全运动、运镜、景别与镜头状态，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选视频风格模板（景别/运镜/光线/色调/节奏） | thread | 原始提示词(`text`:text) | 优化后提示词(`text`:text); 落盘路径(`file_path`:filepath) |
 | 视频对口型-kie | `kie_lip_sync` | 调用 KIE AI 让视频人物口型匹配目标音频（视频 + 音频 → 对口型视频）。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。 | process | 待对口型视频(`video`*:video); 目标音频(`audio`*:audio) | 对口型视频(`video`:video); 视频列表(`videos`:json); 处理参数JSON(`params`:json) |
 | 视频高清放大-kie | `kie_video_upscale` | 调用 KIE AI 对视频做高清放大。使用前请先注册 KIE 账号并获取 API Key：点击卡片上方「获取key」前往官网注册，拿到 Key 后填入【全局设置 → 密钥管理器】，密钥名称必须为 KIEAI_API_KEY（也可在系统环境变量中设置同名变量）；调用量与扣费明细可点击「用量日志」查看。 | process | 待放大视频(`video`*:video) | 放大后视频(`video`:video); 视频列表(`videos`:json); 处理参数JSON(`params`:json) |
 | 语音合成 (TTS) | `tts` | 文本转语音，支持多种TTS模式 | process | TTS任务单JSON(`text`*:json); TTS任务表(`pandas`:pandas); 原始音频(切割参考)(`source_audio`:audio) | TTS任务单JSON(`text`:json); TTS任务表(`pandas`:pandas) |
 | 通用LLM请求 | `llm_request` | 通用 LLM 请求，支持文本/图片输入，可配置 prompt、模型、温度等 | process | 文本输入(`text`:text); 图片输入(`image`:image); JSON输入(`json`:json) | 结果文件(`result`:json); 文本结果(`text`:text) |
-| 长文本TTS | `long_text_tts` | 纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），进程中断也不丢记录，方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。 | process | 长文本(`text`*:text) | 音频路径(`audio`:audio); 记录JSON(`record`:json) |
+| 长文本TTS | `long_text_tts` | 纯文本配音节点：把一整段长文本（兼容直接文本与文本文件路径）按句自动分句后逐句 TTS，不做时间槽调速、不做参考音频切割等额外处理；每完成一句即把输入文本与该句音频片段路径增量写入任务目录下的 TTS 记录 JSON（cache/tts_record_<节点id>.json），进程中断也不丢记录，方便后续节点读取调用；输出合并后的完整音频路径与记录 JSON 路径。 【多角色配音】勾选「多角色配音」后，按文本中的说话人标签识别不同角色并分角色配音。说话人标签格式为「SPEAKER_<标识>」后接全角冒号「：」或半角冒号「:」，例如：   SPEAKER_01：你好啊   SPEAKER_02：我挺好的，你呢？   SPEAKER_AAA：这段由另一个角色朗读 说明：① 标签后的冒号与角色名一起从朗读文本中剥离，不会读出；② 数字后缀按「编号-1」映射角色（SPEAKER_01→角色1、SPEAKER_02→角色2……），非数字后缀按首次出现顺序编号；③ 标签字符串与前端角色槽位解耦，具体写 SPEAKER_01 还是 SPEAKER_AAA 都只决定角色顺序；④ 无前缀的普通文本归为角色0；⑤ 映射出的角色索引若超过前端已配置的角色数，自动降级到角色0（即复用首个角色）。需同时配置对应模式的角色（克隆多角色填角色1~4参考音频 / 预置角色填朗读者1~4音色 / 音色设计填角色1~4描述）才会真正分角色发声。 | process | 长文本(`text`*:text) | 音频路径(`audio`:audio); 记录JSON(`record`:json) |
 
 ### 翻译相关节点（`translation`）
 
@@ -270,7 +269,7 @@
 | 剪辑台渲染导出 | `desk_export` | AI剪辑链·第4步【出片】：把剪辑台工程渲染为成片（occ render，无头出 MP4/WebM/MOV），或导出剪映/CapCut 草稿交给剪映精修；可选把成片登记为创作项目资产。上游：project（串接前面各步）。下游：render 端口 → 归档/发布类节点 | process | 剪辑台项目ID(`project`:any); 创作项目ID(回登资产)(`creation_id`:any); 章节ID(回登资产)(`chapter_id`:any) | 剪辑台项目ID(`project`:text); 导出模式(`mode`:text); 成片/草稿(`render`:video); 演练计划(dry-run)(`plan`:text) |
 | 剪辑素材导入 | `desk_material` | AI剪辑链·第2步【素材进场】：把本地素材（视频/图片/音频，单个/多个/整个目录）导入剪辑台媒体池，并按声明式配置放到时间线轨道上（V1/V2 视频轨、A1/A2 音频轨）。上游：连入上游产物文件路径（单个 path 或多个 paths），或已入库的 asset_ids；同时连入 project。下游：asset_ids / clip_ids / project 端口 →「剪辑编排」 | process | 剪辑台项目ID(`project`:any); 单个素材路径(`path`:filepath); 素材路径(多个)(`paths`:json); 素材目录(整目录导入)(`folder`:text); 已入库素材ID(可选)(`asset_ids`:json) | 剪辑台项目ID(`project`:text); 素材ID列表(`asset_ids`:json); 片段ID列表(`clip_ids`:json); 执行摘要(`plan`:text) |
 | 剪辑编排 | `desk_edit` | AI剪辑链·第3步【编排】：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数，精确控制每一步。语义化「一句话剪辑」请用旁边的「AI剪辑」节点。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」或「AI剪辑」 | process | 剪辑台项目ID(`project`:any); 素材ID列表(可选)(`asset_ids`:json); 片段ID列表(可选)(`clip_ids`:json); 工具调用ops(可选)(`ops`:json) | 剪辑台项目ID(`project`:text); 执行结果(JSON)(`result`:json); 最后一步结果(`last`:json); 执行摘要(`plan`:text) |
-| 新建剪辑工程 | `desk_project` | AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点 | process | 任意输入(`name`:any) | 剪辑台项目ID(`project`:text); 工程名称(`name`:text); 执行摘要(`plan`:text) |
+| 新建剪辑工程 | `desk_project` | AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）；连入「主轨视频」时自动把该视频导入媒体池并放到主视频轨 V1。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点 | process | 任意输入(`name`:any); 主轨视频(`video`:video) | 剪辑台项目ID(`project`:text); 工程名称(`name`:text); 执行摘要(`plan`:text) |
 
 ### asset（`asset`）
 
@@ -330,3 +329,11 @@
 | 免费AI音乐-歌词生音乐 | `step_music_lyrics2music` | ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。 | process | 提示词(`text`:text); 歌词(`lyrics`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
 | 免费AI音乐-纯音乐 | `step_music_instrumental` | ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。官方标价 $0 免费；适合视频配乐。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
 | 免费AI音乐-自然语言创作 | `step_music_natural` | ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
+
+### prompt_opt（`prompt_opt`）
+
+| 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
+|------|----|------|-------|---------|---------|
+| 生图提示词优化 | `prompt_opt_image` | 通用·生图提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/image_prompt_optimize.md）调 LLM 补全主体/构图/光线/风格等静态画面维度，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选画风模板，风格段会作为约束一起发给 LLM | thread | 原始提示词(`text`:text) | 优化后提示词(`text`:text); 落盘路径(`file_path`:filepath) |
+| 生视频提示词优化 | `prompt_opt_video` | 通用·生视频提示词优化：原始提示词取「输入端口 text」优先、其次节点「自定义原始提示词」；用所选优化模板（backend/config/drama_prompts/video_prompt_optimize.md）调 LLM 补全运动、运镜、景别与镜头状态，优化结果落盘为 .txt 并输出到 text 端口。可先点「提示词组装」选视频风格模板（景别/运镜/光线/色调/节奏） | thread | 原始提示词(`text`:text) | 优化后提示词(`text`:text); 落盘路径(`file_path`:filepath) |
+| 音乐提示词优化 | `music_prompt_optimizer` | 把对音乐的简单描述按目标平台（ACE-Step / Suno）提示词规范，用 LLM 扩写成中文提示词、英文提示词、歌词与全信息 JSON；纯音乐模式下不生成歌词。结果可直接接入「免费AI音乐step music」或「AI音乐」节点使用。 | process | 音乐简单描述(`text`:text) | 中文提示词(`prompt_zh`:text); 英文提示词(`prompt_en`:text); 歌词(`lyrics`:text); 全信息Json(`params`:json) |

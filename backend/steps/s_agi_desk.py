@@ -226,7 +226,15 @@ class S_DeskProject(BaseStep):
         if not name:
             raise RuntimeError("缺少工程名称：在节点配置里填写 name（建议带日期/批次，便于在剪辑台里辨认），或连接上游输入")
 
-        data_dir, _timeout = _preflight(cfg, task_dir)
+        data_dir, timeout = _preflight(cfg, task_dir)
+
+        # 主轨视频（可选）：有输入则新建工程后自动导入并放到主视频轨 V1
+        video = _first(cfg, inp, "video")
+        video_path = _resolve_file(video, task_dir) if video else None
+        if video and not video_path:
+            raise RuntimeError(
+                f"主轨视频文件不存在：{video}\n提示：确认上游渲染/输出节点的文件路径有效（支持相对任务目录的路径）"
+            )
 
         step_check_cancel(cancel_callback)
         if callback:
@@ -249,15 +257,51 @@ class S_DeskProject(BaseStep):
         if not project_id:
             raise RuntimeError(f"新建工程返回异常，未拿到项目 ID：{result.tail(10)}")
 
-        cache = _write_cache(task_dir, nid, _PREFIX, {"project": project_id, "name": name})
+        asset_ids: list[str] = []
+        clip_ids: list[str] = []
+        if video_path:
+            if callback:
+                callback(70, f"导入主轨视频 {os.path.basename(video_path)} 并放到 V1…")
+            r = occ.call_tool(
+                "import_asset",
+                {"path": video_path},
+                project=project_id, data_dir=data_dir, timeout=timeout,
+            )
+            if not r.ok:
+                raise RuntimeError(
+                    f"导入主轨视频失败：{r.message}\n提示：{_hint_for(r.message) or '确认文件存在且为受支持的视频格式'}"
+                )
+            asset_ids = _extract_assets(r.data) or []
+            if not asset_ids:
+                raise RuntimeError("导入主轨视频成功但未返回素材 ID，无法上轨")
+            r2 = occ.call_tool(
+                "edit_item",
+                {"adds": [{"type": "video", "assetId": asset_ids[0], "track": "V1", "fromFrame": 0}]},
+                project=project_id, data_dir=data_dir, apply=True, timeout=timeout,
+            )
+            if not r2.ok:
+                raise RuntimeError(
+                    f"主轨视频上轨失败：{r2.message}\n提示：{_hint_for(r2.message) or '检查轨道名（视频 V1/V2…）与素材类型是否匹配'}"
+                )
+            clip_ids = _extract_clips(r2.data)
+            if callback:
+                callback(95, "主轨视频已放到 V1")
+
+        cache = _write_cache(task_dir, nid, _PREFIX, {
+            "project": project_id, "name": name,
+            "video": video_path, "asset_ids": asset_ids, "clip_ids": clip_ids,
+        })
         if callback:
-            callback(100, f"工程已创建：{name}")
+            callback(100, f"工程已创建：{name}" + ("（主轨视频已上 V1）" if clip_ids else ""))
         return {
             "artifacts": [cache],
             "outputs": {
                 "project": project_id,
                 "name": name,
-                "plan": f"occ project new {name} → {project_id}",
+                "plan": (
+                    f"occ project new {name} → {project_id}"
+                    + (f"；主轨视频 {os.path.basename(video_path)} → V1 clip={clip_ids}" if clip_ids else "")
+                ),
             },
         }
 
