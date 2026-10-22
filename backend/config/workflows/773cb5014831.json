@@ -1,0 +1,351 @@
+{
+  "id": "773cb5014831",
+  "name": "未命名工作流",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1792678645809",
+      "type": "workflow",
+      "position": {
+        "x": 11010,
+        "y": 615
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "Y:/VideoLingoLc/control_plane_workspaces/e96e16993a16430db6c0669bd1e7b68e/download/1791489274812-3k4vrqmtydu.mp4",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "text": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\81e1912eb165453898becda58d19ea02\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "duration": 0.08
+      },
+      "measured": {
+        "width": 420,
+        "height": 500
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1792678662808",
+      "type": "workflow",
+      "position": {
+        "x": 12285,
+        "y": 540
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "merge_dub_video",
+        "label": "音视频合成",
+        "config": {
+          "video_mute": true,
+          "audio_volume": 1,
+          "audio_fade_in": 0,
+          "audio_fade_out": 0
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_dubbed.mp4"
+        },
+        "error": "",
+        "duration": 1.08,
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 355
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1792678679762",
+      "type": "workflow",
+      "position": {
+        "x": 11685,
+        "y": 945
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "audio_asset_library",
+        "label": "音频素材库",
+        "config": {
+          "source": "ffde5d77242341899f59f0d003772b73",
+          "asset_name": "need you氛围版"
+        },
+        "status": "completed",
+        "disableExecute": true,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "audio": "Y:\\VideoLingoLc\\control_plane_workspaces\\81e1912eb165453898becda58d19ea02\\need you氛围版.mp3",
+          "info": {
+            "source": "ffde5d77242341899f59f0d003772b73",
+            "source_type": "voiceforge_asset",
+            "file": {
+              "path": "Y:\\VideoLingoLc\\control_plane_workspaces\\81e1912eb165453898becda58d19ea02\\need you氛围版.mp3",
+              "name": "need you氛围版.mp3",
+              "size_bytes": 1882820,
+              "from": "X:\\KwDownload\\song\\我期待的不是你-NEED YOU (氛围混搭版).mp3"
+            },
+            "asset": {
+              "id": "ffde5d77242341899f59f0d003772b73",
+              "name": "need you氛围版",
+              "asset_type": "bgm",
+              "category": "romantic",
+              "storage_key": "external/ffde5d77242341899f59f0d003772b73",
+              "file_name": "我期待的不是你-NEED YOU (氛围混搭版).mp3",
+              "file_size": 1882820,
+              "mime_type": "audio/mpeg",
+              "duration": 117.577143,
+              "description": "",
+              "legacy_source_id": null,
+              "legacy_import_batch_id": null,
+              "created_at": "2026-10-07 03:25:49",
+              "updated_at": "2026-10-07 03:25:49",
+              "external_path": "X:\\KwDownload\\song\\我期待的不是你-NEED YOU (氛围混搭版).mp3",
+              "sample_rate": 44100,
+              "channels": 2,
+              "format": "mp3",
+              "is_favorite": 0,
+              "path_key": "x:/kwdownload/song/我期待的不是你-need you (氛围混搭版).mp3",
+              "tags": [
+                "钢琴曲",
+                "轻柔音乐",
+                "浪漫"
+              ],
+              "absolute_path": "X:\\KwDownload\\song\\我期待的不是你-NEED YOU (氛围混搭版).mp3"
+            }
+          }
+        },
+        "error": "",
+        "duration": 6.34,
+        "logLines": [
+          "[step_worker] start node_type=audio_asset_library node_id=node_3_1792678679762 pid=52720",
+          "[step_worker] step instance created: S_AudioAssetLibrary",
+          "[step_worker] step_inputs keys=[]",
+          "[step_worker] node_config keys=['source', 'asset_name']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\81e1912eb165453898becda58d19ea02, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\81e1912eb165453898becda58d19ea02\\cache\\.step_node_3_1792678679762_result.json, exiting 0"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 429
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1792678698136",
+      "type": "workflow",
+      "position": {
+        "x": 12990,
+        "y": 600
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "output/video_dubbed.mp4"
+        },
+        "error": "",
+        "duration": 0.05,
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 533
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1792678896920",
+      "type": "workflow",
+      "position": {
+        "x": 12630,
+        "y": 1380
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "desk_project",
+        "label": "新建剪辑工程",
+        "config": {
+          "name": "莫奈和t她的儿子",
+          "size": "1080x1920",
+          "fps": "",
+          "use_task_output_dir": false,
+          "data_dir": ""
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 387
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_6_1792678962279",
+      "type": "workflow",
+      "position": {
+        "x": 13260,
+        "y": 1305
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "desk_material_video",
+        "label": "视频素材导入",
+        "config": {
+          "project": "",
+          "path": "",
+          "paths": "",
+          "folder": "",
+          "json_pack": "",
+          "asset_ids": "",
+          "track": "V1",
+          "insert_at": "head",
+          "import_only": false,
+          "dry_run": true,
+          "use_task_output_dir": false,
+          "data_dir": "",
+          "timeout": 1800
+        },
+        "status": "pending",
+        "disableExecute": true
+      },
+      "measured": {
+        "width": 420,
+        "height": 877
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1792678645809",
+      "sourceHandle": "out-video",
+      "target": "node_2_1792678662808",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792678645809out-video-node_2_1792678662808in-video"
+    },
+    {
+      "source": "node_1_1792678645809",
+      "sourceHandle": "out-no_input",
+      "target": "node_3_1792678679762",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6b7280",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792678645809out-no_input-node_3_1792678679762in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1792678679762",
+      "sourceHandle": "out-audio",
+      "target": "node_2_1792678662808",
+      "targetHandle": "in-audio",
+      "id": "xy-edge__node_3_1792678679762out-audio-node_2_1792678662808in-audio"
+    },
+    {
+      "source": "node_2_1792678662808",
+      "sourceHandle": "out-video",
+      "target": "node_4_1792678698136",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1792678662808out-video-node_4_1792678698136in-video"
+    },
+    {
+      "source": "node_5_1792678896920",
+      "sourceHandle": "out-project",
+      "target": "node_6_1792678962279",
+      "targetHandle": "in-project",
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_5_1792678896920out-project-node_6_1792678962279in-project"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1792678645809",
+      "sourceHandle": "out-video",
+      "target": "node_5_1792678896920",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1792678645809out-video-node_5_1792678896920in-video"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-22T22:18:20",
+  "updatedAt": "2026-10-22T23:37:56",
+  "revision": 19
+}

@@ -5,11 +5,13 @@
 无头执行（不需要打开剪辑台页面）。节点之间以 **剪辑台项目 ID** 串联：
 每个节点都有 ``project`` 输入/输出端口，把项目 ID 一路传到底。
 
-    desk_project   新建剪辑工程（occ project new，输出新项目 ID）
-    desk_material  素材导入 + 上轨（import_asset(s)/import_folder → edit_item adds）
-    desk_edit      剪辑编排（ops 声明式批量工具调用）
-    desk_ai_cut    AI 剪辑（AI 语义剪辑：read_script → LLM → apply_script）
-    desk_export    渲染导出（occ render 无头出片 / export jianying 剪映草稿）
+    desk_project         新建剪辑工程（occ project new，输出新项目 ID）
+    desk_material_video  视频素材导入（文件/目录/JSON素材包 → 媒体池 → V 轨）
+    desk_material_audio  音频素材导入（文件/目录/JSON素材包 → 媒体池 → A 轨）
+    desk_material_image  图片素材导入（文件/目录/JSON素材包 → 媒体池 → V 轨，可设时长/缩放）
+    desk_edit            剪辑编排（ops 声明式批量工具调用）
+    desk_ai_cut          AI 剪辑（AI 语义剪辑：read_script → LLM → apply_script）
+    desk_export          渲染导出（occ render 无头出片 / export jianying 剪映草稿）
 
 无人值守约束（OpenChatCut 侧设计）：
 - 只覆盖 headless 工具；分析类（静音/beat/场景检测）、生成类（submit_*）、
@@ -307,13 +309,126 @@ class S_DeskProject(BaseStep):
 
 
 # --------------------------------------------------------------------------- #
-# 节点 1：素材导入 + 上轨
+# 节点 1：分类素材导入（视频 / 音频 / 图片，按媒体类型拆成三个节点）
 # --------------------------------------------------------------------------- #
-class S_DeskMaterial(BaseStep):
-    """把本地素材导入剪辑台媒体池，并按声明式配置放到时间线轨道上。"""
+# 原「剪辑素材导入」单节点过重（路径/目录/JSON/已入库 ID 四种来源 × 三种媒体类型 ×
+# 上轨选项互相纠缠），拆为视频/音频/图片三个节点，共享同一套执行逻辑：
+#   - 输入来源：单个文件 path / 目录 folder / JSON 素材包 json_pack
+#   - JSON 素材包自动识别迭代对象（数组或 {"clips"/"items"/"assets"/"data"…} 包一层），
+#     每项取 id / path / type / 说明（desc/description/note/remark/comment）
+#   - 上轨：目标轨道 + 插入位置（头部 fromFrame=0 / 尾部追加到轨道当前末尾）
+#   - 图片节点额外支持时长（duration_frames）与缩放比例（scale）
+_MEDIA_KIND_ALIASES = {
+    "video": "video", "videos": "video", "视频": "video",
+    "audio": "audio", "audios": "audio", "音频": "audio",
+    "image": "image", "images": "image", "img": "image", "picture": "image", "图片": "image",
+}
+_JSON_LIST_KEYS = ("items", "clips", "assets", "materials", "data", "list", "medias", "media", "videos", "audios", "images")
+_JSON_DESC_KEYS = ("desc", "description", "note", "remark", "comment", "summary", "说明", "描述", "备注")
+_JSON_PATH_KEYS = ("path", "file", "filepath", "file_path", "src", "url", "local_path", "路径")
+_JSON_ID_KEYS = ("id", "asset_id", "assetId", "uid", "素材id")
 
-    step_id = "desk_material"
-    step_name = "剪辑素材导入"
+
+def _norm_media_kind(value) -> str:
+    return _MEDIA_KIND_ALIASES.get(str(value or "").strip().lower(), "")
+
+
+def _iter_json_pack(raw) -> list[dict]:
+    """解析 JSON 素材包，自动识别迭代对象，规整为 [{id,path,type,说明}]。
+
+    支持三种常见形状：
+    1. 顶层就是数组：``[{"id":..,"path":..}, …]``
+    2. 单个对象包一层列表：``{"items": [ … ]}``（items/clips/assets/data… 任一键）
+    3. 值是数组的对象字典：``{"a1": {...}, "a2": {...}}``（键即素材 ID）
+    """
+    if not raw:
+        return []
+    if isinstance(raw, str):
+        try:
+            raw = json.loads(raw)
+        except (ValueError, TypeError):
+            raise RuntimeError("JSON 素材包不是合法 JSON：请检查内容或改用 单个文件/目录 输入")
+    if isinstance(raw, dict):
+        for key in _JSON_LIST_KEYS:
+            value = raw.get(key)
+            if isinstance(value, list):
+                raw = value
+                break
+        else:
+            # 没有已知列表键时，若值是 dict 的字典也按「键=ID」展开
+            values = list(raw.values())
+            if raw and all(isinstance(v, dict) for v in values):
+                raw = [{"id": k, **v} for k, v in raw.items()]
+    if not isinstance(raw, list):
+        raise RuntimeError("JSON 素材包无法识别迭代对象：请传数组，或用 items/clips/assets/data 等键包住数组")
+
+    out: list[dict] = []
+    for index, item in enumerate(raw, 1):
+        if isinstance(item, str):
+            item = {"path": item}
+        if not isinstance(item, dict):
+            continue
+        path = ""
+        for key in _JSON_PATH_KEYS:
+            value = item.get(key)
+            if isinstance(value, str) and value.strip():
+                path = value.strip()
+                break
+        if not path:
+            continue
+        item_id = ""
+        for key in _JSON_ID_KEYS:
+            value = item.get(key)
+            if value is not None and str(value).strip():
+                item_id = str(value).strip()
+                break
+        kind = _norm_media_kind(item.get("type") or item.get("kind") or item.get("类型"))
+        note = ""
+        for key in _JSON_DESC_KEYS:
+            value = item.get(key)
+            if value is not None and str(value).strip():
+                note = str(value).strip()
+                break
+        out.append({"id": item_id, "path": path, "type": kind, "note": note, "index": index})
+    return out
+
+
+def _track_tail_frame(project: str, data_dir: str, track: str, timeout: int) -> int:
+    """读取目标轨道当前末尾帧（read_project view=timeline + track 过滤）。
+
+    失败（空轨道/读不到）时返回 0：头部插入语义，至少不会把素材放到负帧。
+    """
+    r = occ.call_tool(
+        "read_project",
+        {"view": "timeline", "track": track},
+        project=project, data_dir=data_dir, timeout=timeout,
+    )
+    if not r.ok or not isinstance(r.data, dict):
+        return 0
+    items = ((r.data.get("timeline") or {}).get("items")) or []
+    end = 0
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        start = item.get("startFrame") or item.get("fromFrame") or 0
+        duration = item.get("durationInFrames") or 0
+        try:
+            end = max(end, int(float(start)) + int(float(duration)))
+        except (TypeError, ValueError):
+            continue
+    return max(0, end)
+
+
+class S_DeskMaterialBase(BaseStep):
+    """视频/音频/图片素材导入节点的共享实现（子类只声明媒体类型与默认轨道）。"""
+
+    #: 子类覆盖：video / audio / image
+    media_kind = ""
+    #: 子类覆盖：默认目标轨道
+    default_track = "V1"
+
+    step_id = "desk_material_base"
+    step_name = "素材导入（基类，不单独使用）"
     dependencies = []
 
     def check_artifact(self, task_dir: str) -> bool:
@@ -330,67 +445,101 @@ class S_DeskMaterial(BaseStep):
         data_dir, timeout = _preflight(cfg, task_dir)
         dry_run = bool(cfg.get("dry_run", True))
 
-        # 1) 收集素材路径：path(单个) / paths(多个) / folder(整目录) / asset_ids(跳过导入)
-        #    取值优先级：节点配置优先，连线备选（_first / _first_list）
-        raw_paths = _first_list(cfg, inp, "paths")
-        single = _first(cfg, inp, "path")
-        if single:
-            raw_paths = [single] + raw_paths
-        folder = _first(cfg, inp, "folder")
-        resolved = [p for p in (_resolve_file(x, task_dir) or x for x in raw_paths) if p]
-        if folder:
-            folder_abs = _resolve_file(folder, task_dir) or folder
-            if os.path.isdir(folder_abs):
-                resolved.append(folder_abs)
+        kind = self.media_kind
+        label = {"video": "视频", "audio": "音频", "image": "图片"}.get(kind, kind)
+
+        # 1) 收集素材：JSON 素材包 / 单个文件 path / 目录 folder（路径均支持相对任务目录解析）
+        entries: list[dict] = []
+        pack_raw = _first(cfg, inp, "json_pack")
+        if pack_raw:
+            entries = _iter_json_pack(pack_raw)
+            if not entries:
+                raise RuntimeError(f"JSON 素材包里没有可导入的{label}素材：每项至少要有 path 字段")
+        else:
+            raw_paths = _first_list(cfg, inp, "paths")
+            single = _first(cfg, inp, "path")
+            if single:
+                raw_paths = [single] + raw_paths
+            folder = _first(cfg, inp, "folder")
+            resolved = [p for p in (_resolve_file(x, task_dir) or x for x in raw_paths) if p]
+            if folder:
+                folder_abs = _resolve_file(folder, task_dir) or folder
+                if os.path.isdir(folder_abs):
+                    resolved.append(folder_abs)
+            entries = [{"id": "", "path": p, "type": kind, "note": "", "index": i}
+                       for i, p in enumerate(resolved, 1)]
+
+        # 目录导入需在剪辑台侧递归扫描；按目录逐条调用 import_folder
+        folder_entries = [e for e in entries if os.path.isdir(e["path"])]
+        file_entries = [e for e in entries if not os.path.isdir(e["path"])]
+        missing = [e["path"] for e in file_entries if not os.path.isfile(e["path"])]
+        if missing:
+            raise RuntimeError(
+                f"{label}素材文件不存在：{missing[0]}" + (f"（共 {len(missing)} 个）" if len(missing) > 1 else "")
+                + "\n提示：确认上游输出路径有效；相对路径按任务目录解析"
+            )
 
         step_check_cancel(cancel_callback)
         if callback:
-            callback(15, f"导入 {len(resolved)} 个素材到剪辑台媒体池…")
+            callback(15, f"导入 {len(entries)} 项{label}素材到剪辑台媒体池…")
 
+        # 2) 导入媒体池（文件逐个 import_asset；目录 import_folder）
         imported_ids: list[str] = []
-        if resolved:
-            files = [p for p in resolved if os.path.isfile(p)]
-            dirs = [p for p in resolved if os.path.isdir(p)]
-            for path in files:
-                r = occ.call_tool("import_asset", {"path": path},
-                                  project=project, data_dir=data_dir, apply=not dry_run, timeout=timeout)
-                if not r.ok:
-                    raise RuntimeError(
-                        f"导入素材失败 {os.path.basename(path)}：{r.message}\n提示：{_hint_for(r.message) or '确认路径存在且在媒体导入白名单内'}"
-                    )
-                imported_ids.extend(_extract_assets(r.data) or [])
-            for path in dirs:
-                r = occ.call_tool("import_folder", {"path": path},
-                                  project=project, data_dir=data_dir, apply=not dry_run, timeout=timeout)
-                if not r.ok:
-                    raise RuntimeError(
-                        f"导入目录失败 {path}：{r.message}\n提示：{_hint_for(r.message) or '确认目录内包含受支持的媒体文件'}"
-                    )
-                imported_ids.extend(_extract_assets(r.data) or [])
+        imported_notes: list[str] = []
+        for entry in file_entries:
+            r = occ.call_tool("import_asset", {"path": entry["path"]},
+                              project=project, data_dir=data_dir, apply=not dry_run, timeout=timeout)
+            if not r.ok:
+                raise RuntimeError(
+                    f"导入{label}素材失败 {os.path.basename(entry['path'])}：{r.message}\n"
+                    f"提示：{_hint_for(r.message) or '确认路径存在、格式受支持且在媒体导入白名单内'}"
+                )
+            ids = _extract_assets(r.data) or []
+            imported_ids.extend(ids)
+            if entry.get("id"):
+                imported_notes.append(f"{entry['id']} → {ids[0] if ids else '?'}")
+        for entry in folder_entries:
+            r = occ.call_tool("import_folder", {"path": entry["path"]},
+                              project=project, data_dir=data_dir, apply=not dry_run, timeout=timeout)
+            if not r.ok:
+                raise RuntimeError(
+                    f"导入{label}目录失败 {entry['path']}：{r.message}\n提示：{_hint_for(r.message) or '确认目录内包含受支持的媒体文件'}"
+                )
+            imported_ids.extend(_extract_assets(r.data) or [])
 
         asset_ids = _first_list(cfg, inp, "asset_ids") or imported_ids
         if not asset_ids:
-            raise RuntimeError("没有可导入的素材：请连接 path / paths / folder 端口，或直接填 asset_ids（已入库的素材）")
+            raise RuntimeError(
+                f"没有可导入的{label}素材：请连接 单个文件/目录/JSON素材包 端口，或直接填 asset_ids（已入库的素材）"
+            )
 
-        # 2) 上轨（可选）
-        add_to_track = bool(cfg.get("add_to_track", True))
+        # 3) 上轨（默认开启；「仅入库不上轨」关闭）
         clip_ids: list[str] = []
-        if add_to_track and not dry_run is False:
-            track = str(cfg.get("track") or "V1").strip() or "V1"
-            try:
-                from_frame = int(float(cfg.get("from_frame") or 0))
-            except (TypeError, ValueError):
-                from_frame = 0
-            try:
-                duration = int(float(cfg.get("duration_frames") or 0)) or None
-            except (TypeError, ValueError):
-                duration = None
-            kind = str(cfg.get("clip_type") or "").strip().lower()
+        track = str(cfg.get("track") or self.default_track).strip() or self.default_track
+        add_to_track = not bool(cfg.get("import_only", False))
+        insert_at = str(cfg.get("insert_at") or "head").strip().lower()
+        if insert_at not in ("head", "tail"):
+            insert_at = "head"
+        try:
+            duration = int(float(cfg.get("duration_frames") or 0)) or None
+        except (TypeError, ValueError):
+            duration = None
+        try:
+            scale = float(cfg.get("scale") or 0) or None
+        except (TypeError, ValueError):
+            scale = None
 
+        if add_to_track:
+            step_check_cancel(cancel_callback)
+            from_frame = 0
+            if insert_at == "tail":
+                from_frame = _track_tail_frame(project, data_dir, track, timeout)
+                if callback:
+                    callback(60, f"轨道 {track} 当前末尾在第 {from_frame} 帧，从其后续排…")
             adds = []
             for asset_id in asset_ids:
                 add = {
-                    "type": kind or "video",
+                    "type": kind,
                     "assetId": asset_id,
                     "track": track,
                     "fromFrame": from_frame,
@@ -401,33 +550,85 @@ class S_DeskMaterial(BaseStep):
                 if from_frame and duration:
                     from_frame += duration
             if callback:
-                callback(60, f"把 {len(adds)} 个素材放到轨道 {track}…")
+                callback(70, f"把 {len(adds)} 个{label}素材放到轨道 {track}（{'尾部' if insert_at == 'tail' else '头部'}）…")
             r = occ.call_tool(
                 "edit_item",
                 {"adds": adds},
                 project=project, data_dir=data_dir, apply=not dry_run, timeout=timeout,
             )
             if not r.ok:
-                raise RuntimeError(f"上轨失败：{r.message}\n提示：{_hint_for(r.message) or '检查轨道名（视频 V1/V2…、音频 A1/A2…）与素材类型是否匹配'}")
+                raise RuntimeError(
+                    f"{label}素材上轨失败：{r.message}\n提示：{_hint_for(r.message) or '检查轨道名（视频 V1/V2…、音频 A1/A2…）与素材类型是否匹配'}"
+                )
             clip_ids = _extract_clips(r.data)
-        elif add_to_track and dry_run:
+            # 缩放比例：adds 不支持 transform，需对上轨得到的片段逐个 update
+            if scale and scale != 1.0 and clip_ids:
+                updates = [{"type": kind, "itemId": cid, "transform": {"scale": scale}} for cid in clip_ids]
+                if callback:
+                    callback(90, f"应用缩放比例 {scale}…")
+                rs = occ.call_tool(
+                    "edit_item",
+                    {"updates": updates},
+                    project=project, data_dir=data_dir, apply=not dry_run, timeout=timeout,
+                )
+                if not rs.ok:
+                    raise RuntimeError(
+                        f"{label}素材缩放设置失败：{rs.message}\n提示：缩放比例需在 0.05..16 之间（1 = 原始大小）"
+                    )
+        elif dry_run:
             if callback:
                 callback(60, "演练模式：跳过上轨（关闭 dry_run 后才会写入时间线）")
 
         cache = _write_cache(task_dir, nid, _PREFIX, {
-            "project": project, "dry_run": dry_run, "asset_ids": asset_ids, "clip_ids": clip_ids,
+            "project": project, "kind": kind, "dry_run": dry_run,
+            "asset_ids": asset_ids, "clip_ids": clip_ids, "track": track, "insert_at": insert_at,
+            "pack_map": imported_notes,
         })
         if callback:
-            callback(100, f"素材就绪：{len(asset_ids)} 个入库，{len(clip_ids)} 个上轨")
+            callback(100, f"{label}素材就绪：{len(asset_ids)} 个入库" + (f"，{len(clip_ids)} 个上 {track}" if clip_ids else "（仅入库）"))
+        plan = (
+            f"import {len(entries)} item(s) → asset_ids={len(asset_ids)}"
+            + (f" → track {track}({'tail' if insert_at == 'tail' else 'head'}) adds={len(clip_ids)}" if clip_ids else " → 仅入库")
+        )
         return {
             "artifacts": [cache],
             "outputs": {
                 "project": project,
                 "asset_ids": json.dumps(asset_ids, ensure_ascii=False),
                 "clip_ids": json.dumps(clip_ids, ensure_ascii=False),
-                "plan": f"import {len(resolved)} path(s) → asset_ids={asset_ids} → track adds={len(clip_ids)}",
+                "plan": plan,
             },
         }
+
+
+class S_DeskMaterialVideo(S_DeskMaterialBase):
+    """视频素材导入：单个文件 / 目录 / JSON 素材包 → 媒体池 → 目标视频轨。"""
+
+    step_id = "desk_material_video"
+    step_name = "视频素材导入"
+    media_kind = "video"
+    default_track = "V1"
+
+
+class S_DeskMaterialAudio(S_DeskMaterialBase):
+    """音频素材导入：单个文件 / 目录 / JSON 素材包 → 媒体池 → 目标音频轨。"""
+
+    step_id = "desk_material_audio"
+    step_name = "音频素材导入"
+    media_kind = "audio"
+    default_track = "A1"
+
+
+class S_DeskMaterialImage(S_DeskMaterialBase):
+    """图片素材导入：单个文件 / 目录 / JSON 素材包 → 媒体池 → 目标视频轨。
+
+    图片默认时长较短，额外提供时长（帧）与缩放比例两个设置项。
+    """
+
+    step_id = "desk_material_image"
+    step_name = "图片素材导入"
+    media_kind = "image"
+    default_track = "V1"
 
 
 # --------------------------------------------------------------------------- #

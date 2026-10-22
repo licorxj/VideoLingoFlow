@@ -23,7 +23,10 @@ from backend.steps.s_agi_comic import (
     S_AGI_ShotExport, S_AGI_ChapterExport,
 )
 from backend.steps.s_agi_data import S_AGI_Query, S_AGI_Write, S_AGI_AssetRegister
-from backend.steps.s_agi_desk import S_DeskProject, S_DeskMaterial, S_DeskEdit, S_DeskAiCut, S_DeskExport
+from backend.steps.s_agi_desk import (
+    S_DeskProject, S_DeskMaterialVideo, S_DeskMaterialAudio, S_DeskMaterialImage,
+    S_DeskEdit, S_DeskAiCut, S_DeskExport,
+)
 from backend.steps.s03_sentence_split import S03SentenceSplit
 from backend.steps.s_sentence_preprocess import S_SentencePreprocess
 from backend.steps.s_asr_result_validate import S_ASRResultValidate
@@ -263,7 +266,9 @@ _STEPS = {
     "agi_write": S_AGI_Write(),
     "agi_asset_register": S_AGI_AssetRegister(),
     "desk_project": S_DeskProject(),
-    "desk_material": S_DeskMaterial(),
+    "desk_material_video": S_DeskMaterialVideo(),
+    "desk_material_audio": S_DeskMaterialAudio(),
+    "desk_material_image": S_DeskMaterialImage(),
     "desk_edit": S_DeskEdit(),
     "desk_ai_cut": S_DeskAiCut(),
     "desk_export": S_DeskExport(),

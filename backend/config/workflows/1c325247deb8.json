@@ -188,20 +188,20 @@
         "y": 1935
       },
       "data": {
-        "nodeType": "desk_material",
-        "label": "剪辑素材导入",
+        "nodeType": "desk_material_video",
+        "label": "视频素材导入",
         "config": {
           "project": "",
           "path": "",
           "paths": "",
           "folder": "",
+          "json_pack": "",
           "asset_ids": "",
-          "add_to_track": true,
           "track": "V1",
-          "clip_type": "",
-          "from_frame": 0,
-          "duration_frames": 0,
+          "insert_at": "head",
+          "import_only": false,
           "dry_run": true,
+          "use_task_output_dir": false,
           "data_dir": "",
           "timeout": 1800
         },
