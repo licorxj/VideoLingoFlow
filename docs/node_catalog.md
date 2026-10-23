@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-22 23:39:40  
-> 节点总数：186　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-23 16:24:27  
+> 节点总数：190　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -11,7 +11,7 @@
 | 预览节点（`preview`） | 4 |
 | 音频处理节点（`audio`） | 11 |
 | 视频处理节点（`video`） | 19 |
-| AI生成类节点（`ai_gen`） | 21 |
+| AI生成类节点（`ai_gen`） | 22 |
 | 翻译相关节点（`translation`） | 16 |
 | 漫剧·剧本链（`agi_story`） | 4 |
 | 漫剧·资产链（`agi_asset`） | 6 |
@@ -30,6 +30,7 @@
 | hyperframes（`hyperframes`） | 5 |
 | music_gen（`music_gen`） | 21 |
 | music_step（`music_step`） | 4 |
+| ocr（`ocr`） | 3 |
 | prompt_opt（`prompt_opt`） | 3 |
 
 ## 节点详情
@@ -111,6 +112,7 @@
 | Seedream文生图 | `seedream_txt2img` | 调用火山引擎方舟 Seedream 文生图（txt2img）：根据提示词生成单张图片。支持流式输出与提示词优化，产物保存到 cache/images。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream组图生成 | `seedream_grid` | 调用 Seedream 文生组图（grid / sequential_image_generation）：根据提示词一次生成多张图片。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
 | Seedream联网搜索生图 | `seedream_websearch` | 调用 Seedream 联网搜索生图（websearch / tools=[web_search]）：结合网络搜索结果按提示词生成图片，适合需要真实世界参考的场景。 | process | 提示词(`text`:text) | 输出图片列表(`images`:json); 第一张图片(`text`:image) |
+| 单句配音TTS | `single_tts` | 单句配音节点：把一句话（兼容直接文本与文本文件路径）直接交给 TTS 引擎合成，只调用一次、不切分、不合并，输出配音音频路径、时长与记录 JSON。适合「一句台词/一句旁白/一个标题播报」快速出音；长文分段配音请用「长文本TTS」节点。 | process | 单句文本(`text`*:text) | 音频路径(`audio`:audio); 时长(秒)(`duration`:text); 记录JSON(`record`:json) |
 | 即梦-全模态参考生视频 | `seedance_autovideo` | 调用 Seedance 全模态参考生视频（autovideo）：以参考图/视频/音频任意组合生成视频。参考图拆为 参考图1~5、参考视频拆为 参考视频1~2、参考音频拆为 参考音频1~2 共 9 个独立输入口，后端按口序收集（空口跳过、保持顺序）后提交：只接 1 张参考图时以单图模式提交，多张按 参考图1→5 顺序组装为列表。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image); 参考图5(`image5`:image); 参考视频1(`video1`:video); 参考视频2(`video2`:video); 参考音频1(`audio1`:audio); 参考音频2(`audio2`:audio) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
 | 即梦-图生视频 | `seedance_img2video` | 调用 Seedance 图生视频-首帧（img2video）：以参考图按提示词生成视频。提供 image1~image4 共 4 个独立参考图输入口，后端按口序收集（空口跳过、保持顺序）：参考图1 作为首帧（first_frame），参考图2~4 自动作为参考图（reference_image）一并提交；只接 1 张时即为标准单首帧图生视频。注意：本节点不产生/不支持尾帧，需要精确指定尾帧请使用「即梦-图生视频(首尾帧)」节点。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image); 参考图3(`image3`:image); 参考图4(`image4`:image) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
 | 即梦-图生视频(首尾帧) | `seedance_flf2video` | 调用 Seedance 图生视频-首尾帧（flf2video）：以 2 张参考图（首帧/尾帧）生成视频。首尾帧由本节点专用——参考图1 → first_frame、参考图2 → last_frame，角色固定不可互换；多余的图会被忽略。需要额外参考图时请改用「即梦-全模态参考生视频」节点。 | process | 提示词(`text`:text); 参考图1(`image1`:image); 参考图2(`image2`:image) | 视频(`video`:video); 视频列表(`videos`:list); 尾帧(`last_frame`:image); 生成参数JSON(`params`:json); 任务ID(`task_id`:text) |
@@ -331,6 +333,14 @@
 | 免费AI音乐-歌词生音乐 | `step_music_lyrics2music` | ACE-Step 1.5 纯歌词模式：以歌词为主输入生成歌曲（可附加风格提示词），支持 [Verse] / [Chorus] 结构标记。官方标价 $0 免费；歌词必填。 | process | 提示词(`text`:text); 歌词(`lyrics`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
 | 免费AI音乐-纯音乐 | `step_music_instrumental` | ACE-Step 1.5 纯音乐模式：按提示词生成无人声的纯音乐 / BGM（instrumental）。官方标价 $0 免费；适合视频配乐。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
 | 免费AI音乐-自然语言创作 | `step_music_natural` | ACE-Step 1.5 自然语言模式：输入一句话描述（如「生成一首关于夏天和旅行的欢快流行歌」），LM 自动创作描述与歌词并生成完整歌曲。官方标价 $0 免费。 | process | 提示词(`text`:text) | 音频1(`audio_1`:audio); 音频2(`audio_2`:audio); 音频3(`audio_3`:audio); 音频4(`audio_4`:audio); 生成参数JSON(`params`:json) |
+
+### ocr（`ocr`）
+
+| 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
+|------|----|------|-------|---------|---------|
+| OCR图片识别 | `ocr_image` | 通过 OCR 封装工厂识别图片中的文字与坐标（不直连）：面板可选接口与模型，输出 JSON/Markdown/纯 TXT 识别结果，并把文字与坐标以红色字体渲染标注到原图上 | thread | 图片(`image`*:image) | 识别结果(`result`:any); 标注图片(`image`:image) |
+| PDF识别 | `pdf_ocr` | 直连 Indra OCR 解析 PDF：多页版面/表格/公式/Markdown，支持文本层直读、加密 PDF 与页码范围；输入支持路径/URL/base64 | thread | PDF文档(`pdf`*:any) | 识别结果(`result`:text) |
+| 表格识别 | `ocr_table` | 直连 Indra OCR 从 PDF/图片中提取表格：版面模型定位 Table/Form 块并还原行列表格，支持跨列合并与多行单元格，输出 Markdown/JSON/CSV/HTML，可按页码与序号筛选 | thread | PDF/图片(`document`*:any) | 表格结果(`result`:text) |
 
 ### prompt_opt（`prompt_opt`）
 

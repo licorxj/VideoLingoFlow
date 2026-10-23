@@ -4235,6 +4235,201 @@ export const FALLBACK_NODE_TYPES = [
     "isBuiltIn": true
   },
   {
+    "id": "single_tts",
+    "name": "单句配音TTS",
+    "category": "ai_gen",
+    "description": "单句配音节点：把一句话（兼容直接文本与文本文件路径）直接交给 TTS 引擎合成，只调用一次、不切分、不合并，输出配音音频路径、时长与记录 JSON。适合「一句台词/一句旁白/一个标题播报」快速出音；长文分段配音请用「长文本TTS」节点。",
+    "icon": "Volume2",
+    "color": "#10b981",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "text",
+        "label": "单句文本",
+        "type": "text",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "audio",
+        "label": "音频路径",
+        "type": "audio"
+      },
+      {
+        "id": "duration",
+        "label": "时长(秒)",
+        "type": "text"
+      },
+      {
+        "id": "record",
+        "label": "记录JSON",
+        "type": "json"
+      }
+    ],
+    "defaultConfig": {
+      "tts_mode": [
+        "preset_voice"
+      ],
+      "tts_engine": "",
+      "tts_model": "",
+      "clone_source": "fixed",
+      "cc_colloquial_desc": "",
+      "ref_audio_path": "",
+      "ref_audio_role_1": "",
+      "voice_role_1": "",
+      "voice_design_role_1_desc": "",
+      "overwrite_generate": false,
+      "max_chars": 100
+    },
+    "configFields": [
+      {
+        "key": "max_chars",
+        "label": "建议最大字数",
+        "type": "number",
+        "defaultValue": 100,
+        "min": 0,
+        "max": 1000,
+        "step": 10,
+        "colSpan": "half",
+        "description": "超过此字数仅在日志里告警，不会切分（本节点按整句配音）；0 = 不检查"
+      },
+      {
+        "key": "tts_mode",
+        "label": "TTS 模式",
+        "type": "chips",
+        "singleSelect": true,
+        "chipColor": "#10b981",
+        "options": [
+          {
+            "value": "preset_voice",
+            "label": "预置角色"
+          },
+          {
+            "value": "clone",
+            "label": "克隆"
+          },
+          {
+            "value": "controllable_clone",
+            "label": "指令克隆"
+          },
+          {
+            "value": "voice_design",
+            "label": "音色设计"
+          }
+        ]
+      },
+      {
+        "key": "tts_engine",
+        "label": "配音引擎",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "apiEndpoint": "/api/tts-interfaces/by-mode/{tts_mode}",
+        "placeholder": "跟随全局配置",
+        "optionLabel": "name",
+        "optionValue": "id"
+      },
+      {
+        "key": "tts_model",
+        "label": "TTS 模型",
+        "type": "api-select",
+        "dependsOn": "tts_engine",
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/models-for-node",
+        "placeholder": "跟随接口默认模型",
+        "colSpan": "half"
+      },
+      {
+        "key": "clone_source",
+        "label": "克隆音频来源",
+        "type": "select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "clone",
+          "controllable_clone"
+        ],
+        "options": [
+          {
+            "value": "fixed",
+            "label": "固定克隆音频"
+          },
+          {
+            "value": "multi_role",
+            "label": "多角色模式"
+          }
+        ]
+      },
+      {
+        "key": "ref_audio_path",
+        "label": "参考音频路径",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "fixed",
+        "placeholder": "选择参考音频文件",
+        "fileFilter": [
+          "wav",
+          "mp3",
+          "flac",
+          "ogg"
+        ]
+      },
+      {
+        "key": "cc_colloquial_desc",
+        "label": "口语化描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "controllable_clone"
+        ],
+        "placeholder": "例如：用四川话说",
+        "colSpan": "full",
+        "description": "拼接在可控克隆指令最前面，自动补逗号分隔；留空不拼接"
+      },
+      {
+        "key": "ref_audio_role_1",
+        "label": "角色1参考音频",
+        "type": "audio-selector",
+        "dependsOn": "clone_source",
+        "dependsValue": "multi_role",
+        "placeholder": "角色1的参考音频",
+        "fileFilter": [
+          "wav",
+          "mp3",
+          "flac",
+          "ogg"
+        ]
+      },
+      {
+        "key": "voice_role_1",
+        "label": "朗读者1音色",
+        "type": "api-select",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "preset_voice"
+        ],
+        "apiEndpoint": "/api/tts-interfaces/{tts_engine}/voices",
+        "placeholder": "选择音色"
+      },
+      {
+        "key": "voice_design_role_1_desc",
+        "label": "角色1音色描述",
+        "type": "text",
+        "dependsOn": "tts_mode",
+        "dependsAnyValues": [
+          "voice_design"
+        ],
+        "placeholder": "描述这个音色的特征"
+      },
+      {
+        "key": "overwrite_generate",
+        "label": "覆盖已有音频",
+        "type": "toggle",
+        "defaultValue": false,
+        "description": "勾选后即使音频文件已存在也会重新生成，不勾选则跳过已存在的音频"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
     "id": "merge_sub_video",
     "name": "字幕烧录",
     "category": "video",
@@ -6666,6 +6861,8 @@ export const FALLBACK_NODE_TYPES = [
         "label": "模型版本",
         "type": "select",
         "colSpan": "half",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
         "options": [
           {
             "value": "",
@@ -6694,6 +6891,8 @@ export const FALLBACK_NODE_TYPES = [
         "label": "模型尺寸",
         "type": "select",
         "colSpan": "half",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
         "options": [
           {
             "value": "",
@@ -6724,6 +6923,8 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half",
         "dependsOn": "ocr_version",
         "dependsValue": "custom",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
         "placeholder": "输入完整模型名",
         "description": "非空时原样覆盖版本/尺寸，需自行确保模型文件存在"
       },
@@ -6869,6 +7070,8 @@ export const FALLBACK_NODE_TYPES = [
         "label": "模型版本",
         "type": "select",
         "colSpan": "half",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
         "options": [
           {
             "value": "",
@@ -6897,6 +7100,8 @@ export const FALLBACK_NODE_TYPES = [
         "label": "模型尺寸",
         "type": "select",
         "colSpan": "half",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
         "options": [
           {
             "value": "",
@@ -6927,6 +7132,8 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half",
         "dependsOn": "ocr_version",
         "dependsValue": "custom",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
         "placeholder": "输入完整模型名",
         "description": "非空时原样覆盖版本/尺寸，需自行确保模型文件存在"
       },
@@ -7162,6 +7369,552 @@ export const FALLBACK_NODE_TYPES = [
         "type": "datetime-local",
         "dependsOn": "schedule_enabled",
         "dependsValue": true
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "pdf_ocr",
+    "name": "PDF识别",
+    "category": "ocr",
+    "description": "直连 Indra OCR 解析 PDF：多页版面/表格/公式/Markdown，支持文本层直读、加密 PDF 与页码范围；输入支持路径/URL/base64",
+    "icon": "FileText",
+    "color": "#14b8a6",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "pdf",
+        "label": "PDF文档",
+        "type": "any",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "label": "识别结果",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "output_type": "markdown",
+      "mode": "auto",
+      "dpi": 200,
+      "page_range": "",
+      "max_pages": 0,
+      "image_ocr": true,
+      "furniture": false,
+      "math": false,
+      "pdf_password": "",
+      "model_dir": "",
+      "threads": 0,
+      "use_cuda": false,
+      "text_score": 0.0
+    },
+    "configFields": [
+      {
+        "key": "output_type",
+        "label": "输出类型",
+        "type": "select",
+        "colSpan": "half",
+        "description": "决定输出端口类型与落盘格式",
+        "options": [
+          {
+            "value": "markdown",
+            "label": "Markdown（版面/表格结构）"
+          },
+          {
+            "value": "text",
+            "label": "纯文本"
+          },
+          {
+            "value": "json",
+            "label": "结构化 JSON（版面块/坐标/逐行）"
+          },
+          {
+            "value": "filepath",
+            "label": "结果文件（.md）"
+          }
+        ]
+      },
+      {
+        "key": "mode",
+        "label": "识别模式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "auto",
+            "label": "自动（有文本层则直读，否则 OCR）"
+          },
+          {
+            "value": "ocr",
+            "label": "强制 OCR（忽略文本层）"
+          },
+          {
+            "value": "text",
+            "label": "强制文本层（不 OCR，仅 PDF）"
+          }
+        ]
+      },
+      {
+        "key": "dpi",
+        "label": "渲染分辨率",
+        "type": "number",
+        "colSpan": "half",
+        "min": 36,
+        "max": 1200,
+        "step": 10,
+        "description": "无文本层页面的渲染精度，越高越慢越准"
+      },
+      {
+        "key": "page_range",
+        "label": "页码范围",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如 1-5,8,11-20（留空=全部）",
+        "description": "1 起始，支持单页与区间"
+      },
+      {
+        "key": "max_pages",
+        "label": "最大页数",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "安全上限，0=不限"
+      },
+      {
+        "key": "text_score",
+        "label": "置信度过滤",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "max": 1,
+        "step": 0.05,
+        "description": "JSON 输出中按行过滤低置信结果，0=不过滤"
+      },
+      {
+        "key": "image_ocr",
+        "label": "识别文档内嵌图片文字",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "furniture",
+        "label": "保留页眉页脚",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "math",
+        "label": "公式识别（LaTeX）",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "首次使用需额外下载约 20MB 公式模型"
+      },
+      {
+        "key": "pdf_password",
+        "label": "PDF 密码",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "加密 PDF 的打开密码（留空=无密码）"
+      },
+      {
+        "key": "model_dir",
+        "label": "模型目录",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空=自动下载（或用全局 Indra 接口配置）",
+        "description": "本地已下载的 indra-ocr 模型目录"
+      },
+      {
+        "key": "threads",
+        "label": "推理线程",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "单页内部并行度，0=按 CPU 核心数"
+      },
+      {
+        "key": "use_cuda",
+        "label": "使用 GPU（CUDA）",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "需 onnxruntime-gpu，不可用时自动回退 CPU"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "ocr_table",
+    "name": "表格识别",
+    "category": "ocr",
+    "description": "直连 Indra OCR 从 PDF/图片中提取表格：版面模型定位 Table/Form 块并还原行列表格，支持跨列合并与多行单元格，输出 Markdown/JSON/CSV/HTML，可按页码与序号筛选",
+    "icon": "Table",
+    "color": "#0d9488",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "document",
+        "label": "PDF/图片",
+        "type": "any",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "label": "表格结果",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "output_type": "markdown",
+      "table_index": 0,
+      "mode": "auto",
+      "dpi": 200,
+      "page_range": "",
+      "max_pages": 0,
+      "min_rows": 2,
+      "min_cols": 2,
+      "include_form": false,
+      "include_toc": false,
+      "image_ocr": true,
+      "furniture": false,
+      "math": false,
+      "pdf_password": "",
+      "model_dir": "",
+      "threads": 0,
+      "use_cuda": false
+    },
+    "configFields": [
+      {
+        "key": "output_type",
+        "label": "输出类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "markdown",
+            "label": "Markdown 表格（.md）"
+          },
+          {
+            "value": "json",
+            "label": "结构化 JSON（.json）"
+          },
+          {
+            "value": "csv",
+            "label": "CSV 表格（.csv，Excel 直开）"
+          },
+          {
+            "value": "html",
+            "label": "HTML 表格（.html）"
+          }
+        ],
+        "description": "表格结果的落盘格式，输出端口类型随之前端联动"
+      },
+      {
+        "key": "table_index",
+        "label": "表格序号",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "0=全部表格（默认）；N=仅第 N 个表格（按阅读顺序跨页连续编号）"
+      },
+      {
+        "key": "mode",
+        "label": "识别模式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "auto",
+            "label": "自动（先取文本层，失败再 OCR）"
+          },
+          {
+            "value": "ocr",
+            "label": "强制 OCR（图片/扫描件）"
+          },
+          {
+            "value": "text",
+            "label": "仅文本层（无图片识别）"
+          }
+        ]
+      },
+      {
+        "key": "dpi",
+        "label": "渲染分辨率",
+        "type": "number",
+        "colSpan": "half",
+        "min": 36,
+        "max": 1200,
+        "step": 10,
+        "description": "PDF 页面转图片的 DPI，扫描件表格建议 300+"
+      },
+      {
+        "key": "page_range",
+        "label": "页码范围",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "如 1-5,8,11-20（留空=全部页）",
+        "description": "仅识别指定页，1 基计数"
+      },
+      {
+        "key": "max_pages",
+        "label": "最多处理页数",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "防止超长文档跑满，0=不限制"
+      },
+      {
+        "key": "min_rows",
+        "label": "最少行数",
+        "type": "number",
+        "colSpan": "half",
+        "min": 1,
+        "step": 1,
+        "description": "少于此行数的表格块丢弃（过滤误检）"
+      },
+      {
+        "key": "min_cols",
+        "label": "最少列数",
+        "type": "number",
+        "colSpan": "half",
+        "min": 1,
+        "step": 1,
+        "description": "少于此列数的表格块丢弃（过滤误检）"
+      },
+      {
+        "key": "include_form",
+        "label": "包含表单（Form 块）",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "版面模型把无框线表格/表单标记为 Form，默认仅提取 Table"
+      },
+      {
+        "key": "include_toc",
+        "label": "包含目录（Table-Of-Contents 块）",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "提取目录区域的网格结构，默认关闭"
+      },
+      {
+        "key": "image_ocr",
+        "label": "识别文档内嵌图片文字",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "furniture",
+        "label": "保留页眉页脚",
+        "type": "toggle",
+        "colSpan": "half"
+      },
+      {
+        "key": "math",
+        "label": "公式识别（LaTeX）",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "首次使用需额外下载约 20MB 公式模型"
+      },
+      {
+        "key": "pdf_password",
+        "label": "PDF 密码",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "加密 PDF 的打开密码（留空=无密码）"
+      },
+      {
+        "key": "model_dir",
+        "label": "模型目录",
+        "type": "text",
+        "colSpan": "half",
+        "placeholder": "留空=自动下载（或用全局 Indra 接口配置）",
+        "description": "本地已下载的 indra-ocr 模型目录"
+      },
+      {
+        "key": "threads",
+        "label": "推理线程",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "单页内部并行度，0=按 CPU 核心数"
+      },
+      {
+        "key": "use_cuda",
+        "label": "使用 GPU（CUDA）",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "需 onnxruntime-gpu，不可用时自动回退 CPU"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "ocr_image",
+    "name": "OCR图片识别",
+    "category": "ocr",
+    "description": "通过 OCR 封装工厂识别图片中的文字与坐标（不直连）：面板可选接口与模型，输出 JSON/Markdown/纯 TXT 识别结果，并把文字与坐标以红色字体渲染标注到原图上",
+    "icon": "ScanText",
+    "color": "#0891b2",
+    "execution_domain": "thread",
+    "inputs": [
+      {
+        "id": "image",
+        "label": "图片",
+        "type": "image",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "result",
+        "label": "识别结果",
+        "type": "any"
+      },
+      {
+        "id": "image",
+        "label": "标注图片",
+        "type": "image"
+      }
+    ],
+    "defaultConfig": {
+      "model": "",
+      "ocr_version": "",
+      "model_type": "",
+      "custom_model_name": "",
+      "output_type": "json",
+      "text_score": 0.5,
+      "math": false
+    },
+    "configFields": [
+      {
+        "key": "model",
+        "label": "OCR接口",
+        "type": "api-select",
+        "apiEndpoint": "/api/ocr-interfaces/enabled",
+        "optionLabel": "name",
+        "optionValue": "id",
+        "placeholder": "跟随全局配置",
+        "colSpan": "half"
+      },
+      {
+        "key": "ocr_version",
+        "label": "模型版本",
+        "type": "select",
+        "colSpan": "half",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
+        "options": [
+          {
+            "value": "",
+            "label": "跟随接口默认"
+          },
+          {
+            "value": "PP-OCRv6",
+            "label": "PP-OCRv6"
+          },
+          {
+            "value": "PP-OCRv5",
+            "label": "PP-OCRv5"
+          },
+          {
+            "value": "PP-OCRv4",
+            "label": "PP-OCRv4"
+          },
+          {
+            "value": "custom",
+            "label": "自定义"
+          }
+        ]
+      },
+      {
+        "key": "model_type",
+        "label": "模型尺寸",
+        "type": "select",
+        "colSpan": "half",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
+        "options": [
+          {
+            "value": "",
+            "label": "跟随接口默认"
+          },
+          {
+            "value": "small",
+            "label": "small（均衡）"
+          },
+          {
+            "value": "mobile",
+            "label": "mobile"
+          },
+          {
+            "value": "tiny",
+            "label": "tiny（最快）"
+          },
+          {
+            "value": "server",
+            "label": "server（更高精度）"
+          }
+        ]
+      },
+      {
+        "key": "custom_model_name",
+        "label": "自定义模型名",
+        "type": "text",
+        "colSpan": "half",
+        "dependsOn": "ocr_version",
+        "dependsValue": "custom",
+        "dependsNotOn": "model",
+        "dependsNotValue": "indra_ocr",
+        "placeholder": "输入完整模型名",
+        "description": "非空时原样覆盖版本/尺寸，需自行确保模型文件存在"
+      },
+      {
+        "key": "output_type",
+        "label": "输出类型",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "json",
+            "label": "结构化 JSON（含坐标）"
+          },
+          {
+            "value": "markdown",
+            "label": "Markdown 表格"
+          },
+          {
+            "value": "text",
+            "label": "纯 TXT 文本"
+          }
+        ],
+        "description": "识别结果的落盘格式，输出端口类型随之前端联动"
+      },
+      {
+        "key": "text_score",
+        "label": "置信度过滤",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "max": 1,
+        "step": 0.05,
+        "description": "低于该置信度的文本行将被过滤；RapidOCR 引擎阈值加载时固定 0.5，调低未必能找回被丢弃的低置信行"
+      },
+      {
+        "key": "math",
+        "label": "包含数学公式",
+        "type": "toggle",
+        "colSpan": "half",
+        "dependsNotOn": "model",
+        "dependsNotValue": "rapidocr",
+        "description": "Indra OCR 专属：首次使用需额外下载约 20MB 公式模型"
       }
     ],
     "isBuiltIn": true

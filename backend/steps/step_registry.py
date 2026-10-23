@@ -40,6 +40,7 @@ from backend.steps.s07_merge_sub_video import S07MergeSubVideo
 from backend.steps.s08_dub_task import S08DubTask
 from backend.steps.s09_tts import S09TTS
 from backend.steps.s_long_text_tts import S_LongTextTTS
+from backend.steps.s_single_tts import S_SingleSentenceTTS
 from backend.steps.s10_merge_audio import S10MergeAudio
 from backend.steps.s_merge_dub import S_MergeDub
 from backend.steps.s11_merge_dub_video import S11MergeDubVideo
@@ -68,6 +69,9 @@ from backend.steps.s_video_cut_by_subtitle import StepVideoCutBySubtitle
 from backend.steps.s_merge_outputs_to_list import StepMergeOutputsToList
 from backend.steps.s_subtitle_position_search import S_SubtitlePositionSearch
 from backend.steps.s_subtitle_recognition import S_SubtitleRecognition
+from backend.steps.s_pdf_ocr import S_PdfOcr
+from backend.steps.s_ocr_table import S_OcrTable
+from backend.steps.s_ocr_image import S_OcrImage
 from backend.steps.s_video_publish import S_VideoPublish
 from backend.steps.s_video_quick_edit import S_VideoQuickEdit
 from backend.steps.s_xiaopai_publish import S_XiaopaiPublish
@@ -194,6 +198,9 @@ _STEPS = {
     # 长文本 TTS（ai_gen 分组：输入文本/文本文件，输出音频路径 + 增量记录 JSON）
     "long_text_tts": S_LongTextTTS(),
     "s_long_text_tts": S_LongTextTTS(),
+    # 单句配音 TTS（ai_gen 分组：一句话直接配音，输出音频路径 + 时长 + 记录 JSON）
+    "single_tts": S_SingleSentenceTTS(),
+    "s_single_tts": S_SingleSentenceTTS(),
     "s10_merge_audio": S10MergeAudio(),
     "merge_audio": S10MergeAudio(),
     "merge_dub": S_MergeDub(),
@@ -291,6 +298,15 @@ _STEPS = {
     "subtitle_position_search": S_SubtitlePositionSearch(),
     "s_subtitle_recognition": S_SubtitleRecognition(),
     "subtitle_recognition": S_SubtitleRecognition(),
+    # PDF 识别（OCR文字识别分组，直连 indra_ocr 解析 PDF）
+    "pdf_ocr": S_PdfOcr(),
+    "s_pdf_ocr": S_PdfOcr(),
+    # OCR 表格识别（OCR文字识别分组，直连 indra_ocr 提取表格）
+    "ocr_table": S_OcrTable(),
+    "s_ocr_table": S_OcrTable(),
+    # OCR 图片识别（OCR文字识别分组，走 OCR 接口工厂）
+    "ocr_image": S_OcrImage(),
+    "s_ocr_image": S_OcrImage(),
     "s_video_publish": S_VideoPublish(),
     "video_publish": S_VideoPublish(),
     "s_video_quick_edit": S_VideoQuickEdit(),
