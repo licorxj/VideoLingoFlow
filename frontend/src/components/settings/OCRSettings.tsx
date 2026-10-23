@@ -48,8 +48,35 @@ const DEFAULT_CONFIG: OCRInterfaceConfig = {
   timeout: 120,
 };
 
+const INDRA_CONFIG: OCRInterfaceConfig = {
+  sdk_module: "backend.ocr.ocr_indra",
+  sdk_class: "IndraOCREngine",
+  model_dir: "",
+  threads: 4,
+  dpi: 200,
+  mode: "auto",
+  detect_orientation: false,
+  image_ocr: true,
+  furniture: false,
+  math: false,
+  use_cuda: false,
+  device_id: 0,
+  text_score: 0.0,
+  max_workers: 4,
+  timeout: 120,
+};
+
+const INDRA_MODE_FALLBACK = [
+  { value: "auto", label: "auto（PDF 有文本层则直读，否则 OCR）" },
+  { value: "ocr", label: "ocr（强制 OCR）" },
+  { value: "text", label: "text（强制文本层，仅 PDF）" },
+];
+
+const INDRA_ID = "indra_ocr";
+
 const DEP_LABELS: Record<keyof OCRDeps, string> = {
   rapidocr: "rapidocr",
+  indra_ocr: "indra-ocr",
   onnxruntime: "onnxruntime",
   torch: "PyTorch",
   paddle: "PaddlePaddle",
@@ -101,6 +128,7 @@ function Toggle({
 
 export default function OCRSettings() {
   const [interfaces, setInterfaces] = useState<OCRInterface[]>([]);
+  const [activeId, setActiveId] = useState("rapidocr");
   const [config, setConfig] = useState<OCRInterfaceConfig>({ ...DEFAULT_CONFIG });
   const [deps, setDeps] = useState<OCRDeps | null>(null);
   const [fields, setFields] = useState<OCRConfigFields | null>(null);
@@ -135,11 +163,22 @@ export default function OCRSettings() {
     load();
   }, [load]);
 
-  const ifaceId = interfaces.find((i) => i.id === "rapidocr")?.id || interfaces[0]?.id || "rapidocr";
+  const ifaceId = interfaces.find((i) => i.id === activeId)?.id || interfaces[0]?.id || "rapidocr";
+  const isIndra = interfaces.find((i) => i.id === activeId)?.config?.sdk_class === "IndraOCREngine";
+  const isRapid = !isIndra;
 
   const setCfg = (patch: Partial<OCRInterfaceConfig>) => {
     setSaved(false);
     setConfig((prev) => ({ ...prev, ...patch }));
+  };
+
+  const handleSelectEngine = (id: string) => {
+    const target = interfaces.find((i) => i.id === id);
+    if (!target) return;
+    setActiveId(id);
+    setTestResult(null);
+    setSaved(false);
+    setConfig({ ...(id === INDRA_ID ? INDRA_CONFIG : DEFAULT_CONFIG), ...(target.config || {}) });
   };
 
   const handleSave = async () => {
@@ -211,7 +250,8 @@ export default function OCRSettings() {
           运行环境依赖
         </h3>
         <p className="text-xs text-muted-foreground">
-          OCR 使用 rapidocr 本地离线推理。其中 PaddlePaddle 为 GPU 备用引擎，未随项目安装；PyTorch 已随项目安装。
+          OCR 走本地离线推理：RapidOCR（PP-OCR 系列）与 Indra OCR（datalab-to/indra-ocr，文档级）。
+          PaddlePaddle 为 GPU 备用引擎，未随项目安装；PyTorch 已随项目安装。
         </p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
           {deps &&
@@ -257,8 +297,44 @@ export default function OCRSettings() {
             </div>
           </div>
         )}
+        {deps && !deps.indra_ocr && (
+          <div className="flex items-start gap-2 p-3 rounded-xl border border-amber-500/30 bg-amber-500/5 text-xs text-amber-700">
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+            <div>
+              indra-ocr 未安装（Indra OCR 接口需要）：<code className="font-mono">pip install indra-ocr</code>
+            </div>
+          </div>
+        )}
       </div>
 
+      {/* 引擎（接口）选择 */}
+      {interfaces.length > 1 && (
+        <div className={cardCls}>
+          <h3 className={sectionTitle}>
+            <ScanText className="w-4 h-4 text-primary" />
+            当前配置引擎
+          </h3>
+          <select
+            className={selectCls}
+            value={activeId}
+            onChange={(e) => handleSelectEngine(e.target.value)}
+          >
+            {interfaces.map((i) => (
+              <option key={i.id} value={i.id}>
+                {i.name}（{i.id}）
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            {isIndra
+              ? "Indra OCR：ONNX Runtime CPU 文档级 OCR，80+ 语言，输出文本行 / 坐标 / Markdown 与版面块。"
+              : "RapidOCR：PP-OCRv6/v5/v4，可选 onnxruntime / torch / paddle 推理引擎。"}
+          </p>
+        </div>
+      )}
+
+      {isRapid && (
+        <>
       {/* 推理引擎 */}
       <div className={cardCls}>
         <h3 className={sectionTitle}>
@@ -529,6 +605,117 @@ export default function OCRSettings() {
           </div>
         )}
       </div>
+        </>
+      )}
+
+      {isIndra && (
+        <div className={cardCls}>
+          <h3 className={sectionTitle}>
+            <Boxes className="w-4 h-4 text-primary" />
+            Indra OCR 模型与推理
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Datalab Indra OCR（datalab-to/indra-ocr）：ONNX Runtime CPU 推理，80+ 语言，
+            首次使用自动下载约 76MB 模型到 <code className="font-mono">_model_cache/indra-ocr</code>；
+            离线环境请手动下载模型后填写「模型目录」。
+          </p>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">模型目录 model_dir</label>
+            <input
+              className={inputCls}
+              placeholder="留空：自动下载（或设置环境变量 INDRA_OCR_MODEL_DIR）"
+              value={config.model_dir ?? ""}
+              onChange={(e) => setCfg({ model_dir: e.target.value })}
+            />
+            <p className="text-[11px] text-muted-foreground mt-1">
+              目录内需含 det.onnx / rec.onnx / meta.json 等文件。
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">推理线程数 threads</label>
+              <input
+                type="number"
+                min={1}
+                className={numCls}
+                value={config.threads ?? 4}
+                onChange={(e) => setCfg({ threads: parseInt(e.target.value || "4", 10) })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">单页推理内部并行数，≤0 按 CPU 核心数，默认 4</p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">批处理线程数 max_workers</label>
+              <input
+                type="number"
+                min={1}
+                className={numCls}
+                value={config.max_workers ?? 4}
+                onChange={(e) => setCfg({ max_workers: parseInt(e.target.value || "4", 10) })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">字幕抽帧批量识别并行数，默认 4</p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">置信度过滤 text_score</label>
+              <input
+                type="number"
+                step="0.05"
+                min="0"
+                max="1"
+                className={numCls}
+                value={config.text_score ?? 0}
+                onChange={(e) => setCfg({ text_score: parseFloat(e.target.value || "0") })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">丢弃低于该置信度的行，0 表示不过滤</p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">PDF 渲染 DPI</label>
+              <input
+                type="number"
+                min={72}
+                className={numCls}
+                value={config.dpi ?? 200}
+                onChange={(e) => setCfg({ dpi: parseInt(e.target.value || "200", 10) })}
+              />
+              <p className="text-[11px] text-muted-foreground mt-1">仅 PDF/文档输入生效，默认 200</p>
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground mb-1.5 block">文档模式 mode</label>
+              <select
+                className={selectCls}
+                value={config.mode ?? "auto"}
+                onChange={(e) => setCfg({ mode: e.target.value })}
+              >
+                {(fields?.indra_mode_options || INDRA_MODE_FALLBACK).map((opt: any) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-[11px] text-muted-foreground mt-1">仅 PDF 有文本层时生效（图片恒走 OCR）</p>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Toggle
+              checked={!!config.detect_orientation}
+              onChange={(v) => setCfg({ detect_orientation: v })}
+              label="整页方向自动检测"
+              desc="整页扫描件建议开启；字幕裁剪图关闭更快（约快 2~3 倍）"
+            />
+            <Toggle
+              checked={!!config.use_cuda}
+              onChange={(v) => setCfg({ use_cuda: v })}
+              label="启用 CUDA"
+              desc="需安装 onnxruntime-gpu，否则自动回退 CPU"
+            />
+            <Toggle
+              checked={!!config.math}
+              onChange={(v) => setCfg({ math: v })}
+              label="公式转 LaTeX（math）"
+              desc="启用后需额外下载约 20MB 公式模型"
+            />
+          </div>
+        </div>
+      )}
 
       {/* 测试区 */}
       <div className={cardCls}>
@@ -606,7 +793,7 @@ export default function OCRSettings() {
       {/* 保存 */}
       <div className="flex items-center justify-end gap-3">
         <span className="text-xs text-muted-foreground">
-          {saved ? "已保存到 ocr_interfaces.json，重启后端后仍生效" : "配置保存在内置接口 rapidocr 中"}
+          {saved ? "已保存到 ocr_interfaces.json，重启后端后仍生效" : `配置保存在接口 ${ifaceId} 中`}
         </span>
         <button
           onClick={handleSave}

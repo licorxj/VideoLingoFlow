@@ -117,6 +117,11 @@ export interface ConfigField {
   dependsValue?: any;
   dependsOnAny?: string[];
   dependsAnyValues?: any[];
+  /** 第二依赖条件（与 dependsOn/dependsValue 取 AND）：dependsNotOn 的值**不等于** dependsNotValue 时才可见。
+   *  典型场景：OCR 节点的模型版本/尺寸仅对 RapidOCR 接口有意义，选择 Indra OCR 时应隐藏。
+   *  注意：dependsNotValue 为 undefined 时该条件不生效（向后兼容）。 */
+  dependsNotOn?: string;
+  dependsNotValue?: any;
   chipColor?: string;
   singleSelect?: boolean;
   /** chips 选项右侧追加的外链按钮 */
@@ -230,14 +235,16 @@ export const CATEGORIES = {
   asset: { label: "素材库", color: "#84cc16", icon: "Library" },
   audio: { label: "音频处理节点", color: "#0ea5e9", icon: "Volume2" },
   video: { label: "视频处理节点", color: "#ef4444", icon: "Film" },
+  prompt_opt: { label: "AI提示词优化", color: "#eab308", icon: "Sparkles" },
   ai_gen: { label: "AI生成类节点", color: "#10b981", icon: "Sparkles" },
-  music_gen: { label: "AI音乐", color: "#a78bfa", icon: "Music" },
+  music_gen: { label: "AI音乐Suno", color: "#a78bfa", icon: "Music" },
   music_step: { label: "免费AI音乐step music", color: "#22c55e", icon: "Music" },
   translation: { label: "翻译相关节点", color: "#8b5cf6", icon: "Languages" },
   network_request: { label: "网络请求类节点", color: "#0f766e", icon: "Globe" },
   aigc: { label: "AIGC流程链", color: "#22c55e", icon: "Boxes" },
   utility: { label: "工具类节点", color: "#f59e0b", icon: "Wrench" },
   file: { label: "文件操作类节点", color: "#f97316", icon: "FolderOpen" },
+  ocr: { label: "OCR文字识别", color: "#14b8a6", icon: "FileText" },
   group_node: { label: "组合节点", color: "#64748b", icon: "Boxes" },
   hyperframes: { label: "HyperFrames 节点", color: "#f43f5e", icon: "Clapperboard" },
   input: { label: "输入节点", color: "#3b82f6", icon: "Upload" },
@@ -493,6 +500,48 @@ export function getVisibleOutputs(nodeType: NodeTypeDef, config: Record<string, 
     }
     return nodeType.outputs;
   }
+  if (nodeType.id === "pdf_ocr") {
+    // PDF识别：输出类型在节点面板可设（output_type），端口类型/文案随之联动。
+    // 端口 id 恒为 result，后端始终以该键返回结果文件绝对路径。
+    const outputType = String(config.output_type || "markdown");
+    if (outputType === "json") {
+      return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "结构化JSON", type: "json" as PortType } : p);
+    }
+    if (outputType === "text") {
+      return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "纯文本", type: "text" as PortType } : p);
+    }
+    if (outputType === "filepath") {
+      return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "识别结果文件", type: "filepath" as PortType } : p);
+    }
+    return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "Markdown文本", type: "text" as PortType } : p);
+  }
+  if (nodeType.id === "ocr_table") {
+    // OCR表格识别：输出类型在节点面板可设（output_type），端口类型/文案随之联动。
+    // 端口 id 恒为 result，后端始终以该键返回结果文件绝对路径（CSV 落盘为 utf-8-sig）。
+    const outputType = String(config.output_type || "markdown");
+    if (outputType === "json") {
+      return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "结构化JSON", type: "json" as PortType } : p);
+    }
+    if (outputType === "csv") {
+      return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "CSV表格", type: "text" as PortType } : p);
+    }
+    if (outputType === "html") {
+      return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "HTML表格", type: "text" as PortType } : p);
+    }
+    return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "Markdown表格", type: "text" as PortType } : p);
+  }
+  if (nodeType.id === "ocr_image") {
+    // OCR图片识别：输出类型在节点面板可设（output_type），端口类型/文案随之联动。
+    // 端口 id 恒为 result，后端始终以该键返回结果文件绝对路径；标注图片端口不变。
+    const outputType = String(config.output_type || "json");
+    if (outputType === "markdown") {
+      return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "Markdown文本", type: "text" as PortType } : p);
+    }
+    if (outputType === "text") {
+      return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "纯文本", type: "text" as PortType } : p);
+    }
+    return nodeType.outputs.map((p) => p.id === "result" ? { ...p, label: "结构化JSON", type: "json" as PortType } : p);
+  }
   return nodeType.outputs;
 }
 
@@ -534,6 +583,18 @@ export const PI_AGENT_OUTPUT_TYPES = [
 
 /** Check if a config field should be visible based on dependsOn */
 export function isConfigFieldVisible(field: ConfigField, config: Record<string, any>): boolean {
+  // ── 第二依赖条件（dependsNotOn / dependsNotValue，独立于 dependsOn 生效）──
+  // dependsNotOn 的当前值**不等于** dependsNotValue 时才可见，例如
+  // 「OCR 接口不是 indra_ocr」时才显示 RapidOCR 专属的模型版本/尺寸字段；
+  // 也可与 dependsOn/dependsValue 组合（如自定义模型名：ocr_version=custom 且接口非 Indra）。
+  if (field.dependsNotOn && field.dependsNotValue !== undefined) {
+    const notValue = config[field.dependsNotOn];
+    const blocked = Array.isArray(field.dependsNotValue)
+      ? field.dependsNotValue.includes(notValue)
+      : notValue === field.dependsNotValue;
+    if (blocked) return false;
+  }
+
   if (!field.dependsOn) return true;
   // 端点内含 {依赖键} 占位符的联动下拉（如模型随接口类型刷新重取列表）：
   // dependsOn 仅用于触发重新拉取，不控制可见性——否则旧节点 config 缺少该键时字段会被整体隐藏

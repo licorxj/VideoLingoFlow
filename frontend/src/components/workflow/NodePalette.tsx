@@ -15,7 +15,7 @@ import {
   Upload, Wrench, ChevronDown, ChevronRight, ChevronLeft, GripVertical, Settings2,
   Play, Eye, PanelRightClose, RefreshCw, Sparkles, Share2, ChevronsDownUp, ChevronsUpDown,
   Captions, SlidersHorizontal, Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
-  Boxes,
+  Boxes, Table, ScanText,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,7 @@ const ICON_MAP: Record<string, any> = {
   Film, Music, Subtitles, Mic, Mic2, Scissors, Brain, Languages, AlignLeft,
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, Share2, Captions, SlidersHorizontal,
-  Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus, Boxes,
+  Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus, Boxes, Table, ScanText,
 };
 
 interface Props {

@@ -30,6 +30,31 @@
         "max_workers": 6,
         "timeout": 120
       }
+    },
+    {
+      "id": "indra_ocr",
+      "name": "Indra OCR",
+      "type": "sdk",
+      "builtin": true,
+      "enabled": true,
+      "description": "Datalab Indra OCR（datalab-to/indra-ocr）：ONNX/CPU 文档级 OCR，80+ 语言，支持 Markdown/版面块输出，pip install indra-ocr",
+      "config": {
+        "sdk_module": "backend.ocr.ocr_indra",
+        "sdk_class": "IndraOCREngine",
+        "model_dir": "",
+        "threads": 4,
+        "dpi": 200,
+        "mode": "auto",
+        "detect_orientation": false,
+        "image_ocr": true,
+        "furniture": false,
+        "math": false,
+        "use_cuda": false,
+        "device_id": 0,
+        "text_score": 0.0,
+        "max_workers": 4,
+        "timeout": 120
+      }
     }
   ]
 }

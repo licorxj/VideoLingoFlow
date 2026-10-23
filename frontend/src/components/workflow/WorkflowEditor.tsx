@@ -42,7 +42,7 @@ import {
   type WorkflowClipboardPayload,
 } from "@/lib/workflowClipboard";
 import {
-  cloneSnapshot, preserveRuntimeFields, snapshotFingerprint,
+  cloneSnapshot, preserveRuntimeFields, snapshotFingerprint, RUNTIME_KEYS,
   type CanvasSnapshot, type HistoryEntry,
 } from "@/lib/workflowHistory";
 
@@ -55,6 +55,16 @@ const getNextId = () => "node_" + (++nodeIdCounter) + "_" + Date.now();
 let pasteIdCounter = 0;
 const genPasteId = () =>
   "n_" + Date.now().toString(36) + "_" + (++pasteIdCounter).toString(36) + Math.random().toString(36).slice(2, 6);
+
+// 粘贴落点：整批节点包围盒的中心对齐视口中心；连续粘贴在此基础上按阶梯错开，
+// 避免第二份与第一份完全重合（错开 6 次后回绕，始终留在视口附近）
+const PASTE_CASCADE_STEP = 40;
+const PASTE_CASCADE_WRAP = 6;
+/** 读不到节点实测尺寸时的估算值（仅用于包围盒居中，不影响节点本身大小） */
+const PASTE_FALLBACK_SIZE = { w: 320, h: 140 };
+/** 画布网格尺寸（与 ReactFlow snapGrid 保持一致）：平移量取整到网格，
+ *  让粘贴结果落在网格上，后续拖动不会跳一下 */
+const CANVAS_GRID = 15;
 
 // 复制组合/循环节点时，重映射其内部节点与内部连线 id，避免执行时冲突
 function remapContainerInnerIds(node: any) {
@@ -1237,6 +1247,66 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     setContextMenu({ visible: true, position: { x: e.clientX, y: e.clientY } });
   }, []);
 
+  // ===== 右键菜单「来自其他工作流」：读取目标工作流的节点 =====
+  // 与 fetchWorkflows 保持同一套鉴权兜底：未登录 / 会话过期时先恢复本地会话再重试一次。
+  // 少了这段会表现为「工作流列表能列出来，但点进去节点永远是空的」（接口 401 → 被当成空数据）。
+  const fetchWorkflowNodesForInsert = useCallback(async (wfId: string): Promise<any[]> => {
+    let res;
+    try {
+      res = await client.get("/api/workflows/" + wfId);
+    } catch (error: any) {
+      if (Number(error?.status ?? error?.response?.status ?? 0) !== 401) throw error;
+      const user = await restoreLocalControlSession();
+      if (!user) throw error;
+      res = await client.get("/api/workflows/" + wfId);
+    }
+    const nodes = res.data?.workflow?.nodes;
+    return Array.isArray(nodes) ? nodes : [];
+  }, []);
+
+  /**
+   * 把其它工作流里的某个节点插入当前画布。
+   * 保留 data（含 config 等用户设置参数），剔除运行态字段 —— 否则新节点一进来
+   * 就顶着上一轮的「已完成 / 旧输出 / 旧日志」，容易被误认为已执行。
+   * 组合/循环节点内部结构与连线要重排 id，避免与当前画布冲突。
+   */
+  const insertNodeFromWorkflow = useCallback((rawNode: any, screenPos: { x: number; y: number }) => {
+    if (!rawNode) return;
+    const instance = reactFlowInstanceRef.current;
+    // 以右键位置为节点中心插入，视觉上"落在鼠标处"
+    const center = instance ? instance.screenToFlowPosition(screenPos) : screenPos;
+    const cloned = JSON.parse(JSON.stringify(rawNode));
+    const remapped = remapContainerInnerIds(cloned);
+    const data: Record<string, any> = { ...(remapped.data || {}) };
+    for (const key of RUNTIME_KEYS) delete data[key];
+
+    const width = Number(remapped.width ?? remapped.measured?.width) || 320;
+    const height = Number(remapped.height ?? remapped.measured?.height) || 140;
+    const node: any = {
+      ...remapped,
+      id: getNextId(),
+      type: remapped.type || "workflow",
+      position: {
+        x: Math.round((center.x - width / 2) / CANVAS_GRID) * CANVAS_GRID,
+        y: Math.round((center.y - height / 2) / CANVAS_GRID) * CANVAS_GRID,
+      },
+      selected: true,
+      dragging: false,
+      data,
+    };
+    // 清掉 ReactFlow 内部测量字段，让新节点按自身尺寸重新测量
+    delete node.width;
+    delete node.height;
+    delete node.measured;
+
+    setNodes((nds) => [
+      ...nds.map((n: any) => (n.selected ? { ...n, selected: false } : n)),
+      node,
+    ]);
+    setEdges((eds) => eds.map((e: any) => (e.selected ? { ...e, selected: false } : e)));
+    commitHistory();
+  }, [setNodes, setEdges, commitHistory]);
+
   const deleteSelected = useCallback(() => {
     setNodes((nds) => nds.filter((n) => !n.selected));
     setEdges((eds) => eds.filter((e) => !e.selected));
@@ -1250,10 +1320,15 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     () => loadPersistedClipboard() ?? loadSharedClipboard() ?? { nodes: [], edges: [] }
   );
 
+  /** 连续粘贴的阶梯计数：每次粘贴自增，用于让多份节点错开而不是完全重叠；
+   *  每次新的复制动作都会归零，保证「复制 → 粘贴」总是落在视口中心 */
+  const pasteCascadeRef = useRef(0);
+
   // 其它标签页复制了节点 → 同步进来，实现跨标签页粘贴（不经过系统剪贴板）
   useEffect(() => subscribeSharedClipboard((payload) => {
     setClipboard(payload);
     persistClipboard(payload);
+    pasteCascadeRef.current = 0;
   }), []);
   const copySelected = useCallback(() => {
     // 优先取 ReactFlow 实例里的最新快照：updateNodeData 的改动可能尚未同步回 state，
@@ -1275,6 +1350,8 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       edges: JSON.parse(JSON.stringify(relatedEdges)),
     };
     setClipboard(payload);
+    // 新的复制内容 → 粘贴阶梯归零，下一次粘贴回到视口中心
+    pasteCascadeRef.current = 0;
     // 落 sessionStorage（同标签页刷新/跳路由后可用）与 localStorage（跨标签页共享）。
     // 注意：绝不写系统剪贴板，否则用户复制到系统剪贴板里的文字会被节点 JSON 覆盖。
     persistClipboard(payload);
@@ -1285,6 +1362,44 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     // 失败时会误把「粘贴普通文字」的操作变成粘节点，这里彻底去掉该路径
     const source = clipboard.nodes.length ? clipboard : loadPersistedClipboard() ?? clipboard;
     if (!source || source.nodes.length === 0) return false;
+
+    // ── 落点计算 ──────────────────────────────────────────────────────────
+    // 1) 取整批节点的包围盒（含估算尺寸，保证视觉居中而非左上角居中）；
+    // 2) 平移量 = 视口中心 − 包围盒中心，相对布局原样保留；
+    // 3) 叠加阶梯偏移，避免连续粘贴时多份节点完全重合。
+    const bx = source.nodes.map((n: any) => {
+      const px = Number(n.position?.x) || 0;
+      const py = Number(n.position?.y) || 0;
+      const w = n.width ?? n.measured?.width ?? PASTE_FALLBACK_SIZE.w;
+      const h = n.height ?? n.measured?.height ?? PASTE_FALLBACK_SIZE.h;
+      return { px, py, w, h };
+    });
+    const box = bx.reduce(
+      (acc, b) => ({
+        minX: Math.min(acc.minX, b.px),
+        minY: Math.min(acc.minY, b.py),
+        maxX: Math.max(acc.maxX, b.px + b.w),
+        maxY: Math.max(acc.maxY, b.py + b.h),
+      }),
+      { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+    );
+    const instance = reactFlowInstanceRef.current;
+    const canvasRect = reactFlowWrapper.current?.getBoundingClientRect();
+    const viewCenter = instance && canvasRect
+      ? instance.screenToFlowPosition({
+          x: canvasRect.left + canvasRect.width / 2,
+          y: canvasRect.top + canvasRect.height / 2,
+        })
+      : null;
+    // 拿不到实例/画布尺寸时退回旧的「原坐标 +200」，保证功能不失效
+    const baseX = viewCenter ? viewCenter.x - (box.minX + box.maxX) / 2 : 200;
+    const baseY = viewCenter ? viewCenter.y - (box.minY + box.maxY) / 2 : 200;
+    const cascade = (pasteCascadeRef.current++ % PASTE_CASCADE_WRAP) * PASTE_CASCADE_STEP;
+    // 统一平移量取整到网格：整批节点共用一个偏移，相对布局完全不变
+    const snapOffset = (v: number) => Math.round(v / CANVAS_GRID) * CANVAS_GRID;
+    const offsetX = snapOffset(baseX + cascade);
+    const offsetY = snapOffset(baseY + cascade);
+
     const idMap: Record<string, string> = {};
     const newNodes = source.nodes.map((n: any) => {
       const newId = genPasteId();
@@ -1294,7 +1409,10 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
       return {
         ...remapped,
         id: newId,
-        position: { x: n.position.x + 200, y: n.position.y + 200 },
+        position: {
+          x: (Number(n.position?.x) || 0) + offsetX,
+          y: (Number(n.position?.y) || 0) + offsetY,
+        },
         selected: false,
       };
     });
@@ -1307,6 +1425,35 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
     }));
     setNodes((nds) => [...nds, ...newNodes]);
     setEdges((eds) => [...eds, ...newEdges]);
+
+    // 兜底：视图被改动过 / 拿不到画布尺寸时，落点仍可能与视口不相交，
+    // 此时把视口平移过去，避免用户按了 Ctrl+V 却看不到任何变化
+    if (instance && canvasRect) {
+      const vp = instance.getViewport();
+      const zoom = vp.zoom || 1;
+      const view = {
+        minX: -vp.x / zoom,
+        maxX: (canvasRect.width - vp.x) / zoom,
+        minY: -vp.y / zoom,
+        maxY: (canvasRect.height - vp.y) / zoom,
+      };
+      const pasted = {
+        minX: box.minX + offsetX,
+        maxX: box.maxX + offsetX,
+        minY: box.minY + offsetY,
+        maxY: box.maxY + offsetY,
+      };
+      const visible =
+        pasted.maxX > view.minX && pasted.minX < view.maxX &&
+        pasted.maxY > view.minY && pasted.minY < view.maxY;
+      if (!visible) {
+        instance.setCenter(
+          (pasted.minX + pasted.maxX) / 2,
+          (pasted.minY + pasted.maxY) / 2,
+          { zoom, duration: 300 }
+        );
+      }
+    }
     return true;
   }, [clipboard, setNodes, setEdges]);
   const selectAll = useCallback(() => {
@@ -2982,6 +3129,10 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
           if (screenPos) setPlacingPos(screenPos);
           setPlacingNode(nodeType);
         }}
+        workflows={savedWorkflows}
+        currentWorkflowId={currentWfId || undefined}
+        onLoadWorkflowNodes={fetchWorkflowNodesForInsert}
+        onInsertNode={insertNodeFromWorkflow}
       />
 
       {/* 从输出端点拖线松手后的"可接入下游节点"面板 */}

@@ -33,7 +33,7 @@ import {
   CheckSquare, Square, Users, FolderOpen, ExternalLink, FileJson,
   Layers, Captions, SlidersHorizontal, RefreshCw, Eraser, Type, PenTool,
   Grid3x3, Ratio, Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes, Terminal,
-  Dices,
+  Dices, Table, ScanText,
 } from "lucide-react";
 import JsonEditorDialog from "./JsonEditorDialog";
 import TextEditorDialog from "./TextEditorDialog";
@@ -59,7 +59,7 @@ const ICON_MAP: Record<string, any> = {
   FileText, Volume2, Merge, Clapperboard, Image, Stamp, Download,
   Upload, Wrench, Play, Eye, Sparkles, FolderOpen, Captions, SlidersHorizontal,
   Eraser, Type, Grid3x3, Ratio, Video, UserRound, AudioLines, UserRoundPlus,
-  Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes, Terminal,
+  Search, PencilLine, PackagePlus, Database, Braces, ListMusic, Boxes, Terminal, Table, ScanText,
 };
 
 /** 节点头部顶栏：只有在该元素上按下鼠标才允许拖动节点，避免正文内框选/拖动误触移动节点 */
@@ -1322,7 +1322,7 @@ function BrowseProjectButton({ onClick }: { onClick: () => void }) {
   );
 }
 
-function ApiSelectField({ field, value, config, onConfigChange, followValue, onBrowseProject }: { field: ConfigField; value: string; config: Record<string, any>; onConfigChange: (key: string, value: any) => void; followValue?: string; onBrowseProject?: () => void }) {
+function ApiSelectField({ field, value, config, onConfigChange, followValue, onBrowseProject, onDefaultInterface }: { field: ConfigField; value: string; config: Record<string, any>; onConfigChange: (key: string, value: any) => void; followValue?: string; onBrowseProject?: () => void; onDefaultInterface?: (id: string) => void }) {
   const [apiOptions, setApiOptions] = useState<{ value: string; label: string; description?: string }[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -1366,6 +1366,9 @@ function ApiSelectField({ field, value, config, onConfigChange, followValue, onB
       setApiLoading(true);
       client.get(fetchKey).then((res) => {
         const resData = res.data || {};
+        // 接口端点可附带全局默认接口 id（如 /api/ocr-interfaces/enabled 的 default_interface），
+        // 上报给表单层：节点「跟随全局配置」时按实际生效引擎做字段显隐判定
+        if (resData.default_interface) onDefaultInterface?.(String(resData.default_interface));
         let allItems: { value: string; label: string; description?: string }[] = [];
         const optionLabel = field.optionLabel || "label";
         const optionValue = field.optionValue || "value";
@@ -1907,6 +1910,9 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
   const [piSkillOptions, setPiSkillOptions] = useState<{ value: string; label: string }[]>([]);
   const [piMcpOptions, setPiMcpOptions] = useState<{ value: string; label: string }[]>([]);
   const [picker, setPicker] = useState<{ kind: PickerKind; label: string; open: boolean } | null>(null);
+  // 全局默认接口（如 OCR 的 default_interface）：节点配置「跟随全局配置」时，
+  // 按实际生效引擎参与字段显隐判定（如全局默认 Indra OCR 时隐藏 RapidOCR 专属字段）
+  const [defaultInterface, setDefaultInterface] = useState("");
 
   // pi_agent / opencode_agent：从小π Agent 设置拉取已授权 Skill/MCP 选项
   useEffect(() => {
@@ -2066,6 +2072,14 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
     return "col-span-6";
   };
 
+  // 「跟随全局配置」类依赖键的生效值：节点未显式选择接口（config.model 为空）时，
+  // 用接口端点返回的全局默认接口参与可见性判定——例如全局默认 Indra OCR 时，
+  // 同样不应显示 RapidOCR 专属的模型版本/尺寸字段。仅当表单中确实存在
+  // dependsNotOn="model" 的字段时才回填，避免影响其他节点的依赖判定。
+  const effectiveConfig = defaultInterface && configFields.some((f: ConfigField) => f.dependsNotOn === "model")
+    ? { ...config, model: config.model || defaultInterface }
+    : config;
+
   return (
     <>
       <div ref={formRef} className="px-3 pb-3 grid grid-cols-6 gap-x-3 gap-y-2 border-t border-border/50 pt-2">
@@ -2082,7 +2096,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
           <div className="col-span-2 text-[11px] text-muted-foreground/70 py-1">加载配置中...</div>
         )}
         {configFields.map((field: ConfigField) => {
-          if (!isConfigFieldVisible(field, config)) return null;
+          if (!isConfigFieldVisible(field, effectiveConfig)) return null;
           // Chips / toggle group
           if (field.type === "chips") {
             const selected: string[] = config[field.key] || [];
@@ -2686,7 +2700,7 @@ function ConfigForm({ nodeType, config, onConfigChange, onVoiceSelect, onButtonA
             const showBrowse = !!onBrowseProject
               && nodeType.id?.startsWith("agi_")
               && field.apiEndpoint === "/api/creation/list";
-            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={{ ...(nodeType.defaultConfig || {}), ...config }} onConfigChange={onConfigChange} followValue={field.followPort ? String((upstreamOutputs as any)?.[field.followPort] ?? "") : ""} onBrowseProject={showBrowse ? onBrowseProject : undefined} /></div>;
+            return <div key={field.key} className={fieldSpanClass(field)}><ApiSelectField field={field} value={value} config={{ ...(nodeType.defaultConfig || {}), ...config }} onConfigChange={onConfigChange} followValue={field.followPort ? String((upstreamOutputs as any)?.[field.followPort] ?? "") : ""} onBrowseProject={showBrowse ? onBrowseProject : undefined} onDefaultInterface={setDefaultInterface} /></div>;
           }
 
           if (field.type === "desk-ops") {

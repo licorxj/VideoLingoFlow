@@ -1,27 +1,10 @@
 import client from "./client";
 
-export interface OCRInterfaceConfig {
-  sdk_module?: string;
-  sdk_class?: string;
-  engine_type: string;
-  ocr_version: string;
-  model_type: string;
-  custom_model_name: string;
-  lang_type: string;
-  use_cuda: boolean;
-  device_id: number;
-  use_det: boolean;
-  use_cls: boolean;
-  use_rec: boolean;
-  text_score: number;
-  box_thresh: number;
-  unclip_ratio: number;
-  limit_side_len: number;
-  threads: number;
-  return_word_box: boolean;
-  max_workers: number;
-  timeout: number;
-}
+/**
+ * 各引擎字段不同（RapidOCR 用 engine_type/ocr_version/...，Indra OCR 用
+ * model_dir/threads/dpi/...），故统一用松散字典承载，key 说明见 backend/config/ocr_interfaces.json。
+ */
+export type OCRInterfaceConfig = Record<string, any>;
 
 export interface OCRInterface {
   id: string;
@@ -43,6 +26,7 @@ export interface OCRTestResult {
 
 export interface OCRDeps {
   rapidocr: boolean;
+  indra_ocr: boolean;
   onnxruntime: boolean;
   torch: boolean;
   paddle: boolean;
@@ -52,6 +36,7 @@ export interface OCRConfigFields {
   engine_options: Array<{ value: string; label: string; description: string }>;
   sizes_by_version: Record<string, string[]>;
   lang_options: Array<{ value: string; label: string }>;
+  indra_mode_options?: Array<{ value: string; label: string }>;
 }
 
 export const ocrInterfacesApi = {

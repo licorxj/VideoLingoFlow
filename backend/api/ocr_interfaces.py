@@ -15,6 +15,7 @@ from backend.ocr.ocr_rapidocr import (
     LANG_OPTIONS,
     SIZES_BY_VERSION,
 )
+from backend.ocr.ocr_indra import MODE_OPTIONS as INDRA_MODE_OPTIONS
 
 from backend.config.credential_store import mask_deep
 
@@ -63,7 +64,14 @@ async def list_interfaces():
 async def list_enabled():
     mgr = get_ocr_interface_manager()
     # get_enabled() 已解析 secret:// 为明文密钥，下发前必须脱敏（与 GET / 、GET /{id} 一致）
-    return {"interfaces": mask_deep(mgr.get_enabled())}
+    # default_interface：全局默认接口（config ocr.method，兜底 rapidocr），
+    # 供工作流节点在「跟随全局配置」时判定实际生效引擎（如 RapidOCR 专属字段的显隐）
+    from backend.config.config_manager import config
+    global_method = (config.get("ocr.method") or "").strip()
+    return {
+        "interfaces": mask_deep(mgr.get_enabled()),
+        "default_interface": global_method or "rapidocr",
+    }
 
 
 @router.get("/check-deps")
@@ -79,6 +87,7 @@ async def get_ocr_config_fields():
         "engine_options": ENGINE_OPTIONS,
         "sizes_by_version": SIZES_BY_VERSION,
         "lang_options": LANG_OPTIONS,
+        "indra_mode_options": INDRA_MODE_OPTIONS,
     }
 
 

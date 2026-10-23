@@ -11,6 +11,7 @@
 ``S09TTS`` 的实现，仅重写编排逻辑（run / 输入输出 / 记录）。
 """
 import os
+import re
 import json
 import shutil
 import subprocess
@@ -195,6 +196,56 @@ class S_LongTextTTS(S09TTS):
                 result.extend(cls._hard_split(p, max_chars, compact))
 
         return [s.strip() for s in result if s and s.strip()]
+
+    # ── 多角色识别（SPEAKER_xxx： 标记） ───────────────────────────────
+    # 说话人标记：SPEAKER_<标识> 后接全角/半角冒号，例如：
+    #   SPEAKER_01：你好啊
+    #   SPEAKER_AAA：今天天气不错
+    # 标记前的内容（若有）归为默认说话人（角色0）。
+    _SPEAKER_RE = re.compile(r"(SPEAKER_[0-9A-Za-z_\-]+)\s*[:：]")
+
+    @classmethod
+    def _extract_speaker_blocks(cls, text: str) -> List[tuple]:
+        """把带 SPEAKER_xxx： 标记的长文本切成 (speaker_label, content) 块。
+
+        - 标记前的文本归为默认说话人（label=None）；
+        - 每个 SPEAKER_xxx： 开始一个新块，content 为该标记后到下一个标记前的内容；
+        - 标记内的冒号支持全角「：」与半角「:」。
+        """
+        matches = list(cls._SPEAKER_RE.finditer(text))
+        if not matches:
+            return [(None, text)]
+        blocks: List[tuple] = []
+        if matches[0].start() > 0:
+            pre = text[: matches[0].start()].strip()
+            if pre:
+                blocks.append((None, pre))
+        for i, m in enumerate(matches):
+            label = m.group(1)               # SPEAKER_xxx
+            start = m.end()                  # 冒号之后
+            end = matches[i + 1].start() if i + 1 < len(matches) else len(text)
+            content = text[start:end].strip()
+            if content:
+                blocks.append((label, content))
+        return blocks
+
+    @classmethod
+    def _speaker_to_character(cls, label, order: List[str]) -> int:
+        """把说话人标记解耦为角色索引（character_id）。
+
+        - 数字后缀（如 SPEAKER_01）直接用「数字-1」作为索引，直观对应“角色1/2/...”；
+        - 非数字标识按首次出现顺序分配索引；
+        - 与前端配置的多角色槽位解耦：具体标签字符串不绑定索引，仅由编号/出现顺序决定，
+          索引超出已配置角色数时由 _match_characters 降级到角色0。
+        """
+        if label is None:
+            return 0
+        suffix = label[len("SPEAKER_"):]
+        if suffix.isdigit():
+            return max(0, int(suffix) - 1)
+        if label not in order:
+            order.append(label)
+        return order.index(label)
 
     # ── 增量记录 ───────────────────────────────────────────────────────
     @staticmethod
@@ -382,13 +433,31 @@ class S_LongTextTTS(S09TTS):
         # 2) TTS 配置（复用 TTS 节点解析逻辑）
         tts_config = self._parse_tts_config()
 
-        # 3) 分句
+        # 3) 分句 + 多角色识别
+        multi_role = bool(node_cfg.get("multi_role", False))
         max_chars = int(node_cfg.get("max_chars") or 80)
-        sentences = self._split_text(text, max_chars)
-        if not sentences:
+
+        speaker_order: List[str] = []
+        if multi_role:
+            # 按 SPEAKER_xxx： 标记切分说话人，并把标签解耦为角色索引（character_id）
+            blocks = self._extract_speaker_blocks(text)
+            sentence_items = []  # (句子文本, character_id)
+            for label, content in blocks:
+                for sent in self._split_text(content, max_chars):
+                    sentence_items.append((sent, self._speaker_to_character(label, speaker_order)))
+            if not sentence_items:
+                raise ValueError(
+                    "多角色模式：未从文本解析出任何可配音句子，请确认文本包含 SPEAKER_xxx： 形式的角色标记。"
+                )
+            print(f"[长文本TTS] 多角色模式：识别到 {len(speaker_order)} 个说话人 -> {speaker_order}")
+        else:
+            sentence_items = [(s, 0) for s in self._split_text(text, max_chars)]
+
+        if not sentence_items:
             raise ValueError("输入文本分句后为空，请检查文本内容。")
-        total = len(sentences)
-        print(f"[长文本TTS] 输入文本 {len(text)} 字，切分为 {total} 句（单句上限 {max_chars} 字）")
+        total = len(sentence_items)
+        print(f"[长文本TTS] 输入文本 {len(text)} 字，切分为 {total} 句（单句上限 {max_chars} 字）"
+              + (f"，多角色（{len(speaker_order)} 说话人）" if multi_role else ""))
 
         # 4) 构建片段（沿用 TTS 任务单字段，便于复用引擎与完整性校验）
         node_id = self._nid()
@@ -396,7 +465,7 @@ class S_LongTextTTS(S09TTS):
         os.makedirs(seg_dir, exist_ok=True)
 
         segments: List[Dict] = []
-        for i, sentence in enumerate(sentences):
+        for i, (sentence, cid) in enumerate(sentence_items):
             audio_abs = os.path.join(seg_dir, f"{i:04d}.wav")
             segments.append({
                 "index": i,
@@ -410,8 +479,8 @@ class S_LongTextTTS(S09TTS):
                 "gap_after": 0.0,
                 "speed_ratio": 1.0,
                 "audio_file": self._rel(audio_abs, task_dir),
-                "character_id": 0,
-                "read_character_id": 0,
+                "character_id": cid,
+                "read_character_id": cid,
                 "character_voice_desc": "",
                 "dialect": "",
                 "方言": "",

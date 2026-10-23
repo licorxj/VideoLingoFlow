@@ -87,10 +87,16 @@ pillow==11.1.0
 pysubs2>=1.7,<2
 
 # ============================================================
-# OCR 文字识别（rapidocr；paddle 引擎需手动安装，默认不装）
+# OCR 文字识别
+#   rapidocr：PP-OCR 系列（内置接口 rapidocr）
+#   indra-ocr：Datalab Indra 文档级 OCR（内置接口 indra_ocr，ONNX/CPU，
+#              首次使用自动下载约 76MB 模型到 _model_cache/indra-ocr）
+#   注意：indra-ocr 传递依赖 opencv-python-headless，与上方 opencv-python 冲突，
+#        安装时用 pip install --no-deps indra-ocr（cv2/numpy/onnxruntime 项目已有）
 # ============================================================
 rapidocr>=3.9,<4
 onnxruntime>=1.16,<2
+indra-ocr>=1.1,<2
 
 # ============================================================
 # 音频处理

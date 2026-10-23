@@ -72,6 +72,7 @@ TS_CONFIG_FIELD_KEYS = {
     "url", "fileFilter", "apiEndpoint", "apiUrl", "followPort", "interfaceIdKey",
     "optionLabel", "optionValue", "description", "hint", "defaultValue",
     "min", "max", "step", "inline", "colSpan", "chips",
+    "dependsNotOn", "dependsNotValue",
 }
 TS_KINDS = {"normal", "group", "loop"}
 TS_CATEGORIES = {

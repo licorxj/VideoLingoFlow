@@ -66,21 +66,21 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
       { value: "any", label: "通用" },
     ],
     configFieldTypes: [
-      { value: "text", label: "单行文本", supportedProperties: ["placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "textarea", label: "多行文本", supportedProperties: ["placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "select", label: "下拉选择", supportedProperties: ["placeholder", "options", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"], requiresOptions: true },
-      { value: "multiselect", label: "多选下拉", supportedProperties: ["placeholder", "options", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "checkbox", label: "复选框", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "toggle", label: "开关", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "chips", label: "标签选择", supportedProperties: ["options", "chipColor", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"], requiresOptions: true },
-      { value: "file", label: "文件选择", supportedProperties: ["placeholder", "fileFilter", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "language-select", label: "语言选择", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "api-select", label: "接口选项", supportedProperties: ["placeholder", "apiEndpoint", "apiUrl", "optionLabel", "optionValue", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "slider", label: "滑块", supportedProperties: ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "number", label: "数字", supportedProperties: ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "voice-target-list", label: "音色目标列表", supportedProperties: ["apiEndpoint", "optionLabel", "optionValue", "placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
-      { value: "reorder-list", label: "排序列表", supportedProperties: ["options", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"], requiresOptions: true },
-      { value: "desk-ops", label: "AI剪辑·工具调用", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues"] },
+      { value: "text", label: "单行文本", supportedProperties: ["placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "textarea", label: "多行文本", supportedProperties: ["placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "select", label: "下拉选择", supportedProperties: ["placeholder", "options", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"], requiresOptions: true },
+      { value: "multiselect", label: "多选下拉", supportedProperties: ["placeholder", "options", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "checkbox", label: "复选框", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "toggle", label: "开关", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "chips", label: "标签选择", supportedProperties: ["options", "chipColor", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"], requiresOptions: true },
+      { value: "file", label: "文件选择", supportedProperties: ["placeholder", "fileFilter", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "language-select", label: "语言选择", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "api-select", label: "接口选项", supportedProperties: ["placeholder", "apiEndpoint", "apiUrl", "optionLabel", "optionValue", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "slider", label: "滑块", supportedProperties: ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "number", label: "数字", supportedProperties: ["placeholder", "min", "max", "step", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "voice-target-list", label: "音色目标列表", supportedProperties: ["apiEndpoint", "optionLabel", "optionValue", "placeholder", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
+      { value: "reorder-list", label: "排序列表", supportedProperties: ["options", "description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"], requiresOptions: true },
+      { value: "desk-ops", label: "AI剪辑·工具调用", supportedProperties: ["description", "dependsOn", "dependsValue", "dependsOnAny", "dependsAnyValues", "dependsNotOn", "dependsNotValue"] },
     ],
     execTypes: [
       { value: "", label: "无 (仅 UI)" },
@@ -927,6 +927,20 @@ export default function NodeManager({ open, onClose }: NodeManagerProps) {
                               <label className={labelCls}>依赖值</label>
                               <input value={field.dependsValue ?? ""} onChange={(e) => updateConfigField(i, { dependsValue: e.target.value })}
                                 className={inputCls} placeholder="video" />
+                            </div>
+                          )}
+                          {supported.has("dependsNotOn") && (
+                            <div>
+                              <label className={labelCls}>排除依赖字段</label>
+                              <input value={field.dependsNotOn || ""} onChange={(e) => updateConfigField(i, { dependsNotOn: e.target.value })}
+                                className={inputCls} placeholder="model" />
+                            </div>
+                          )}
+                          {supported.has("dependsNotValue") && (
+                            <div>
+                              <label className={labelCls}>排除依赖值</label>
+                              <input value={field.dependsNotValue ?? ""} onChange={(e) => updateConfigField(i, { dependsNotValue: e.target.value })}
+                                className={inputCls} placeholder="indra_ocr" />
                             </div>
                           )}
                         </div>

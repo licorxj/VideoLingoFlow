@@ -130,7 +130,7 @@ export default function TTSSettings() {
             <span className="font-semibold">小贴士：</span>
             以下用到的外置开源配音TTS接口，请下载 LCTTSHUB，一包解忧，
             <a
-              href="https://pan.quark.cn/s/705450a2358e"
+              href="https://pan.quark.cn/s/2d287e56456c"
               target="_blank"
               rel="noopener noreferrer"
               className="text-amber-700 dark:text-amber-300 underline underline-offset-2 hover:text-amber-800 dark:hover:text-amber-200 transition-colors"

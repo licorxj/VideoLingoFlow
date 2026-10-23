@@ -44,6 +44,7 @@ def check_ocr_dependencies() -> dict:
     """探测 OCR 相关依赖是否已安装（不触发 import 副作用）。"""
     return {
         "rapidocr": importlib.util.find_spec("rapidocr") is not None,
+        "indra_ocr": importlib.util.find_spec("indra_ocr") is not None,
         "onnxruntime": importlib.util.find_spec("onnxruntime") is not None,
         "torch": importlib.util.find_spec("torch") is not None,
         "paddle": importlib.util.find_spec("paddle") is not None,

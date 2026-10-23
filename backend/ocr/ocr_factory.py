@@ -1,7 +1,9 @@
 """OCR factory: creates OCR engine instances by interface ID.
 
 OCR 服务层统一入口，调用方通过 get_ocr_engine(iface_id) 获取引擎实例。
-当前仅支持 sdk 型（rapidocr 本地库），动态 import 配置中的 sdk_module/sdk_class。
+当前仅支持 sdk 型（本地库：rapidocr / indra-ocr），动态 import 配置中的
+sdk_module/sdk_class；新增本地引擎只需实现 OCRBase 子类并在
+backend/config/ocr_interfaces.json 增加条目（type="sdk"）。
 
 引擎生命周期：空闲超过 5 秒无任务调用时自动卸载（归还内存/显存），
 下次调用按需重建；配置变更时 clear_cache() 立即全部卸载。

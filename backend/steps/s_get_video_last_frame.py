@@ -155,23 +155,47 @@ def _extract_last_frame(video_path: str, output_path: str, tail: float, duration
     return False
 
 
-def _resolve_video(task_dir: str, step_inputs: dict) -> str:
-    """解析视频路径：优先节点连线输入，回退扫描 cache 中的视频文件。"""
+def _resolve_video(task_dir: str, step_inputs: dict):
+    """解析视频路径：严格优先连线输入的视频，绝不拿 cache 里的输入视频顶替。
+
+    返回 ``(path, invalid_raw)``：
+      - path 为找到的视频绝对路径（空串代表未找到）；
+      - invalid_raw 为「视频端口已连线但文件无效/不存在」时的原始值（用于严格报错）。
+    兼容上游输出端口名与本节点不一致的情况（如「视频加载器/文件加载」输出 ``filepath``）。
+    仅当完全未连接任何视频时，才回退扫描 cache 中的输入视频。
+    """
+    # 1) 严格优先：本节点 video 端口（被连线赋值）
     raw = step_inputs.get("video", "")
     if raw:
         p = raw if os.path.isabs(raw) else os.path.join(task_dir, raw)
         if os.path.isfile(p):
-            return p
+            return p, None
+        # 已连到 video 端口但文件无效 -> 严格标记，不回退
+        return "", raw
 
+    # 2) 兼容其它输入端口（上游输出名不是 video，例如 filepath）
+    skip_keys = {"srt", "json", "subtitle", "subtitle_path", "patch_json", "text"}
+    for key, val in step_inputs.items():
+        if key in skip_keys or key == "video":
+            continue
+        for c in (val if isinstance(val, (list, tuple)) else [val]):
+            text = str(c or "").strip()
+            if not text.lower().endswith(_VIDEO_EXTS):
+                continue
+            p = text if os.path.isabs(text) else os.path.join(task_dir, text)
+            if os.path.isfile(p):
+                return p, None
+
+    # 3) 完全没有连线视频时，回退 cache 中的输入视频（工作流程主输入）
     cache_dir = os.path.join(task_dir, "cache")
     if os.path.isdir(cache_dir):
         for f in sorted(os.listdir(cache_dir)):
             if f.startswith("input_video") and f.lower().endswith(_VIDEO_EXTS):
-                return os.path.join(cache_dir, f)
+                return os.path.join(cache_dir, f), None
         for f in sorted(os.listdir(cache_dir)):
             if f.lower().endswith(_VIDEO_EXTS):
-                return os.path.join(cache_dir, f)
-    return ""
+                return os.path.join(cache_dir, f), None
+    return "", None
 
 
 class S_GetVideoLastFrame(BaseStep):
@@ -186,7 +210,10 @@ class S_GetVideoLastFrame(BaseStep):
 
     def validate_inputs(self, task_dir: str) -> bool:
         step_inputs = getattr(self, "_step_inputs", {}) or {}
-        return bool(_resolve_video(task_dir, step_inputs))
+        video_path, invalid = _resolve_video(task_dir, step_inputs)
+        if invalid:
+            return False
+        return bool(video_path)
 
     def run(self, task_dir: str, callback: Optional[Callable] = None,
             cancel_callback: Optional[Callable] = None) -> dict:
@@ -194,7 +221,11 @@ class S_GetVideoLastFrame(BaseStep):
         node_config = getattr(self, "_node_config", {}) or {}
         step_inputs = getattr(self, "_step_inputs", {}) or {}
 
-        video_path = _resolve_video(task_dir, step_inputs)
+        video_path, invalid = _resolve_video(task_dir, step_inputs)
+        if invalid:
+            raise FileNotFoundError(
+                f"视频端口已连接，但文件路径无效或不存在：{invalid}（请确认上游节点已成功产出视频）。"
+            )
         if not video_path:
             raise FileNotFoundError("未连接视频输入或缓存中未找到视频文件。")
 
