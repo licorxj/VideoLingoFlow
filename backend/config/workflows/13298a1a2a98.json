@@ -1,0 +1,285 @@
+{
+  "id": "13298a1a2a98",
+  "name": "OCR测试",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1792695598356",
+      "type": "workflow",
+      "position": {
+        "x": 6900,
+        "y": 2925
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "X:/PCTMoveData/Videos/1.mp4",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "text": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\f1c11d69977b481fbe9945acc850244a\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 500
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1792695679232",
+      "type": "workflow",
+      "position": {
+        "x": 7620,
+        "y": 2940
+      },
+      "selected": true,
+      "data": {
+        "nodeType": "subtitle_position_search",
+        "label": "OCR字幕查找",
+        "config": {
+          "model": "indra_ocr",
+          "ocr_version": "",
+          "model_type": "",
+          "custom_model_name": "",
+          "position_mode": "ocr",
+          "manual_box": {},
+          "skip_head_sec": 1,
+          "skip_tail_sec": 2.3,
+          "direction": "horizontal",
+          "position": "lower",
+          "position_ratio": "0.6-0.8",
+          "frame_interval": 20,
+          "clean_cache": true
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "image": "cache/subtitle_frame_node_2_1792695679232.png",
+          "json": "cache/subtitle_box_node_2_1792695679232.json"
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 531
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1792695921359",
+      "type": "workflow",
+      "position": {
+        "x": 8145,
+        "y": 3045
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "subtitle_recognition",
+        "label": "OCR字幕识别",
+        "config": {
+          "model": "indra_ocr",
+          "ocr_version": "",
+          "model_type": "",
+          "custom_model_name": "",
+          "initial_interval": 20,
+          "boundary_precision_ms": 100,
+          "tilt_threshold_deg": 8
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "subtitle": "cache/subtitle_ocr_node_3_1792695921359.json"
+        },
+        "error": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 389
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1792696116337",
+      "type": "workflow",
+      "position": {
+        "x": 9135,
+        "y": 2865
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "pending",
+        "progress": 0,
+        "message": "",
+        "outputs": {},
+        "error": "",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 421
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1792696166831",
+      "type": "workflow",
+      "position": {
+        "x": 8700,
+        "y": 3405
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "subtitle_gen",
+        "label": "字幕生成",
+        "config": {
+          "file_prefix": "",
+          "filter_punctuation": false,
+          "punctuation_replace_mode": "space",
+          "processing_language": "from_source"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "original": "output/subtitles_node_5_1792696166831.srt"
+        },
+        "error": "",
+        "duration": 0.08,
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 299
+      },
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1792695598356",
+      "sourceHandle": "out-video",
+      "target": "node_2_1792695679232",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792695598356out-video-node_2_1792695679232in-video"
+    },
+    {
+      "source": "node_2_1792695679232",
+      "sourceHandle": "out-json",
+      "target": "node_3_1792695921359",
+      "targetHandle": "in-json",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1792695679232out-json-node_3_1792695921359in-json"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1792695598356",
+      "sourceHandle": "out-video",
+      "target": "node_3_1792695921359",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1792695598356out-video-node_3_1792695921359in-video"
+    },
+    {
+      "source": "node_1_1792695598356",
+      "sourceHandle": "out-video",
+      "target": "node_4_1792696116337",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792695598356out-video-node_4_1792696116337in-video"
+    },
+    {
+      "source": "node_3_1792695921359",
+      "sourceHandle": "out-subtitle",
+      "target": "node_5_1792696166831",
+      "targetHandle": "in-subtitle",
+      "type": "bezier",
+      "style": {
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1792695921359out-subtitle-node_5_1792696166831in-subtitle"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#f59e0b",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_5_1792696166831",
+      "sourceHandle": "out-original",
+      "target": "node_4_1792696116337",
+      "targetHandle": "in-original",
+      "id": "xy-edge__node_5_1792696166831out-original-node_4_1792696116337in-original"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-23T03:02:24",
+  "updatedAt": "2026-10-23T03:16:24",
+  "revision": 7
+}

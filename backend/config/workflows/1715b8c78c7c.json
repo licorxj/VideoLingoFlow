@@ -313,8 +313,7 @@
           "thinking": false,
           "duration": 260,
           "audio_format": "mp3",
-          "poll_timeout": 900,
-          "batch_size": 2
+          "poll_timeout": 900
         },
         "status": "pending",
         "disableExecute": false,
@@ -326,7 +325,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 675
+        "height": 676
       },
       "selected": false,
       "dragging": false,
@@ -364,10 +363,10 @@
         "error": "",
         "logLines": [
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\.step_node_4_1792477106319_result.json, exiting 0",
-          "[step_worker] start node_type=step_music_natural node_id=node_4_1792477106319 pid=42480",
+          "[step_worker] start node_type=step_music_natural node_id=node_4_1792477106319 pid=45004",
           "[step_worker] step instance created: S_StepMusicNatural",
           "[step_worker] step_inputs keys=[]",
-          "[step_worker] node_config keys=['model', 'custom_prompt', 'custom_lyrics', 'lm_optimize', 'thinking', 'duration', 'audio_format', 'poll_timeout', 'batch_size']",
+          "[step_worker] node_config keys=['model', 'custom_prompt', 'custom_lyrics', 'lm_optimize', 'thinking', 'duration', 'audio_format', 'poll_timeout']",
           "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76, kwargs=['callback', 'cancel_callback'])",
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\3c7946ec9911442f8b43ced8c43adc76\\cache\\.step_node_4_1792477106319_result.json, exiting 0"
@@ -413,7 +412,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 675
+        "height": 676
       },
       "selected": false,
       "dragging": false,
@@ -599,6 +598,6 @@
   ],
   "type": "user",
   "createdAt": "2026-10-18T07:44:59",
-  "updatedAt": "2026-10-20T21:07:04",
-  "revision": 75
+  "updatedAt": "2026-10-23T02:15:36",
+  "revision": 80
 }

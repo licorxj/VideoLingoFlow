@@ -38,14 +38,15 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 563
+        "height": 500
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1780650299385",
@@ -72,14 +73,15 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 308
+        "height": 276
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1780948332813",
@@ -105,7 +107,7 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "logLines": [
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780948332813_result.json, exiting 0",
           "[step_worker] start node_type=summarize node_id=node_1_1780948332813 pid=35128",
@@ -119,10 +121,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 398
+        "height": 355
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1780954897405",
@@ -150,7 +153,7 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "logLines": [
           "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
           "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\e89d7e49899f478286610500a4db97f5\\cache\\.step_node_1_1780954897405_result.json, exiting 0",
@@ -164,10 +167,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 401
+        "height": 355
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781200299298",
@@ -192,14 +196,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 236
+        "height": 209
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_3_1781212794939",
@@ -224,14 +229,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 477
+        "height": 417
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781645240103",
@@ -267,7 +273,7 @@
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": "",
         "logLines": [
           "[S09] 分析变速倍数",
@@ -282,10 +288,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 456
+        "height": 515
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781709944783",
@@ -313,14 +320,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 223
+        "height": 281
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781810867151",
@@ -349,15 +357,16 @@
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 520
+        "height": 548
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1781939413425",
@@ -388,14 +397,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 554
+        "height": 778
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1781973904798",
@@ -425,14 +435,15 @@
         },
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 466
+        "height": 418
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1781987851660",
@@ -462,14 +473,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 208
+        "height": 207
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1782422054967",
@@ -499,14 +511,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 474
+        "height": 416
       },
-      "selected": true,
-      "dragging": false
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1782507205161",
@@ -540,15 +553,16 @@
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 528
+        "height": 117
       },
-      "selected": false,
-      "dragging": false
+      "selected": true,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1782509281196",
@@ -573,14 +587,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 261
+        "height": 253
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1782640383627",
@@ -608,14 +623,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 299
+        "height": 266
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1782640528572",
@@ -647,15 +663,16 @@
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 369
+        "height": 326
       },
-      "selected": false,
-      "dragging": false
+      "selected": true,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1782672877872",
@@ -695,15 +712,16 @@
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": false,
+        "disableExecute": true,
         "workbench_url": ""
       },
       "measured": {
         "width": 420,
-        "height": 748
+        "height": 640
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1782725550457",
@@ -733,14 +751,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 474
+        "height": 416
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1783320818226",
@@ -765,14 +784,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 172
+        "height": 153
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1783321957415",
@@ -797,14 +817,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 210
+        "height": 185
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_8_1783325677193",
@@ -831,14 +852,15 @@
         "outputs": {},
         "error": "",
         "workbench_url": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 337
+        "height": 298
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787067672223",
@@ -858,7 +880,7 @@
           "bitrate": "192"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -869,10 +891,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 435
+        "height": 391
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "n_msyu4zm55ofz",
@@ -892,7 +915,7 @@
           "bitrate": "192"
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -903,10 +926,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 435
+        "height": 391
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787654769764",
@@ -933,14 +957,16 @@
           "audio": "output/denoised_audio_node_1_1787654769764.wav"
         },
         "error": "",
-        "workbench_url": ""
+        "workbench_url": "",
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 486
+        "height": 497
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "n_mtbix66cius1",
@@ -1290,7 +1316,7 @@
           "name": "asr组合",
           "savedNodeTypeId": "groupnode_mtbj9s8i"
         },
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 0,
         "message": "",
         "outputs": {},
@@ -1298,9 +1324,10 @@
       },
       "measured": {
         "width": 440,
-        "height": 543
+        "height": 483
       },
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787835358621",
@@ -1318,7 +1345,7 @@
           "punctuation_replace_mode": "space"
         },
         "status": "pending",
-        "disableExecute": false,
+        "disableExecute": true,
         "note": "切割后的配套字幕",
         "progress": 0,
         "message": "",
@@ -1328,10 +1355,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 299
+        "height": 323
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1786046579815",
@@ -1362,10 +1390,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 492
+        "height": 442
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1787654223924",
@@ -1392,7 +1421,7 @@
           "pause_split_enabled": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -1404,10 +1433,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 670
+        "height": 600
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_2_1787215768626",
@@ -1437,7 +1467,7 @@
           "max_speakers": ""
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -1458,10 +1488,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 576
+        "height": 519
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787828965709",
@@ -1489,7 +1520,7 @@
           "post_diarization": false
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -1510,10 +1541,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 551
+        "height": 493
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_1_1787830624387",
@@ -1530,7 +1562,7 @@
           "properNouns": ""
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -1542,10 +1574,11 @@
       },
       "measured": {
         "width": 420,
-        "height": 351
+        "height": 310
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     },
     {
       "id": "node_5_1787845484222",
@@ -1558,14 +1591,16 @@
         "nodeType": "asr_result_validate",
         "label": "ASR结果校验",
         "config": {},
-        "status": "pending"
+        "status": "pending",
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 132
+        "height": 153
       },
       "selected": false,
-      "dragging": false
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
     }
   ],
   "edges": [
@@ -1601,27 +1636,29 @@
       "type": "smoothstep",
       "style": {
         "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "strokeWidth": 2
       },
       "source": "node_1_1782507205161",
       "sourceHandle": "out-text",
       "target": "node_1_1782509281196",
       "targetHandle": "in-image",
-      "id": "xy-edge__node_1_1782507205161out-text-node_1_1782509281196in-image"
+      "id": "xy-edge__node_1_1782507205161out-text-node_1_1782509281196in-image",
+      "selected": true,
+      "animated": true
     },
     {
       "type": "smoothstep",
       "style": {
         "stroke": "#6366f1",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "strokeWidth": 2
       },
       "source": "node_1_1782422054967",
       "sourceHandle": "out-result",
       "target": "node_2_1782640528572",
       "targetHandle": "in-json",
-      "id": "xy-edge__node_1_1782422054967out-result-node_2_1782640528572in-json"
+      "id": "xy-edge__node_1_1782422054967out-result-node_2_1782640528572in-json",
+      "selected": true,
+      "animated": true
     },
     {
       "type": "smoothstep",
@@ -1677,18 +1714,17 @@
     },
     {
       "type": "smoothstep",
-      "animated": false,
+      "animated": true,
       "style": {
         "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "strokeWidth": 2
       },
       "source": "node_1_1782507205161",
       "sourceHandle": "out-text",
       "target": "node_1_1782672877872",
       "targetHandle": "in-cover_portrait",
       "id": "xy-edge__node_1_1782507205161out-text-node_1_1782672877872in-cover_portrait",
-      "selected": false
+      "selected": true
     },
     {
       "type": "smoothstep",
@@ -1757,31 +1793,31 @@
     },
     {
       "type": "smoothstep",
-      "animated": false,
+      "animated": true,
       "style": {
         "stroke": "#ec4899",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "strokeWidth": 2
       },
       "source": "node_1_1782640383627",
       "sourceHandle": "out-image",
       "target": "node_1_1782507205161",
       "targetHandle": "in-image",
       "id": "xy-edge__node_1_1782640383627out-image-node_1_1782507205161in-image",
-      "selected": false
+      "selected": true
     },
     {
       "type": "smoothstep",
       "style": {
         "stroke": "#8b5cf6",
-        "strokeWidth": 2,
-        "strokeDasharray": "6 3"
+        "strokeWidth": 2
       },
       "source": "node_2_1782640528572",
       "sourceHandle": "out-prompt",
       "target": "node_1_1782507205161",
       "targetHandle": "in-text",
-      "id": "xy-edge__node_2_1782640528572out-prompt-node_1_1782507205161in-text"
+      "id": "xy-edge__node_2_1782640528572out-prompt-node_1_1782507205161in-text",
+      "selected": true,
+      "animated": true
     },
     {
       "type": "smoothstep",
@@ -1811,10 +1847,11 @@
     },
     {
       "type": "smoothstep",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#ec4899",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1782640383627",
       "sourceHandle": "out-image",
@@ -1825,10 +1862,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1781973904798",
       "sourceHandle": "out-audio",
@@ -1838,10 +1875,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780650299385",
       "sourceHandle": "out-audio",
@@ -1851,10 +1888,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#fb923c",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780590163157",
       "sourceHandle": "out-video",
@@ -1864,10 +1901,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780650299385",
       "sourceHandle": "out-audio",
@@ -1877,10 +1914,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780590163157",
       "sourceHandle": "out-video",
@@ -1890,10 +1927,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780590163157",
       "sourceHandle": "out-video",
@@ -1903,10 +1940,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1780948332813",
       "sourceHandle": "out-subtitle",
@@ -1916,10 +1953,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1781973904798",
       "sourceHandle": "out-background",
@@ -1930,10 +1968,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787654769764",
       "sourceHandle": "out-audio",
@@ -1943,10 +1981,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-audio",
@@ -1956,10 +1994,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-audio",
@@ -1969,10 +2007,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#60a5fa",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1781810867151",
       "sourceHandle": "out-audio",
@@ -1982,10 +2020,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "n_mtbix66cius1",
       "sourceHandle": "out-gout_2",
@@ -1995,10 +2033,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#facc15",
-        "strokeWidth": 2
+        "stroke": "#f59e0b",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787835358621",
       "sourceHandle": "out-original",
@@ -2008,10 +2046,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1786046579815",
       "sourceHandle": "out-subtitle",
@@ -2022,10 +2061,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787828965709",
       "sourceHandle": "out-subtitle",
@@ -2036,10 +2076,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787830624387",
       "sourceHandle": "out-output",
@@ -2050,10 +2091,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1787215768626",
       "sourceHandle": "out-subtitle",
@@ -2064,10 +2106,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#a78bfa",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787067672223",
       "sourceHandle": "out-audio",
@@ -2078,10 +2121,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_1_1787067672223",
       "sourceHandle": "out-audio",
@@ -2092,10 +2136,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#6366f1",
-        "strokeWidth": 2
+        "stroke": "#10b981",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "n_msyu4zm55ofz",
       "sourceHandle": "out-audio",
@@ -2106,10 +2151,11 @@
     },
     {
       "type": "bezier",
-      "animated": true,
+      "animated": false,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1787654223924",
       "sourceHandle": "out-text",
@@ -2120,10 +2166,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#f472b6",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1787654223924",
       "sourceHandle": "out-subtitle",
@@ -2133,10 +2179,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#22d3ee",
-        "strokeWidth": 2
+        "stroke": "#6366f1",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_5_1787845484222",
       "sourceHandle": "out-json",
@@ -2146,10 +2192,10 @@
     },
     {
       "type": "bezier",
-      "animated": true,
       "style": {
-        "stroke": "#34d399",
-        "strokeWidth": 2
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
       },
       "source": "node_2_1787654223924",
       "sourceHandle": "out-text",
@@ -2160,6 +2206,6 @@
   ],
   "type": "user",
   "createdAt": "2026-08-19T05:28:27",
-  "updatedAt": "2026-08-27T23:51:02",
-  "revision": 46
+  "updatedAt": "2026-10-22T01:14:22",
+  "revision": 76
 }
