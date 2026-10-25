@@ -216,6 +216,11 @@ class RapidOCREngine(OCRBase):
 
         input_path 支持图片文件路径（str）或内存图片数组（ndarray，BGR），
         便于批量流水线直接传入裁剪后的字幕区域。
+
+        额外 kwargs（仅对本次调用生效，用完即还原，不改变引擎默认配置）：
+        - ``limit_type``：'min'（默认，短边缩放到 limit_side_len）/ 'max'（限制长边）。
+          裁成细长条时用 'max'，否则短边会被放大到 limit_side_len，反而更慢；
+        - ``limit_side_len``：配合上面的限制边长。
         """
         if callback:
             callback(10, "初始化 RapidOCR 引擎...")
@@ -226,24 +231,62 @@ class RapidOCREngine(OCRBase):
         use_cls = kwargs.get("use_cls", cfg.get("use_cls", True))
         use_rec = kwargs.get("use_rec", cfg.get("use_rec", True))
 
-        if callback:
-            callback(40, "正在识别图片文本...")
-        result = engine(input_path, use_det=use_det, use_cls=use_cls, use_rec=use_rec)
+        # 运行期临时覆盖 det 的边限制（不破坏引擎缓存，调用后还原）
+        restored = self._apply_det_limits(engine, kwargs.get("limit_type"),
+                                          kwargs.get("limit_side_len"))
+        try:
+            if callback:
+                callback(40, "正在识别图片文本...")
+            result = engine(input_path, use_det=use_det, use_cls=use_cls, use_rec=use_rec)
+        finally:
+            for attr, val in restored.items():
+                try:
+                    setattr(engine.text_det, attr, val)
+                except Exception:  # noqa: BLE001 - 还原失败不该影响识别结果
+                    pass
         if callback:
             callback(100, "识别完成")
 
         return self._to_dict(result)
 
     @staticmethod
+    def _apply_det_limits(engine, limit_type, limit_side_len) -> dict:
+        """临时改写引擎 det 的 limit_type/limit_side_len，返回原值用于还原。
+
+        RapidOCR 默认 limit_type='min'（把**短边**缩放到 limit_side_len）：把字幕
+        区域裁成细长条后，短边变小反而触发更强的放大，检测耗时涨到 3~10 倍。
+        limit_type='max' 才是"限制最长边"，裁剪才能真的省时。
+        """
+        det = getattr(engine, "text_det", None)
+        if det is None:
+            return {}
+        restored: dict = {}
+        if limit_type and hasattr(det, "limit_type"):
+            restored["limit_type"] = getattr(det, "limit_type")
+            det.limit_type = str(limit_type)
+        if limit_side_len and hasattr(det, "limit_side_len"):
+            restored["limit_side_len"] = getattr(det, "limit_side_len")
+            det.limit_side_len = int(limit_side_len)
+        return restored
+
+    @staticmethod
     def _to_dict(result) -> dict:
-        """把 RapidOCROutput 转为可 JSON 序列化的 dict。"""
-        txts = list(result.txts) if result.txts else []
-        scores = [float(s) for s in result.scores] if result.scores else []
-        elapse = float(result.elapse) if getattr(result, "elapse", None) is not None else 0.0
+        """把 RapidOCR 输出对象转为可 JSON 序列化的 dict。
+
+        仅检测（use_rec=False / use_det=False 等组合）时 rapidocr 返回的是
+        TextDetOutput，只有 boxes、没有 txts/scores —— 这里按 getattr 容错，
+        缺字段用空列表占位，保证 det-only 调用（如快速字幕定位）也能复用本适配层。
+        """
+        raw_txts = getattr(result, "txts", None)
+        raw_scores = getattr(result, "scores", None)
+        txts = list(raw_txts) if raw_txts else []
+        scores = [float(s) for s in raw_scores] if raw_scores else []
+        elapse = float(getattr(result, "elapse", 0.0) or 0.0)
 
         boxes = []
-        if result.boxes is not None:
-            boxes = [[[float(coord) for coord in point] for point in box] for box in result.boxes]
+        raw_boxes = getattr(result, "boxes", None)
+        if raw_boxes is not None:
+            boxes = [[[float(coord) for coord in point] for point in box] for box in raw_boxes]
 
         return {
             "txts": txts,

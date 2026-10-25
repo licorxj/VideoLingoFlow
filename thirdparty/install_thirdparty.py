@@ -8,7 +8,7 @@ thirdparty 第三方扩展安装脚本（由主安装程序调用，任意 Pytho
     python thirdparty/install_thirdparty.py --force       # 强制重新下载/构建
 
 职责（按顺序）:
-  1. CloakBrowser                下载隐匿浏览器二进制 → thirdparty/cloakbrowser/
+  1. CloakBrowser                隐匿浏览器二进制 → thirdparty/cloakbrowser/（优先用随包离线包）
   2. social-auto-upload-web-ui   前端构建产物 + backend-mcp(node) + backend(pip)
   3. QM-LocalRouter              后端 pip 依赖 + 前端构建
   4. pi (Node.js)                保证 node_modules 就绪（各包 dist 已随 git 上传，无需重建）
@@ -21,7 +21,8 @@ thirdparty 第三方扩展安装脚本（由主安装程序调用，任意 Pytho
   - 非 Windows: 每次重新构建各项目前端（提交的 dist 为 Windows 产物，不做跨平台保证）。
 
 下载源:
-  - CloakBrowser: GitHub Releases (CloakHQ/CloakBrowser) 主源 + cloakbrowser.dev 兜底
+  - CloakBrowser: 随包离线包 thirdparty/cloakbrowser-windows-x64.zip 优先（整合包自带，
+    免联网）；否则 GitHub Releases (CloakHQ/CloakBrowser) 主源 + cloakbrowser.dev 兜底
 """
 
 import argparse
@@ -262,8 +263,13 @@ def _cb_binary_name(tag: str) -> str:
 
 
 def ensure_cloakbrowser(force: bool) -> Path | None:
-    """下载 CloakBrowser → thirdparty/cloakbrowser/，返回浏览器可执行文件路径。"""
-    print("\n[1/4] CloakBrowser 隐匿浏览器")
+    """准备 CloakBrowser → thirdparty/cloakbrowser/，返回浏览器可执行文件路径。
+
+    优先使用**随包分发的离线包**（thirdparty/cloakbrowser-windows-x64.zip，
+    约 250 MB，由整合包 build/pack_cloakbrowser.py 产出）：解压即用，不联网。
+    离线包不存在时才回退到 GitHub Releases / cloakbrowser.dev 联网下载。
+    """
+    print("\n[1/5] CloakBrowser 隐匿浏览器")
     tag = platform_tag()
     binary_name = _cb_binary_name(tag)
     target_dir = THIRDPARTY / "cloakbrowser"
@@ -272,6 +278,24 @@ def ensure_cloakbrowser(force: bool) -> Path | None:
     if not force and target_bin.exists():
         ok(f"已存在: {target_bin}")
         return target_bin
+
+    # --- 优先：随包离线包（免联网）---
+    offline = THIRDPARTY / _cb_archive_name(tag)
+    if not force and offline.exists():
+        log(f"使用随包离线包: {offline}")
+        try:
+            extract_archive(offline, target_dir)
+        except Exception as exc:  # noqa: BLE001
+            warn(f"离线包解压失败（{exc}），回退到联网下载")
+        else:
+            if not target_bin.exists():
+                found = list(target_dir.rglob(binary_name))
+                if found:
+                    target_bin = found[0]
+            if target_bin.exists():
+                ok(f"CloakBrowser 就绪（离线包）: {target_bin}")
+                return target_bin
+            warn("离线包解压后未找到浏览器二进制，回退到联网下载")
 
     if tag.startswith("darwin"):
         # macOS 无官方自动下载包：优先使用用户提供的离线包
@@ -370,7 +394,7 @@ def ensure_npm_deps(proj_dir: Path, force: bool, label: str, build: bool = False
 # 2. social-auto-upload-web-ui
 # ---------------------------------------------------------------------------
 def ensure_social(force: bool) -> None:
-    print("\n[2/4] social-auto-upload-web-ui")
+    print("\n[2/5] social-auto-upload-web-ui")
     base = THIRDPARTY / "social-auto-upload-web-ui"
     if not base.exists():
         warn("目录不存在，跳过（请先 git 拉取完整源码）")
@@ -394,7 +418,7 @@ def _qm_venv_python():
 
 def ensure_qm_router(force: bool) -> None:
     """QM-LocalRouter：使用独立虚拟环境（不污染主 venv312），并完成数据库初始化。"""
-    print("\n[3/4] QM-LocalRouter")
+    print("\n[3/5] QM-LocalRouter")
     base = THIRDPARTY / "QM-LocalRouter"
     if not base.exists():
         warn("目录不存在，跳过")

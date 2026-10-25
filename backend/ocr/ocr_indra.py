@@ -79,9 +79,14 @@ def _hf_endpoint() -> str:
 
 
 def _model_cache_dir(math: bool = False) -> str:
-    """缓存目录：<MODEL_CACHE_DIR 或 项目根/_model_cache>/indra-ocr[-math]/<revision>。"""
+    """缓存目录：<MODEL_CACHE_DIR 或 项目根/_model_cache>/indra-ocr/<revision>。
+
+    公式模型（mathcls/math_enc/...）与基础模型**同目录**存放：开启公式只需补下
+    约 20MB 的公式文件，不必为公式再拉一份完整基础模型。`math` 参数保留仅为兼容
+    旧调用（历史上公式模型曾落在 indra-ocr-math 子目录）。
+    """
     root = os.environ.get("MODEL_CACHE_DIR") or os.path.join(_PROJECT_ROOT, "_model_cache")
-    return os.path.join(root, "indra-ocr-math" if math else "indra-ocr", _hf_revision())
+    return os.path.join(root, "indra-ocr", _hf_revision())
 
 
 def _model_files(math: bool = False) -> tuple:
@@ -127,16 +132,14 @@ def _download_file(url: str, dest: str, retries: int = 3) -> None:
             time.sleep(1.5 * attempt)
 
 
-def ensure_model_dir(
-    math: bool = False,
+def _ensure_math_files(
+    folder: str,
     progress: Optional[Callable[[int, str], None]] = None,
-) -> str:
-    """确保本地模型目录完整（缺失文件按需下载），返回目录路径。"""
-    folder = _model_cache_dir(math)
-    files = _model_files(math)
-    missing = _missing_files(folder, files)
+) -> bool:
+    """就地把缺失的公式模型文件补下到 folder，返回公式文件是否齐全。"""
+    missing = _missing_files(folder, _MATH_FILES)
     if not missing:
-        return folder
+        return True
 
     os.makedirs(folder, exist_ok=True)
     endpoint = _hf_endpoint()
@@ -145,15 +148,75 @@ def ensure_model_dir(
     for idx, name in enumerate(missing):
         if progress:
             progress(3 + int(7 * idx / max(1, total)),
-                     f"下载 Indra OCR 模型 {name}（{idx + 1}/{total}）...")
+                     f"下载 Indra OCR 公式模型 {name}（{idx + 1}/{total}）...")
         url = f"{endpoint}/{MODEL_REPO}/resolve/{revision}/{name}"
-        print(f"[IndraOCR] 下载模型 {name} -> {folder}")
+        print(f"[IndraOCR] 下载公式模型 {name} -> {folder}")
         _download_file(url, os.path.join(folder, name))
+    return not _missing_files(folder, _MATH_FILES)
 
-    still = _missing_files(folder, files)
+
+def ensure_model_dir(
+    math: bool = False,
+    progress: Optional[Callable[[int, str], None]] = None,
+) -> str:
+    """确保本地模型目录完整（缺失文件按需下载），返回目录路径。
+
+    公式模型与基础模型同目录；公式文件下载失败（离线/镜像异常）只告警不中断，
+    调用方用 `prepare_math_models` 决定是否降级关闭公式，避免可选能力拖垮整条流程。
+    """
+    folder = _model_cache_dir(math)
+    # 主循环只补齐基础模型；公式文件交给 _ensure_math_files 单独容错，
+    # 否则公式下载失败会让「基础 OCR 可用」的场景整体失败。
+    files = _BASE_FILES
+    missing = _missing_files(folder, files)
+    if missing:
+        os.makedirs(folder, exist_ok=True)
+        endpoint = _hf_endpoint()
+        revision = _hf_revision()
+        total = len(missing)
+        for idx, name in enumerate(missing):
+            if progress:
+                progress(3 + int(7 * idx / max(1, total)),
+                         f"下载 Indra OCR 模型 {name}（{idx + 1}/{total}）...")
+            url = f"{endpoint}/{MODEL_REPO}/resolve/{revision}/{name}"
+            print(f"[IndraOCR] 下载模型 {name} -> {folder}")
+            _download_file(url, os.path.join(folder, name))
+
+    still = _missing_files(folder, _BASE_FILES)
     if still:
         raise RuntimeError(f"Indra OCR 模型目录不完整，缺少：{', '.join(still)}")
+
+    if math:
+        try:
+            _ensure_math_files(folder, progress)
+        except Exception as exc:  # noqa: BLE001 公式模型缺失不应阻断基础 OCR
+            print(f"[IndraOCR] 公式模型下载失败：{exc}")
     return folder
+
+
+def prepare_math_models(
+    model_dir: Optional[str],
+    math: bool,
+    progress: Optional[Callable[[int, str], None]] = None,
+) -> bool:
+    """判断本次能否真的启用公式识别（缺失时尝试就地补下），返回最终的 math 开关。
+
+    节点级「包含数学公式」可覆盖接口配置，但公式模型是**加载期**参数：目录里没有
+    mathcls/math_enc/... 时 `indra_ocr.load(math=True)` 会直接抛错，过去会让整个步骤
+    失败。这里统一收口：先补下，仍缺失就降级为关闭公式并告警（公式是可选能力）。
+    """
+    if not math or not model_dir:
+        return bool(math) and bool(model_dir)
+    if not _missing_files(model_dir, _MATH_FILES):
+        return True
+    try:
+        if _ensure_math_files(model_dir, progress):
+            return True
+    except Exception as exc:  # noqa: BLE001 离线环境下不应让可选能力炸掉整条流程
+        print(f"[IndraOCR] 公式模型下载失败：{exc}")
+    print(f"[IndraOCR] 公式模型不可用（{model_dir} 缺少 {', '.join(_MATH_FILES)}），"
+          "本次按关闭公式识别处理")
+    return False
 
 
 def _to_gray(image):
@@ -231,9 +294,12 @@ class IndraOCREngine(OCRBase):
 
     # ── 引擎惰性初始化 ────────────────────────────────────────
     @staticmethod
-    def _resolve_model_dir(cfg: dict, callback: Optional[Callable] = None):
+    def _resolve_model_dir(cfg: dict, callback: Optional[Callable] = None,
+                           math: bool = False):
         """模型目录：接口配置 model_dir > 环境变量 INDRA_OCR_MODEL_DIR > 自动下载缓存。
 
+        ``math`` 是**运行时**（节点级可覆盖接口配置）的公式开关，必须参与目录解析：
+        否则会出现「按非公式目录下载 → 再用 math=True 加载」的必崩组合。
         自动下载失败时返回 None，交给 indra_ocr 自带的 huggingface_hub 逻辑再试一次。
         """
         explicit = str(cfg.get("model_dir") or "").strip()
@@ -245,7 +311,7 @@ class IndraOCREngine(OCRBase):
         if env_dir:
             return env_dir
         try:
-            return ensure_model_dir(bool(cfg.get("math", False)), progress=callback)
+            return ensure_model_dir(bool(math), progress=callback)
         except Exception as exc:  # noqa: BLE001 下载失败再给 hub 一次机会
             print(f"[IndraOCR] 模型自动下载失败：{exc}；回退 huggingface_hub 下载")
             return None
@@ -277,7 +343,9 @@ class IndraOCREngine(OCRBase):
                 print(f"[IndraOCR] 节点级模型覆盖 {ignored} 不适用于 Indra，已忽略")
 
             want_math = bool(cfg.get("math", False)) if math is None else bool(math)
-            model_dir = self._resolve_model_dir(cfg, callback)
+            model_dir = self._resolve_model_dir(cfg, callback, math=want_math)
+            # 公式模型缺失（离线/下载失败）时降级关闭，避免可选能力把整个步骤拖挂
+            want_math = prepare_math_models(model_dir, want_math, callback)
             try:
                 self._engine = indra_ocr.load(
                     path=model_dir or None,
@@ -294,6 +362,11 @@ class IndraOCREngine(OCRBase):
             self._use_cuda = bool(cfg.get("use_cuda", False))
             self._math_loaded = want_math
         return self._engine
+
+    @property
+    def math_enabled(self) -> bool:
+        """当前已加载引擎实际生效的公式开关（公式模型缺失时会被降级为 False）。"""
+        return bool(self._math_loaded)
 
     def unload(self):
         """释放引擎实例并归还内存/显存。"""

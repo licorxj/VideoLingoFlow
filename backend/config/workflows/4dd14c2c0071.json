@@ -1,0 +1,158 @@
+{
+  "id": "4dd14c2c0071",
+  "name": "未命名工作流",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1792951195729",
+      "type": "workflow",
+      "position": {
+        "x": 585,
+        "y": 255
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "url"
+          ],
+          "videoPath": "https://www.bilibili.com/video/BV1o17tzTESz/?share_source=copy_web&vd_source=a2b9aa0b6d751b0161e2814c34c5e399",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "https://www.bilibili.com/video/BV1o17tzTESz/?share_source=copy_web&vd_source=a2b9aa0b6d751b0161e2814c34c5e399",
+          "filePath": "",
+          "text": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 430
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "selected": false
+    },
+    {
+      "id": "node_2_1792951232941",
+      "type": "workflow",
+      "position": {
+        "x": 1155,
+        "y": 375
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "platform_download",
+        "label": "平台视频下载",
+        "config": {
+          "download_subs": false,
+          "download_cover": true,
+          "resolution": "best",
+          "cookie_file": "",
+          "use_as_task_name": true
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "logLines": [
+          "[S00] yt-dlp stderr: To suppress this warning, add --no-update to your command/config.",
+          "[S00] yt-dlp stdout: VLDL\t误入镜头的神级路人，一时分不清谁是主角\tY:\\VideoLingoLc\\control_plane_workspaces\\b3c48d7ebbba424186f97d4965e82ad9\\cache\\误入镜头的神级路人，一时分不清谁是主角 [BV1o17tzTESz].mp4",
+          "[S00] task_name set to: 误入镜头的神级路人，一时分不清谁是主角",
+          "[S00] Output: video -> 误入镜头的神级路人，一时分不清谁是主角_node_2_1792951232941.mp4",
+          "[S00] Output: cover -> 误入镜头的神级路人，一时分不清谁是主角_node_2_1792951232941.jpg",
+          "[S00] Done: 2 files produced",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\b3c48d7ebbba424186f97d4965e82ad9\\cache\\.step_node_2_1792951232941_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 335
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1792951249340",
+      "type": "workflow",
+      "position": {
+        "x": 1995,
+        "y": 480
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_split",
+        "label": "视频切割",
+        "config": {
+          "split_mode": "range",
+          "segment_count": 2,
+          "segment_duration": 60,
+          "use_silence": false,
+          "output_index": 1,
+          "time_range": "18-23"
+        },
+        "status": "pending",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {},
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 311
+      },
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    }
+  ],
+  "edges": [
+    {
+      "source": "node_1_1792951195729",
+      "sourceHandle": "out-url",
+      "target": "node_2_1792951232941",
+      "targetHandle": "in-url",
+      "type": "bezier",
+      "style": {
+        "stroke": "#06b6d4",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_1_1792951195729out-url-node_2_1792951232941in-url"
+    },
+    {
+      "source": "node_2_1792951232941",
+      "sourceHandle": "out-video",
+      "target": "node_3_1792951249340",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1792951232941out-video-node_3_1792951249340in-video"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-26T02:20:21",
+  "updatedAt": "2026-10-26T02:45:13",
+  "revision": 4
+}

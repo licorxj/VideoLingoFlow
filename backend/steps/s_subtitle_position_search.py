@@ -6,8 +6,12 @@
 - ocr：调用字幕位置检查工具自动查找字幕区域（支持片头片尾屏蔽）；
 - manual：不执行 OCR，直接使用前端手动框选的相对坐标与片头片尾数据。
 
-运行参数：OCR 接口（模型，全局兜底）、模型版本/尺寸/自定义名、字幕方向、字幕位置、
-抽帧步长、是否清理缓存、片头片尾跳过秒数。
+OCR 查找默认走**快速二分检测**（det 撒点估计区域 + 二分定位切换帧，见
+backend/utils/subtitle_fast_detect.py），失败/未命中自动回退旧的逐帧识别算法。
+
+运行参数：OCR 接口（模型，全局兜底）、模型版本/尺寸/自定义名、字幕方向（含自动判定）、
+搜索区域（全画幅自动估计 / 指定位置）、抽样步长、快速模式、是否清理缓存、
+片头片尾跳过秒数。
 """
 import json
 import os
@@ -108,9 +112,12 @@ class S_SubtitlePositionSearch(BaseStep):
         # --- 3. 读取 OCR 查找运行参数 ---
         model = str(node_config.get("model") or "").strip()
         model_options = _build_model_options(node_config)
-        direction = str(node_config.get("direction") or "horizontal").strip()
-        if direction not in ("horizontal", "vertical"):
-            direction = "horizontal"
+        direction = str(node_config.get("direction") or "auto").strip()
+        if direction not in ("horizontal", "vertical", "auto"):
+            direction = "auto"
+        search_mode = str(node_config.get("search_mode") or "auto").strip()
+        if search_mode not in ("auto", "position"):
+            search_mode = "auto"
         position = str(node_config.get("position") or "lower").strip()
         if position not in ("upper", "lower", "ratio"):
             position = "lower"
@@ -120,17 +127,24 @@ class S_SubtitlePositionSearch(BaseStep):
         except (ValueError, TypeError):
             frame_interval = 20
         clean_cache = bool(node_config.get("clean_cache", True))
+        fast_mode = bool(node_config.get("fast_mode", True))
+        auto_direction = bool(node_config.get("auto_direction", True))
 
-        # 位置参数：上半段/下半段 或 比例范围（如 0.6-0.8）
-        region: str = position
-        if position == "ratio":
-            region = position_ratio if position_ratio else "0.6-0.8"
+        # 搜索区域：auto = 全画幅撒点自动估计（推荐，字幕位置中途变化也能覆盖）；
+        # position = 只在设定的位置范围内查找（老旧视频/明确知道位置时更省时）。
+        region = None
+        if search_mode == "position":
+            region = position
+            if position == "ratio":
+                region = position_ratio if position_ratio else "0.6-0.8"
 
         if callback:
-            callback(10, f"参数：模型={model or '全局默认'}，方向={direction}，位置={region}，"
-                         f"抽帧步长={frame_interval}，片头跳过 {skip_head_sec}s，片尾跳过 {skip_tail_sec}s")
+            callback(10, f"参数：模型={model or '全局默认'}，方向={direction}，"
+                         f"搜索区域={region or '全画幅自动估计'}，抽样步长={frame_interval}，"
+                         f"{'快速二分检测' if fast_mode else '逐帧识别'}，"
+                         f"片头跳过 {skip_head_sec}s，片尾跳过 {skip_tail_sec}s")
 
-        # --- 4. 执行字幕位置检查（片头片尾时间段不抽帧识别） ---
+        # --- 4. 执行字幕位置检查（片头片尾时间段不参与检测） ---
         result = check_subtitle_position(
             video_path,
             model=model,
@@ -142,6 +156,9 @@ class S_SubtitlePositionSearch(BaseStep):
             skip_tail_sec=skip_tail_sec,
             keep_cache=not clean_cache,
             callback=callback,
+            use_fast=fast_mode,
+            auto_direction=auto_direction,
+            cancel_callback=cancel_callback,
         )
 
         if not result.get("success"):
@@ -175,11 +192,22 @@ class S_SubtitlePositionSearch(BaseStep):
             "skip_head_sec": result.get("skip_head_sec", skip_head_sec),
             "skip_tail_sec": result.get("skip_tail_sec", skip_tail_sec),
         }
+        # 快速检测的附加信息：字幕出现区段（帧范围 + 区域）与命中帧数。
+        # 下游识别节点目前只用 box 做统一区域裁剪，这里保留明细便于排查/后续按区段识别。
+        if "segments" in result:
+            payload["detect"] = {
+                "fast": True,
+                "segments": result.get("segments") or [],
+                "hit_frames": result.get("hit_frames", 0),
+                "region": result.get("region"),
+            }
         with open(os.path.join(cache_dir, json_name), "w", encoding="utf-8") as f:
             json.dump(payload, f, ensure_ascii=False, indent=2)
 
         if callback:
-            callback(100, f"字幕位置：{box}（相对比例），已输出标注帧与坐标 JSON")
+            segs = (result.get("segments") or [])
+            extra = f"，{len(segs)} 个字幕区段" if segs else ""
+            callback(100, f"字幕位置：{box}（相对比例），已输出标注帧与坐标 JSON{extra}")
 
         return {
             "artifacts": [f"cache/{frame_name}", f"cache/{json_name}"],

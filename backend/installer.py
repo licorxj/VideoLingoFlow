@@ -297,6 +297,8 @@ def verify_installation():
         ("cv2", "OpenCV (headless)"),
         ("PIL", "Pillow"),
         ("yt_dlp", "yt-dlp"),
+        # 「按镜头切割视频」节点（s_video_shot_split）的镜头检测库
+        ("scenedetect", "PySceneDetect"),
     ]
     
     success_count = 0

@@ -197,9 +197,15 @@ def _load_indra_engine(model_dir: Optional[str], threads: int, dpi: float, mode:
         raise RuntimeError(f"{_INSTALL_HINT}（{e}）")
 
     if model_dir is None:
-        from backend.ocr.ocr_indra import ensure_model_dir
+        from backend.ocr.ocr_indra import ensure_model_dir, prepare_math_models
 
         model_dir = ensure_model_dir(math=bool(math))
+    else:
+        from backend.ocr.ocr_indra import prepare_math_models
+
+    # 公式模型是加载期参数：目录里缺 mathcls/math_enc/... 时 load(math=True) 会抛错，
+    # 这里先尝试补下，仍缺失就降级关闭公式（可选能力不应拖垮整个步骤）。
+    math = prepare_math_models(str(model_dir), bool(math))
 
     providers = None
     if use_cuda:

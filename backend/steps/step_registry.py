@@ -66,6 +66,7 @@ from backend.steps.s_imagegen import S_ImageGen
 from backend.steps.s_video_frame_extract import S_VideoFrameExtract
 from backend.steps.s_video_transcode import S_VideoTranscode
 from backend.steps.s_video_cut_by_subtitle import StepVideoCutBySubtitle
+from backend.steps.s_video_shot_split import S_VideoShotSplit
 from backend.steps.s_merge_outputs_to_list import StepMergeOutputsToList
 from backend.steps.s_subtitle_position_search import S_SubtitlePositionSearch
 from backend.steps.s_subtitle_recognition import S_SubtitleRecognition
@@ -292,6 +293,9 @@ _STEPS = {
     "audio_cut_by_subtitle": StepAudioCutBySubtitle(),
     "s_video_cut_by_subtitle": StepVideoCutBySubtitle(),
     "video_cut_by_subtitle": StepVideoCutBySubtitle(),
+    # 按镜头切换切割视频（PySceneDetect 检测 + ffmpeg 切割，输出镜头片段列表）
+    "s_video_shot_split": S_VideoShotSplit(),
+    "video_shot_split": S_VideoShotSplit(),
     "s_output_merge_list": StepMergeOutputsToList(),
     "output_merge_list": StepMergeOutputsToList(),
     "s_subtitle_position_search": S_SubtitlePositionSearch(),

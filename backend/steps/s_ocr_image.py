@@ -379,6 +379,10 @@ class S_OcrImage(BaseStep):
         step_check_cancel(cancel_callback)
         report(10, "正在识别图片文本...")
         result = engine.recognize(img_path, engine_cb, text_score=text_score, math=math)
+        # 公式模型可能缺失（离线/下载失败），引擎会降级关闭：以实际生效值为准回写 meta
+        actual_math = getattr(engine, "math_enabled", None)
+        if actual_math is not None:
+            math = bool(actual_math)
         step_check_cancel(cancel_callback)
 
         txts = list(result.get("txts") or [])

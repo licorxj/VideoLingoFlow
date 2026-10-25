@@ -1,7 +1,7 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-23 16:24:27  
-> 节点总数：190　（带 `*` 的接口为必填项）
+> 自动生成时间：2026-10-26 02:38:27  
+> 节点总数：191　（带 `*` 的接口为必填项）
 
 ## 总览
 
@@ -10,7 +10,7 @@
 | 输入输出节点（`io`） | 10 |
 | 预览节点（`preview`） | 4 |
 | 音频处理节点（`audio`） | 11 |
-| 视频处理节点（`video`） | 19 |
+| 视频处理节点（`video`） | 20 |
 | AI生成类节点（`ai_gen`） | 22 |
 | 翻译相关节点（`translation`） | 16 |
 | 漫剧·剧本链（`agi_story`） | 4 |
@@ -80,15 +80,16 @@
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
 | LCWR 去水印 | `lcwr_watermark_removal` | 调用 LCWR 本地 API 去除视频/图片中的水印与字幕。需先安装并启动 LCWR 软件（下载地址：https://qinmuzhifang.feishu.cn/wiki/IkBVwfe72iEVLTkhVQ0cW0mvnBc），右键「启动LCWR-API.bat」以管理员身份运行本地 API（默认 http://localhost:1120） | process | 视频(`video`:video); 图片(`image`:image) | 视频(`video`:video); 图片(`image`:image) |
-| OCR字幕查找 | `subtitle_position_search` | 定位视频字幕区域：支持 OCR 自动查找（输出标注帧与相对坐标 JSON），也可手动框选字幕位置并设置片头片尾跳过时间 | thread | 视频(`video`:video) | 标注帧(`image`:image); 字幕坐标JSON(`json`:json) |
+| OCR字幕查找 | `subtitle_position_search` | 定位视频字幕区域：OCR 自动查找（快速二分检测，仅检测文本框即可定位字幕行与区段），输出标注帧与相对坐标 JSON；也可手动框选字幕位置并设置片头片尾跳过时间 | thread | 视频(`video`:video) | 标注帧(`image`:image); 字幕坐标JSON(`json`:json) |
 | OCR字幕识别 | `subtitle_recognition` | 按字幕区域坐标用 OCR 识别字幕内容与时间轴，输出 ASR 格式结果 JSON | thread | 视频(`video`*:video); 字幕区域坐标(`json`:json) | 识别结果JSON(ASR)(`subtitle`:json) |
 | 切割片头片尾 | `video_clip_intro_outro` | 从主视频中裁剪片头与片尾，输出裁剪后的主视频、片头片段、片尾片段（ffmpeg 流拷贝，不重新编码） | thread | 主视频(`video`*:video) | 裁剪后主视频(`video`:video); 片头片段(`intro`:video); 片尾片段(`outro`:video) |
 | 在线去水印去字幕 | `online_watermark_removal` | VLF官方节点，登录即可使用，消耗积分1.3积分每秒。请使用【媒体转链接节点】前置获取上传云端信息 | thread | 媒体详情JSON(`url_json`:json) | 去水印视频(`video`:video); 任务记录(`json`:json) |
 | 字幕烧录 | `merge_sub_video` | 将字幕烧录到视频 | thread | 视频(`video`*:video); 字幕(`subtitle`*:subtitle); 背景音乐(`audio`:audio); 配音音频(`dub`:audio) | 字幕视频(`video`:video) |
 | 按字幕切割视频 | `video_cut_by_subtitle` | 按 srt 字幕或句子 json 的时间轴切割视频，输出片段清单 json 与各视频片段 | thread | 视频(`video`*:video); SRT字幕(`srt`:subtitle); 句子JSON(`json`:json) | 切割信息(`json`:json); 视频片段清单(`video_segments`:json) |
+| 按镜头切割视频 | `video_shot_split` | 按画面镜头切换点自动切割视频：用 PySceneDetect 逐帧比对画面变化找出切点（支持内容差异/自适应/淡入淡出/直方图/感知哈希五种算法），输出每个镜头一个视频片段 + 镜头清单 JSON。不需要字幕，适合素材拆分、按镜头重剪 | process | 视频(`video`*:video) | 镜头清单(`json`:json); 镜头片段列表(`videos`:list); 镜头数(`count`:text) |
 | 水印添加 | `watermark` | 为视频添加水印 | thread | 视频(`video`*:video); 水印图片(`image`:image) | 最终视频(`video`:video) |
 | 获取视频尾帧 | `get_video_last_frame` | 获取视频的尾帧图片（默认取最末帧，可设置从尾部偏移秒数跳过片尾） | thread | 视频(`video`*:video) | 尾帧图片(`image`:image); 尾帧信息(`text`:text) |
-| 视频切割 | `video_split` | 将视频按数量或时长切割为多段，支持静音点切割 | thread | 视频(`video`*:video); 音频(`audio`:audio) | 切割片段(`video`:video); 切割信息(`text`:text) |
+| 视频切割 | `video_split` | 将视频按数量、固定时长或指定时间段切割，支持静音点切割；按时间段为精准切割（重新编码，帧精确），切点严格落在指定起止时间上 | thread | 视频(`video`*:video); 音频(`audio`:audio) | 切割片段(`video`:video); 切割信息(`text`:text) |
 | 视频区域贴片 | `video_region_composite` | 将「视频截取区域」产出的局部视频按坐标贴回主视频。贴片大于区域时自动缩放，主/贴片编码不一致时统一重编码后贴合。 | thread | 主视频(`main_video`*:video); 贴片视频(`patch_video`*:video); 贴片坐标(`patch_json`*:json) | 贴合后视频(`video`:video) |
 | 视频去重 | `video_dedupe` | 反平台查重变换：对视频做水平镜像、放大裁切、调速、调色/滤镜、加边框等画面变换以规避重复检测；不删内容，只改画面（ffmpeg 重编码） | thread | 视频(`video`*:video) | 去重视频(`video`:video) |
 | 视频快剪 | `video_quick_edit` | 本地 ffmpeg 视频小工具集：压缩、剪切、合并、提取音频、转格式、转 GIF、截图、改分辨率、调速、去声音、配背景音乐、加文字水印、烧录字幕、旋转翻转、查看信息。先在下拉框选择功能，选中后自动展开对应参数；结果另存到任务目录下的「处理后」文件夹，绝不覆盖原视频。 | thread | 视频(`video`*:video); 合并·视频2(`video_b`:video); 合并·视频3(`video_c`:video); 合并·视频4(`video_d`:video); 背景音乐(`music`:audio); 字幕(`subtitle`:subtitle) | 处理后视频(`video`:video); 结果说明(`result`:text) |

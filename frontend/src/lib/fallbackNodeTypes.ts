@@ -6807,7 +6807,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "subtitle_position_search",
     "name": "OCR字幕查找",
     "category": "video",
-    "description": "定位视频字幕区域：支持 OCR 自动查找（输出标注帧与相对坐标 JSON），也可手动框选字幕位置并设置片头片尾跳过时间",
+    "description": "定位视频字幕区域：OCR 自动查找（快速二分检测，仅检测文本框即可定位字幕行与区段），输出标注帧与相对坐标 JSON；也可手动框选字幕位置并设置片头片尾跳过时间",
     "icon": "Captions",
     "color": "#f59e0b",
     "execution_domain": "thread",
@@ -6839,10 +6839,13 @@ export const FALLBACK_NODE_TYPES = [
       "manual_box": {},
       "skip_head_sec": 0,
       "skip_tail_sec": 0,
-      "direction": "horizontal",
+      "fast_mode": true,
+      "direction": "auto",
+      "auto_direction": true,
+      "search_mode": "auto",
       "position": "lower",
       "position_ratio": "0.6-0.8",
-      "frame_interval": 20,
+      "frame_interval": 25,
       "clean_cache": true
     },
     "configFields": [
@@ -6929,11 +6932,22 @@ export const FALLBACK_NODE_TYPES = [
         "description": "非空时原样覆盖版本/尺寸，需自行确保模型文件存在"
       },
       {
+        "key": "fast_mode",
+        "label": "快速检测",
+        "type": "toggle",
+        "colSpan": "half",
+        "description": "只用文本框检测（不做文字识别）+ 二分定位字幕切换点，长视频通常快一个数量级；关闭则逐帧识别（较慢但可作对照排错）"
+      },
+      {
         "key": "direction",
         "label": "字幕方向",
         "type": "select",
         "colSpan": "half",
         "options": [
+          {
+            "value": "auto",
+            "label": "自动判定"
+          },
           {
             "value": "horizontal",
             "label": "水平"
@@ -6945,42 +6959,46 @@ export const FALLBACK_NODE_TYPES = [
         ]
       },
       {
-        "key": "position",
-        "label": "字幕位置",
-        "type": "select",
+        "key": "auto_direction",
+        "label": "自动判定横竖排",
+        "type": "toggle",
         "colSpan": "half",
         "dependsOn": "direction",
-        "dependsValue": "horizontal",
+        "dependsValue": "auto",
+        "description": "竖排字幕按横排处理会被形状过滤全部丢弃，自动判定可避免"
+      },
+      {
+        "key": "search_mode",
+        "label": "搜索方式",
+        "type": "select",
+        "colSpan": "half",
         "options": [
           {
-            "value": "upper",
-            "label": "上半段"
+            "value": "auto",
+            "label": "自动估计区域（推荐）"
           },
           {
-            "value": "lower",
-            "label": "下半段"
-          },
-          {
-            "value": "ratio",
-            "label": "比例范围"
+            "value": "position",
+            "label": "只在指定位置查找"
           }
-        ]
+        ],
+        "description": "自动估计会全程均匀撒点找字幕行，字幕位置中途变化/双行混排也能覆盖；只在指定位置查找更快，但字幕不在该范围内会漏"
       },
       {
         "key": "position",
         "label": "字幕位置",
         "type": "select",
         "colSpan": "half",
-        "dependsOn": "direction",
-        "dependsValue": "vertical",
+        "dependsOn": "search_mode",
+        "dependsValue": "position",
         "options": [
           {
             "value": "upper",
-            "label": "左半段"
+            "label": "上半段（竖直：左半段）"
           },
           {
             "value": "lower",
-            "label": "右半段"
+            "label": "下半段（竖直：右半段）"
           },
           {
             "value": "ratio",
@@ -7000,18 +7018,19 @@ export const FALLBACK_NODE_TYPES = [
       },
       {
         "key": "frame_interval",
-        "label": "抽帧步长",
+        "label": "抽样步长(帧)",
         "type": "number",
         "colSpan": "half",
         "min": 1,
-        "placeholder": "默认 20"
+        "placeholder": "默认 25",
+        "description": "每隔多少帧取一个样本比对；越小越准但更慢，短字幕较多时建议 10~15"
       },
       {
         "key": "clean_cache",
         "label": "清理缓存",
         "type": "checkbox",
         "colSpan": "half",
-        "description": "结束后删除抽帧缓存"
+        "description": "关闭逐帧识别模式结束后删除抽帧缓存（快速检测不产生缓存）"
       }
     ],
     "isBuiltIn": true
@@ -8536,7 +8555,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "video_split",
     "name": "视频切割",
     "category": "video",
-    "description": "将视频按数量或时长切割为多段，支持静音点切割",
+    "description": "将视频按数量、固定时长或指定时间段切割，支持静音点切割；按时间段为精准切割（重新编码，帧精确），切点严格落在指定起止时间上",
     "icon": "Scissors",
     "color": "#ef4444",
     "execution_domain": "thread",
@@ -8570,7 +8589,8 @@ export const FALLBACK_NODE_TYPES = [
       "segment_count": 2,
       "segment_duration": 60,
       "use_silence": false,
-      "output_index": 1
+      "output_index": 1,
+      "time_range": ""
     },
     "configFields": [
       {
@@ -8585,6 +8605,10 @@ export const FALLBACK_NODE_TYPES = [
           {
             "value": "duration",
             "label": "按固定时长"
+          },
+          {
+            "value": "range",
+            "label": "按时间段"
           }
         ]
       },
@@ -8605,17 +8629,37 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "half"
       },
       {
+        "key": "time_range",
+        "label": "时间段(秒)",
+        "type": "text",
+        "dependsOn": "split_mode",
+        "dependsValue": "range",
+        "colSpan": "half",
+        "placeholder": "如 30-90",
+        "description": "起止秒数，支持 30-90 / 30~90 / 1:30-2:00；该方式使用精准切割（重新编码，帧精确）"
+      },
+      {
         "key": "use_silence",
         "label": "寻找静音点切割",
         "type": "checkbox",
-        "colSpan": "half"
+        "colSpan": "half",
+        "dependsOn": "split_mode",
+        "dependsValue": [
+          "count",
+          "duration"
+        ]
       },
       {
         "key": "output_index",
         "label": "输出片段序号",
         "type": "text",
         "placeholder": "从1开始",
-        "colSpan": "half"
+        "colSpan": "half",
+        "dependsOn": "split_mode",
+        "dependsValue": [
+          "count",
+          "duration"
+        ]
       }
     ],
     "isBuiltIn": true
@@ -15406,6 +15450,194 @@ export const FALLBACK_NODE_TYPES = [
         "label": "切割点外扩(秒)",
         "type": "number",
         "description": "每段在首尾各外扩的秒数，避免裁掉首尾画面"
+      }
+    ],
+    "isBuiltIn": true
+  },
+  {
+    "id": "video_shot_split",
+    "name": "按镜头切割视频",
+    "category": "video",
+    "description": "按画面镜头切换点自动切割视频：用 PySceneDetect 逐帧比对画面变化找出切点（支持内容差异/自适应/淡入淡出/直方图/感知哈希五种算法），输出每个镜头一个视频片段 + 镜头清单 JSON。不需要字幕，适合素材拆分、按镜头重剪",
+    "icon": "Clapperboard",
+    "color": "#ef4444",
+    "execution_domain": "process",
+    "inputs": [
+      {
+        "id": "video",
+        "label": "视频",
+        "type": "video",
+        "required": true
+      }
+    ],
+    "outputs": [
+      {
+        "id": "json",
+        "label": "镜头清单",
+        "type": "json"
+      },
+      {
+        "id": "videos",
+        "label": "镜头片段列表",
+        "type": "list"
+      },
+      {
+        "id": "count",
+        "label": "镜头数",
+        "type": "text"
+      }
+    ],
+    "defaultConfig": {
+      "detector": "content",
+      "threshold": 0,
+      "min_scene_sec": 1.0,
+      "frame_skip": 0,
+      "max_clips": 300,
+      "cut_mode": "reencode",
+      "output_format": "mp4",
+      "quality": "medium",
+      "ffmpeg_threads": 0
+    },
+    "configFields": [
+      {
+        "key": "detector",
+        "label": "检测算法",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "content",
+            "label": "内容差异（通用，推荐）"
+          },
+          {
+            "value": "adaptive",
+            "label": "自适应（抗强运镜）"
+          },
+          {
+            "value": "threshold",
+            "label": "亮度阈值（淡入淡出）"
+          },
+          {
+            "value": "histogram",
+            "label": "直方图（抗轻微运动）"
+          },
+          {
+            "value": "hash",
+            "label": "感知哈希（画面相似度）"
+          }
+        ],
+        "description": "内容差异适合绝大多数剪切成片；强运镜/快速移动素材用自适应；渐变淡入淡出转场用亮度阈值"
+      },
+      {
+        "key": "threshold",
+        "label": "检测阈值",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 0.1,
+        "placeholder": "0 = 用算法默认",
+        "description": "越大越严格（切得越少）、越小越敏感（切得越多）。留 0 使用算法默认：内容差异 27 / 自适应 3 / 阈值 12 / 直方图 0.2 / 哈希 0.35"
+      },
+      {
+        "key": "min_scene_sec",
+        "label": "最小镜头时长(秒)",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 0.1,
+        "description": "短于该时长的切点会被合并，用于压掉闪白/闪黑造成的碎片镜头，默认 1 秒"
+      },
+      {
+        "key": "frame_skip",
+        "label": "跳帧检测",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "0 = 逐帧检测（最准）。设为 N 则每 N+1 帧才检测一次，长视频可提速但可能漏切点"
+      },
+      {
+        "key": "max_clips",
+        "label": "最多镜头数",
+        "type": "number",
+        "colSpan": "half",
+        "min": 1,
+        "step": 1,
+        "description": "安全上限，检测结果超过该值直接报错并提示调高阈值，避免误切出成百上千个碎片占满磁盘"
+      },
+      {
+        "key": "cut_mode",
+        "label": "切割方式",
+        "type": "select",
+        "colSpan": "half",
+        "options": [
+          {
+            "value": "reencode",
+            "label": "重新编码（帧精确，推荐）"
+          },
+          {
+            "value": "copy",
+            "label": "流拷贝（极快，切点有偏移）"
+          }
+        ],
+        "description": "重新编码切点严格落在检测到的帧上；流拷贝不对齐关键帧，片段首尾可能多出少量画面"
+      },
+      {
+        "key": "output_format",
+        "label": "输出格式",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "cut_mode",
+        "dependsValue": "reencode",
+        "options": [
+          {
+            "value": "mp4",
+            "label": "MP4（H.264/AAC）"
+          },
+          {
+            "value": "mkv",
+            "label": "MKV（H.264/AAC）"
+          },
+          {
+            "value": "mov",
+            "label": "MOV（H.264/AAC）"
+          },
+          {
+            "value": "webm",
+            "label": "WebM（VP9/Opus）"
+          }
+        ]
+      },
+      {
+        "key": "quality",
+        "label": "编码质量",
+        "type": "select",
+        "colSpan": "half",
+        "dependsOn": "cut_mode",
+        "dependsValue": "reencode",
+        "options": [
+          {
+            "value": "high",
+            "label": "高质量（CRF 18）"
+          },
+          {
+            "value": "medium",
+            "label": "中等（CRF 23）"
+          },
+          {
+            "value": "low",
+            "label": "低质量（CRF 28）"
+          }
+        ]
+      },
+      {
+        "key": "ffmpeg_threads",
+        "label": "ffmpeg 线程上限",
+        "type": "number",
+        "colSpan": "half",
+        "min": 0,
+        "step": 1,
+        "description": "0 = 自动（约半数 CPU 核），避免批量切割把机器拖卡"
       }
     ],
     "isBuiltIn": true

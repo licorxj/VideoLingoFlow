@@ -1,19 +1,26 @@
 """视频字幕位置检查工具。
 
-流程：
+两种算法，默认走「快速二分检测」：
+
+快速检测（默认，见 backend/utils/subtitle_fast_detect.py）
+--------------------------------------------------------
+1. 全程均匀撒点（≤16 帧）做**只检测文本框**的预扫描，聚类中线 + 形态打分 + 内容
+   变化度判定，自动得出字幕行与搜索区域（识别不了就退回全画幅）；
+2. 按抽样步长建队列，生产者抽帧并裁剪到字幕区域（内存中直接送引擎，不写临时图），
+   消费者做 det，分析者按帧号升序比较相邻样本：同一字幕则延伸区间，不同则二分
+   收敛出切换帧；两个相邻样本都判空时对间隙抽查，捞出短于抽样步长的字幕；
+3. 相邻区间兜底合并后，把每帧框收敛到字幕行，最终取并集外框。
+
+相比旧的「逐帧全量 OCR」：完全省掉抽帧落盘、逐帧写裁剪图与 rec 识别，帧数从
+「总帧数/步长」降到「切换点数量的对数级」，长视频通常快一个数量级。
+
+旧算法（use_fast=False 时保留）
+------------------------------
 1. 对视频按固定帧间隔抽帧，缓存文件保存在视频所在目录下的子目录中；
 2. 按检查区域（下半段 / 上半段 / 自定义左上+右下点坐标）对帧图裁剪；
-3. 多线程批量调用 rapidocr OCR 接口识别裁剪图（线程数取自 OCR 接口配置 max_workers，
-   默认 4；rapidocr 无内置并行 API，因此在代码层用 ThreadPoolExecutor 并发识别）；
-4. 文本行数据处理：
-   - 第一轮：剔除无识别结果的帧数据；
-   - 第二轮：按字幕方向筛除宽高比不符合的文本行；
-   - 第三轮：同帧内重叠文本行合并为外包大框；
-   - 中线聚类：对所有文本框的中线做 1D 容差聚类，取最大簇均值作为字幕中线；
-   - 高度容差计数：统计中线穿过文本框的高/宽值出现次数，取排名第一、第二作为预选值，
-     第二名出现次数 <= 1 时舍弃，最终取二者较大值作为字幕高度；
-   - 由字幕中线 ± 高度/2 推出上下边线，取入选框的宽度坐标最小/最大作为左右边线，
-     得到字幕最大外框；
+3. 多线程批量调用 OCR 接口识别裁剪图（线程数取自 OCR 接口配置 max_workers）；
+4. 文本行数据处理：剔除空帧 → 方向宽高比筛选 → 同帧重叠框合并 → 中线聚类取
+   最大簇 → 高度容差计数取较大值 → 推出字幕最大外框；
 5. 选取代表性帧，用粗红线绘制字幕外框，保存为视频目录下 subtitle_frame.png；
 6. 将外框坐标映射回裁剪前的原视频坐标，返回标注帧路径与字幕框坐标。
 
@@ -30,6 +37,7 @@ import cv2
 from backend.config.config_manager import config
 from backend.ocr.ocr_factory import get_ocr_engine
 from backend.ocr.ocr_interface_manager import get_ocr_interface_manager
+from backend.utils.subtitle_fast_detect import FastSubtitleDetector
 
 # ── 常量 ─────────────────────────────────────────────────────
 DEFAULT_FRAME_INTERVAL = 20
@@ -275,8 +283,257 @@ def check_subtitle_position(
     keep_cache: bool = False,
     max_workers: Optional[int] = None,
     callback: Optional[Callable] = None,
+    use_fast: bool = True,
+    auto_direction: bool = True,
+    cancel_callback: Optional[Callable[[], bool]] = None,
 ) -> dict:
     """检查视频字幕位置，返回标注帧路径与字幕外框坐标（相对比例坐标）。
+
+    Parameters
+    ----------
+    video_path : str
+        视频文件路径。
+    model : str
+        选用 OCR 接口 id；留空时使用全局设置 ocr.method，再兜底 rapidocr。
+    model_options : dict
+        RapidOCR 模型覆盖（ocr_version/model_type/custom_model_name）。
+    direction : str
+        字幕方向：horizontal（水平）/ vertical（竖直）/ auto（自动判定，快速检测支持）。
+    region : None | "lower" | "upper" | "0.6-0.8" | (x1, y1, x2, y2)
+        检查区域：不传或 "lower" 为下半段（竖直方向为右半段），"upper" 为上半段
+        （竖直方向为左半段）；比例范围字符串 "0.6-0.8" 按方向取 y/x 坐标比例；
+        也可传左上+右下像素坐标。快速检测下该区域作为**搜索先验**（只在其内找）。
+    frame_interval : int
+        抽样/抽帧间隔（帧），默认 20。
+    skip_head_sec / skip_tail_sec : float
+        片头/片尾跳过秒数，这些时间段不参与检测，默认 0。
+    keep_cache : bool
+        是否保留抽帧缓存（仅旧算法产生缓存），默认 False。
+    max_workers : Optional[int]
+        并行识别线程数（仅旧算法使用）。
+    callback : Optional[Callable]
+        (percent: int, message: str) 进度回调。
+    use_fast : bool
+        是否使用快速二分检测（默认 True）；False 时直接走旧的逐帧识别算法。
+    auto_direction : bool
+        快速检测下是否允许自动判定横/竖排（direction="auto" 时生效）。
+    cancel_callback : Optional[Callable]
+        取消回调，返回 True 时尽快退出。
+
+    Returns
+    -------
+    dict
+        {"success": True, "frame_path": subtitle_frame.png 路径,
+         "box": {"x1","y1","x2","y2"}（相对比例坐标，0~1）,
+         "width","height": 视频宽高, "direction", "relative": True,
+         "skip_head_sec", "skip_tail_sec", 快速检测额外给 "segments"/"hit_frames"}；
+        无有效字幕时 success=False 并给出 message。
+    """
+    if not os.path.isfile(video_path):
+        raise ValueError(f"视频文件不存在：{video_path}")
+
+    direction = str(direction or "horizontal").strip().lower()
+    fast_dir = direction
+    if direction == "auto":
+        fast_dir = "auto" if auto_direction else "horizontal"
+    elif direction not in ("horizontal", "vertical"):
+        raise ValueError(f"不支持的字幕方向：{direction}，仅支持 horizontal / vertical / auto")
+    # 旧算法只认 horizontal / vertical：auto 回退时按水平处理（自动判定的结果无法复用）
+    legacy_dir = "horizontal" if direction == "auto" else direction
+    fast_error: Optional[str] = None
+
+    if use_fast:
+        if cancel_callback and _is_cancelled(cancel_callback):
+            raise RuntimeError("字幕查找已取消")
+        try:
+            result = _check_subtitle_position_fast(
+                video_path,
+                model=model, model_options=model_options, direction=fast_dir,
+                region=region, frame_interval=frame_interval,
+                skip_head_sec=skip_head_sec, skip_tail_sec=skip_tail_sec,
+                callback=callback, cancel_callback=cancel_callback,
+            )
+            if result.get("success"):
+                return result
+            print(f"{LOG_PREFIX} 快速检测未找到字幕（{result.get('message', '')}），"
+                  f"回退逐帧识别算法")
+        except RuntimeError as exc:
+            if cancel_callback and _is_cancelled(cancel_callback):
+                raise RuntimeError("字幕查找已取消") from exc
+            fast_error = str(exc)
+            print(f"{LOG_PREFIX} 快速检测失败（{exc}），回退逐帧识别算法")
+        except Exception as exc:  # noqa: BLE001 - 任何异常都退回旧算法，保证可用
+            fast_error = str(exc)
+            print(f"{LOG_PREFIX} 快速检测异常（{exc}），回退逐帧识别算法")
+        if cancel_callback and _is_cancelled(cancel_callback):
+            raise RuntimeError("字幕查找已取消")
+
+    try:
+        return _check_subtitle_position_legacy(
+            video_path,
+            model=model, model_options=model_options, direction=legacy_dir,
+            region=region, frame_interval=frame_interval,
+            skip_head_sec=skip_head_sec, skip_tail_sec=skip_tail_sec,
+            keep_cache=keep_cache, max_workers=max_workers, callback=callback,
+            cancel_callback=cancel_callback,
+        )
+    except RuntimeError:
+        raise
+    except ValueError as exc:
+        # 引擎缺失/配置错误这类根因会被旧算法吞成"无文本"，这里把快速检测的原始
+        # 错误一并抛出，避免用户只看到含糊的"未识别到文本"。
+        if fast_error and ("rapidocr" in fast_error or "indra" in fast_error
+                           or "未检测到" in fast_error):
+            raise RuntimeError(f"{fast_error}（逐帧识别回退也失败：{exc}）") from exc
+        raise
+
+
+def _is_cancelled(cancel_callback) -> bool:
+    """安全调用取消回调（异常视为未取消）。"""
+    try:
+        return bool(cancel_callback())
+    except Exception:  # noqa: BLE001
+        return False
+
+
+def _skip_time_range(video_path: str, skip_head_sec: float, skip_tail_sec: float):
+    """把片头/片尾跳过秒数换算成 (start_sec, end_sec)；都未设时返回 None。"""
+    if skip_head_sec <= 0 and skip_tail_sec <= 0:
+        return None
+    cap = cv2.VideoCapture(video_path)
+    try:
+        fps = float(cap.get(cv2.CAP_PROP_FPS) or 25.0)
+        total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    finally:
+        cap.release()
+    if total <= 0:
+        return None
+    duration = total / fps
+    start = max(0.0, float(skip_head_sec or 0))
+    end = duration - max(0.0, float(skip_tail_sec or 0))
+    if end - start < 0.2:
+        raise ValueError("片头/片尾跳过时间覆盖了全部视频，请减小跳过时长")
+    return (start, end)
+
+
+def _check_subtitle_position_fast(
+    video_path: str,
+    *,
+    model: str = "",
+    model_options: Optional[Dict] = None,
+    direction: str = "horizontal",
+    region=None,
+    frame_interval: int = DEFAULT_FRAME_INTERVAL,
+    skip_head_sec: float = 0.0,
+    skip_tail_sec: float = 0.0,
+    callback: Optional[Callable] = None,
+    cancel_callback: Optional[Callable[[], bool]] = None,
+) -> dict:
+    """快速二分检测：det 抽样 + 二分定位切换帧，得出字幕区域与区段。"""
+    iface_id = _resolve_interface_id(model)
+    probe_dir = "vertical" if str(direction).startswith("v") else "horizontal"
+
+    cap = cv2.VideoCapture(video_path)
+    try:
+        fw = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        fh = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    finally:
+        cap.release()
+    if fw <= 0 or fh <= 0:
+        raise ValueError(f"无法读取视频尺寸：{video_path}")
+
+    # 检查区域作为「搜索先验」：只在该范围内撒点估计与抽样检测
+    hint = None
+    if region is not None:
+        hint = _resolve_region(region, fw, fh, probe_dir)
+
+    time_range = _skip_time_range(video_path, skip_head_sec, skip_tail_sec)
+    _notify(callback, 3,
+            f"快速字幕检测（引擎 {iface_id}，方向 {direction}，抽样步长 {frame_interval}，"
+            f"搜索区域 {hint or '全画幅'}，片头跳过 {skip_head_sec}s，片尾跳过 {skip_tail_sec}s）")
+
+    engine = get_ocr_engine(iface_id, overrides=model_options)
+    det = FastSubtitleDetector(
+        video_path, engine,
+        hint_region=hint, direction=direction, step=frame_interval,
+        time_range=time_range, progress=callback, cancel=cancel_callback,
+    )
+    data = det.detect()
+    if data.get("cancelled"):
+        raise RuntimeError("字幕查找已取消")
+
+    union = det.union_box()
+    if not union:
+        return {"success": False, "message": "未检出字幕文本（快速检测）"}
+
+    width = data.get("width") or fw
+    height = data.get("height") or fh
+    xmin, xmax, ymin, ymax = union
+
+    # 代表性帧：字幕框最多的那一帧
+    counts = {no: len(boxes) for no, boxes in det.frame_results.items() if boxes}
+    best_no = max(counts, key=counts.get) if counts else None
+    out_path = ""
+    if best_no:
+        cap = cv2.VideoCapture(video_path)
+        try:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, best_no - 1)
+            ret, frame = cap.read()
+        finally:
+            cap.release()
+        if ret and frame is not None:
+            cv2.rectangle(frame, (int(xmin), int(ymin)), (int(xmax), int(ymax)),
+                          DRAW_COLOR, DRAW_THICKNESS)
+            video_dir = os.path.dirname(os.path.abspath(video_path))
+            out_path = os.path.join(video_dir, "subtitle_frame.png")
+            cv2.imwrite(out_path, frame)
+    if not out_path:
+        print(f"{LOG_PREFIX} 警告：标注帧绘制/保存失败")
+    _notify(callback, 97, f"字幕外框已标注并保存：{out_path or '（失败）'}")
+
+    rel_box = {
+        "x1": round(xmin / width, 6),
+        "y1": round(ymin / height, 6),
+        "x2": round(xmax / width, 6),
+        "y2": round(ymax / height, 6),
+    }
+    result = {
+        "success": True,
+        "frame_path": out_path,
+        "box": rel_box,
+        "width": width,
+        "height": height,
+        "direction": data.get("direction", probe_dir),
+        "relative": True,
+        "skip_head_sec": max(0.0, float(skip_head_sec)),
+        "skip_tail_sec": max(0.0, float(skip_tail_sec)),
+        # 快速检测附加信息：字幕区段（帧范围 + 区域）与命中帧数
+        "segments": data.get("segments") or [],
+        "hit_frames": len(counts),
+        "region": list(data.get("region") or []) if data.get("region") != "FULL" else "FULL",
+    }
+    _notify(callback, 100,
+            f"字幕位置检查完成：外框 {rel_box}（相对比例），"
+            f"{len(result['segments'])} 个区段 / {result['hit_frames']} 个命中帧")
+    return result
+
+
+def _check_subtitle_position_legacy(
+    video_path: str,
+    *,
+    model: str = "",
+    model_options: Optional[Dict] = None,
+    direction: str = "horizontal",
+    region: Optional[Union[str, Tuple[float, float, float, float], Dict[str, float]]] = None,
+    frame_interval: int = DEFAULT_FRAME_INTERVAL,
+    skip_head_sec: float = 0.0,
+    skip_tail_sec: float = 0.0,
+    keep_cache: bool = False,
+    max_workers: Optional[int] = None,
+    callback: Optional[Callable] = None,
+    cancel_callback: Optional[Callable[[], bool]] = None,
+) -> dict:
+    """旧算法：按帧间隔抽帧落盘 → 批量 rec 识别 → 聚类出字幕外框。
 
     Parameters
     ----------

@@ -144,6 +144,7 @@ AGI 链路各 LLM 阶段的 system prompt 来自 `backend/config/drama_prompts/*
 - `subtitle_position_search`：OCR 字幕查找
 - `subtitle_recognition`：OCR 字幕识别
 - `video_cut_by_subtitle`：按字幕切割视频
+- `video_shot_split`：按镜头切割视频 ·子进程（PySceneDetect 镜头检测 + ffmpeg 切割，输出镜头片段列表）
 - `video_frame_extract`：视频抽帧
 - `get_video_last_frame`：获取视频尾帧
 - `video_region_composite`：视频区域贴片
