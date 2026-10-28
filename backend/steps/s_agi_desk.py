@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 from backend.steps.base_step import BaseStep, step_check_cancel
 from backend import openchatcut_client as occ
@@ -167,11 +168,19 @@ def _preflight(cfg: dict, task_dir: str = ""):
 
 
 def _extract_assets(result) -> list[str]:
-    """从工具调用结果里抽取素材 id（import_asset(s) 的返回形状）。"""
+    """从工具调用结果里抽取素材 id。
+
+    ``import_asset`` / ``import_folder`` 的真实返回形如::
+
+        {"ok": true, "imported": [{"id": "asset_x", "name": "a.mp4", "kind": "video"}],
+         "duplicateCount": 0}
+
+    同时兼容 ``assetIds`` / ``assets`` / ``importedAssets`` 等旧形状。
+    """
     if result is None:
         return []
     data = result if isinstance(result, dict) else {}
-    for key in ("assetIds", "assets", "importedAssets", "imported"):
+    for key in ("imported", "assetIds", "assets", "importedAssets"):
         value = data.get(key)
         if isinstance(value, list) and value:
             out = []
@@ -180,27 +189,54 @@ def _extract_assets(result) -> list[str]:
                     out.append(str(item.get("id") or item.get("assetId") or ""))
                 elif item:
                     out.append(str(item))
-            return [x for x in out if x]
+            out = [x for x in out if x]
+            if out:
+                return out
     if isinstance(data.get("assetId"), str):
         return [data["assetId"]]
     return []
 
 
 def _extract_clips(result) -> list[str]:
-    """从工具调用结果里抽取片段 id。"""
+    """从工具调用结果里抽取片段 id。
+
+    ``edit_item`` 的真实返回形如::
+
+        {"ok": true, "atomic": true, "results": [
+            {"ok": true, "kind": "video", "placed": {"itemId": "clip_x", ...}}]}
+
+    同时兼容 ``itemIds`` / ``clipIds`` / ``items`` / ``clips`` / ``added`` 等旧形状。
+    """
     if not isinstance(result, dict):
         return []
+    out: list[str] = []
     for key in ("itemIds", "clipIds", "items", "clips", "added"):
         value = result.get(key)
         if isinstance(value, list) and value:
-            out = []
             for item in value:
                 if isinstance(item, dict):
                     out.append(str(item.get("id") or item.get("itemId") or ""))
                 elif item:
                     out.append(str(item))
-            return [x for x in out if x]
-    return []
+            out = [x for x in out if x]
+            if out:
+                return out
+    # edit_item：results[*].placed.itemId / results[*].itemId
+    results = result.get("results")
+    if isinstance(results, list):
+        for entry in results:
+            if not isinstance(entry, dict):
+                continue
+            placed = entry.get("placed")
+            if isinstance(placed, dict):
+                item_id = str(placed.get("itemId") or placed.get("id") or "")
+                if item_id:
+                    out.append(item_id)
+                    continue
+            item_id = str(entry.get("itemId") or entry.get("id") or "")
+            if item_id:
+                out.append(item_id)
+    return [x for x in out if x]
 
 
 # --------------------------------------------------------------------------- #
@@ -264,10 +300,11 @@ class S_DeskProject(BaseStep):
         if video_path:
             if callback:
                 callback(70, f"导入主轨视频 {os.path.basename(video_path)} 并放到 V1…")
+            # 导入必须 apply=True：occ 的 dry-run 会丢弃草稿，素材不会真正进媒体池
             r = occ.call_tool(
                 "import_asset",
                 {"path": video_path},
-                project=project_id, data_dir=data_dir, timeout=timeout,
+                project=project_id, data_dir=data_dir, apply=True, timeout=timeout,
             )
             if not r.ok:
                 raise RuntimeError(
@@ -275,7 +312,13 @@ class S_DeskProject(BaseStep):
                 )
             asset_ids = _extract_assets(r.data) or []
             if not asset_ids:
-                raise RuntimeError("导入主轨视频成功但未返回素材 ID，无法上轨")
+                # 兜底：素材可能已在池中（重复导入会被去重），按文件名从媒体池里找
+                asset_ids = _find_pool_assets(project_id, data_dir, timeout, [os.path.basename(video_path)])
+            if not asset_ids:
+                raise RuntimeError(
+                    "导入主轨视频成功但未返回素材 ID，无法上轨。\n"
+                    f"提示：工具返回：{json.dumps(r.data, ensure_ascii=False)[:300]}"
+                )
             r2 = occ.call_tool(
                 "edit_item",
                 {"adds": [{"type": "video", "assetId": asset_ids[0], "track": "V1", "fromFrame": 0}]},
@@ -286,6 +329,11 @@ class S_DeskProject(BaseStep):
                     f"主轨视频上轨失败：{r2.message}\n提示：{_hint_for(r2.message) or '检查轨道名（视频 V1/V2…）与素材类型是否匹配'}"
                 )
             clip_ids = _extract_clips(r2.data)
+            if not clip_ids:
+                raise RuntimeError(
+                    "主轨视频上轨未返回片段 ID。\n"
+                    f"提示：工具返回：{json.dumps(r2.data, ensure_ascii=False)[:300]}"
+                )
             if callback:
                 callback(95, "主轨视频已放到 V1")
 
@@ -393,6 +441,96 @@ def _iter_json_pack(raw) -> list[dict]:
     return out
 
 
+def _find_pool_assets(project: str, data_dir: str, timeout: int, names: list[str]) -> list[str]:
+    """从剪辑台媒体池里按文件名找素材 id（导入被去重时兜底）。
+
+    ``manage_media_pool action=list`` 返回 ``{folders, assets:[{id,name,kind,...}]}``。
+    """
+    wanted = {n for n in names if n}
+    if not wanted:
+        return []
+    r = occ.call_tool("manage_media_pool", {"action": "list"},
+                      project=project, data_dir=data_dir, timeout=timeout)
+    if not r.ok or not isinstance(r.data, dict):
+        return []
+    assets = r.data.get("assets")
+    if not isinstance(assets, list):
+        return []
+    out: list[str] = []
+    for asset in assets:
+        if not isinstance(asset, dict):
+            continue
+        name = str(asset.get("name") or "")
+        asset_id = str(asset.get("id") or "")
+        if asset_id and name in wanted:
+            out.append(asset_id)
+    return out
+
+
+def _list_tracks(project: str, data_dir: str, timeout: int) -> list[dict]:
+    """列出工程里的轨道（``edit_track action=list`` → ``[{id, alias, trackType, ...}]``）。"""
+    r = occ.call_tool("edit_track", {"action": "list"},
+                      project=project, data_dir=data_dir, timeout=timeout)
+    if not r.ok:
+        return []
+    data = r.data
+    if isinstance(data, list):
+        return [x for x in data if isinstance(x, dict)]
+    if isinstance(data, dict):
+        tracks = data.get("tracks")
+        if isinstance(tracks, list):
+            return [x for x in tracks if isinstance(x, dict)]
+    return []
+
+
+def _ensure_track(project: str, data_dir: str, track: str, timeout: int, apply: bool) -> tuple[bool, str]:
+    """确保目标轨道存在，不存在则尝试创建。
+
+    - 音频/字幕轨（别名 A1…/C1… 按顺序）：缺哪条补哪条；
+    - 视频轨：别名是倒序的（最后一条恒为 V1），新建会打乱已有轨道编号，
+      因此**不自动创建**，只报出当前可用轨道让用户选择。
+
+    返回 ``(是否可用, 错误说明)``。
+    """
+    alias = str(track or "").strip().upper()
+    if not alias:
+        return False, "目标轨道为空"
+    tracks = _list_tracks(project, data_dir, timeout)
+    available = [str(t.get("alias") or "") for t in tracks if t.get("alias")]
+    if alias in available:
+        return True, ""
+
+    kind = "audio" if alias.startswith("A") else "caption" if alias.startswith("C") else "video"
+    if kind == "video":
+        return False, (
+            f"目标视频轨 {alias} 不存在（当前工程可用：{('、'.join(available) or '无')}）。"
+            f"提示：视频轨别名随新建轨道倒序变化，请在剪辑台里新建视频轨后再上素材，或改选已有轨道"
+        )
+
+    # 音频/字幕轨：按需补齐（index = 别名里的数字 - 1）
+    digits = alias[1:]
+    index = int(digits) - 1 if digits.isdigit() else 0
+    same_kind = [t for t in tracks if str(t.get("trackType") or "") == kind]
+    missing = (index + 1) - len(same_kind)
+    if missing <= 0:
+        return False, (
+            f"目标轨道 {alias} 不存在（当前工程可用：{('、'.join(available) or '无')}）"
+        )
+    r = occ.call_tool(
+        "edit_track",
+        {"action": "create", "json": json.dumps({"trackType": kind, "count": missing})},
+        project=project, data_dir=data_dir, apply=apply, timeout=timeout,
+    )
+    if not r.ok:
+        return False, f"创建轨道 {alias} 失败：{r.message}"
+    after = [str(t.get("alias") or "") for t in _list_tracks(project, data_dir, timeout)]
+    if alias not in after:
+        return False, (
+            f"创建轨道后仍未找到 {alias}（当前可用：{('、'.join(after) or '无')}）"
+        )
+    return True, ""
+
+
 def _track_tail_frame(project: str, data_dir: str, track: str, timeout: int) -> int:
     """读取目标轨道当前末尾帧（read_project view=timeline + track 过滤）。
 
@@ -406,9 +544,14 @@ def _track_tail_frame(project: str, data_dir: str, track: str, timeout: int) -> 
     if not r.ok or not isinstance(r.data, dict):
         return 0
     items = ((r.data.get("timeline") or {}).get("items")) or []
+    want = str(track or "").strip().upper()
     end = 0
     for item in items:
         if not isinstance(item, dict):
+            continue
+        # 轨道过滤：read_project 已按 track 过滤，这里再按别名兜底（兼容未过滤的实现）
+        item_track = str(item.get("track") or item.get("trackId") or "").upper()
+        if want and item_track and item_track != want:
             continue
         start = item.get("startFrame") or item.get("fromFrame") or 0
         duration = item.get("durationInFrames") or 0
@@ -506,6 +649,11 @@ class S_DeskMaterialBase(BaseStep):
                     f"导入{label}目录失败 {entry['path']}：{r.message}\n提示：{_hint_for(r.message) or '确认目录内包含受支持的媒体文件'}"
                 )
             imported_ids.extend(_extract_assets(r.data) or [])
+        if not imported_ids and file_entries:
+            # 兜底：素材可能已在池中（重复导入会被去重），按文件名从媒体池里找
+            imported_ids = _find_pool_assets(
+                project, data_dir, timeout, [os.path.basename(e["path"]) for e in file_entries]
+            )
 
         asset_ids = _first_list(cfg, inp, "asset_ids") or imported_ids
         if not asset_ids:
@@ -531,6 +679,10 @@ class S_DeskMaterialBase(BaseStep):
 
         if add_to_track:
             step_check_cancel(cancel_callback)
+            if not dry_run:
+                ok, why = _ensure_track(project, data_dir, track, timeout, True)
+                if not ok:
+                    raise RuntimeError(f"{label}素材上轨失败：{why}")
             from_frame = 0
             if insert_at == "tail":
                 from_frame = _track_tail_frame(project, data_dir, track, timeout)
@@ -557,10 +709,17 @@ class S_DeskMaterialBase(BaseStep):
                 project=project, data_dir=data_dir, apply=not dry_run, timeout=timeout,
             )
             if not r.ok:
-                raise RuntimeError(
-                    f"{label}素材上轨失败：{r.message}\n提示：{_hint_for(r.message) or '检查轨道名（视频 V1/V2…、音频 A1/A2…）与素材类型是否匹配'}"
-                )
-            clip_ids = _extract_clips(r.data)
+                if dry_run:
+                    # 演练模式：素材没真正入库，上轨校验必然失败（找不到素材池条目），
+                    # 这里不报错，改为回报计划
+                    if callback:
+                        callback(90, "演练模式：素材未落盘，上轨仅回计划（关闭 dry_run 后真正写入时间线）")
+                else:
+                    raise RuntimeError(
+                        f"{label}素材上轨失败：{r.message}\n提示：{_hint_for(r.message) or '检查轨道名（视频 V1/V2…、音频 A1/A2…）与素材类型是否匹配'}"
+                    )
+            else:
+                clip_ids = _extract_clips(r.data)
             # 缩放比例：adds 不支持 transform，需对上轨得到的片段逐个 update
             if scale and scale != 1.0 and clip_ids:
                 updates = [{"type": kind, "itemId": cid, "transform": {"scale": scale}} for cid in clip_ids]
@@ -719,6 +878,78 @@ class S_DeskEdit(BaseStep):
 # --------------------------------------------------------------------------- #
 # 节点 3：AI 剪辑（AI 语义剪辑，自「剪辑编排」剥离的独立节点）
 # --------------------------------------------------------------------------- #
+# timeline.md 的合法行语法（对齐剪辑台 src/script/parse.ts）：
+#   ``# 标题`` / ``<!-- 元信息 -->`` / ``## 轨道`` / ``### 素材区``
+#   ``[sN] 文本`` / ``[sN@k] 文本`` / ``[cN] Nf`` / ``[gap Nf]`` / ``[silence=Xs→Ys]``
+# 整行删除 = 整行用 ~~ 包住；其它任何行都会被 apply_script 判为非法行。
+# LLM 常自作主张插 ``[zoom] 1:1`` 之类注释，所以落盘前先本地清洗。
+_RE_H2 = re.compile(r"^##\s+\S+$")
+_RE_H3 = re.compile(r"^###\s+.+$")
+_RE_SEG = re.compile(r"^\[s\d+(?:@\d+)?\]\s*.*$")
+_RE_CLIP = re.compile(r"^\[c\d+\]\s*\d+f$")
+_RE_GAP = re.compile(r"^\[gap\s+\d+f\]$")
+_RE_SILENCE = re.compile(r"^\[silence=\d+(?:\.\d+)?s(?:\s*(?:→|->)\s*\d+(?:\.\d+)?s)?\]$")
+_RE_STRIKE_ROW = re.compile(r"^~~(.*)~~$")
+_RE_ROW_ID = re.compile(r"^\[(s\d+|c\d+)\]")
+
+
+def _md_line_ok(line: str) -> bool:
+    """判断 timeline.md 的一行是否属于合法语法（整行 ~~ 删除也合法）。"""
+    s = line.strip()
+    if not s:
+        return True
+    if s.startswith("# ") or s.startswith("@"):
+        return True
+    if s.startswith("<!--") and s.endswith("-->"):
+        return True
+    if _RE_H2.match(s) or _RE_H3.match(s):
+        return True
+    whole = _RE_STRIKE_ROW.match(s)
+    if whole and "~~" not in whole.group(1):
+        s = whole.group(1).strip()
+    return bool(
+        _RE_SEG.match(s) or _RE_CLIP.match(s) or _RE_GAP.match(s) or _RE_SILENCE.match(s)
+    )
+
+
+def _md_row_ids(md: str) -> set[str]:
+    """收集 timeline.md 里出现过的行 id（[sN] / [cN]），用于校验结构没被改坏。"""
+    ids: set[str] = set()
+    for line in md.splitlines():
+        s = line.strip()
+        whole = _RE_STRIKE_ROW.match(s)
+        if whole and "~~" not in whole.group(1):
+            s = whole.group(1).strip()
+        m = _RE_ROW_ID.match(s)
+        if m:
+            ids.add(m.group(1))
+    return ids
+
+
+def _sanitize_timeline_md(edited: str, original: str) -> tuple[str, list[str], set[str]]:
+    """清洗 LLM 返回的 timeline.md，只保留合法行。
+
+    返回 ``(清洗后的 md, 违规说明列表, 丢失的行 id 集合)``。
+    """
+    kept: list[str] = []
+    dropped: list[str] = []
+    for line in edited.splitlines():
+        if _md_line_ok(line):
+            kept.append(line.rstrip())
+        else:
+            dropped.append(line.strip())
+    sanitized = "\n".join(kept).strip() + "\n"
+    missing = _md_row_ids(original) - _md_row_ids(sanitized)
+    issues: list[str] = []
+    if dropped:
+        shown = "、".join(f"「{d[:40]}」" for d in dropped[:3])
+        more = f" 等 {len(dropped)} 行" if len(dropped) > 3 else ""
+        issues.append(f"已丢弃 {len(dropped)} 行非法行：{shown}{more}")
+    if missing:
+        issues.append(f"缺少原有行 id：{'、'.join(sorted(missing)[:5])}")
+    return sanitized, issues, missing
+
+
 class S_DeskAiCut(BaseStep):
     """AI 剪辑：读取 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交。
 
@@ -758,29 +989,76 @@ class S_DeskAiCut(BaseStep):
 
         timeline_md = ""
         if isinstance(read.data, dict):
-            timeline_md = str(read.data.get("timelineMd") or read.data.get("markdown") or read.data.get("script") or "")
+            # read_script 真实返回：{file: 'timeline.md', content: md, trackId?}
+            timeline_md = str(
+                read.data.get("content")
+                or read.data.get("timelineMd")
+                or read.data.get("markdown")
+                or read.data.get("script")
+                or ""
+            )
         elif isinstance(read.data, str):
             timeline_md = read.data
         if not timeline_md:
-            raise RuntimeError("read_script 未返回 timeline.md 内容（可能时间线为空）")
+            raise RuntimeError(
+                "read_script 未返回 timeline.md 内容（可能时间线为空）。\n"
+                f"提示：工具返回：{json.dumps(read.data, ensure_ascii=False)[:300]}"
+            )
 
         if callback:
             callback(40, "调用 LLM 按指令编辑 timeline.md…")
         from backend.steps.s_agi_comic import _llm
 
         system = (
-            "你是视频剪辑师，下面是剪辑台时间线的 timeline.md（分段 id 编码的 Markdown）。"
-            "按用户指令编辑后，原样返回完整的 timeline.md（不要解释、不要代码块包裹）。"
-            "编辑语法：删除词用 ~~词~~；可整段删除、调整顺序、合并；不要改动除内容以外的结构。"
+            "你是视频剪辑师。下面是剪辑台导出的 timeline.md（行 id 编码的时间线）。\n"
+            "只允许三类改动：\n"
+            "1) 删词：把要删的词用 ~~ 包住，如 这段~~这个词~~保留；\n"
+            "2) 整行删除：整行用 ~~ 包住，如 ~~[s7] 整行内容~~；\n"
+            "3) 调整顺序：直接移动行（行的先后 = 播放顺序）。\n"
+            "严格禁止：新增行、修改 [sN]/[cN]/[gap Nf]/[silence=..] 编号、加注释或说明行"
+            "（例如 [zoom] 1:1 这类行一律非法）、改写口播文字、代码块包裹、任何解释文字。\n"
+            "只输出编辑后的完整 timeline.md 正文。"
         )
-        prompt = f"【剪辑指令】\n{instruction}\n\n【当前 timeline.md】\n{timeline_md}"
-        step_check_cancel(cancel_callback)
-        resp = _llm(self.step_id, prompt, system=system, json_mode=False)
-        edited = _text_of(resp)
+
+        def _edit_once(extra: str = "") -> str:
+            prompt = f"【剪辑指令】\n{instruction}\n\n【当前 timeline.md】\n{timeline_md}"
+            if extra:
+                prompt += f"\n\n【上次输出的问题，请修正】\n{extra}"
+            step_check_cancel(cancel_callback)
+            raw = _text_of(_llm(self.step_id, prompt, system=system, json_mode=False))
+            if not raw.strip():
+                return ""
+            if "```" in raw:  # 去掉可能的代码块包裹
+                raw = raw.replace("```markdown", "").replace("```", "").strip()
+            return raw
+
+        edited = _edit_once()
         if not edited.strip():
             raise RuntimeError("LLM 未返回编辑后的 timeline.md")
-        if "```" in edited:  # 去掉可能的代码块包裹
-            edited = edited.replace("```markdown", "").replace("```", "").strip()
+        edited, issues, missing = _sanitize_timeline_md(edited, timeline_md)
+        if issues and callback:
+            callback(60, issues[0])
+        if missing:
+            # 丢了原有行 = 结构被改坏（按语法会被当成删除），让模型修正一次
+            if callback:
+                callback(62, "编辑结果丢失原有行，交给模型修正一次…")
+            repaired = _edit_once(
+                "\n".join(issues)
+                + "\n若确实要删整行，请写成 ~~[sN] 原文~~ 保留在原位，不要直接消失；"
+                "其它行、轨道小节与编号一律保持原样。"
+            )
+            if repaired.strip():
+                candidate, cand_issues, cand_missing = _sanitize_timeline_md(repaired, timeline_md)
+                if len(cand_missing) < len(missing):
+                    edited, issues, missing = candidate, cand_issues, cand_missing
+        if missing:
+            raise RuntimeError(
+                "AI 返回的 timeline.md 丢失了原有行（结构被改坏），已中止以免误删素材："
+                f"{'、'.join(sorted(missing)[:8])}\n"
+                "提示：把指令写具体些（例如「删掉第 3 段开头那句」），或改用「剪辑编排」节点用 ops 精确控制"
+            )
+        if issues and callback:
+            callback(65, issues[0])
 
         if callback:
             callback(70, "预校验编辑结果（preview，不落盘）…")
@@ -790,8 +1068,23 @@ class S_DeskAiCut(BaseStep):
             project=project, data_dir=data_dir, timeout=timeout,
         )
         if not preview.ok:
+            # 二次自修复：把剪辑台的报错喂回去，让模型只改错处
+            if callback:
+                callback(75, f"预校验失败，交给模型修正一次：{preview.message[:60]}…")
+            repaired = _edit_once(f"剪辑台校验报错：{preview.message}")
+            if repaired.strip():
+                candidate, cand_issues, cand_missing = _sanitize_timeline_md(repaired, timeline_md)
+                if not cand_missing:
+                    edited = candidate
+                    preview = occ.call_tool(
+                        "apply_script",
+                        {"timelineMd": edited, "preview": True},
+                        project=project, data_dir=data_dir, timeout=timeout,
+                    )
+        if not preview.ok:
             raise RuntimeError(
-                f"编辑结果校验失败（未写入）：{preview.message}\n提示：保持 [sN] 行结构与轨道小节，仅改文字内容"
+                f"编辑结果校验失败（未写入）：{preview.message}\n"
+                "提示：保持 [sN] 行结构与轨道/素材小节不变，只改文字；非法行（如 [zoom] 1:1）需删除"
             )
 
         if dry_run:

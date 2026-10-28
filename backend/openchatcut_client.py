@@ -244,6 +244,35 @@ def list_tools(headless_only: bool = False, data_dir: str = "") -> OccResult:
     return run_occ(args, data_dir=data_dir)
 
 
+def unwrap_tool_result(data: Any) -> Any:
+    """从 ``occ --json`` 信封里取出工具自身的结果。
+
+    ``occ tools call <tool> --json`` 打印的是信封::
+
+        {"projectId": "...", "applied": true,
+         "ops": [{"tool": "import_asset", "result": {工具返回值}}],
+         "terminal": {...}}
+
+    工具返回值在 ``ops[*].result``；这里把它取出来，让调用方直接面对
+    工具语义（如 ``imported`` / ``timeline`` / ``results``）。
+    非信封结构（``occ project new`` 这类直接输出 JSON 的命令）原样返回。
+    """
+    if not isinstance(data, dict):
+        return data
+    ops = data.get("ops")
+    if not isinstance(ops, list) or not ops:
+        return data
+    results = [op.get("result") for op in ops if isinstance(op, dict) and "result" in op]
+    if not results:
+        return data
+    if len(results) == 1:
+        only = results[0]
+        if isinstance(only, (dict, list)):
+            return only
+        return {"result": only}
+    return {"results": results}
+
+
 def call_tool(
     tool: str,
     args: dict | None = None,
@@ -256,9 +285,13 @@ def call_tool(
     """调用单个剪辑台工具（``occ tools call <tool> --args '<json>'``）。
 
     dry-run（``apply=False``）时不加 ``--apply``，工具只做校验/预览。
+
+    返回的 ``data`` 是**工具自身的结果**（已剥掉 ``occ --json`` 信封）。
     """
     cmd_args = ["tools", "call", str(tool), "--args", json.dumps(args or {}, ensure_ascii=False)]
-    return run_occ(cmd_args, project=project, data_dir=data_dir, apply=apply, timeout=timeout)
+    result = run_occ(cmd_args, project=project, data_dir=data_dir, apply=apply, timeout=timeout)
+    result.data = unwrap_tool_result(result.data)
+    return result
 
 
 # --------------------------------------------------------------------------- #
