@@ -13980,7 +13980,7 @@ export const FALLBACK_NODE_TYPES = [
     "id": "desk_export",
     "name": "剪辑台渲染导出",
     "category": "ai_desk",
-    "description": "AI剪辑链·第4步【出片】：把剪辑台工程渲染为成片（occ render，无头出 MP4/WebM/MOV），或导出剪映/CapCut 草稿交给剪映精修；可选把成片登记为创作项目资产。上游：project（串接前面各步）。下游：render 端口 → 归档/发布类节点",
+    "description": "AI剪辑链·第4步【出片】：把剪辑台工程渲染为成片（occ render，无头出 MP4/WebM/MOV），或导出剪映/CapCut 草稿交给剪映精修。上游：project（串接前面各步）。下游：video 端口 → 归档/发布类节点；draft 端口 → 剪映草稿目录",
     "icon": "FileVideo",
     "color": "#0ea5e9",
     "execution_domain": "process",
@@ -13989,33 +13989,23 @@ export const FALLBACK_NODE_TYPES = [
         "id": "project",
         "label": "剪辑台项目ID",
         "type": "any"
-      },
-      {
-        "id": "creation_id",
-        "label": "创作项目ID(回登资产)",
-        "type": "any"
-      },
-      {
-        "id": "chapter_id",
-        "label": "章节ID(回登资产)",
-        "type": "any"
       }
     ],
     "outputs": [
       {
         "id": "project",
-        "label": "剪辑台项目ID",
+        "label": "剪辑项目ID",
         "type": "text"
       },
       {
-        "id": "mode",
-        "label": "导出模式",
-        "type": "text"
-      },
-      {
-        "id": "render",
-        "label": "成片/草稿",
+        "id": "video",
+        "label": "导出成片",
         "type": "video"
+      },
+      {
+        "id": "draft",
+        "label": "剪映草稿",
+        "type": "any"
       },
       {
         "id": "plan",
@@ -14034,9 +14024,7 @@ export const FALLBACK_NODE_TYPES = [
       "dry_run": true,
       "use_task_output_dir": false,
       "data_dir": "",
-      "timeout": 1800,
-      "creation_id": "",
-      "chapter_id": ""
+      "timeout": 1800
     },
     "configFields": [
       {
@@ -14061,18 +14049,18 @@ export const FALLBACK_NODE_TYPES = [
             "label": "渲染成片（occ render）"
           },
           {
-            "value": "jiangying",
+            "value": "jianying",
             "label": "剪映草稿（occ export jianying）"
           }
         ],
-        "description": "渲染成片：无头出 MP4；剪映草稿：导出到剪映/CapCut 精修"
+        "description": "渲染成片 → 填充「导出成片」端口；剪映草稿 → 填充「剪映草稿」端口，输出按模式自动匹配"
       },
       {
         "key": "dry_run",
         "label": "仅演练（不落盘）",
         "type": "switch",
         "colSpan": "half",
-        "description": "开启时只输出渲染计划，不写文件也不登记资产；确认无误后关闭再跑一次正式出片"
+        "description": "开启时只输出渲染计划，不写文件；确认无误后关闭再跑一次正式出片"
       },
       {
         "key": "out_name",
@@ -14126,28 +14114,6 @@ export const FALLBACK_NODE_TYPES = [
         "colSpan": "full",
         "placeholder": "仅 jianying 模式；留空用项目名",
         "description": "仅导出剪映草稿模式生效"
-      },
-      {
-        "key": "creation_id",
-        "label": "回登创作项目",
-        "type": "api-select",
-        "apiEndpoint": "/api/creation/list",
-        "optionLabel": "name",
-        "optionValue": "id",
-        "followPort": "creation_id",
-        "colSpan": "half",
-        "description": "可选：把成片登记为该创作项目的 chapter_render 资产；手动输入优先，未填时取连线值"
-      },
-      {
-        "key": "chapter_id",
-        "label": "回登章节",
-        "type": "api-select",
-        "apiEndpoint": "/api/creation/{creation_id}/chapters",
-        "optionLabel": "title",
-        "optionValue": "id",
-        "followPort": "chapter_id",
-        "colSpan": "half",
-        "description": "可选：资产挂到该章节下；手动输入优先，未填时取连线值"
       },
       {
         "key": "use_task_output_dir",

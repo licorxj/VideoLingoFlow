@@ -1,6 +1,6 @@
 # VideoLingo 节点目录（Node Catalog）
 
-> 自动生成时间：2026-10-26 02:38:27  
+> 自动生成时间：2026-10-29 09:16:40  
 > 节点总数：191　（带 `*` 的接口为必填项）
 
 ## 总览
@@ -269,7 +269,7 @@
 | 节点 | ID | 描述 | 执行域 | 输入接口 | 输出接口 |
 |------|----|------|-------|---------|---------|
 | AI剪辑 | `desk_ai_cut` | AI剪辑链·AI 语义剪辑：读取时间线 timeline.md → LLM 按自然语言指令编辑 → 预校验 → 原子提交。与「剪辑编排」互补：编排节点精确控制每一步工具调用，本节点面向「一句话说清要什么改动」的语义剪辑。上游：project（新建工程/素材导入/编排）。下游：project →「剪辑台渲染导出」或继续「剪辑编排」 | process | 剪辑台项目ID(`project`:any); AI剪辑指令(可选)(`instruction`:text) | 剪辑台项目ID(`project`:text); 执行结果(JSON)(`result`:json); 执行摘要(`plan`:text) |
-| 剪辑台渲染导出 | `desk_export` | AI剪辑链·第4步【出片】：把剪辑台工程渲染为成片（occ render，无头出 MP4/WebM/MOV），或导出剪映/CapCut 草稿交给剪映精修；可选把成片登记为创作项目资产。上游：project（串接前面各步）。下游：render 端口 → 归档/发布类节点 | process | 剪辑台项目ID(`project`:any); 创作项目ID(回登资产)(`creation_id`:any); 章节ID(回登资产)(`chapter_id`:any) | 剪辑台项目ID(`project`:text); 导出模式(`mode`:text); 成片/草稿(`render`:video); 演练计划(dry-run)(`plan`:text) |
+| 剪辑台渲染导出 | `desk_export` | AI剪辑链·第4步【出片】：把剪辑台工程渲染为成片（occ render，无头出 MP4/WebM/MOV），或导出剪映/CapCut 草稿交给剪映精修。上游：project（串接前面各步）。下游：video 端口 → 归档/发布类节点；draft 端口 → 剪映草稿目录 | process | 剪辑台项目ID(`project`:any) | 剪辑项目ID(`project`:text); 导出成片(`video`:video); 剪映草稿(`draft`:any); 演练计划(dry-run)(`plan`:text) |
 | 剪辑编排 | `desk_edit` | AI剪辑链·第3步【编排】：按序批量调用剪辑台工具（读时间线/找片段/改时序/分镜/加特效/字幕/水印/模板/标记/画布比例等），用可视化编辑器逐条选择工具并填参数，精确控制每一步。语义化「一句话剪辑」请用旁边的「AI剪辑」节点。上游：project + 上游 asset_ids/clip_ids。下游：project →「剪辑台渲染导出」或「AI剪辑」 | process | 剪辑台项目ID(`project`:any); 素材ID列表(可选)(`asset_ids`:json); 片段ID列表(可选)(`clip_ids`:json); 工具调用ops(可选)(`ops`:json) | 剪辑台项目ID(`project`:text); 执行结果(JSON)(`result`:json); 最后一步结果(`last`:json); 执行摘要(`plan`:text) |
 | 图片素材导入 | `desk_material_image` | AI剪辑链·第2步【素材进场】：把图片素材导入剪辑台媒体池并放到目标视频轨，可设置每张图片的时长与缩放比例。三种来源任选：单个文件、整个目录、JSON 素材包（自动识别迭代对象，每项取 id/path/type/说明）。上游：project + 单个文件/目录/JSON素材包 端口。下游：asset_ids / clip_ids / project 端口 →「剪辑编排」 | process | 剪辑台项目ID(`project`:any); 单个图片文件(`path`:filepath); 多个图片文件(`paths`:json); 图片目录(`folder`:text); JSON素材包(`json_pack`:json); 已入库素材ID(可选)(`asset_ids`:json) | 剪辑台项目ID(`project`:text); 素材ID列表(`asset_ids`:json); 片段ID列表(`clip_ids`:json); 执行摘要(`plan`:text) |
 | 新建剪辑工程 | `desk_project` | AI剪辑链·第1步【新建工程】：在剪辑台里新建一个工程（occ project new），输出新项目 ID 供下游节点串联；不依赖已有项目。上游：可选连入 name（工程名）；连入「主轨视频」时自动把该视频导入媒体池并放到主视频轨 V1。下游：project 端口 →「剪辑素材导入」等所有剪辑台节点 | process | 任意输入(`name`:any); 主轨视频(`video`:video) | 剪辑台项目ID(`project`:text); 工程名称(`name`:text); 执行摘要(`plan`:text) |

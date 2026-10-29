@@ -271,9 +271,7 @@
           "draft_name": "",
           "dry_run": true,
           "data_dir": "",
-          "timeout": 1800,
-          "creation_id": "",
-          "chapter_id": ""
+          "timeout": 1800
         },
         "status": "pending",
         "disableExecute": true

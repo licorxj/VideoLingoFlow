@@ -1214,7 +1214,7 @@ class S_DeskExport(BaseStep):
                 callback(100, "演练完成：未写入任何文件（关闭 dry_run 后才会出片）")
             return {
                 "artifacts": [cache],
-                "outputs": {"project": project, "mode": mode, "render": "", "plan": plan},
+                "outputs": {"project": project, "video": "", "draft": "", "plan": plan},
             }
 
         produced = ""
@@ -1229,33 +1229,16 @@ class S_DeskExport(BaseStep):
             else:
                 raise RuntimeError(f"剪映草稿目录为空：{out_file}（CLI 输出：{result.message or result.tail(10)}）")
 
-        creation_id = _first(cfg, inp, "creation_id")
-        chapter_id = _first(cfg, inp, "chapter_id")
-        if creation_id:
-            try:
-                duration = 0.0
-                if mode == "render":
-                    try:
-                        from backend.utils.audio_processor import get_video_duration
-
-                        duration = get_video_duration(produced) or 0.0
-                    except Exception:  # noqa: BLE001
-                        duration = 0.0
-                from backend import creation as agi
-
-                agi.register_asset(
-                    creation_id, "chapter_render",
-                    chapter_id=chapter_id or None,
-                    paths_list=[produced], duration_seconds=duration,
-                )
-            except Exception as exc:  # noqa: BLE001
-                if callback:
-                    callback(95, f"资产登记失败（产物已生成）：{exc}")
-
         cache = _write_cache(task_dir, nid, _PREFIX, {"project": project, "mode": mode, "dry_run": False, "output": produced})
         if callback:
             callback(100, "剪辑台导出完成")
+        # 输出按导出模式自动匹配：render → 导出成片；jianying → 剪映草稿
         return {
             "artifacts": [cache, produced],
-            "outputs": {"project": project, "mode": mode, "render": produced, "plan": ""},
+            "outputs": {
+                "project": project,
+                "video": produced if mode == "render" else "",
+                "draft": produced if mode != "render" else "",
+                "plan": "",
+            },
         }
