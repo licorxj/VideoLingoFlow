@@ -1,0 +1,422 @@
+{
+  "id": "e3b9d26951fb",
+  "name": "未命名工作流",
+  "description": "",
+  "nodes": [
+    {
+      "id": "node_1_1793143571143",
+      "type": "workflow",
+      "position": {
+        "x": 540,
+        "y": 195
+      },
+      "data": {
+        "nodeType": "input",
+        "label": "输入",
+        "config": {
+          "selectedTypes": [
+            "video"
+          ],
+          "videoPath": "X:/PCTMoveData/Videos/e3673ec52d5a1af20037eb0a06d0ecdd.mp4",
+          "audioPath": "",
+          "subtitlePath": "",
+          "url": "",
+          "filePath": "",
+          "text": "",
+          "source_language": "auto",
+          "target_language": "zh",
+          "copyInputs": true,
+          "var1": "",
+          "var1Required": false,
+          "var2": "",
+          "var2Required": false
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "Y:\\VideoLingoLc\\control_plane_workspaces\\dd9d6b1e416d4faab4553753e588854c\\cache\\input_video.mp4",
+          "languages": {
+            "source_language": "auto",
+            "target_language": "zh"
+          },
+          "no_input": ""
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 503
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_2_1793143627054",
+      "type": "workflow",
+      "position": {
+        "x": 1155,
+        "y": 300
+      },
+      "data": {
+        "nodeType": "video_region_crop",
+        "label": "视频截取区域",
+        "config": {
+          "crop_size": "custom",
+          "crop_width": 600,
+          "crop_height": 800,
+          "crop_position": "center",
+          "start_time": 0,
+          "end_mode": "countdown",
+          "end_time": "",
+          "end_countdown": 0
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "cache\\video_region_crop_node_2_1793143627054.mp4",
+          "json": "cache\\video_region_crop_node_2_1793143627054.json"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 530
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle",
+      "dragging": false
+    },
+    {
+      "id": "node_3_1793143682284",
+      "type": "workflow",
+      "position": {
+        "x": 1695,
+        "y": 420
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "video": "cache\\video_region_crop_node_2_1793143627054.mp4"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 536
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1793143816932",
+      "type": "workflow",
+      "position": {
+        "x": 2355,
+        "y": 465
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "archive_artifacts",
+        "label": "产物文件归档",
+        "config": {
+          "operation": "copy",
+          "targetType": "custom",
+          "customPath": "X:\\PCTMoveData\\Videos\\视频测试",
+          "useSubfolder": false,
+          "subfolderNaming": "by_name",
+          "renameEnabled": false,
+          "renameMode": "seq",
+          "prefix": "",
+          "suffix": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "output": "X:\\PCTMoveData\\Videos\\视频测试"
+        },
+        "error": "",
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 400
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_3_1793155893775",
+      "type": "workflow",
+      "position": {
+        "x": 2640,
+        "y": 1215
+      },
+      "data": {
+        "nodeType": "desk_project",
+        "label": "新建剪辑工程",
+        "config": {
+          "name": "缩放视频",
+          "size": "1080x1080",
+          "fps": "",
+          "use_task_output_dir": false,
+          "data_dir": ""
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "project": "00e54958-3f35-4f4f-820e-1d54b0f44406",
+          "name": "缩放视频",
+          "plan": "occ project new 缩放视频 → 00e54958-3f35-4f4f-820e-1d54b0f44406；主轨视频 video_region_crop_node_2_1793143627054.mp4 → V1 clip=['item_2c8f5a23-a7bd-4e93-93c5-d6901721c84a']"
+        },
+        "error": "",
+        "logLines": [
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\dd9d6b1e416d4faab4553753e588854c, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] start node_type=desk_project node_id=node_3_1793155893775 pid=27152",
+          "[step_worker] step instance created: S_DeskProject",
+          "[step_worker] step_inputs keys=['video']",
+          "[step_worker] node_config keys=['name', 'size', 'fps', 'use_task_output_dir', 'data_dir']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\dd9d6b1e416d4faab4553753e588854c, kwargs=['callback', 'cancel_callback'])",
+          "[step_worker] step.run returned, result keys=['artifacts', 'outputs']",
+          "[step_worker] result written to Y:\\VideoLingoLc\\control_plane_workspaces\\dd9d6b1e416d4faab4553753e588854c\\cache\\.step_node_3_1793155893775_result.json, exiting 0"
+        ],
+        "workbench_url": ""
+      },
+      "measured": {
+        "width": 420,
+        "height": 536
+      },
+      "selected": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_4_1793155903204",
+      "type": "workflow",
+      "position": {
+        "x": 3270,
+        "y": 1230
+      },
+      "data": {
+        "nodeType": "desk_ai_cut",
+        "label": "AI剪辑",
+        "config": {
+          "project": "",
+          "instruction": "把视频缩放成1:1",
+          "dry_run": true,
+          "use_task_output_dir": false,
+          "data_dir": "",
+          "timeout": 1800
+        },
+        "status": "completed",
+        "disableExecute": false,
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "project": "00e54958-3f35-4f4f-820e-1d54b0f44406",
+          "result": "{\"ok\": true, \"preview\": true, \"wouldRemove\": [], \"wouldChange\": []}",
+          "plan": "read_script → llm edit → apply_script(preview)"
+        },
+        "error": "节点子进程异常退出(code=1): e \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 154, in <module>\n    sys.exit(main(sys.argv))\n             ^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\control_plane\\step_worker.py\", line 144, in main\n    result = step.run(task_dir, **run_kwargs)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"Y:\\VideoLingoLc\\backend\\steps\\s_agi_desk.py\", line 961, in run\n    raise RuntimeError(\nRuntimeError: 编辑结果校验失败（未写入）：timeline.md 第 8 行: 无法识别的行: \"[zoom] 1:1\"\n提示：保持 [s",
+        "workbench_url": "",
+        "duration": 99.92,
+        "logLines": [
+          "[step_worker] start node_type=desk_ai_cut node_id=node_4_1793155903204 pid=58792",
+          "[step_worker] step instance created: S_DeskAiCut",
+          "[step_worker] step_inputs keys=['project']",
+          "[step_worker] node_config keys=['project', 'instruction', 'dry_run', 'use_task_output_dir', 'data_dir', 'timeout']",
+          "[step_worker] calling step.run(task_dir=Y:\\VideoLingoLc\\control_plane_workspaces\\dd9d6b1e416d4faab4553753e588854c, kwargs=['callback', 'cancel_callback'])",
+          "[LLM] direct (step=desk_ai_cut, strategy=vlf-01, stream=False, response_json=False, timeout=300s, prompt_chars=297)",
+          "[LLM] direct ok (step=desk_ai_cut, elapsed=19.4s)"
+        ]
+      },
+      "measured": {
+        "width": 420,
+        "height": 590
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_5_1793156315878",
+      "type": "workflow",
+      "position": {
+        "x": 3840,
+        "y": 1140
+      },
+      "data": {
+        "nodeType": "desk_export",
+        "label": "剪辑台渲染导出",
+        "config": {
+          "project": "",
+          "mode": "render",
+          "out_name": "",
+          "resolution": "",
+          "fps": "",
+          "codec": "",
+          "draft_name": "",
+          "dry_run": true,
+          "use_task_output_dir": false,
+          "data_dir": "",
+          "timeout": 1800,
+          "creation_id": "",
+          "chapter_id": ""
+        },
+        "status": "completed",
+        "progress": 100,
+        "message": "Completed",
+        "outputs": {
+          "project": "00e54958-3f35-4f4f-820e-1d54b0f44406",
+          "mode": "render",
+          "render": "",
+          "plan": "{\n  \"projectId\": \"00e54958-3f35-4f4f-820e-1d54b0f44406\",\n  \"timelineId\": \"tl_b0e67fb8-c4d4-4837-93b4-5db03235fa27\",\n  \"output\": \"Y:\\\\VideoLingoLc\\\\control_plane_workspaces\\\\dd9d6b1e416d4faab4553753e588854c\\\\output\\\\desk_render_node_5_1793156315878.mp4\",\n  \"codec\": \"h264\",\n  \"extension\": \"mp4\",\n  \"scale\": 1,\n  \"frameRange\": null,\n  \"totalFrames\": 564,\n  \"durationSeconds\": 18.8,\n  \"filename\": \"export.mp4\"\n}"
+        },
+        "error": "",
+        "disableExecute": false,
+        "workbench_url": "",
+        "duration": 58.88
+      },
+      "measured": {
+        "width": 420,
+        "height": 842
+      },
+      "selected": false,
+      "dragging": false,
+      "dragHandle": ".wf-node-drag-handle"
+    },
+    {
+      "id": "node_1_1793233973007",
+      "type": "workflow",
+      "position": {
+        "x": 4380,
+        "y": 1485
+      },
+      "selected": false,
+      "data": {
+        "nodeType": "video_preview",
+        "label": "视频预览器",
+        "config": {
+          "title": "",
+          "fontSize": 12,
+          "fontFamily": "sans-serif",
+          "fontColor": "#ffffff",
+          "backgroundColor": "rgba(0,0,0,0.6)",
+          "subtitlePosition": "bottom"
+        },
+        "status": "pending",
+        "disableExecute": false
+      },
+      "measured": {
+        "width": 420,
+        "height": 207
+      },
+      "dragHandle": ".wf-node-drag-handle"
+    }
+  ],
+  "edges": [
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_1_1793143571143",
+      "sourceHandle": "out-video",
+      "target": "node_2_1793143627054",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_1_1793143571143out-video-node_2_1793143627054in-video"
+    },
+    {
+      "source": "node_2_1793143627054",
+      "sourceHandle": "out-video",
+      "target": "node_3_1793143682284",
+      "targetHandle": "in-video",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_2_1793143627054out-video-node_3_1793143682284in-video"
+    },
+    {
+      "source": "node_3_1793143682284",
+      "sourceHandle": "out-video",
+      "target": "node_4_1793143816932",
+      "targetHandle": "in-any",
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "id": "xy-edge__node_3_1793143682284out-video-node_4_1793143816932in-any"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#3b82f6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1793143682284",
+      "sourceHandle": "out-video",
+      "target": "node_3_1793155893775",
+      "targetHandle": "in-video",
+      "id": "xy-edge__node_3_1793143682284out-video-node_3_1793155893775in-video"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_3_1793155893775",
+      "sourceHandle": "out-project",
+      "target": "node_4_1793155903204",
+      "targetHandle": "in-project",
+      "id": "xy-edge__node_3_1793155893775out-project-node_4_1793155903204in-project"
+    },
+    {
+      "type": "bezier",
+      "style": {
+        "stroke": "#8b5cf6",
+        "strokeWidth": 2,
+        "strokeDasharray": "6 3"
+      },
+      "source": "node_4_1793155903204",
+      "sourceHandle": "out-project",
+      "target": "node_5_1793156315878",
+      "targetHandle": "in-project",
+      "id": "xy-edge__node_4_1793155903204out-project-node_5_1793156315878in-project"
+    }
+  ],
+  "type": "user",
+  "createdAt": "2026-10-28T07:27:50",
+  "updatedAt": "2026-10-29T08:40:04",
+  "revision": 12
+}

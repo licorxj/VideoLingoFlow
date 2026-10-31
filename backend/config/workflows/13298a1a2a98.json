@@ -32,7 +32,7 @@
           "var2Required": false
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -47,7 +47,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 500
+        "height": 503
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -79,7 +79,7 @@
           "clean_cache": true
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -90,7 +90,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 531
+        "height": 506
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -116,7 +116,7 @@
           "tilt_threshold_deg": 8
         },
         "status": "completed",
-        "disableExecute": false,
+        "disableExecute": true,
         "progress": 100,
         "message": "Completed",
         "outputs": {
@@ -126,7 +126,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 389
+        "height": 335
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -155,7 +155,7 @@
         "message": "",
         "outputs": {},
         "error": "",
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
@@ -188,11 +188,11 @@
         },
         "error": "",
         "duration": 0.08,
-        "disableExecute": false
+        "disableExecute": true
       },
       "measured": {
         "width": 420,
-        "height": 299
+        "height": 302
       },
       "dragging": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -280,6 +280,6 @@
   ],
   "type": "user",
   "createdAt": "2026-10-23T03:02:24",
-  "updatedAt": "2026-10-23T03:16:24",
-  "revision": 7
+  "updatedAt": "2026-10-29T08:32:27",
+  "revision": 8
 }

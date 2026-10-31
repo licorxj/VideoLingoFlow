@@ -373,7 +373,10 @@ export default function WorkflowEditor({ workflowId, taskId, onExecute }: Props)
   // 本轮执行结束的状态：终态之外还包含局部执行（单节点 / 往后执行）收尾时的「等待继续」。
   // 这类任务实际只跑了部分节点，任务状态停在 paused/interrupted，若不算本轮结束，
   // 前端会一直保持「执行中」并持续轮询。
-  const RUN_END_TASK_STATUSES = [...TERMINAL_TASK_STATUSES, "paused", "interrupted"];
+  // created（已初始化未投递）也不算执行中：固定调试任务由 debug_init 创建后永远停在
+  // created，直到下一次显式提交才转 queued；若不把 created 视为结束，加载工作流时
+  // /status 恢复逻辑会把从未运行过的调试任务误判为「运行中」，禁用执行按钮。
+  const RUN_END_TASK_STATUSES = [...TERMINAL_TASK_STATUSES, "paused", "interrupted", "created"];
   const [nodes, setNodes, onNodesChange] = useNodesState<any>(store.nodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>(store.edges);
 
