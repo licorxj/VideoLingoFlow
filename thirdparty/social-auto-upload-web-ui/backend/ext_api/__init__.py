@@ -21,6 +21,7 @@ from .task_queue import get_task_queue, PublishTask, TaskStatus
 from ._personalized import compute_personalized
 from services.draft_merge import (
     merge_config, validate_draft_for_publish, build_platform_kwargs,
+    _get_account_default_config,
 )
 
 ext_api = Blueprint('ext_api', __name__, url_prefix='/api/v2')
@@ -1362,6 +1363,11 @@ def batch_publish_drafts():
 
                     account_platform = PLATFORM_ID_TO_KEY.get(acc_row['type'], '')
                     platform_default = platform_configs.get(account_platform) or {}
+                    # 合并账号默认发布配置(账号管理页「默认配置」):作为账号级默认值,
+                    # 高于平台默认、低于本次发布的平台覆写/账号个性化;MCP 不传这些参数时自动套用
+                    account_default = _get_account_default_config(acc_row['id'])
+                    if account_default:
+                        platform_default = {**platform_default, **account_default}
                     account_ov = account_overrides.get(str(account_id)) or {}
 
                     platform_overrides = draft_data.get('platformOverrides') or {}
@@ -1587,6 +1593,11 @@ def videos_batch_publish():
 
                 account_platform = PLATFORM_ID_TO_KEY.get(acc_row['type'], '')
                 platform_default = platform_configs.get(account_platform) or {}
+                # 合并账号默认发布配置(账号管理页「默认配置」):账号级默认值,
+                # 高于平台默认、低于本次发布的平台覆写/账号个性化;MCP 不传时自动套用
+                account_default = _get_account_default_config(acc_row['id'])
+                if account_default:
+                    platform_default = {**platform_default, **account_default}
                 account_ov = account_overrides.get(str(account_id)) or {}
 
                 merged = merge_config(

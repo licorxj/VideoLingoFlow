@@ -200,11 +200,14 @@ export const PLATFORMS = {
       ] },
       // 转载联动字段:创作声明选「内容为转载」时显示,B 站要求转载必填来源
       { key: 'biliRepostSource', label: '转载来源', type: 'input', required: true, placeholder: '请输入转载来源(例:转自 https://xxx)', visibleWhen: { key: 'creationDeclaration', value: '内容为转载' } },
+      // 充电设置:开启后视频设为充电专属(需账号已开通充电计划或粉丝数≥1000,与转载互斥)
+      { key: 'biliChargingPay', label: '充电设置', type: 'switch', fullRow: true,
+        description: '开启后该视频将设为充电专属视频(仅对已开通充电计划或粉丝数≥1000的账号生效,与转载、商业推广互斥)' },
       { key: 'isOriginal', label: '原创声明', type: 'radio', options: [{ label: '原创', value: true }, { label: '非原创', value: false }] },
       { key: 'scheduleTime', label: '定时发布', type: 'datetime', placeholder: '选择时间' },
       { key: 'videoFormat', label: '视频格式', type: 'radio', options: [{ label: '横版', value: 'landscape' }, { label: '竖版', value: 'portrait' }] },
     ],
-    defaultSettings: { title: '', description: '', zone: '', creationDeclaration: '', biliRepostSource: '', isOriginal: false, scheduleTime: '', videoFormat: '' },
+    defaultSettings: { title: '', description: '', zone: '', creationDeclaration: '', biliRepostSource: '', biliChargingPay: false, isOriginal: false, scheduleTime: '', videoFormat: '' },
   },
   BAIJIAHAO: {
     id: 6,

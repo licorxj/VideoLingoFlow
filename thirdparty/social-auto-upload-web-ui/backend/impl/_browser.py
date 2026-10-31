@@ -9,11 +9,28 @@
 from __future__ import annotations
 
 import asyncio
+import os
 
-from conf import LOGIN_HEADLESS, LOCAL_CHROME_HEADLESS
+from conf import CLOAKBROWSER_BINARY_PATH, LOGIN_HEADLESS, LOCAL_CHROME_HEADLESS
 from util._logger import get_channel_logger
 
 logger = get_channel_logger("browser")
+
+
+def _apply_binary_override() -> None:
+    """把本地 cloakbrowser 路径写进环境变量,使其跳过联网下载。
+
+    cloakbrowser 的 ``ensure_binary()`` 第一步就检查 ``CLOAKBROWSER_BINARY_PATH``,
+    命中则直接用本地二进制返回、完全不走网络。用 setdefault 保证外部显式
+    设置的环境变量优先级最高。
+    """
+    if CLOAKBROWSER_BINARY_PATH:
+        os.environ.setdefault("CLOAKBROWSER_BINARY_PATH", CLOAKBROWSER_BINARY_PATH)
+        logger.info("[浏览器] 固定使用本地 CloakBrowser: %s", CLOAKBROWSER_BINARY_PATH)
+
+
+# 模块导入即生效:确保任何调用 cloakbrowser 的代码路径都能命中本地二进制
+_apply_binary_override()
 
 
 def _download_binary():
@@ -23,7 +40,15 @@ def _download_binary():
 
 
 def init():
-    """Pre-download CloakBrowser binary at startup."""
+    """启动时确保 CloakBrowser 二进制可用。
+
+    已解析到本地二进制时直接跳过联网检查(离线环境 / C 盘写满也能跑)。
+    """
+    if CLOAKBROWSER_BINARY_PATH:
+        logger.info(
+            "CloakBrowser 隐匿浏览器已就绪(本地二进制): %s", CLOAKBROWSER_BINARY_PATH
+        )
+        return
     try:
         _download_binary()
         logger.info("CloakBrowser 隐匿浏览器已就绪")

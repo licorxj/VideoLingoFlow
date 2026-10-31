@@ -482,6 +482,7 @@ class BilibiliPlatform(BasePlatform):
         - ``thumbnail_portrait_path`` (*str*, optional) -- portrait cover
         - ``schedule_time_str`` (*str*, optional)
         - ``creation_declaration`` (*str*, optional)
+        - ``bili_charging_pay`` (*bool*, optional) -- 开启充电(设为充电专属视频)
         """
 
         async def _run():
@@ -516,6 +517,9 @@ class BilibiliPlatform(BasePlatform):
             logger.info("[发布参数] B 站转载来源: %r", bili_repost_source or "(空)")
             # B 站合集(账号级)
             bili_collection_name = kwargs.get("bili_collection_name", "")
+            # 充电设置:True = 开启「设为充电专属视频」开关(需账号已开通充电计划或粉丝数 >= 1000)
+            bili_charging_pay = bool(kwargs.get("bili_charging_pay", False))
+            logger.info("[发布参数] 充电设置(设为充电专属视频): %s", bili_charging_pay)
             # 是否保留 B 站系统生成的标签(False = 填自己标签前先清空标签栏)
             bili_keep_system_tags = bool(kwargs.get("bili_keep_system_tags", True))
 
@@ -579,6 +583,7 @@ class BilibiliPlatform(BasePlatform):
                             bili_collection_name=bili_collection_name,
                             bili_repost_source=bili_repost_source,
                             bili_keep_system_tags=bili_keep_system_tags,
+                            bili_charging_pay=bili_charging_pay,
                         )
 
             logger.info("=" * 60)
@@ -606,6 +611,7 @@ class BilibiliPlatform(BasePlatform):
         bili_collection_name: str = "",
         bili_repost_source: str = "",
         bili_keep_system_tags: bool = True,
+        bili_charging_pay: bool = False,
     ):
         """Upload a single video to Bilibili using CloakBrowser."""
         log_dir = Path(BASE_DIR / "logs")
@@ -680,6 +686,15 @@ class BilibiliPlatform(BasePlatform):
                 # 创作声明=转载 时, 选完后会展开转载来源输入框, 一并填入
                 await self._set_creation_declaration(page, creation_declaration, bili_repost_source)
 
+                # 8.5 充电设置(设为充电专属视频)
+                # 互斥:B 站充电专属视频不支持转载稿件,开启充电时跳过并告警
+                if bili_charging_pay and creation_declaration == "内容为转载":
+                    logger.warning(
+                        "[充电设置] 充电专属视频不支持转载稿件(创作声明=内容为转载),已跳过充电设置"
+                    )
+                elif bili_charging_pay:
+                    await self._set_charging_pay(page)
+
                 # 9. Set scheduled publish
                 if (
                     isinstance(publish_date, int)
@@ -722,6 +737,7 @@ class BilibiliPlatform(BasePlatform):
                 logger.info("[发布调试] 定时时间(publish_date): %s", publish_date)
                 logger.info("[发布调试] 发布策略(strategy): %s", publish_strategy)
                 logger.info("[发布调试] 合集(collection)  : %s", bili_collection_name or "(无)")
+                logger.info("[发布调试] 充电设置(charging) : %s", bili_charging_pay)
                 logger.info("[发布调试] ========================================")
                 logger.info("=" * 60)
 
@@ -1527,6 +1543,83 @@ class BilibiliPlatform(BasePlatform):
                 f"[上传视频] creation declaration failed (non-fatal): "
                 f"{exc}"
             )
+
+    @staticmethod
+    async def _set_charging_pay(page) -> None:
+        """开启「充电设置」开关(设为充电专属视频)。
+
+        入口在「更多设置 → 声明与权益」卡片里,仅对已开通充电计划
+        (或粉丝数 >= 1000)的账号渲染 —— 未达标账号整个卡片不出现。
+        DOM 结构(来自 B 站 videoup bundle 的 charging-pay 组件):
+
+            .charging-pay-wrapper
+              └ .charging-pay                      (已开通时渲染)
+                 └ .opt-switch
+                    └ .switch-container            (v-switch 根节点,点击切换)
+                       ├ .switch-roll
+                       └ span.opt-switch-tips      文案「设为充电专属视频」
+
+        - .switch-container-active    = 开关已打开
+        - .switch-container-disabled  = 开关被互斥规则禁用(转载/商单等)
+        - 开关打开后组件会追加 .opt-line(试看设置行),以此验证开启成功。
+        未开通充电计划的账号找不到该 DOM,跳过并告警(非致命,不影响发布)。
+        """
+        log_dir = Path(BASE_DIR / "logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+
+        logger.info("[充电设置] 开始设置充电(设为充电专属视频)")
+        try:
+            switch = page.locator(".charging-pay .opt-switch .switch-container").first
+            if await switch.count() == 0:
+                logger.warning(
+                    "[充电设置] 页面上没有充电设置入口(账号未开通充电计划"
+                    "或粉丝数不足 1000 时 B 站不渲染该设置),跳过"
+                )
+                return
+
+            # 充电设置在折叠的「更多设置」里,不可见时先展开
+            if not await switch.is_visible():
+                more = page.locator(".title .label", has_text="更多设置").first
+                try:
+                    await more.scroll_into_view_if_needed()
+                    await more.click()
+                    await asyncio.sleep(1)
+                except Exception as exc:
+                    logger.info("[充电设置] 展开「更多设置」失败: %s", exc)
+                if not await switch.is_visible():
+                    logger.warning("[充电设置] 展开后仍未找到充电开关,跳过")
+                    return
+
+            classes = (await switch.get_attribute("class")) or ""
+            if "switch-container-disabled" in classes:
+                logger.warning(
+                    "[充电设置] 充电开关当前被禁用(稿件类型互斥,如转载/商单),跳过"
+                )
+                return
+            if "switch-container-active" in classes:
+                logger.info("[充电设置] 充电开关已处于开启状态,无需操作")
+                return
+
+            await switch.scroll_into_view_if_needed()
+            await switch.click()
+            await asyncio.sleep(1)
+
+            # 验证:开关 class 变为 active,或出现 .opt-line(试看设置行)
+            classes = (await switch.get_attribute("class")) or ""
+            opt_line = page.locator(".charging-pay .opt-line").first
+            if "switch-container-active" in classes or await opt_line.count() > 0:
+                logger.info("[充电设置] 充电已开启(设为充电专属视频)")
+            else:
+                logger.warning(
+                    "[充电设置] 点击后未检测到开启状态,请检查账号充电权限"
+                    "(详见 logs/bilibili_before_submit.png)"
+                )
+                await page.screenshot(
+                    path=str(log_dir / "bilibili_charging_pay_fail.png"),
+                    full_page=True,
+                )
+        except Exception as exc:
+            logger.warning("[充电设置] 设置失败(非致命,继续发布): %s", exc)
 
     @staticmethod
     async def _set_collection(page, collection_name: str) -> None:

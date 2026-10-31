@@ -246,6 +246,14 @@
               <el-icon><Link /></el-icon>
               创作中心
             </button>
+            <button
+              class="action-btn config"
+              :title="'设置该账号的默认发布参数(合集/充电/定位等)'"
+              @click="handleOpenDefaultConfig(account)"
+            >
+              <el-icon><Setting /></el-icon>
+              默认配置
+            </button>
             <button class="action-btn delete" @click="handleDelete(account)">
               <el-icon><Delete /></el-icon>
               删除
@@ -281,6 +289,13 @@
     <BatchTagDialog
       v-model="batchTagDialogVisible"
       @done="onBatchTagDone"
+    />
+
+    <!-- 账号默认发布配置对话框(合集/充电/定位等) -->
+    <AccountDefaultConfigDialog
+      v-model="defaultConfigDialogVisible"
+      :account="defaultConfigAccount"
+      @saved="onDefaultConfigSaved"
     />
 
     <!-- 批量检查对话框（复用发布前检查的 4 阶段进度 + 失效自动重登） -->
@@ -480,7 +495,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, nextTick, h } from 'vue'
-import { Refresh, Loading, Link, Plus, Edit, Delete, Check, Folder, Key, CollectionTag, Close, Upload, SuccessFilled, CircleCheckFilled, CircleCloseFilled, Position, InfoFilled, Select, Search, Clock } from '@element-plus/icons-vue'
+import { Refresh, Loading, Link, Plus, Edit, Delete, Check, Folder, Key, CollectionTag, Close, Upload, SuccessFilled, CircleCheckFilled, CircleCloseFilled, Position, InfoFilled, Select, Search, Clock, Setting } from '@element-plus/icons-vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { accountApi } from '@/api/account'
 import { useAccountStore } from '@/stores/account'
@@ -492,6 +507,7 @@ import LoginDialog from '@/components/LoginDialog.vue'
 import TagPopover from '@/components/TagPopover.vue'
 import PrePublishCheckDialog from '@/components/PrePublishCheckDialog.vue'
 import BatchTagDialog from '@/components/BatchTagDialog.vue'
+import AccountDefaultConfigDialog from '@/components/AccountDefaultConfigDialog.vue'
 
 const accountStore = useAccountStore()
 const appStore = useAppStore()
@@ -1187,6 +1203,19 @@ const handleOpenCreatorCenter = async (row) => {
     console.error('打开创作中心失败:', error)
     ElMessage.error('打开创作中心失败')
   }
+}
+
+// 账号默认发布配置(合集/充电/定位等)
+const defaultConfigDialogVisible = ref(false)
+const defaultConfigAccount = ref(null)
+const handleOpenDefaultConfig = (row) => {
+  defaultConfigAccount.value = row
+  defaultConfigDialogVisible.value = true
+}
+const onDefaultConfigSaved = ({ id, defaultConfig }) => {
+  // 立即同步到 store,避免刷新前列表里的 defaultConfig 还是旧值
+  const acc = accountStore.accounts.find(a => a.id === id)
+  if (acc) acc.defaultConfig = defaultConfig
 }
 
 // LoginDialog 回调:登录成功后刷新账号列表(后端 sync_profile 已写库)
@@ -2022,6 +2051,12 @@ const submitAccountForm = () => {
           background: rgba($accent-cyan, 0.1);
           color: $accent-cyan;
           &:hover:not(:disabled) { background: rgba($accent-cyan, 0.2); box-shadow: 0 2px 10px rgba($accent-cyan, 0.2); }
+        }
+
+        &.config {
+          background: rgba($accent-amber, 0.1);
+          color: $accent-amber;
+          &:hover:not(:disabled) { background: rgba($accent-amber, 0.2); box-shadow: 0 2px 10px rgba($accent-amber, 0.2); }
         }
 
         &.delete {

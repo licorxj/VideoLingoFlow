@@ -7,6 +7,7 @@
 import os
 import re
 import sqlite3
+import json
 from pathlib import Path
 import sys
 
@@ -22,6 +23,30 @@ DB_PATH = BASE_DIR / "db" / "database.db"
 _HASHTAG_PATTERN = re.compile(r"(?:^|\s)#[^\s#]+", re.MULTILINE)
 DOUYIN_HASHTAG_RE = _HASHTAG_PATTERN
 XHS_HASHTAG_RE = _HASHTAG_PATTERN
+
+
+def _get_account_default_config(account_id):
+    """读取账号的默认发布配置（账号管理页「默认配置」写入的 JSON）。
+
+    返回 dict。该配置是账号级持久化默认值，发布时作为「账号默认层」合并：
+    高于平台默认、低于本次发布的平台覆写 / 账号个性化。MCP / 程序化发布不传
+    这些参数时，自动套用此配置。读取失败或为空时返回空 dict（不抛异常）。
+    """
+    try:
+        with sqlite3.connect(str(DB_PATH)) as conn:
+            conn.row_factory = sqlite3.Row
+            row = conn.execute(
+                "SELECT default_config FROM user_info WHERE id = ?", (account_id,)
+            ).fetchone()
+        if row is None:
+            return {}
+        raw = row["default_config"]
+        if not raw:
+            return {}
+        parsed = json.loads(raw)
+        return parsed if isinstance(parsed, dict) else {}
+    except Exception:
+        return {}
 
 
 def _get_account_by_id(account_id):
@@ -151,7 +176,9 @@ def merge_config(common, platform_default, platform_ov, account_ov):
         )
 
     # 布尔字段单独用 _first_bool（False 是有效值，不能用 _first_truthy 跳过）
-    for field in ['extendLink', 'vivoDistribution']:
+    # biliChargingPay: B 站充电专属视频开关(账号默认配置/MCP 发布需要,
+    #   False 也是有效显式值,必须能覆盖平台默认 True)
+    for field in ['extendLink', 'vivoDistribution', 'biliChargingPay']:
         platform_specific[field] = _first_bool(
             account_ov.get(field), platform_ov.get(field), platform_default.get(field)
         )
@@ -416,6 +443,8 @@ def build_platform_kwargs(merged, common, account):
         # B 站转载来源(创作声明=转载 时必填)
         'bili_repost_source': merged.get('biliRepostSource', '') or '',
         'bili_keep_system_tags': bool(merged.get('biliKeepSystemTags', True)),
+        # B 站充电设置(设为充电专属视频)
+        'bili_charging_pay': bool(merged.get('biliChargingPay', False)),
         'risk_warning': merged.get('riskWarning', '') or '',
         'enable_cash_activity': bool(merged.get('enableCashActivity')),
         'supplementary_declaration': merged.get('supplementaryDeclaration', '') or '',

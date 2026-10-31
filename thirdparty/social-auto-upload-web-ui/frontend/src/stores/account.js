@@ -9,8 +9,8 @@ export const useAccountStore = defineStore('account', () => {
   
   // 设置账号列表
   const setAccounts = (accountsData) => {
-    // 后端 SELECT * 列顺序:id/type/filePath/userName/status/avatar/fans/likes/follows/stats,
-    // 然后 row.append(tags) → tags 为最后一列。stats 是 JSON 字符串,需要解析。
+    // 后端 SELECT * 列顺序:id/type/filePath/userName/status/avatar/fans/likes/follows/stats/default_config,
+    // 然后 row.append(tags) → tags 为最后一列。stats 是 JSON 字符串,需要解析;default_config 为账号默认发布配置 JSON。
     accounts.value = accountsData.map(item => {
       let stats = []
       const rawStats = item[9]
@@ -18,6 +18,18 @@ export const useAccountStore = defineStore('account', () => {
         try { stats = JSON.parse(rawStats) } catch { stats = [] }
       } else if (Array.isArray(rawStats)) {
         stats = rawStats
+      }
+      // tags 始终为末尾附加列;default_config 为 tags 之前的最后一列
+      // (兼容未迁移旧库:该列不存在时容错为空对象)
+      const tags = item[item.length - 1] || []
+      let defaultConfig = {}
+      try {
+        const rawCfg = item[item.length - 2]
+        if (typeof rawCfg === 'string' && rawCfg.trim().startsWith('{')) {
+          defaultConfig = JSON.parse(rawCfg) || {}
+        }
+      } catch (e) {
+        defaultConfig = {}
       }
       return {
         id: item[0],
@@ -31,7 +43,8 @@ export const useAccountStore = defineStore('account', () => {
         likes: item[7] || 0,
         follows: item[8] || 0,
         stats,
-        tags: item[10] || item[item.length - 1] || []
+        tags,
+        defaultConfig
       }
     })
   }

@@ -31,6 +31,10 @@ def init_database():
         status INTEGER DEFAULT 0,
         avatar TEXT DEFAULT ''
     )
+    -- 注意:default_config 列不在此 CREATE 里声明,统一由 migrate_database()
+    -- 用 ALTER TABLE ADD COLUMN 追加到表末尾,以保证「新建库」与「存量库」
+    -- 的物理列顺序完全一致(id/type/filePath/userName/status/avatar/fans/likes/follows/stats/default_config),
+    -- 前端按索引解析不会错位。
     """)
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS file_records (
@@ -337,6 +341,15 @@ def migrate_database():
                 logger.info(f'[migrate] 账号 {acc_id} 的 fans/likes/follows 已迁移至 stats')
         except Exception as e:
             logger.warning(f'[migrate] fans/likes/follows → stats 数据迁移失败(可忽略): {e}')
+
+    # user_info 升级:新增 default_config 列(每个账号的默认发布配置 JSON)
+    # 结构 = 该账号平台 settingsFields 的定制子集(camelCase 键,如 {"biliChargingPay": true})
+    # 发布时(含 MCP/程序化发布)自动套用为账号级默认值,可被本次发布的账号个性化覆盖
+    cursor.execute("PRAGMA table_info(user_info)")
+    user_info_cols = [row[1] for row in cursor.fetchall()]
+    if 'default_config' not in user_info_cols:
+        cursor.execute("ALTER TABLE user_info ADD COLUMN default_config TEXT DEFAULT '{}'")
+        logger.info("已添加 user_info.default_config 列")
 
     conn.commit()
     conn.close()

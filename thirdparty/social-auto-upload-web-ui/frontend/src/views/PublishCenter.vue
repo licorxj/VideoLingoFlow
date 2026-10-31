@@ -1166,6 +1166,8 @@ function mergeConfig(common, platformDefault, platformOv, accountOv) {
     biliRepostSource: accountOv?.biliRepostSource ?? platformOv?.biliRepostSource ?? platformDefault?.biliRepostSource ?? '',
     // B 站是否保留系统生成的标签(关闭 = 发布前先清空 B 站标签栏再填自己的)
     biliKeepSystemTags: accountOv?.biliKeepSystemTags ?? platformOv?.biliKeepSystemTags ?? platformDefault?.biliKeepSystemTags ?? true,
+    // B 站充电设置(开启 = 设为充电专属视频,需账号开通充电计划或粉丝数≥1000)
+    biliChargingPay: accountOv?.biliChargingPay ?? platformOv?.biliChargingPay ?? platformDefault?.biliChargingPay ?? false,
     riskWarning: accountOv?.riskWarning ?? platformOv?.riskWarning ?? platformDefault?.riskWarning,
     enableCashActivity: accountOv?.enableCashActivity ?? platformOv?.enableCashActivity ?? platformDefault?.enableCashActivity,
     supplementaryDeclaration: accountOv?.supplementaryDeclaration ?? platformOv?.supplementaryDeclaration ?? platformDefault?.supplementaryDeclaration,
@@ -1330,7 +1332,7 @@ const DEFAULT_PLATFORM_CONFIGS = {
   douyin: { title: '', description: '', tags: [], aiContent: '', isOriginal: false, scheduleTime: '', activityId: [], hotspotId: '', hotspotData: null, selectedTag: null, tagType: '', tagValue: '', mixId: '', mixData: null },
   xiaohongshu: { title: '', description: '', aiContent: '', isOriginal: false, scheduleTime: '', tags: [], collectionId: '', collectionName: '', collectionData: null },
   kuaishou: { title: '', description: '', aiContent: '', isOriginal: false, scheduleTime: '', tags: [] },
-  bilibili: { title: '', description: '', zone: '', tags: [], creationDeclaration: '', biliRepostSource: '', biliKeepSystemTags: true, isOriginal: false, scheduleTime: '', biliCollectionName: '', biliCollectionData: null },
+  bilibili: { title: '', description: '', zone: '', tags: [], creationDeclaration: '', biliRepostSource: '', biliKeepSystemTags: true, biliChargingPay: false, isOriginal: false, scheduleTime: '', biliCollectionName: '', biliCollectionData: null },
   channels: { title: '', description: '', isOriginal: false, scheduleTime: '', tags: [], channelsCollectionName: '', channelsCollectionData: null, channelsLocationName: '', channelsLocationData: null, channelsActivityName: '', channelsActivityData: null, channelsMarkTag: '无需标注', channelsShootDate: '', channelsShootRegion: [], channelsRepostSource: '', channelsDrama: [], channelsLinkType: '', channelsLinkArticleUrl: '', channelsRedEnvelopeUrl: '' },
   baijiahao: { title: '', description: '', isOriginal: false, scheduleTime: '', tags: [] },
   tiktok: { title: '', description: '', aiContent: false, isOriginal: false, scheduleTime: '', tags: [] },
@@ -2970,6 +2972,7 @@ function collectVideoErrors(state) {
   const accountsWithoutRepostSource = []
   const accountsWithoutReprintUrl = []
   const accountsWithoutDayuRepostUrl = []
+  const accountsChargingRepostConflict = []
   const accountsWithoutTitle = []
   const accountsWithoutCover = []
   const accountsVideoInvalid = []
@@ -3018,6 +3021,11 @@ function collectVideoErrors(state) {
         }
       }
 
+      // 3a-bonus-4. B 站充电设置互斥: 充电专属视频不支持转载稿件(B 站会拦截投稿)
+      if (platformKey === 'bilibili' && merged.biliChargingPay && merged.creationDeclaration === '内容为转载') {
+        accountsChargingRepostConflict.push(`${account.name}(${group.name})`)
+      }
+
       // 3b. 标题
       if (!merged.title || !merged.title.trim()) {
         accountsWithoutTitle.push(`${account.name}(${group.name})`)
@@ -3034,6 +3042,7 @@ function collectVideoErrors(state) {
   if (accountsWithoutRepostSource.length > 0) errors.push({ type: '转载来源(B站)', accounts: accountsWithoutRepostSource })
   if (accountsWithoutReprintUrl.length > 0) errors.push({ type: '转载来源(支付宝)', accounts: accountsWithoutReprintUrl })
   if (accountsWithoutDayuRepostUrl.length > 0) errors.push({ type: '原文链接(大鱼号)', accounts: accountsWithoutDayuRepostUrl })
+  if (accountsChargingRepostConflict.length > 0) errors.push({ type: '充电设置与转载互斥(B站)', accounts: accountsChargingRepostConflict })
   if (accountsWithoutTitle.length > 0) errors.push({ type: '标题', accounts: accountsWithoutTitle })
   if (accountsWithoutCover.length > 0) errors.push({ type: '封面', accounts: accountsWithoutCover })
 

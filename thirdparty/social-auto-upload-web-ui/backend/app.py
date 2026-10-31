@@ -377,12 +377,22 @@ def updateUserinfo():
     user_id = data.get('id')
     type_ = data.get('type')
     userName = data.get('userName')
+    # 账号默认发布配置(JSON 字符串或 dict):账号管理页「默认配置」按钮写入
+    default_config = data.get('defaultConfig')
     try:
         with sqlite3.connect(str(DB_PATH)) as conn:
-            conn.execute(
-                'UPDATE user_info SET type = ?, userName = ? WHERE id = ?',
-                (type_, userName, user_id)
-            )
+            if default_config is not None:
+                if not isinstance(default_config, str):
+                    default_config = json.dumps(default_config, ensure_ascii=False)
+                conn.execute(
+                    'UPDATE user_info SET type = ?, userName = ?, default_config = ? WHERE id = ?',
+                    (type_, userName, default_config, user_id)
+                )
+            else:
+                conn.execute(
+                    'UPDATE user_info SET type = ?, userName = ? WHERE id = ?',
+                    (type_, userName, user_id)
+                )
             conn.commit()
         return jsonify({"code": 200, "msg": "account update successfully", "data": None}), 200
     except Exception as e:
@@ -951,6 +961,49 @@ def _enqueue_publish(platform, publish_kwargs, detail_id):
     return _publish_exec.submit(_job)
 
 
+def _camel_to_snake(name):
+    """camelCase → snake_case(B 站 camel 字段与老接口 snake 字段对齐)。"""
+    if not name:
+        return name
+    result = name[0].lower()
+    for ch in name[1:]:
+        if ch.isupper():
+            result += '_' + ch.lower()
+        else:
+            result += ch
+    return result
+
+
+def _inject_account_default_config(data):
+    """把账号默认发布配置注入 data 中未显式设置的字段。
+
+    账号默认配置以 camelCase 存储,这里转 snake_case 以匹配 /postVideo 的发布
+    参数命名。只对 data 中缺失或为空的 key 生效,调用方显式传入的参数优先级最高。
+    多账号请求时取第一个账号的默认配置(近似,MCP 通常为单账号发布)。
+    """
+    account_list = data.get('accountList') or []
+    if not account_list:
+        return data
+    with sqlite3.connect(str(DB_PATH)) as conn:
+        conn.row_factory = sqlite3.Row
+        for fp in account_list:
+            row = conn.execute(
+                "SELECT default_config FROM user_info WHERE filePath = ?", (fp,)
+            ).fetchone()
+            if row and row["default_config"]:
+                try:
+                    cfg = json.loads(row["default_config"]) or {}
+                except Exception:
+                    cfg = {}
+                if isinstance(cfg, dict):
+                    for k, v in cfg.items():
+                        sk = _camel_to_snake(k)
+                        if data.get(sk) in (None, ""):
+                            data[sk] = v
+                break
+    return data
+
+
 def _finish_publish_failed(task_id, detail_id, msg):
     """发布 job 失败收尾：更新任务状态 + 发布历史明细（先落库再标记终态）。"""
     if detail_id:
@@ -963,6 +1016,10 @@ def postVideo():
     data = request.get_json()
     if not data:
         return jsonify({"code": 400, "msg": "请求数据不能为空", "data": None}), 400
+
+    # 注入账号默认发布配置(账号管理页「默认配置」):camelCase→snake_case,
+    # 只对未显式传入的字段生效——满足「MCP 不改参数自动套用默认」的诉求
+    _inject_account_default_config(data)
 
     logger.info("postVideo data: tag_type=%s, tag_value=%s, hotspot=%s, mix_id=%s",
                  data.get('tag_type'), data.get('tag_value'), data.get('hotspot'), data.get('mix_id'))
@@ -1051,6 +1108,8 @@ def postVideo():
                 # B 站转载来源(创作声明=转载 时必填)
                 bili_repost_source=data.get('biliRepostSource', ''),
                 bili_keep_system_tags=bool(data.get('biliKeepSystemTags', True)),
+                # B 站充电设置(设为充电专属视频)
+                bili_charging_pay=bool(data.get('biliChargingPay', False)),
                 risk_warning=data.get('riskWarning', ''),
                 enable_cash_activity=data.get('enableCashActivity', False),
                 supplementary_declaration=data.get('supplementaryDeclaration', ''),
@@ -1218,6 +1277,8 @@ def postVideoBatch():
                 # B 站转载来源(创作声明=转载 时必填)
                 bili_repost_source=data.get('biliRepostSource', ''),
                 bili_keep_system_tags=bool(data.get('biliKeepSystemTags', True)),
+                # B 站充电设置(设为充电专属视频)
+                bili_charging_pay=bool(data.get('biliChargingPay', False)),
                     risk_warning=data.get('riskWarning', ''),
                     enable_cash_activity=data.get('enableCashActivity', False),
                     supplementary_declaration=data.get('supplementaryDeclaration', ''),
@@ -1264,6 +1325,8 @@ def postVideoBatch():
                 # B 站转载来源(创作声明=转载 时必填)
                 bili_repost_source=data.get('biliRepostSource', ''),
                 bili_keep_system_tags=bool(data.get('biliKeepSystemTags', True)),
+                # B 站充电设置(设为充电专属视频)
+                bili_charging_pay=bool(data.get('biliChargingPay', False)),
                     risk_warning=data.get('riskWarning', ''),
                     enable_cash_activity=data.get('enableCashActivity', False),
                     supplementary_declaration=data.get('supplementaryDeclaration', ''),
