@@ -69,7 +69,26 @@ async def _add_missing_columns():
 
 
 async def init_db():
+    # 显式导入模型包：确保所有表都注册到 Base.metadata。
+    # 直接调用 init_db() 的场景（scripts/init_db.py、独立脚本）若没有先导入
+    # routers，models 不会被加载，create_all 会静默建出空库。
+    from app import models  # noqa: F401
+
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _add_missing_columns()
+    # 首次安装（providers 表为空）时预置 DeepSeek 平台 / 默认模型 / 全部策略，
+    # 降低新用户学习成本；老用户库已有数据，seed_new_install() 直接返回不改动。
+    try:
+        from app.seed import seed_new_install
+
+        seeded = await seed_new_install()
+        if seeded:
+            print(
+                "[init_db] 已初始化默认配置: "
+                f"平台={seeded['provider']} 默认模型={seeded['model']} "
+                f"策略={len(seeded['strategies'])} 个"
+            )
+    except Exception as exc:  # 种子失败不应阻塞服务启动
+        print(f"[init_db] 默认配置初始化跳过: {exc}")
 
