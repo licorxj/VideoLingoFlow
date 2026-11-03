@@ -4716,12 +4716,12 @@ BUILTIN_NODE_TYPES = [
         ],
         "defaultConfig": {
             "project": "", "instruction": "",
-            "dry_run": True, "use_task_output_dir": False, "data_dir": "", "timeout": 1800,
+            "dry_run": False, "use_task_output_dir": False, "data_dir": "", "timeout": 1800,
         },
         "configFields": [
             {"key": "project", "label": "剪辑台项目", "type": "api-select", "apiEndpoint": "/api/openchatcut/projects", "optionLabel": "name", "optionValue": "id", "followPort": "project", "colSpan": "full", "description": "目标剪辑台工程；手动输入优先，未填时取连线值"},
             {"key": "instruction", "label": "AI 剪辑指令", "type": "textarea", "colSpan": "full", "placeholder": "例：删掉所有语气词，把第3段移到最前", "description": "自然语言描述要做的剪辑改动；手动输入优先，未填时取连线值"},
-            {"key": "dry_run", "label": "仅演练（不落盘）", "type": "switch", "colSpan": "full", "description": "开启时只做到预校验不提交，输出编辑差异；确认无误后关闭再正式执行"},
+            {"key": "dry_run", "label": "仅演练（不落盘）", "type": "switch", "colSpan": "full", "description": "默认关闭，编辑经预校验后直接原子提交到时间线。如需只看计划、不真正改动时间线，再勾选开启"},
             {"key": "use_task_output_dir", "label": "使用本任务文件夹", "type": "switch", "colSpan": "full", "description": "勾选后以「本任务目录/output」作为剪辑台数据目录（每次任务数据互相隔离，便于溯源与清理）；不勾选则用剪辑台默认数据目录"},
             {"key": "data_dir", "label": "剪辑台数据目录", "type": "text", "colSpan": "full", "placeholder": "留空用剪辑台默认位置"},
             {"key": "timeout", "label": "超时(秒)", "type": "number", "colSpan": "half", "min": 60, "max": 7200, "step": 60},

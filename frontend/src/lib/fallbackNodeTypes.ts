@@ -13918,7 +13918,7 @@ export const FALLBACK_NODE_TYPES = [
     "defaultConfig": {
       "project": "",
       "instruction": "",
-      "dry_run": true,
+      "dry_run": false,
       "use_task_output_dir": false,
       "data_dir": "",
       "timeout": 1800
@@ -13948,7 +13948,7 @@ export const FALLBACK_NODE_TYPES = [
         "label": "仅演练（不落盘）",
         "type": "switch",
         "colSpan": "full",
-        "description": "开启时只做到预校验不提交，输出编辑差异；确认无误后关闭再正式执行"
+        "description": "默认关闭，编辑经预校验后直接原子提交到时间线。如需只看计划、不真正改动时间线，再勾选开启"
       },
       {
         "key": "use_task_output_dir",
