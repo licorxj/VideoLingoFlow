@@ -48,7 +48,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 503
+        "height": 500
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -86,7 +86,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 530
+        "height": 531
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle",
@@ -123,7 +123,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 536
+        "height": 533
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -161,7 +161,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 400
+        "height": 399
       },
       "dragHandle": ".wf-node-drag-handle"
     },
@@ -206,7 +206,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 536
+        "height": 533
       },
       "selected": false,
       "dragHandle": ".wf-node-drag-handle"
@@ -253,7 +253,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 590
+        "height": 586
       },
       "selected": false,
       "dragging": false,
@@ -300,7 +300,7 @@
       },
       "measured": {
         "width": 420,
-        "height": 842
+        "height": 759
       },
       "selected": false,
       "dragging": false,
@@ -417,6 +417,6 @@
   ],
   "type": "user",
   "createdAt": "2026-10-28T07:27:50",
-  "updatedAt": "2026-10-29T08:40:04",
-  "revision": 12
+  "updatedAt": "2026-11-03T17:15:55",
+  "revision": 14
 }
