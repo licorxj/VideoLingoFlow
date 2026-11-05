@@ -15,15 +15,15 @@ async function main() {
   const auth = new AuthManager(config.dbPath);
   await auth.init();
 
-  console.log(`[MCP] Starting in ${config.transportMode} mode...`);
-  console.log(`[MCP] Backend URL: ${config.backendUrl}`);
-  console.log(`[MCP] DB Path: ${config.dbPath}`);
-  console.log(`[MCP] Auth enabled: ${auth.isAuthEnabled()}`);
+  console.error(`[MCP] Starting in ${config.transportMode} mode...`);
+  console.error(`[MCP] Backend URL: ${config.backendUrl}`);
+  console.error(`[MCP] DB Path: ${config.dbPath}`);
+  console.error(`[MCP] Auth enabled: ${auth.isAuthEnabled()}`);
 
   if (config.transportMode === 'stdio' || config.transportMode === 'both') {
     const stdioTransport = new StdioServerTransport();
     await server.connect(stdioTransport);
-    console.log('[MCP] Stdio transport connected');
+    console.error('[MCP] Stdio transport connected');
   }
 
   if (config.transportMode === 'sse' || config.transportMode === 'both') {
@@ -68,12 +68,12 @@ async function main() {
     });
 
     app.listen(config.mcpPort, () => {
-      console.log(`[MCP] SSE server listening on http://localhost:${config.mcpPort}`);
-      console.log(`[MCP] SSE endpoint: http://localhost:${config.mcpPort}/sse`);
+      console.error(`[MCP] SSE server listening on http://localhost:${config.mcpPort}`);
+      console.error(`[MCP] SSE endpoint: http://localhost:${config.mcpPort}/sse`);
     });
   }
 
-  console.log('[MCP] Server ready');
+  console.error('[MCP] Server ready');
 }
 
 main().catch((error) => {

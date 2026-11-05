@@ -28,7 +28,37 @@
               :label="f.label"
               :class="{ 'full-row': f.fullRow }"
             >
+              <!-- 合集类:保留手填,同时支持「获取合集数据」→ 下拉快捷选择 -->
+              <template v-if="f.fetchKind === 'collection'">
+                <div class="adc-fetch-row">
+                  <el-autocomplete
+                    v-model="form[f.key]"
+                    :fetch-suggestions="(qs, cb) => queryCollection(f, qs, cb)"
+                    :placeholder="f.placeholder || '留空则不设置'"
+                    clearable
+                    class="adc-fetch-input"
+                    @select="(item) => onCollectionSelect(f, item)"
+                  >
+                    <template #default="{ item }">
+                      <span class="adc-opt-name">{{ item.value }}</span>
+                      <span v-if="item.desc" class="adc-opt-desc">{{ item.desc }}</span>
+                    </template>
+                  </el-autocomplete>
+                  <el-button
+                    size="small"
+                    class="adc-fetch-btn"
+                    :loading="!!loadingMap[f.key]"
+                    @click="loadCollectionData(f)"
+                  >获取合集数据</el-button>
+                </div>
+                <div class="adc-field-desc">
+                  {{ collectionOptions[f.key]?.length
+                    ? `已获取 ${collectionOptions[f.key].length} 个合集,聚焦输入框即可下拉选择`
+                    : '点击右侧按钮拉取该账号的合集列表;也可直接手填名称' }}
+                </div>
+              </template>
               <el-input
+                v-else
                 v-model="form[f.key]"
                 :placeholder="f.placeholder || '留空则不设置'"
                 clearable
@@ -151,6 +181,13 @@ import { InfoFilled } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { accountApi } from '@/api/account'
 import { getPlatformByName } from '@/config/platforms'
+import { biliApi } from '@/api/bilibili'
+import { xhsApi } from '@/api/xiaohongshu'
+import { channelsApi } from '@/api/channels'
+import { weiboApi } from '@/api/weibo'
+import { weixinGzhApi } from '@/api/weixin_gzh'
+import { douyinImageApi } from '@/api/douyinImage'
+import { toutiaoApi } from '@/api/toutiao'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -194,30 +231,126 @@ const settingFields = computed(() => {
 // 后端 merge_config 白名单 + build_platform_kwargs 消费的是名称字符串 / id,纯文本可配置。
 const EXTRA_FIELDS_BY_KEY = {
   douyin: [
-    { key: 'mixId', label: '默认合集 ID', placeholder: '抖音合集 mix_id(留空则不加入合集)', fullRow: true },
+    // 字段名是 mixId,但后端 _set_image_mix 是按文本匹配(has-text),发布页存的也是 mix_name,
+    // 因此这里的值语义 = 合集名称,与其余平台保持一致
+    { key: 'mixId', label: '默认合集', placeholder: '输入抖音合集名称(留空则不加入合集)', fullRow: true, fetchKind: 'collection' },
   ],
   xiaohongshu: [
-    { key: 'collectionName', label: '默认合集名称', placeholder: '输入合集名称(留空则不加入合集)' },
-    { key: 'collectionId', label: '默认合集 ID', placeholder: '可选,填了更精确' },
+    { key: 'collectionName', label: '默认合集名称', placeholder: '输入合集名称(留空则不加入合集)', fetchKind: 'collection', idKey: 'collectionId' },
+    { key: 'collectionId', label: '默认合集 ID', placeholder: '可选,选了合集会自动填入' },
   ],
   bilibili: [
-    { key: 'biliCollectionName', label: '默认合集名称', placeholder: '输入 B 站合集名称(留空则不加入合集)', fullRow: true },
+    { key: 'biliCollectionName', label: '默认合集名称', placeholder: '输入 B 站合集名称(留空则不加入合集)', fullRow: true, fetchKind: 'collection' },
   ],
   channels: [
-    { key: 'channelsCollectionName', label: '默认合集名称', placeholder: '输入视频号合集名称(留空则不加入合集)' },
+    { key: 'channelsCollectionName', label: '默认合集名称', placeholder: '输入视频号合集名称(留空则不加入合集)', fetchKind: 'collection' },
     { key: 'channelsLocationName', label: '默认位置', placeholder: '输入地理位置名称(留空则不显示位置)' },
   ],
   weibo: [
-    { key: 'weiboCollectionName', label: '默认合集名称', placeholder: '输入微博合集名称(留空则不加入合集)', fullRow: true },
+    { key: 'weiboCollectionName', label: '默认合集名称', placeholder: '输入微博合集名称(留空则不加入合集)', fullRow: true, fetchKind: 'collection' },
   ],
   weixin_gzh: [
-    { key: 'gzhCollectionName', label: '默认合集名称', placeholder: '输入公众号合集名称(留空则不加入合集)', fullRow: true },
+    { key: 'gzhCollectionName', label: '默认合集名称', placeholder: '输入公众号合集名称(留空则不加入合集)', fullRow: true, fetchKind: 'collection' },
+  ],
+  // 今日头条:后端 _set_collection 按 collection_id(合集 ID)匹配;
+  // 后端 /compilation-search 拉取合集列表,下拉回填 ID(而非名称)
+  toutiao: [
+    { key: 'collection_id', label: '默认合集', placeholder: '输入今日头条合集名称或 ID(留空则不加入合集)', fullRow: true, fetchKind: 'collection', valueKey: 'id' },
+  ],
+  // 快手 / 百家号:后端暂未接入「获取合集数据」(需真实账号校准合集 DOM),
+  // 先提供手动填写,后端 _set_collection 设置逻辑已就位(selector 待校准)
+  kuaishou: [
+    { key: 'kuaishouCollectionName', label: '默认合集名称', placeholder: '输入快手合集名称(留空则不加入合集)', fullRow: true, description: '暂需手动填写;「获取合集数据」按钮待平台 DOM 校准后接入' },
+  ],
+  baijiahao: [
+    { key: 'baijiahaoCollectionName', label: '默认合集名称', placeholder: '输入百家号合集名称(留空则不加入合集)', fullRow: true, description: '暂需手动填写;「获取合集数据」按钮待平台 DOM 校准后接入' },
   ],
 }
 const extraFields = computed(() => {
   const key = platformConf.value?.key
-  return key ? (EXTRA_FIELDS_BY_KEY[key] || []) : []
+  const list = key ? (EXTRA_FIELDS_BY_KEY[key] || []) : []
+  // 带「获取合集数据」按钮的字段占整行,避免两列布局下输入框被按钮挤窄
+  return list.map(f => (f.fetchKind ? { ...f, fullRow: true } : f))
 })
+
+// ============ 合集数据:「获取合集数据」按钮 → 下拉快捷选择(同时保留手填) ============
+// 各平台接口契约不同,统一归一为 [{ id, name, desc }]
+const COLLECTION_FETCHERS = {
+  bilibili: (accountId) => biliApi.getCollections(accountId).then(r => r.data?.list || []),
+  xiaohongshu: (accountId) => xhsApi.getCollections(accountId).then(r => r.data?.list || []),
+  channels: (accountId) => channelsApi.getCollections(accountId).then(r => r.data?.list || []),
+  weibo: (accountId) => weiboApi.getCollections(accountId).then(r => r.data?.list || []),
+  weixin_gzh: (accountId) => weixinGzhApi.getCollections(accountId, '视频合集').then(r => r.data?.list || []),
+  // 抖音只有 mix_id / mix_name,且后端放在 data.mix_list
+  douyin: (accountId) => douyinImageApi.getMixList(accountId).then(r => r.data?.mix_list || []),
+  // 头条合集接口返回 {compilationId, title, total},归一为 {id, name, desc}
+  toutiao: (accountId) => toutiaoApi.searchCompilation(accountId, '').then(r => (r.data?.list || []).map(it => ({
+    id: it.compilationId,
+    name: it.title,
+    desc: it.total ? `${it.total} 个` : '',
+  }))),
+}
+
+const collectionOptions = reactive({})   // fieldKey -> [{ id, name, desc }]
+const loadingMap = reactive({})
+
+function normalizeCollections(platformKey, raw) {
+  const isDouyin = platformKey === 'douyin'
+  return (raw || [])
+    .map(item => {
+      const id = isDouyin ? item.mix_id : item.id
+      const name = isDouyin ? item.mix_name : item.name
+      let desc = ''
+      if (platformKey === 'xiaohongshu' && item.note_num != null) {
+        desc = item.note_num > 0 ? `共 ${item.note_num} 篇` : '暂无内容'
+      } else if (isDouyin && item.video_count != null) {
+        desc = `${item.video_count} 个视频`
+      }
+      return { id, name, desc }
+    })
+    .filter(c => c.name)
+}
+
+async function loadCollectionData(f) {
+  const accountId = props.account?.id
+  if (!accountId) return
+  const platformKey = platformConf.value?.key
+  const fetcher = COLLECTION_FETCHERS[platformKey]
+  if (!fetcher) {
+    ElMessage.warning('该平台暂不支持获取合集数据,请手动输入名称')
+    return
+  }
+  loadingMap[f.key] = true
+  try {
+    const raw = await fetcher(accountId)
+    const list = normalizeCollections(platformKey, raw)
+    collectionOptions[f.key] = list
+    if (!list.length) ElMessage.info('该账号暂无合集,可手动输入名称')
+    else ElMessage.success(`已获取 ${list.length} 个合集,聚焦输入框即可选择`)
+  } catch (e) {
+    ElMessage.error('获取合集数据失败:' + (e?.response?.data?.msg || e?.message || e))
+  } finally {
+    loadingMap[f.key] = false
+  }
+}
+
+// 下拉数据源:已获取则按关键字过滤(空关键字 = 全部,聚焦即可见),未获取则为空(不影响手填)
+function queryCollection(f, queryString, cb) {
+  const all = collectionOptions[f.key] || []
+  const kw = (queryString || '').trim().toLowerCase()
+  const list = kw ? all.filter(c => c.name?.toLowerCase().includes(kw)) : all
+  cb(list.map(c => ({ value: c.name, id: c.id, desc: c.desc })))
+}
+
+// 下拉回填:多数平台按名称匹配(v-model 已写入名称);
+// 头条等 valueKey='id' 的平台按 ID 匹配,需覆盖为 ID;idKey 再把 id 同步到附属字段
+function onCollectionSelect(f, item) {
+  if (!item) return
+  if (f.valueKey && item[f.valueKey] != null && item[f.valueKey] !== '') {
+    form[f.key] = String(item[f.valueKey])
+  }
+  if (f.idKey && item.id != null && item.id !== '') form[f.idKey] = String(item.id)
+}
 
 function isFieldVisible(f) {
   const vw = f.visibleWhen
@@ -235,6 +368,9 @@ function isFieldDisabled(f) {
 
 function initForm() {
   Object.keys(form).forEach(k => delete form[k])
+  // 切换账号时清空上一个账号的合集缓存
+  Object.keys(collectionOptions).forEach(k => delete collectionOptions[k])
+  Object.keys(loadingMap).forEach(k => delete loadingMap[k])
   const defaults = platformConf.value?.defaultSettings || {}
   const saved = (props.account && typeof props.account.defaultConfig === 'object' && props.account.defaultConfig)
     ? props.account.defaultConfig : {}
@@ -266,7 +402,14 @@ async function save() {
   })
   saving.value = true
   try {
-    await accountApi.updateAccount({ id: props.account.id, defaultConfig: payload })
+    // 后端 updateUserinfo 会把 type/userName 一并 UPDATE;若只传 id 会导致这两列被置 NULL,
+    // 而 user_info.type 是 INTEGER NOT NULL,置 NULL 触发 500。这里补上账号真实的 type/userName
+    await accountApi.updateAccount({
+      id: props.account.id,
+      type: props.account.type,
+      userName: props.account.userName ?? props.account.name,
+      defaultConfig: payload
+    })
     ElMessage.success('默认发布配置已保存')
     emit('saved', { id: props.account.id, defaultConfig: payload })
     visible.value = false
@@ -319,6 +462,12 @@ function onClosed() {
 .adc-grid :deep(.full-row) { grid-column: 1 / -1; }
 .adc-grid :deep(.el-form-item__label) { font-size: 12px; color: #475569; padding-bottom: 4px; }
 .adc-switch-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+/* 合集字段:输入框 + 「获取合集数据」按钮 */
+.adc-fetch-row { display: flex; align-items: center; gap: 8px; }
+.adc-fetch-input { flex: 1; min-width: 0; }
+.adc-fetch-btn { flex-shrink: 0; }
+.adc-opt-name { font-size: 13px; color: #334155; }
+.adc-opt-desc { margin-left: 8px; font-size: 11px; color: #94a3b8; }
 .adc-field-desc { font-size: 11px; color: #94a3b8; line-height: 1.5; margin-top: 2px; }
 .adc-footer { display: flex; justify-content: space-between; align-items: center; }
 .adc-footer-right { display: flex; gap: 8px; }

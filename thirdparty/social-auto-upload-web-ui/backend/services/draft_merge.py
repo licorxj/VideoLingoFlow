@@ -86,6 +86,7 @@ DECLARATION_PLATFORMS = {
     'iqiyi': 'creationDeclaration',
     'dayu': 'creationDeclaration',
     'youtube': ['audience', 'alteredContent'],
+    'toutiao': 'creationDeclaration',
     # channels / tiktok 不在此表（不校验声明字段）
 }
 

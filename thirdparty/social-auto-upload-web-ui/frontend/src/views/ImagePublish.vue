@@ -158,6 +158,30 @@
             @config-changed="onChannelConfigChanged"
             @publish-result="onPublishResult"
           />
+          <ChannelsImagePublishPanel
+            ref="channelsPanelRef"
+            :account-id="selectedPlatform === 'channels' ? selectedAccountId : null"
+            :disabled="publishing"
+            v-show="selectedPlatform === 'channels'"
+            @config-changed="onChannelConfigChanged"
+            @publish-result="onPublishResult"
+          />
+          <BaijiahaoImagePublishPanel
+            ref="baijiahaoPanelRef"
+            :account-id="selectedPlatform === 'baijiahao' ? selectedAccountId : null"
+            :disabled="publishing"
+            v-show="selectedPlatform === 'baijiahao'"
+            @config-changed="onChannelConfigChanged"
+            @publish-result="onPublishResult"
+          />
+          <ToutiaoImagePublishPanel
+            ref="toutiaoPanelRef"
+            :account-id="selectedPlatform === 'toutiao' ? selectedAccountId : null"
+            :disabled="publishing"
+            v-show="selectedPlatform === 'toutiao'"
+            @config-changed="onChannelConfigChanged"
+            @publish-result="onPublishResult"
+          />
         </div>
 
         <!-- No account selected hint -->
@@ -319,6 +343,9 @@ import KuaishouImagePublishPanel from '@/components/kuaishou/ImagePublishPanel.v
 import WeiboImagePublishPanel from '@/components/weibo/ImagePublishPanel.vue'
 import AlipayImagePublishPanel from '@/components/alipay/ImagePublishPanel.vue'
 import WeixinGzhImagePublishPanel from '@/components/weixin_gzh/ImagePublishPanel.vue'
+import ChannelsImagePublishPanel from '@/components/channels/ImagePublishPanel.vue'
+import BaijiahaoImagePublishPanel from '@/components/baijiahao/ImagePublishPanel.vue'
+import ToutiaoImagePublishPanel from '@/components/toutiao/ImagePublishPanel.vue'
 import PrePublishCheckDialog from '@/components/PrePublishCheckDialog.vue'
 
 // ========== Stores & Config ==========
@@ -329,7 +356,7 @@ appStore.loadAccountCheckMode()
 appStore.loadAutoSaveSettings()
 const route = useRoute()
 
-const IMAGE_PLATFORM_KEYS = ['xiaohongshu', 'douyin', 'kuaishou', 'weibo', 'alipay', 'weixin_gzh']
+const IMAGE_PLATFORM_KEYS = ['xiaohongshu', 'douyin', 'kuaishou', 'weibo', 'alipay', 'weixin_gzh', 'channels', 'baijiahao', 'toutiao']
 const IMAGE_PLATFORMS = platformList.filter(p => IMAGE_PLATFORM_KEYS.includes(p.key))
 
 // ========== Left Sidebar State ==========
@@ -419,9 +446,12 @@ const kuaishouPanelRef = ref(null)
 const weiboPanelRef = ref(null)
 const alipayPanelRef = ref(null)
 const weixinGzhPanelRef = ref(null)
+const channelsPanelRef = ref(null)
+const baijiahaoPanelRef = ref(null)
+const toutiaoPanelRef = ref(null)
 
 function getPanel(key) {
-  const map = { douyin: douyinPanelRef, xiaohongshu: xiaohongshuPanelRef, kuaishou: kuaishouPanelRef, weibo: weiboPanelRef, alipay: alipayPanelRef, weixin_gzh: weixinGzhPanelRef }
+  const map = { douyin: douyinPanelRef, xiaohongshu: xiaohongshuPanelRef, kuaishou: kuaishouPanelRef, weibo: weiboPanelRef, alipay: alipayPanelRef, weixin_gzh: weixinGzhPanelRef, channels: channelsPanelRef, baijiahao: baijiahaoPanelRef, toutiao: toutiaoPanelRef }
   return map[key]?.value
 }
 
@@ -543,6 +573,9 @@ const panelsProxy = reactive({
   get weibo() { return weiboPanelRef.value },
   get alipay() { return alipayPanelRef.value },
   get weixin_gzh() { return weixinGzhPanelRef.value },
+  get channels() { return channelsPanelRef.value },
+  get baijiahao() { return baijiahaoPanelRef.value },
+  get toutiao() { return toutiaoPanelRef.value },
 })
 const { applyImageBatchSet } = useImageBatchSetApply({ panels: panelsProxy, accountStore })
 // 渠道个性化可见平台列表：过滤掉被拉黑的平台

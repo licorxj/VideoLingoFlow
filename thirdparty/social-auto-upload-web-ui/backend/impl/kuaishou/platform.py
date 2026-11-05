@@ -670,6 +670,7 @@ class KuaishouPlatform(BasePlatform):
         # （参见 services/draft_merge.py DECLARATION_PLATFORMS['kuaishou']='aiContent'）
         # author_declaration 仅作别名兼容旧调用
         author_declaration = kwargs.get("ai_content", "") or kwargs.get("author_declaration", "")
+        kuaishou_collection_name = kwargs.get("kuaishou_collection_name", "")
 
         # 固定使用 4:3 横版封面（用户要求），竖版/通用仅作缺失兜底
         cover_path = thumbnail_landscape_path or thumbnail_portrait_path or thumbnail_path
@@ -719,6 +720,7 @@ class KuaishouPlatform(BasePlatform):
                         publish_date=pub_date,
                         enable_timer=enable_timer,
                         video_format=video_format,
+                        kuaishou_collection_name=kuaishou_collection_name,
                     )
 
         logger.info("=" * 60)
@@ -741,6 +743,7 @@ class KuaishouPlatform(BasePlatform):
         publish_date,
         enable_timer: bool,
         video_format: str = "landscape",
+        kuaishou_collection_name: str = "",
     ):
         browser = await self.create_browser(headless=False)
         upload_success = False
@@ -823,6 +826,11 @@ class KuaishouPlatform(BasePlatform):
             else:
                 logger.info("[设置封面] 未提供封面路径, 跳过封面设置")
 
+            # ------ Set collection (合集) ------
+            if kuaishou_collection_name:
+                logger.info("[设置合集] 开始设置合集: %s", kuaishou_collection_name)
+                await self._set_collection(page, kuaishou_collection_name)
+
             # ------ Set author declaration（值为「无需声明」或空时跳过）------
             if author_declaration and author_declaration != _DECLARATION_NONE:
                 logger.info("[作者声明] 开始设置作者声明: %s", author_declaration)
@@ -877,6 +885,41 @@ class KuaishouPlatform(BasePlatform):
                 await self.close_browser(browser, is_close_by_code=True)
             except Exception:
                 pass
+
+    # ------------------------------------------------------------------
+    # Helper: set collection (合集) — 非致命, selector 需真实账号校准
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    async def _set_collection(page, collection_name: str) -> None:
+        """选择指定合集(按名称匹配);无名称时跳过。
+
+        TODO: 快手视频发布页合集入口文案与下拉选项 DOM 需真实账号校准。
+        当前按同类平台同源模式假设(「合集」入口 + 选项文本匹配),
+        选择器不对时仅 warning 跳过,不阻塞发布。
+        """
+        if not collection_name:
+            return
+        try:
+            entry = page.get_by_text("合集", exact=True)
+            if await entry.count() == 0:
+                logger.warning("[设置合集] 未找到「合集」入口,跳过")
+                return
+            await entry.first.click()
+            await asyncio.sleep(1)
+            # TODO: 合集下拉选项选择器需真实账号校准
+            option_items = page.locator(".collection-item, [class*='collection'] [class*='item']")
+            count = await option_items.count()
+            for i in range(count):
+                name = (await option_items.nth(i).inner_text()).strip()
+                if name == collection_name:
+                    await option_items.nth(i).click()
+                    logger.info("[设置合集] 已选择合集: %s", collection_name)
+                    return
+            logger.warning("[设置合集] 未找到合集: %s", collection_name)
+            await page.keyboard.press("Escape")
+        except Exception as e:
+            logger.warning("[设置合集] 合集设置失败(非致命): %s", e)
 
     # ------------------------------------------------------------------
     # Helper: close guide overlay (new + old DOM)

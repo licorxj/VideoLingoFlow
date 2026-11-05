@@ -1793,3 +1793,205 @@ class ChannelsPlatform(BasePlatform):
         logger.info("[发布视频] 视频发布流程完成!")
         logger.info("=" * 60)
         return True
+
+
+    # ------------------------------------------------------------------
+    # Publish image — 图文动态 (finder new life post)
+    # ------------------------------------------------------------------
+
+    FINDER_POST_LIST_URL = "https://channels.weixin.qq.com/platform/post/finderNewLifePostList"
+    FINDER_POST_CREATE_URL = "https://channels.weixin.qq.com/platform/post/finderNewLifeCreate"
+    FINDER_POST_MAX_IMAGES = 9
+    FINDER_POST_TITLE_LIMIT = 22
+
+    async def publish_image(self, **kwargs) -> bool:
+        """Publish an image post (图文动态) to Channels via CloakBrowser.
+
+        Accepted keyword arguments (aligned with ``publish_image`` contract in
+        ``blueprints/image_publish_bp.py``):
+
+        - ``title`` (*str*) -- post title, truncated to 22 chars (page limit)
+        - ``files`` (*list[str]*) -- image absolute paths, 1..9 images
+        - ``tags`` (*list[str]*) -- hashtags typed into the description editor
+        - ``account_file`` (*list[str]*) -- cookie file names under ``cookiesFile``
+        - ``desc`` (*str*) -- description text
+        - ``cover_path`` (*str*) -- ignored (image posts have no separate cover)
+        - ``enableTimer`` / ``schedule_time_str`` -- scheduled publish
+        - ``ai_content`` / ``is_original`` -- accepted for contract parity;
+          image posts expose no dedicated declaration UI, values are logged only
+        - ``dry_run`` (*bool*) -- walk the whole flow but skip the final publish
+          click (default True); a screenshot is saved under ``logs/`` as evidence
+        """
+        title = kwargs.get("title", "")
+        files = kwargs.get("files", []) or []
+        tags = kwargs.get("tags", []) or []
+        account_file = kwargs.get("account_file", []) or []
+        desc = kwargs.get("desc", "")
+        enable_timer = kwargs.get("enableTimer", False)
+        schedule_time_str = kwargs.get("schedule_time_str", "")
+        dry_run = kwargs.get("dry_run", True)
+        ai_content = kwargs.get("ai_content", "") or kwargs.get("author_declaration", "")
+        is_original = kwargs.get("is_original", False)
+
+        logger.info("=" * 60)
+        logger.info("[发布图文] 开始视频号图文动态发布流程")
+        logger.info("=" * 60)
+
+        if not files:
+            raise ValueError("视频号图文动态至少需要 1 张图片")
+        if len(files) > self.FINDER_POST_MAX_IMAGES:
+            raise ValueError(
+                f"视频号图片动态最多 {self.FINDER_POST_MAX_IMAGES} 张图片, 当前 {len(files)} 张"
+            )
+        if title and len(title) > self.FINDER_POST_TITLE_LIMIT:
+            logger.warning(
+                "[发布校验] 标题超长将被截断: %d -> %d 字符",
+                len(title), self.FINDER_POST_TITLE_LIMIT,
+            )
+            title = title[: self.FINDER_POST_TITLE_LIMIT]
+
+        logger.info("[发布参数] 标题: %s", title)
+        logger.info("[发布参数] 图片数量: %d", len(files))
+        logger.info("[发布参数] 标签: %s", tags)
+        logger.info("[发布参数] 描述: %s", desc[:50] if desc else "无")
+        logger.info("[发布参数] 账号数量: %d", len(account_file))
+        logger.info(
+            "[发布参数] 声明参数(ai_content=%s, is_original=%s) 图文动态暂无对应控件, 仅记录",
+            ai_content or "无", is_original,
+        )
+        logger.info("[发布策略] 模式: %s", "演练(dry_run)" if dry_run else "正式发布")
+
+        account_paths = [str(Path(BASE_DIR / "cookiesFile" / f)) for f in account_file]
+        file_paths = [str(f) for f in files]
+
+        for cookie_index, cookie_path in enumerate(account_paths):
+            cookie_name = Path(cookie_path).name
+            nick = get_account_name_by_cookie_file(cookie_name)
+            with bind_account_name(nick or "-"):
+                logger.info(
+                    "[发布进度] 发布到第 %d/%d 个账号 (%s)",
+                    cookie_index + 1, len(account_paths), nick or "未知",
+                )
+                await self._upload_finder_post(
+                    title=title,
+                    file_paths=file_paths,
+                    tags=tags,
+                    account_file=cookie_path,
+                    desc=desc,
+                    enable_timer=enable_timer,
+                    schedule_time_str=schedule_time_str,
+                    dry_run=dry_run,
+                )
+
+        logger.info("=" * 60)
+        logger.info("[发布图文] 图文动态发布流程完成!")
+        logger.info("=" * 60)
+        return True
+
+    async def _upload_finder_post(
+        self, *, title, file_paths, tags, account_file, desc="",
+        enable_timer=False, schedule_time_str="", dry_run=True,
+    ):
+        """Upload one image post (图文动态) for a single Channels account."""
+        logger.info("[上传图文] 开始上传图文动态 (%d 张图片)", len(file_paths))
+        browser = await self.create_browser(headless=False)
+        try:
+            context = await self.create_context(browser, storage_state=account_file)
+            try:
+                page = await context.new_page()
+
+                # 1. 打开图文管理列表页, 点击「发表图文」
+                logger.info("[上传图文] 正在打开图文管理列表页...")
+                await page.goto(
+                    self.FINDER_POST_LIST_URL,
+                    wait_until="domcontentloaded", timeout=60000,
+                )
+                create_btn = page.get_by_role("button", name="发表图文").first
+                await create_btn.wait_for(state="visible", timeout=30000)
+                await create_btn.click()
+                await page.wait_for_url("**/post/finderNewLifeCreate**", timeout=30000)
+                logger.info("[上传图文] 图文创建页已打开: %s", page.url)
+                await asyncio.sleep(2)
+
+                # 2. 填标题(页面限制 22 字符)
+                title_input = page.locator(
+                    'input[type="text"][placeholder*="填写标题"]'
+                ).first
+                await title_input.wait_for(state="visible", timeout=30000)
+                if title:
+                    await title_input.fill(title)
+                    logger.info("[填写标题] 标题已填写: %s", title)
+
+                # 3. 上传图片(隐藏 file input 直接 set_input_files)
+                logger.info("[上传图片] 正在上传 %d 张图片...", len(file_paths))
+                file_input = page.locator(
+                    'input[type="file"][accept="image/*"]'
+                ).first
+                await file_input.set_input_files(file_paths)
+                await asyncio.sleep(3)
+                logger.info("[上传图片] 图片已提交, 等待页面渲染")
+
+                # 4. 填描述 + 话题标签(编辑器在图片上传后渲染)
+                full_desc = desc
+                if full_desc:
+                    desc_editor = page.locator("div.input-editor").first
+                    try:
+                        await desc_editor.wait_for(state="visible", timeout=20000)
+                    except Exception:
+                        desc_editor = page.locator('[contenteditable="true"]').first
+                        await desc_editor.wait_for(state="visible", timeout=20000)
+                    await clear_and_type(page, full_desc[:1000], element=desc_editor)
+                    logger.info("[填写描述] 描述已填写 (%d 字符)", len(full_desc[:1000]))
+                    if tags:
+                        await desc_editor.click()
+                        for tag in tags[:10]:
+                            await page.keyboard.type("#" + tag, delay=30)
+                            await page.keyboard.press("Space")
+                            await asyncio.sleep(0.5)
+                        logger.info("[填写描述] 已追加 %d 个话题标签", min(len(tags), 10))
+                        await desc_editor.click()
+
+                # 5. 定时发布(可选;复用视频流的 weui 日期选择流程)
+                if enable_timer and schedule_time_str:
+                    try:
+                        publish_dates = parse_schedule_time(
+                            schedule_time_str, 1, enable_timer, 1, None, 0
+                        )
+                        if publish_dates and publish_dates[0] != 0:
+                            logger.info("[定时发布] 开始设置定时发布...")
+                            await _set_schedule_time(page, publish_dates[0])
+                            logger.info("[定时发布] 定时发布设置完成")
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[定时发布] 设置失败(忽略继续): %s", exc)
+
+                logger.info(
+                    "[填写完成] 表单填写完成, 模式: %s",
+                    "演练(dry_run)" if dry_run else "正式发布",
+                )
+
+                if not dry_run:
+                    # 6. 点击「发表」(可能弹「我知道了」发布须知)
+                    publish_btn = page.get_by_role("button", name="发表", exact=True).first
+                    await publish_btn.wait_for(state="visible", timeout=15000)
+                    await publish_btn.click()
+                    await asyncio.sleep(1)
+                    await _dismiss_i_know_dialog(page)
+                    await page.wait_for_url("**/finderNewLifePostList**", timeout=60000)
+                    logger.info("[发布] 图文动态发布成功!")
+                    await context.storage_state(path=account_file)
+                    logger.info("[发布] Cookie状态已更新")
+                else:
+                    # dry_run 留截图证据, 不点击发表
+                    shot = Path(BASE_DIR) / "logs" / (
+                        f"dryrun_channels_{int(time.time())}.png"
+                    )
+                    try:
+                        await page.screenshot(path=str(shot))
+                        logger.info("[演练] 表单截图已保存: %s", shot)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[演练] 截图失败(忽略): %s", exc)
+                    logger.info("[演练] dry_run=True, 已跳过发表点击")
+            finally:
+                await context.close()
+        finally:
+            await self.close_browser(browser, is_close_by_code=True)

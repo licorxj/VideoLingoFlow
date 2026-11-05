@@ -419,6 +419,7 @@ class BaijiahaoPlatform(BasePlatform):
         creation_declaration = kwargs.get("creation_declaration", "")
         supplementary_declaration = kwargs.get("supplementary_declaration", "")
         ai_content = kwargs.get("ai_content", False)
+        baijiahao_collection_name = kwargs.get("baijiahao_collection_name", "")
 
         # 打印发布参数摘要
         logger.info("[发布参数] 标题: %s", title)
@@ -478,6 +479,7 @@ class BaijiahaoPlatform(BasePlatform):
                         creation_declaration=creation_declaration,
                         supplementary_declaration=supplementary_declaration,
                         ai_content=ai_content,
+                        baijiahao_collection_name=baijiahao_collection_name,
                     )
 
         logger.info("=" * 60)
@@ -502,6 +504,7 @@ class BaijiahaoPlatform(BasePlatform):
         creation_declaration="",
         supplementary_declaration="",
         ai_content=False,
+        baijiahao_collection_name="",
     ):
         """Upload a single video to one Baijiahao account."""
         browser = await self.create_browser(headless=False)
@@ -626,6 +629,11 @@ class BaijiahaoPlatform(BasePlatform):
                     supplementary_declaration,
                 )
                 logger.info("[设置声明] 创作声明设置完成")
+
+                # Set collection (合集)
+                if baijiahao_collection_name:
+                    logger.info("[设置合集] 开始设置合集: %s", baijiahao_collection_name)
+                    await self._set_collection(page, baijiahao_collection_name)
 
                 # Publish (immediate or scheduled)
                 logger.info("[发布] 正在点击发布按钮...")
@@ -803,6 +811,37 @@ class BaijiahaoPlatform(BasePlatform):
     # ------------------------------------------------------------------
     # Helper: publish (immediate or scheduled)
     # ------------------------------------------------------------------
+
+    @staticmethod
+    async def _set_collection(page, collection_name: str) -> None:
+        """选择指定合集(按名称匹配);无名称时跳过。
+
+        TODO: 百家号视频发布页合集入口文案与下拉选项 DOM 需真实账号校准。
+        当前按同类平台同源模式假设(「合集」入口 + 选项文本匹配),
+        选择器不对时仅 warning 跳过,不阻塞发布。
+        """
+        if not collection_name:
+            return
+        try:
+            entry = page.get_by_text("合集", exact=True)
+            if await entry.count() == 0:
+                logger.warning("[设置合集] 未找到「合集」入口,跳过")
+                return
+            await entry.first.click()
+            await asyncio.sleep(1)
+            # TODO: 合集下拉选项选择器需真实账号校准
+            option_items = page.locator(".collection-item, [class*='collection'] [class*='item']")
+            count = await option_items.count()
+            for i in range(count):
+                name = (await option_items.nth(i).inner_text()).strip()
+                if name == collection_name:
+                    await option_items.nth(i).click()
+                    logger.info("[设置合集] 已选择合集: %s", collection_name)
+                    return
+            logger.warning("[设置合集] 未找到合集: %s", collection_name)
+            await page.keyboard.press("Escape")
+        except Exception as e:
+            logger.warning("[设置合集] 合集设置失败(非致命): %s", e)
 
     async def _publish_video(self, page, publish_date):
         """Click the publish button, with optional scheduling."""
@@ -1151,3 +1190,464 @@ class BaijiahaoPlatform(BasePlatform):
 
         except Exception as e:
             logger.warning("[设置声明] 设置创作声明失败（不影响上传）: %s", e)
+
+
+    # ------------------------------------------------------------------
+    # Publish image — 图文文章 (rich article with inline images)
+    # ------------------------------------------------------------------
+
+    BAIJIAHAO_ARTICLE_EDIT_URL = "https://baijiahao.baidu.com/builder/rc/edit?type=news&is_from_cms=1"
+    BAIJIAHAO_ARTICLE_TITLE_LIMIT = 64
+    BAIJIAHAO_ARTICLE_MAX_IMAGES = 20
+
+    def publish_image(self, **kwargs) -> bool:
+        """Publish a rich article (图文文章) to Baijiahao (sync wrapper).
+
+        Accepted keyword arguments (aligned with the ``publish_image`` contract
+        in ``blueprints/image_publish_bp.py``):
+
+        - ``title`` (*str*) -- article title, 2..64 chars (BJH limit)
+        - ``files`` (*list[str]*) -- images inserted inline into the article body
+        - ``tags`` (*list[str]*) -- accepted for contract parity; appended as a
+          hashtag line at the end of the article body (article flow has no
+          dedicated tag widget)
+        - ``account_file`` (*list[str]*) -- cookie file names
+        - ``desc`` (*str*) -- article body text (paragraphs split by newlines)
+        - ``cover_path`` (*str*, optional) -- cover image; falls back to files[0]
+        - ``creation_declaration`` / ``supplementary_declaration`` -- 创作声明
+        - ``enableTimer`` / ``schedule_time_str`` -- scheduled publish
+        - ``dry_run`` (*bool*) -- walk the whole flow but skip the final publish
+          click (default True); a screenshot is saved under ``logs/``
+        """
+        title = kwargs.get("title", "")
+        files = kwargs.get("files", []) or []
+        tags = kwargs.get("tags", []) or []
+        account_file = kwargs.get("account_file", []) or []
+        desc = kwargs.get("desc", "")
+        cover_path = kwargs.get("cover_path", "")
+        creation_declaration = kwargs.get("creation_declaration", "") or kwargs.get("ai_content", "")
+        supplementary_declaration = kwargs.get("supplementary_declaration", "")
+        enable_timer = kwargs.get("enableTimer", False)
+        schedule_time_str = kwargs.get("schedule_time_str", "")
+        dry_run = kwargs.get("dry_run", True)
+
+        logger.info("=" * 60)
+        logger.info("[发布图文] 开始百家号图文文章发布流程")
+        logger.info("=" * 60)
+
+        # 文章流校验:标题 2..64(emoji 按 3 算),正文非空,图片数量上限
+        t_len = self._count_chars(title)
+        if t_len < 2 or t_len > self.BAIJIAHAO_ARTICLE_TITLE_LIMIT:
+            raise ValueError(
+                f"百家号文章标题需 2~{self.BAIJIAHAO_ARTICLE_TITLE_LIMIT} 字(emoji 按 3 算), 当前 {t_len} 字"
+            )
+        if not desc:
+            raise ValueError("百家号图文文章需要正文内容(desc 不能为空)")
+        if len(files) > self.BAIJIAHAO_ARTICLE_MAX_IMAGES:
+            raise ValueError(
+                f"百家号文章插图最多 {self.BAIJIAHAO_ARTICLE_MAX_IMAGES} 张, 当前 {len(files)} 张"
+            )
+
+        logger.info("[发布参数] 标题: %s", title)
+        logger.info("[发布参数] 插图数量: %d", len(files))
+        logger.info("[发布参数] 正文长度: %d 字符", self._count_chars(desc))
+        logger.info("[发布参数] 标签: %s", tags)
+        logger.info("[发布参数] 账号数量: %d", len(account_file))
+        logger.info("[发布参数] 创作声明: %s", creation_declaration or "无")
+        logger.info("[发布参数] 补充声明: %s", supplementary_declaration or "无")
+        logger.info("[发布策略] 模式: %s", "演练(dry_run)" if dry_run else "正式发布")
+
+        if cover_path and not Path(cover_path).is_file():
+            logger.warning("[发布参数] 封面文件不存在, 回退用第一张插图: %s", cover_path)
+            cover_path = ""
+
+        asyncio.run(self._upload_all_articles(**kwargs))
+        return True
+
+    async def _upload_all_articles(self, **kwargs):
+        """Publish the article for each account cookie."""
+        title = kwargs.get("title", "")
+        files = [str(f) for f in (kwargs.get("files", []) or [])]
+        tags = kwargs.get("tags", []) or []
+        account_file = kwargs.get("account_file", []) or []
+        desc = kwargs.get("desc", "")
+        cover_path = kwargs.get("cover_path", "") or (files[0] if files else "")
+        creation_declaration = kwargs.get("creation_declaration", "") or kwargs.get("ai_content", "")
+        supplementary_declaration = kwargs.get("supplementary_declaration", "")
+        enable_timer = kwargs.get("enableTimer", False)
+        schedule_time_str = kwargs.get("schedule_time_str", "")
+        dry_run = kwargs.get("dry_run", True)
+
+        for cookie_index, cookie_name in enumerate(account_file):
+            cookie_path = str(Path(BASE_DIR / "cookiesFile" / cookie_name))
+            nick = get_account_name_by_cookie_file(cookie_name)
+            with bind_account_name(nick or "-"):
+                logger.info(
+                    "[发布进度] 发布到第 %d/%d 个账号 (%s)",
+                    cookie_index + 1, len(account_file), nick or "未知",
+                )
+                await self._upload_one_article(
+                    title=title,
+                    file_paths=files,
+                    tags=tags,
+                    account_file=cookie_path,
+                    desc=desc,
+                    cover_path=cover_path,
+                    creation_declaration=creation_declaration,
+                    supplementary_declaration=supplementary_declaration,
+                    enable_timer=enable_timer,
+                    schedule_time_str=schedule_time_str,
+                    dry_run=dry_run,
+                )
+
+    async def _upload_one_article(
+        self, *, title, file_paths, tags, account_file, desc, cover_path="",
+        creation_declaration="", supplementary_declaration="",
+        enable_timer=False, schedule_time_str="", dry_run=True,
+    ):
+        """Create one rich article (图文文章) for a single Baijiahao account."""
+        logger.info("[上传文章] 开始创建图文文章 (%d 张插图)", len(file_paths))
+        browser = await self.create_browser(headless=False)
+        try:
+            context = await self.create_context(browser, storage_state=account_file)
+            try:
+                page = await context.new_page()
+                await page.goto(
+                    self.BAIJIAHAO_ARTICLE_EDIT_URL,
+                    wait_until="domcontentloaded", timeout=60000,
+                )
+
+                # 1. 等编辑器加载(页面较慢, ~15s)
+                logger.info("[上传文章] 等待文章编辑器加载...")
+                title_editor = page.locator(
+                    '[class*="FeEditorApp-"][contenteditable="true"]'
+                ).first
+                await title_editor.wait_for(state="visible", timeout=60000)
+                await asyncio.sleep(2)
+                await self._close_bjh_article_popups(page)
+
+                # 2. 标题(placeholder「请输入标题(2 - 64字)」)
+                #    标题是 #newsTextArea 内的 Lexical 编辑器(整页唯一
+                #    contenteditable), 隐藏的 simulator textarea 用 :visible 过滤
+                title_input = page.locator(
+                    '#newsTextArea input:visible, #newsTextArea textarea:visible, '
+                    '#newsTextArea [contenteditable="true"]:visible'
+                ).first
+                if await title_input.count():
+                    await title_input.wait_for(state="visible", timeout=20000)
+                    await clear_and_type(page, title, element=title_input)
+                else:
+                    title_box = page.locator(
+                        '#newsTextArea .input-container, #newsTextArea'
+                    ).first
+                    await title_box.wait_for(state="visible", timeout=20000)
+                    await title_box.click()
+                    await page.keyboard.press("Control+KeyA")
+                    await page.keyboard.press("Delete")
+                    await page.keyboard.type(title, delay=15)
+                logger.info("[填写标题] 标题已填写: %s", title)
+
+                # 3. 正文 —— 在 UEditor iframe 内(请输入正文), 不在主文档
+                ue_frame = await self._bjh_get_editor_frame(page)
+                body = ue_frame.locator("body")
+                await body.click()
+                await clear_and_type(page, desc, element=body)
+                body_text = (await body.inner_text()).strip()
+                logger.info(
+                    "[填写正文] 正文已填写 (%d 字符), 编辑器实际文本长度: %d, 前50字: %s",
+                    len(desc), len(body_text), body_text[:50],
+                )
+
+                # 4. 逐张插入插图(光标保持在文末)
+                if file_paths:
+                    for idx, img in enumerate(file_paths, 1):
+                        await self._bjh_insert_image(page, img)
+                        logger.info("[插图] 已插入第 %d/%d 张", idx, len(file_paths))
+
+                # 5. 标签作为话题行追加到文末(UEditor iframe 内)
+                if tags:
+                    tag_line = " ".join(f"#{t}" for t in tags[:10])
+                    await body.click()
+                    await page.keyboard.press("Control+End")
+                    await page.keyboard.press("Enter")
+                    await page.keyboard.type(tag_line, delay=20)
+                    logger.info("[正文话题] 已追加话题行: %s", tag_line)
+
+                # 6. 封面(单图 radio 默认选中; 点「选择封面」上传)
+                if cover_path:
+                    try:
+                        await self._bjh_set_article_cover(page, cover_path)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[设置封面] 设置失败(不影响发布): %s", exc)
+
+                # 7. 创作声明(非致命)
+                if creation_declaration:
+                    try:
+                        await self._bjh_set_article_declaration(
+                            page, creation_declaration, supplementary_declaration
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[设置声明] 设置创作声明失败(不影响上传): %s", exc)
+
+                # 8. 定时发布(非致命)
+                if enable_timer and schedule_time_str:
+                    try:
+                        publish_dates = parse_schedule_time(
+                            schedule_time_str, 1, enable_timer, 1, None, 0
+                        )
+                        if publish_dates and publish_dates[0] != 0:
+                            await self._bjh_set_article_schedule(page, publish_dates[0])
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[定时发布] 设置失败(忽略继续): %s", exc)
+
+                logger.info(
+                    "[填写完成] 表单填写完成, 模式: %s",
+                    "演练(dry_run)" if dry_run else "正式发布",
+                )
+
+                if not dry_run:
+                    # 9. 发布(可能触发人机校验 passMod)
+                    publish_btn = page.get_by_role("button", name="发布", exact=True).first
+                    await publish_btn.wait_for(state="visible", timeout=15000)
+                    await publish_btn.click()
+                    logger.info("[发布] 已点击发布, 等待结果...")
+                    try:
+                        await page.wait_for_url("**/builder/rc/clue**", timeout=120000)
+                        logger.info("[发布] 图文文章发布成功! URL: %s", page.url)
+                    except Exception:
+                        # 可能被人机校验阻塞, 给足等待
+                        await self._bjh_wait_passmod(page)
+                        await page.wait_for_url("**/builder/rc/clue**", timeout=120000)
+                        logger.info("[发布] 人机校验后发布成功!")
+                    await context.storage_state(path=account_file)
+                    logger.info("[发布] Cookie状态已更新")
+                else:
+                    shot = Path(BASE_DIR) / "logs" / (
+                        f"dryrun_baijiahao_{int(time.time())}.png"
+                    )
+                    try:
+                        await page.screenshot(path=str(shot))
+                        logger.info("[演练] 表单截图已保存: %s", shot)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[演练] 截图失败(忽略): %s", exc)
+                    logger.info("[演练] dry_run=True, 已跳过发布点击")
+            finally:
+                await context.close()
+        finally:
+            await self.close_browser(browser, is_close_by_code=True)
+
+    # -- 百家号图文文章内部小工具 -------------------------------------
+
+    @staticmethod
+    def _bjh_title_locator(page):
+        """Locate the article title input inside the #newsTextArea container.
+
+        编辑器改版频繁, 依次尝试: 原生 input/textarea → contenteditable →
+        容器本身(点击后键盘输入)。"""
+        return page.locator(
+            '#newsTextArea input, #newsTextArea textarea, '
+            '#newsTextArea [contenteditable="true"], '
+            'input[placeholder*="请输入标题"], textarea[placeholder*="请输入标题"], '
+            '[data-placeholder*="请输入标题"]'
+        ).first
+
+    @staticmethod
+    async def _close_bjh_article_popups(page) -> None:
+        """Close the AI-assistant welcome dialog / top tip on the article editor.
+
+        cheetah-modal 引导窗会拦截一切鼠标事件, 且可能延迟挂载。用 JS 直点关闭
+        (绕开 actionability 拦截), 多轮确认直到无可见弹窗。"""
+        js_close = r"""
+() => {
+  const wraps = [...document.querySelectorAll('.cheetah-modal-wrap')]
+    .filter(w => w.offsetParent !== null || getComputedStyle(w).display !== 'none');
+  if (!wraps.length) return 0;
+  // 1) aria-label 关闭按钮(百家号引导窗的 × 是 aria-label="关闭", class 里无 close 字样)
+  let btn = document.querySelector(
+    '.cheetah-modal-wrap button[aria-label="关闭"], '
+    + '.cheetah-modal-wrap button[aria-label="Close"], '
+    + '.cheetah-modal-wrap .cheetah-modal-close'
+  );
+  if (btn) { btn.click(); return 1; }
+  // 2) 主行动按钮(立即体验/我知道了等, 点击后同样关窗)
+  btn = [...document.querySelectorAll('.cheetah-modal-wrap button')].find(b => {
+    const t = (b.textContent || '').trim();
+    return t.includes('立即体验') || t.includes('我知道了') || t.includes('知道了') || t.includes('开始使用');
+  });
+  if (btn) { btn.click(); return 2; }
+  return 3;
+}
+"""
+        for attempt in range(6):
+            try:
+                result = await page.evaluate(js_close)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[弹窗] JS 关闭执行失败: %s", exc)
+                break
+            if result == 0:
+                # 无可见弹窗; 再观察 1.2s 确认没有延迟挂载的新弹窗
+                await page.wait_for_timeout(1200)
+                try:
+                    again = await page.evaluate(js_close)
+                except Exception:  # noqa: BLE001
+                    again = 0
+                if again == 0:
+                    if attempt:
+                        logger.info("[弹窗] 全部引导弹窗已关闭")
+                    return
+                continue
+            logger.info("[弹窗] JS 关闭引导弹窗(策略 %d, 第 %d 次)", result, attempt + 1)
+            await page.wait_for_timeout(900)
+        logger.warning("[弹窗] 多轮关闭后仍可能有弹窗存在, 继续流程")
+
+    @staticmethod
+    async def _bjh_get_editor_frame(page):
+        """Locate the UEditor iframe that hosts the article body (请输入正文).
+
+        正文编辑器跑在 document.write 出来的 iframe 里(UEditor 经典架构),
+        主文档里唯一的 contenteditable 是标题。按 body 特征识别:
+        contenteditable=true 或 class 含 view。"""
+        for frame in page.frames:
+            if frame == page.main_frame:
+                continue
+            try:
+                hit = await frame.evaluate(
+                    "() => !!document.body && "
+                    "(document.body.classList.contains('view') || "
+                    "document.body.getAttribute('contenteditable') === 'true' || "
+                    "!!document.querySelector('.edui-body-container'))"
+                )
+            except Exception:  # noqa: BLE001, PERF203
+                continue
+            if hit:
+                return frame
+        raise RuntimeError("未找到百家号正文编辑器 iframe(UEditor)")
+
+    @staticmethod
+    async def _bjh_insert_image(page, image_path: str) -> None:
+        """Insert one image via the UEditor insertimage dialog (本地图片 tab).
+
+        点击 .edui-for-insertimage(div)后弹出 cheetah-modal「插入图片」对话框:
+        本地图片 tab 默认激活, 走 .cheetah-upload input[type=file] 上传后点「确认」。
+        """
+        # 注意: edui-for-insertimage 是 div 而非 button
+        insert_btn = page.locator(".edui-for-insertimage").first
+        await insert_btn.wait_for(state="visible", timeout=15000)
+        await insert_btn.click()
+
+        # 等待「插入图片」对话框(本地图片 tab 默认激活)
+        dialog = page.locator('.cheetah-modal-wrap:has-text("本地图片")').first
+        await dialog.wait_for(state="visible", timeout=15000)
+
+        # 上传图片(cheetah-upload 的隐藏 file input 可直接 set_input_files)
+        file_input = dialog.locator(
+            'input[type="file"][accept*="image"]'
+        ).first
+        await file_input.set_input_files(image_path)
+
+        # 等上传完成: 确认按钮从禁用变为可用(最长 30s)
+        confirm_btn = dialog.get_by_role("button", name="确认").first
+        for _ in range(30):
+            try:
+                if await confirm_btn.is_enabled():
+                    break
+            except Exception:  # noqa: BLE001, PERF203
+                pass
+            await page.wait_for_timeout(1000)
+        await confirm_btn.click()
+        # 等对话框关闭 + 图片插入正文
+        await dialog.wait_for(state="hidden", timeout=30000)
+        await page.wait_for_timeout(1000)
+
+    @staticmethod
+    async def _bjh_set_article_cover(page, cover_path: str) -> None:
+        """Set the article cover via the「选择封面」dialog (正文/本地上传 tab).
+
+        点击「选择封面」弹出 cheetah-modal 封面对话框: 上传(或选已有插图)后
+        必须点「确定」关闭, 否则弹窗会一直挡住页面。"""
+        cover_box = page.get_by_text("选择封面", exact=True).first
+        await cover_box.wait_for(state="visible", timeout=15000)
+        await cover_box.click()
+
+        dialog = page.locator('.cheetah-modal-wrap:has-text("本地上传")').first
+        await dialog.wait_for(state="visible", timeout=15000)
+
+        if cover_path:
+            try:
+                file_input = dialog.locator(
+                    'input[type="file"][accept*="image"]'
+                ).first
+                await file_input.set_input_files(cover_path)
+                await page.wait_for_timeout(2000)
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("[设置封面] 本地上传失败(改选已有插图): %s", exc)
+
+        # 等确定按钮可用(上传/选择完成后出现 确定(N))
+        confirm_btn = dialog.get_by_role("button", name="确定").first
+        for _ in range(20):
+            try:
+                if await confirm_btn.is_enabled():
+                    break
+            except Exception:  # noqa: BLE001, PERF203
+                pass
+            await page.wait_for_timeout(1000)
+        await confirm_btn.click()
+        await dialog.wait_for(state="hidden", timeout=30000)
+        await page.wait_for_timeout(1000)
+        logger.info("[设置封面] 封面已设置并确认")
+
+    @staticmethod
+    async def _bjh_set_article_declaration(
+        page, creation_declaration: str, supplementary_declaration: str
+    ) -> None:
+        """Best-effort: tick the article declaration checkboxes (non-fatal).
+
+        文章页的创作声明是 checkbox 组(采用AI生成内容 / 来源说明), 与视频流的
+        下拉不同; 按传入值的关键词映射, 无匹配则跳过。"""
+        text = creation_declaration or ""
+        target = ""
+        if "AI" in text or "ai" in text:
+            target = "采用AI生成内容"
+        elif "转载" in text or "来源" in text:
+            target = "来源说明"
+        if not target:
+            logger.info(
+                "[设置声明] 声明值「%s」在文章页无可对应勾选项, 跳过(非致命)", text
+            )
+            return
+        checkbox = page.locator(
+            f'label:has-text("{target}") input[type="checkbox"], '
+            f'label:has-text("{target}")'
+        ).first
+        try:
+            if await checkbox.count():
+                await checkbox.click()
+                await page.wait_for_timeout(500)
+                logger.info("[设置声明] 已勾选: %s", target)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("[设置声明] 勾选失败(不影响发布): %s", exc)
+
+    @staticmethod
+    async def _bjh_set_article_schedule(page, publish_date) -> None:
+        """Best-effort: switch to scheduled publish and fill the datetime input."""
+        timer_btn = page.get_by_role("button", name="定时发布").first
+        await timer_btn.click()
+        await page.wait_for_timeout(800)
+        time_input = page.locator('input[placeholder="请选择时间"]').first
+        await time_input.fill(publish_date.strftime("%Y-%m-%d %H:%M:%S"))
+        await page.keyboard.press("Enter")
+        await page.wait_for_timeout(500)
+        logger.info("[定时发布] 定时发布设置完成: %s", publish_date)
+
+    @staticmethod
+    async def _bjh_wait_passmod(page, timeout_s: int = 120) -> bool:
+        """Wait for the BJH captcha dialog (passMod) to appear and be solved."""
+        captcha = page.locator("div.passMod_dialog-container")
+        try:
+            await captcha.wait_for(state="visible", timeout=timeout_s * 1000)
+            logger.info("[人机校验] 检测到人机校验, 等待人工完成...")
+            await captcha.wait_for(state="hidden", timeout=300000)
+            logger.info("[人机校验] 人机校验已通过")
+            return True
+        except Exception:
+            return False

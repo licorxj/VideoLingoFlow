@@ -177,6 +177,9 @@ def publish_images():
                 'alipay': 12, '支付宝': 12,  # 图集发布
                 'vivo': 16, 'VIVO': 16,
                 'weixin_gzh': 17, '微信公众号': 17,  # 公众号贴图
+                'channels': 2, '视频号': 2,  # 视频号图片动态
+                'baijiahao': 6, '百家号': 6,  # 百家号图文文章
+                'toutiao': 13, '今日头条': 13,  # 头条文章
             }
             platform_id = platform_map.get(platform_type)
             if not platform_id:

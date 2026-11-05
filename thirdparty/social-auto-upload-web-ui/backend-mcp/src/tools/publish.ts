@@ -188,13 +188,14 @@ export function registerPublishTools(server: McpServer, client: BackendClient): 
 2. 作品声明（各平台选项不同，见下方各字段说明）
 3. 是否定时发布，如需要则询问定时时间（格式 yyyy-MM-dd HH:mm:ss，如 2026-06-05 18:00:00）
 
-【各平台声明字段对照表】
-- 小红书(xiaohongshu): aiContent（下拉选择）+ isOriginal（是否原创）
-- 视频号(channels): aiContent（布尔开关）+ isOriginal（是否原创）
-- 抖音(douyin): aiContent（下拉选择）+ isOriginal（是否原创）
-- 快手(kuaishou): aiContent（下拉选择）+ isOriginal（是否原创）
+【各平台图文形态与声明字段对照表】
+- 小红书(xiaohongshu): 图文笔记; aiContent（下拉选择）+ isOriginal（是否原创）
+- 视频号(channels): 图片动态（最多9图, 标题22字内）; 无声明控件
+- 抖音(douyin): 图文; aiContent（下拉选择）+ isOriginal（是否原创）
+- 快手(kuaishou): 图文; aiContent（下拉选择）+ isOriginal（是否原创）
 - B站(bilibili): creationDeclaration（下拉选择）+ isOriginal（是否原创）
-- 百家号(baijiahao): creationDeclaration（下拉）+ supplementaryDeclaration（补充声明）+ aiContent（布尔）+ isOriginal（是否原创）
+- 百家号(baijiahao): 图文文章（标题2-64字, 图片作正文插图）; creationDeclaration（下拉）+ supplementaryDeclaration（补充声明）+ aiContent（布尔）+ isOriginal（是否原创）
+- 头条(toutiao): 文章（标题2-30字, 图片作正文插图）; 无声明控件
 - TikTok(tiktok): aiContent（布尔开关）+ isOriginal（是否原创）
 - YouTube(youtube): audience（观众）+ alteredContent（是否加工内容）
 - 腾讯视频(tencent_video): creationDeclaration（多选）
@@ -205,8 +206,9 @@ export function registerPublishTools(server: McpServer, client: BackendClient): 
       cover_path: z.string().optional().describe('封面图本地路径（与 cover_material_id 二选一）'),
       account_configs: z.array(z.object({
         account_id: z.number().describe('账号ID'),
-        platform: z.string().describe('平台类型: xiaohongshu/channels/douyin/kuaishou/bilibili/baijiahao/tiktok/youtube/tencent_video/iqiyi'),
+        platform: z.string().describe('平台类型: xiaohongshu/channels/douyin/kuaishou/bilibili/baijiahao/toutiao/tiktok/youtube/tencent_video/iqiyi/weibo/alipay/vivo/weixin_gzh'),
         filePath: z.string().describe('cookie文件路径'),
+        cover_path: z.string().optional().describe('封面图本地路径（覆盖全局 cover_material_id/cover_path）'),
         title: z.string().optional().describe('标题'),
         description: z.string().optional().describe('描述'),
         tags: z.array(z.string()).optional().describe('标签列表'),
@@ -263,22 +265,54 @@ export function registerPublishTools(server: McpServer, client: BackendClient): 
         }
 
         // 将 cover_path 注入每个 account_config，默认 dry_run=false 真实发布
-        const account_configs = rest.account_configs.map((cfg: any) => ({
-          ...cfg,
-          cover_path: resolvedCoverPath || cfg.cover_path || '',
-          dry_run: false,
-        }));
+        // 注意：后端 /api/image-publish/publish 只接受单个账号配置 dict（前端也是
+        // 逐账号循环调用），这里按账号逐个 POST，单账号失败不影响其他账号。
+        const results: Array<Record<string, unknown>> = [];
+        const failures: Array<Record<string, unknown>> = [];
+        for (const cfg of rest.account_configs) {
+          const payload = {
+            image_ids: rest.image_ids,
+            account_configs: {
+              ...cfg,
+              cover_path: resolvedCoverPath || cfg.cover_path || '',
+              dry_run: false,
+            },
+          };
+          try {
+            const response = await client.post(
+              '/api/image-publish/publish',
+              payload,
+              600000,
+            );
+            results.push({
+              account_id: cfg.account_id,
+              platform: cfg.platform,
+              response,
+            });
+          } catch (err: any) {
+            failures.push({
+              account_id: cfg.account_id,
+              platform: cfg.platform,
+              error: String(err?.message || err),
+            });
+          }
+        }
 
-        const response = await client.post('/api/image-publish/publish', {
-          ...rest,
-          account_configs,
-        }, 600000);
-
+        const summary = {
+          total: rest.account_configs.length,
+          success: results.length,
+          failed: failures.length,
+          results,
+          failures,
+        };
         return {
-          content: [{
-            type: 'text' as const,
-            text: JSON.stringify(response, null, 2)
-          }]
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(summary, null, 2),
+            },
+          ],
+          isError: results.length === 0 ? true : undefined,
         };
       } catch (error: any) {
         return formatErrorResult(translateError(null, error));

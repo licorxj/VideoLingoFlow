@@ -1178,3 +1178,269 @@ class ToutiaoPlatform(BasePlatform):
                 logger.warning("[定时发布] 未找到定时发布按钮!")
         except Exception as e:
             logger.error("[定时发布] 设置定时发布时间失败: %s", e)
+
+
+    # ------------------------------------------------------------------
+    # Publish image — 文章 (rich article with inline images)
+    # ------------------------------------------------------------------
+
+    TOUTIAO_ARTICLE_PUBLISH_URL = "https://mp.toutiao.com/profile_v4/graphic/publish"
+    TOUTIAO_ARTICLE_TITLE_LIMIT = 30
+    TOUTIAO_ARTICLE_MAX_IMAGES = 20
+
+    async def publish_image(self, **kwargs) -> bool:
+        """Publish a rich article (文章) to Toutiao via CloakBrowser.
+
+        Accepted keyword arguments (aligned with the ``publish_image`` contract
+        in ``blueprints/image_publish_bp.py``):
+
+        - ``title`` (*str*) -- article title, 2..30 chars (page limit)
+        - ``files`` (*list[str]*) -- images inserted inline into the article body
+        - ``tags`` (*list[str]*) -- accepted for contract parity; the article
+          editor exposes no tag widget, values are logged only
+        - ``account_file`` (*list[str]*) -- cookie file names
+        - ``desc`` (*str*) -- article body text (newlines become paragraphs)
+        - ``cover_path`` (*str*, optional) -- cover image; falls back to files[0]
+        - ``ai_content`` / ``is_original`` -- accepted for contract parity; the
+          article page exposes no declaration control, values are logged only
+        - ``enableTimer`` / ``schedule_time_str`` -- scheduled publish
+        - ``dry_run`` (*bool*) -- walk the whole flow but skip the final publish
+          click (default True); a screenshot is saved under ``logs/``
+        """
+        title = kwargs.get("title", "")
+        files = kwargs.get("files", []) or []
+        tags = kwargs.get("tags", []) or []
+        account_file = kwargs.get("account_file", []) or []
+        desc = kwargs.get("desc", "")
+        cover_path = kwargs.get("cover_path", "")
+        enable_timer = kwargs.get("enableTimer", False)
+        schedule_time_str = kwargs.get("schedule_time_str", "")
+        dry_run = kwargs.get("dry_run", True)
+        ai_content = kwargs.get("ai_content", "") or kwargs.get("author_declaration", "")
+        is_original = kwargs.get("is_original", False)
+
+        logger.info("=" * 60)
+        logger.info("[发布图文] 开始头条文章发布流程")
+        logger.info("=" * 60)
+
+        if not (2 <= len(title) <= self.TOUTIAO_ARTICLE_TITLE_LIMIT):
+            raise ValueError(
+                f"头条文章标题需 2~{self.TOUTIAO_ARTICLE_TITLE_LIMIT} 字, 当前 {len(title)} 字"
+            )
+        if not desc:
+            raise ValueError("头条文章需要正文内容(desc 不能为空)")
+        if len(files) > self.TOUTIAO_ARTICLE_MAX_IMAGES:
+            raise ValueError(
+                f"头条文章插图最多 {self.TOUTIAO_ARTICLE_MAX_IMAGES} 张, 当前 {len(files)} 张"
+            )
+
+        logger.info("[发布参数] 标题: %s", title)
+        logger.info("[发布参数] 插图数量: %d", len(files))
+        logger.info("[发布参数] 正文长度: %d 字符", len(desc))
+        logger.info("[发布参数] 标签: %s (文章编辑器无标签控件, 忽略)", tags)
+        logger.info(
+            "[发布参数] 声明参数(ai_content=%s, is_original=%s) 文章页无对应控件, 仅记录",
+            ai_content or "无", is_original,
+        )
+        logger.info("[发布策略] 模式: %s", "演练(dry_run)" if dry_run else "正式发布")
+
+        if cover_path and not Path(cover_path).is_file():
+            logger.warning("[发布参数] 封面文件不存在, 回退用第一张插图: %s", cover_path)
+            cover_path = ""
+
+        for cookie_index, cookie_name in enumerate(account_file):
+            cookie_path = str(Path(BASE_DIR / "cookiesFile" / cookie_name))
+            nick = get_account_name_by_cookie_file(cookie_name)
+            with bind_account_name(nick or "-"):
+                logger.info(
+                    "[发布进度] 发布到第 %d/%d 个账号 (%s)",
+                    cookie_index + 1, len(account_file), nick or "未知",
+                )
+                await self._upload_one_article(
+                    title=title,
+                    file_paths=[str(f) for f in files],
+                    account_file=cookie_path,
+                    desc=desc,
+                    cover_path=cover_path or (str(files[0]) if files else ""),
+                    enable_timer=enable_timer,
+                    schedule_time_str=schedule_time_str,
+                    dry_run=dry_run,
+                )
+
+        logger.info("=" * 60)
+        logger.info("[发布图文] 头条文章发布流程完成!")
+        logger.info("=" * 60)
+        return True
+
+    async def _upload_one_article(
+        self, *, title, file_paths, account_file, desc, cover_path="",
+        enable_timer=False, schedule_time_str="", dry_run=True,
+    ):
+        """Create one rich article for a single Toutiao account."""
+        logger.info("[上传文章] 开始创建文章 (%d 张插图)", len(file_paths))
+        browser = await self.create_browser(headless=False)
+        try:
+            context = await self.create_context(browser, storage_state=account_file)
+            try:
+                page = await context.new_page()
+                await page.goto(
+                    self.TOUTIAO_ARTICLE_PUBLISH_URL,
+                    wait_until="domcontentloaded", timeout=60000,
+                )
+
+                # 1. 等编辑器就绪
+                logger.info("[上传文章] 等待文章编辑器加载...")
+                body = page.locator(".ProseMirror").first
+                await body.wait_for(state="visible", timeout=60000)
+                await asyncio.sleep(2)
+
+                # 2. 标题(2~30 字)
+                title_ta = page.locator(
+                    'textarea[placeholder*="请输入文章标题"]'
+                ).first
+                await title_ta.wait_for(state="visible", timeout=20000)
+                await title_ta.fill(title)
+                logger.info("[填写标题] 标题已填写: %s", title)
+
+                # 3. 正文(换行分段)
+                await body.click()
+                await clear_and_type(page, desc, element=body)
+                logger.info("[填写正文] 正文已填写 (%d 字符)", len(desc))
+
+                # 4. 逐张插入插图(工具栏 image 按钮 → file chooser)
+                if file_paths:
+                    image_btn = page.locator(".syl-toolbar-tool.image").first
+                    await image_btn.wait_for(state="visible", timeout=15000)
+                    for idx, img in enumerate(file_paths, 1):
+                        await self._toutiao_article_insert_image(page, image_btn, img)
+                        logger.info("[插图] 已插入第 %d/%d 张", idx, len(file_paths))
+
+                # 5. 封面(默认单图; 上传框「+」)
+                if cover_path:
+                    try:
+                        await self._toutiao_article_set_cover(page, cover_path)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[设置封面] 设置失败(不影响发布): %s", exc)
+
+                # 6. 定时发布(可选, 非致命)
+                if enable_timer and schedule_time_str:
+                    try:
+                        publish_dates = parse_schedule_time(
+                            schedule_time_str, 1, enable_timer, 1, None, 0
+                        )
+                        if publish_dates and publish_dates[0] != 0:
+                            await self._toutiao_article_set_schedule(
+                                page, publish_dates[0]
+                            )
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[定时发布] 设置失败(忽略继续): %s", exc)
+
+                logger.info(
+                    "[填写完成] 表单填写完成, 模式: %s",
+                    "演练(dry_run)" if dry_run else "正式发布",
+                )
+
+                if not dry_run:
+                    # 7. 发布(可能弹出预览确认)
+                    publish_btn = page.get_by_role(
+                        "button", name="预览并发布"
+                    ).first
+                    await publish_btn.wait_for(state="visible", timeout=15000)
+                    await publish_btn.click()
+                    logger.info("[发布] 已点击预览并发布, 等待结果...")
+                    await asyncio.sleep(2)
+                    # 预览确认弹窗(存在则点击「发布」/「确认」)
+                    for label in ("发布", "确认发布", "确认"):
+                        confirm_btn = page.get_by_role("button", name=label)
+                        if await confirm_btn.count():
+                            try:
+                                await confirm_btn.first.click(timeout=3000)
+                                logger.info("[发布] 已确认弹窗按钮「%s」", label)
+                                break
+                            except Exception:  # noqa: PERF203
+                                continue
+                    await page.wait_for_url(
+                        "**/profile_v4/**", timeout=180000,
+                    )
+                    logger.info("[发布] 文章发布流程完成! URL: %s", page.url)
+                    await context.storage_state(path=account_file)
+                    logger.info("[发布] Cookie状态已更新")
+                else:
+                    shot = Path(BASE_DIR) / "logs" / (
+                        f"dryrun_toutiao_{int(time.time())}.png"
+                    )
+                    try:
+                        await page.screenshot(path=str(shot))
+                        logger.info("[演练] 表单截图已保存: %s", shot)
+                    except Exception as exc:  # noqa: BLE001
+                        logger.warning("[演练] 截图失败(忽略): %s", exc)
+                    logger.info("[演练] dry_run=True, 已跳过发布点击")
+            finally:
+                await context.close()
+        finally:
+            await self.close_browser(browser, is_close_by_code=True)
+
+    # -- 头条文章内部小工具 -------------------------------------------
+
+    @staticmethod
+    async def _toutiao_article_insert_image(page, image_btn, image_path: str) -> None:
+        """Insert one image at the cursor via the toolbar image button."""
+        try:
+            async with page.expect_file_chooser(timeout=5000) as fc_info:
+                await image_btn.click()
+            chooser = await fc_info.value
+            await chooser.set_files(image_path)
+        except Exception:
+            # 未直接弹文件选择器 → 可能弹出了上传面板, 找面板里的 file input
+            panel_input = page.locator(
+                'div[class*="upload"] input[type="file"], '
+                'div[class*="modal"] input[type="file"]'
+            ).first
+            await panel_input.set_input_files(image_path, timeout=10000)
+            for label in ("确认", "确定", "上传"):
+                confirm_btn = page.get_by_role("button", name=label)
+                if await confirm_btn.count():
+                    await confirm_btn.first.click()
+                    break
+        # 等图片渲染进编辑器
+        await page.wait_for_timeout(2500)
+
+    @staticmethod
+    async def _toutiao_article_set_cover(page, cover_path: str) -> None:
+        """Upload the article cover via the「+」box in the cover section."""
+        cover_plus = page.locator(
+            'label:has-text("展示封面") ~ * [class*="upload"], '
+            '[class*="cover"] [class*="upload"]'
+        ).first
+        try:
+            async with page.expect_file_chooser(timeout=5000) as fc_info:
+                await cover_plus.click()
+            chooser = await fc_info.value
+            await chooser.set_files(cover_path)
+        except Exception:
+            fallback_input = page.locator(
+                '[class*="cover"] input[type="file"][accept*="image"]'
+            ).first
+            await fallback_input.set_input_files(cover_path, timeout=10000)
+        await page.wait_for_timeout(2500)
+        logger.info("[设置封面] 封面已上传")
+
+    @staticmethod
+    async def _toutiao_article_set_schedule(page, publish_date) -> None:
+        """Best-effort: switch to scheduled publish on the article page."""
+        timer_btn = page.get_by_role("button", name="定时发布").first
+        await timer_btn.click()
+        await page.wait_for_timeout(800)
+        # byte-select 日期/时间(复用视频页组件结构, 逐项尝试)
+        for sel in (
+            'input[placeholder*="请选择"]',
+            ".byte-select input",
+            ".day-select input",
+        ):
+            time_input = page.locator(sel).first
+            if await time_input.count():
+                await time_input.fill(publish_date.strftime("%Y-%m-%d %H:%M"))
+                await page.keyboard.press("Enter")
+                break
+        await page.wait_for_timeout(500)
+        logger.info("[定时发布] 定时发布设置完成: %s", publish_date)
